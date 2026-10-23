@@ -119,6 +119,7 @@ CREATE TABLE "book_entries" (
 	"member_id" uuid NOT NULL,
 	"exchange_id" uuid NOT NULL,
 	"kept_at" timestamp with time zone NOT NULL,
+	"kept_by" uuid,
 	"removed_at" timestamp with time zone,
 	"removed_by" uuid,
 	CONSTRAINT "book_entries_exchange_id_key" UNIQUE("exchange_id")
@@ -284,6 +285,24 @@ CREATE TABLE "invites" (
 	CONSTRAINT "invites_channel_check" CHECK ("channel" in ('link', 'line', 'whatsapp', 'telegram', 'sms', 'email'))
 );
 
+CREATE TABLE "keep_suggestions" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"kind" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"dismissed_at" timestamp with time zone,
+	"dismissed_by" uuid,
+	CONSTRAINT "keep_suggestions_exchange_id_key" UNIQUE("exchange_id"),
+	CONSTRAINT "keep_suggestions_offsets_check" CHECK ("keep_suggestions"."start_offset" >= 0 and "keep_suggestions"."end_offset" > "keep_suggestions"."start_offset" and "keep_suggestions"."end_offset" - "keep_suggestions"."start_offset" <= 2000),
+	CONSTRAINT "keep_suggestions_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up'))
+);
+
 CREATE TABLE "media" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -340,6 +359,7 @@ CREATE TABLE "members" (
 	"learning_until" date,
 	"suggestions_signed_by" uuid,
 	"answer_stats" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"memories_off_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"left_at" timestamp with time zone,
 	CONSTRAINT "members_family_id_user_id_key" UNIQUE("family_id","user_id"),
@@ -454,6 +474,24 @@ CREATE TABLE "memory_sharing_presentations" (
 	CONSTRAINT "memory_sharing_presentations_fingerprint_check" CHECK ("memory_sharing_presentations"."fingerprint" ~ '^[0-9a-f]{64}$'),
 	CONSTRAINT "memory_sharing_presentations_audience_check" CHECK (cardinality("memory_sharing_presentations"."recipient_ids") between 1 and 50 and array_position("memory_sharing_presentations"."recipient_ids", null) is null),
 	CONSTRAINT "memory_sharing_presentations_timing_check" CHECK ("memory_sharing_presentations"."expires_at" = "memory_sharing_presentations"."issued_at" + interval '5 minutes' and ("memory_sharing_presentations"."consumed_at" is null or ("memory_sharing_presentations"."consumed_at" >= "memory_sharing_presentations"."issued_at" and "memory_sharing_presentations"."consumed_at" < "memory_sharing_presentations"."expires_at")))
+);
+
+CREATE TABLE "memory_stories" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"title_answer_id" uuid NOT NULL,
+	"title_start" integer NOT NULL,
+	"title_end" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "memory_stories_title_check" CHECK ("memory_stories"."title_start" >= 0 and "memory_stories"."title_end" > "memory_stories"."title_start" and "memory_stories"."title_end" - "memory_stories"."title_start" <= 200)
+);
+
+CREATE TABLE "memory_story_moments" (
+	"story_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	CONSTRAINT "memory_story_moments_pkey" PRIMARY KEY("story_id","exchange_id"),
+	CONSTRAINT "memory_story_moments_exchange_id_key" UNIQUE("exchange_id")
 );
 
 CREATE TABLE "message_refs" (
@@ -785,6 +823,7 @@ ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FO
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_kept_by_members_id_fk" FOREIGN KEY ("kept_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_removed_by_members_id_fk" FOREIGN KEY ("removed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
@@ -801,6 +840,11 @@ ALTER TABLE "invites" ADD CONSTRAINT "invites_family_id_families_id_fk" FOREIGN 
 ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_for_member_id_members_id_fk" FOREIGN KEY ("for_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_accepted_by_members_id_fk" FOREIGN KEY ("accepted_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_dismissed_by_members_id_fk" FOREIGN KEY ("dismissed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
@@ -827,6 +871,11 @@ ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_recipient_user_id_user
 ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_presentation_id_memory_sharing_presentations_id_fk" FOREIGN KEY ("presentation_id") REFERENCES "public"."memory_sharing_presentations"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_keep_id_memory_keeps_id_fk" FOREIGN KEY ("keep_id") REFERENCES "public"."memory_keeps"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_title_answer_id_answers_id_fk" FOREIGN KEY ("title_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_story_moments" ADD CONSTRAINT "memory_story_moments_story_id_memory_stories_id_fk" FOREIGN KEY ("story_id") REFERENCES "public"."memory_stories"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_story_moments" ADD CONSTRAINT "memory_story_moments_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_events_id_fk" FOREIGN KEY ("quiet_event_id") REFERENCES "public"."quiet_events"("id") ON DELETE cascade ON UPDATE no action;
@@ -888,6 +937,9 @@ CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipie
 CREATE INDEX "exchanges_queue_idx" ON "exchanges" USING btree ("recipient_id","when_rule","created_at") WHERE "state" = 'composed';
 CREATE INDEX "exchanges_family_recent_idx" ON "exchanges" USING btree ("family_id","scheduled_for" DESC NULLS FIRST);
 CREATE UNIQUE INDEX "family_channels_channel_conversation_id_idx" ON "family_channels" USING btree ("channel","conversation_id") WHERE "unlinked_at" is null;
+CREATE INDEX "keep_suggestions_family_idx" ON "keep_suggestions" USING btree ("family_id","created_at");
+CREATE INDEX "keep_suggestions_answer_idx" ON "keep_suggestions" USING btree ("answer_id");
+CREATE INDEX "keep_suggestions_expiry_idx" ON "keep_suggestions" USING btree ("expires_at");
 CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kept" = false;
 CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
@@ -913,6 +965,9 @@ CREATE INDEX "memory_sharing_presentations_keep_idx" ON "memory_sharing_presenta
 CREATE INDEX "memory_sharing_presentations_owner_idx" ON "memory_sharing_presentations" USING btree ("owner_user_id");
 CREATE INDEX "memory_sharing_presentations_recipients_idx" ON "memory_sharing_presentations" USING gin ("recipient_ids");
 CREATE INDEX "memory_sharing_presentations_expiry_idx" ON "memory_sharing_presentations" USING btree ("expires_at");
+CREATE INDEX "memory_stories_family_idx" ON "memory_stories" USING btree ("family_id","created_at");
+CREATE INDEX "memory_stories_member_idx" ON "memory_stories" USING btree ("member_id");
+CREATE INDEX "memory_stories_title_answer_idx" ON "memory_stories" USING btree ("title_answer_id");
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';

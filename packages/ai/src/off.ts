@@ -35,6 +35,7 @@ export function createOffAi(): Ai {
     readback: off("readback"),
     recipe: off("recipe"),
     memoryPick: off("memory_pick"),
+    storyWeave: off("story_weave"),
     hello: off("hello"),
     weeklyRead: off("weekly_read"),
     weeklyInsight: off("weekly_insight"),

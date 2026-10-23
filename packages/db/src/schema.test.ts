@@ -72,6 +72,8 @@ import {
   memoryPermissionPresentations,
   memoryShares,
   memorySharingPresentations,
+  memoryStories,
+  memoryStoryMoments,
   messageRefs,
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
@@ -395,8 +397,22 @@ async function seedEveryTable(): Promise<void> {
     answerId: answer.id,
     start: 0,
     end: 4,
+    kind: "moment",
     expiresAt: new Date(Date.now() + 86_400_000),
   });
+  const story = only(
+    await db
+      .insert(memoryStories)
+      .values({
+        familyId,
+        memberId: seed.parent.id,
+        titleAnswerId: answer.id,
+        titleStart: 0,
+        titleEnd: 4,
+      })
+      .returning(),
+  );
+  await db.insert(memoryStoryMoments).values({ storyId: story.id, exchangeId: exchange.id });
   await db.insert(replies).values({
     exchangeId: exchange.id,
     memberId: seed.organiser.id,
@@ -2193,6 +2209,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "memory_facts", column: "kind", values: MEMORY_FACT_KINDS },
     { table: "memory_candidates", column: "kind", values: FAMILY_MEMORY_KINDS },
     { table: "memory_keeps", column: "kind", values: FAMILY_MEMORY_KINDS },
+    { table: "keep_suggestions", column: "kind", values: FAMILY_MEMORY_KINDS },
     { table: "quiet_events", column: "outcome", values: QUIET_OUTCOMES },
     { table: "away_periods", column: "source", values: AWAY_SOURCES },
     { table: "outbound", column: "kind", values: OUTBOUND_KINDS },
@@ -2275,6 +2292,12 @@ describe("CHECK constraints on enumerated columns", () => {
       expect(await rejection(db.update(keepSuggestions).set(offsets))).toEqual({
         code: CHECK_VIOLATION,
         constraint: "keep_suggestions_offsets_check",
+      });
+    }
+    for (const title of [{ titleStart: -1 }, { titleEnd: 0 }, { titleEnd: 201 }]) {
+      expect(await rejection(db.update(memoryStories).set(title))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_stories_title_check",
       });
     }
     expect(
@@ -2369,6 +2392,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "memory_candidates_expiry_check",
       "memory_keeps_offsets_check",
       "keep_suggestions_offsets_check",
+      "memory_stories_title_check",
       "memory_shares_fingerprint_check",
       "memory_sharing_presentations_fingerprint_check",
       "memory_sharing_presentations_audience_check",

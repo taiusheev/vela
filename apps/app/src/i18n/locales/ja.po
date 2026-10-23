@@ -7,12 +7,14 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: ja\n"
 
-#: app/(tabs)/exchanges.tsx
+#: src/components/keepsake.tsx
+msgid "“{text}”"
+msgstr ""
+
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
 #: app/exchange/[id].tsx
 msgid "{asker} asked · written by Vela"
 msgstr ""
@@ -23,6 +25,15 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "{asker} asked {recipient} · written by Vela"
+msgstr ""
+
+#: app/story/[id].tsx
+#: src/components/family-book.tsx
+msgid "{asker} asked, {asked}"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "{asker} asked: {question}"
 msgstr ""
 
 #: src/data/precision.ts
@@ -43,6 +54,15 @@ msgstr ""
 
 #: src/components/connection-windows.tsx
 msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "{count, plural, one {# morning} other {# mornings}}"
+msgstr ""
+
+#: app/story/[id].tsx
+#: src/components/family-book.tsx
+msgid "{count, plural, one {Told on # morning} other {Told across # mornings}}"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -109,6 +129,18 @@ msgstr ""
 msgid "{holder} already has that Sunday."
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "{kept, plural, one {# memory kept} other {# memories kept}}"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "{kept, plural, one {# memory} other {# memories}}"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "{keptCount, plural, one {# of its memories is kept} other {# of its memories are kept}}"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{known} fine, and the family knew why"
 msgstr ""
@@ -129,20 +161,8 @@ msgstr ""
 msgid "{later} answered later"
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "{memories, plural, one {# kept answer} other {# kept answers}}"
-msgstr ""
-
 #: src/components/onboarding/plan.tsx
 msgid "{mornings, plural, one {# morning, ready.} other {# mornings, ready.}}"
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "{name} · {day}"
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "{name} · {day} · {asker} asked"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -246,10 +266,6 @@ msgstr ""
 msgid "{name} reads"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "{name} said"
-msgstr ""
-
 #: src/components/calling-number-editor.tsx
 msgid "{name} said I may save this number on my iPhone."
 msgstr ""
@@ -268,10 +284,6 @@ msgstr ""
 
 #: src/components/quiet-notice.tsx
 msgid "{name} will look in."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "{name}, asked “{question}”"
 msgstr ""
 
 #: src/components/reminders.tsx
@@ -329,10 +341,6 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "{name}’s photo and parent link"
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "{name}'s recipe · {day}"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -407,15 +415,12 @@ msgstr ""
 msgid "{relation} · asked after setup"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "{replies, plural, one {# reply} other {# replies}}"
-msgstr ""
-
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr ""
 
 #: src/components/family-book.tsx
+#: src/components/keepsake.tsx
 msgid "{stories, plural, one {# story} other {# stories}}"
 msgstr ""
 
@@ -463,6 +468,14 @@ msgstr ""
 msgid "A connection is not a delivered morning message or a reply."
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "A favourite"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "A funny one"
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "A hello for {recipient}"
 msgstr ""
@@ -491,10 +504,15 @@ msgstr ""
 msgid "A live connection has not been set up."
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "A moment"
+msgstr ""
+
 #: app/help.tsx
 msgid "A morning message is missing"
 msgstr ""
 
+#: src/components/keepsake.tsx
 #: src/data/chat.ts
 msgid "A photo"
 msgstr ""
@@ -531,8 +549,16 @@ msgstr ""
 msgid "A sticker"
 msgstr ""
 
+#: app/story/[id].tsx
+#: src/components/keepsake.tsx
 #: src/data/ask.ts
 msgid "A story"
+msgstr ""
+
+#: app/story/[id].tsx
+#: src/components/family-book.tsx
+#: src/components/keepsake.tsx
+msgid "A story in {name}'s words"
 msgstr ""
 
 #: src/components/story-day.tsx
@@ -547,6 +573,7 @@ msgstr ""
 msgid "A voice message"
 msgstr ""
 
+#: src/components/keepsake.tsx
 #: src/data/ask.ts
 msgid "A voice note"
 msgstr ""
@@ -565,6 +592,10 @@ msgstr ""
 
 #: app/help.tsx
 msgid "About a quiet notice"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "About someone"
 msgstr ""
 
 #: app/conversation.tsx
@@ -1029,14 +1060,6 @@ msgstr ""
 msgid "Coming up"
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "Coming up · {name} · {day}"
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "Coming up · {name} · {day} · chosen by {asker}"
-msgstr ""
-
 #: src/components/nearby-editor.tsx
 msgid "Confirm removal"
 msgstr ""
@@ -1267,6 +1290,10 @@ msgstr ""
 msgid "Everyone's light is on today"
 msgstr ""
 
+#: src/components/family-book.tsx
+msgid "Everything here stays until an organiser takes it out, or memories are turned off in the chat."
+msgstr ""
+
 #: src/components/today-heart.tsx
 msgid "Example · heart sent"
 msgstr ""
@@ -1295,6 +1322,10 @@ msgstr ""
 msgid "Exchange"
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "Fades on {date} unless someone keeps it"
+msgstr ""
+
 #: src/data/family.ts
 msgctxt "role"
 msgid "family"
@@ -1306,10 +1337,6 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Family & children"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Family book"
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
@@ -1334,6 +1361,10 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Films, TV & books"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Find a memory to keep"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -1384,12 +1415,12 @@ msgstr ""
 msgid "From {fromName} · Saved for their morning"
 msgstr ""
 
-#: src/components/ask-ideas.tsx
-msgid "From {name}'s own words"
+#: src/components/family-book.tsx
+msgid "From {name}'s kitchen"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "From a voice note"
+#: src/components/ask-ideas.tsx
+msgid "From {name}'s own words"
 msgstr ""
 
 #: src/data/onboarding.ts
@@ -1522,22 +1553,6 @@ msgstr ""
 msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Her words"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words stay here for thirty days."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words stay here for thirty days. Tap Keep on the ones you want to keep for good; they and her stories stay in the family book."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Her words stay here for thirty days. The stories she tells are kept in the family book."
-msgstr ""
-
 #: src/components/onboarding/finish.tsx
 msgid "Hi {name}, it’s {you}. I’ve set up Vela for us: one small question from me each morning. Tap to see it, then decide. (An example invitation: nothing was sent.)"
 msgstr ""
@@ -1564,6 +1579,10 @@ msgstr ""
 
 #: src/components/ask-ideas.tsx
 msgid "How {name} sees it"
+msgstr ""
+
+#: src/data/memories.ts
+msgid "How are the seedlings doing?"
 msgstr ""
 
 #: src/components/reminders.tsx
@@ -1609,6 +1628,18 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
+msgstr ""
+
+#: src/data/memories.ts
+msgid "I like the radio on in the kitchen, even when nobody is listening."
+msgstr ""
+
+#: src/data/memories.ts
+msgid "I like the radio on in the kitchen, even when nobody is listening. It keeps the kettle company."
+msgstr ""
+
+#: src/data/memories.ts
+msgid "I saved the seeds from last summer's tomatoes in an envelope by the radio."
 msgstr ""
 
 #: app/weekly-support-preview.tsx
@@ -1763,16 +1794,16 @@ msgstr ""
 msgid "It reaches {parentName} tomorrow morning, {tomorrow}. To write now, open the chat."
 msgstr ""
 
+#: src/components/family-book.tsx
+msgid "It stops being kept. Like everything in the chat, it is then deleted 30 days after it was said."
+msgstr ""
+
 #: app/ask.tsx
 msgid "It waits its turn and reaches {name} on the first morning nobody else has asked for."
 msgstr ""
 
 #: src/data/exchanges.ts
 msgid "It was a bakery, then a bookshop. We queued there for bread in the winter."
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "It will stop being kept as a story. The exchange still follows the usual retention period."
 msgstr ""
 
 #: src/components/quiet-notice.tsx
@@ -1796,12 +1827,8 @@ msgstr ""
 msgid "Kazakhstan"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Keep"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Keep for good"
+#: src/components/family-book.tsx
+msgid "Keep it"
 msgstr ""
 
 #: app/delete-account.tsx
@@ -1828,7 +1855,12 @@ msgstr ""
 msgid "Keep these words?"
 msgstr ""
 
-#: src/components/family-book.tsx
+#: src/components/keepsake.tsx
+msgid "Keep this memory"
+msgstr ""
+
+#: app/story/[id].tsx
+#: src/components/keepsake.tsx
 msgid "Keep this story"
 msgstr ""
 
@@ -1836,12 +1868,16 @@ msgstr ""
 msgid "Keeping {name}’s mornings safe…"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
+#: app/story/[id].tsx
 msgid "Keeping…"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Keeps this answer in the family book instead of deleting it after 30 days"
+#: src/components/keepsake.tsx
+msgid "Keeps every memory in it in the family book"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "Keeps it in the family book instead of letting it fade after 30 days"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -1850,16 +1886,33 @@ msgid "Kept"
 msgstr ""
 
 #: src/components/family-book.tsx
+#: src/components/keepsake.tsx
 msgid "Kept by {keeper}"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
 #: src/components/family-book.tsx
-msgid "Kept for good"
+msgid "Kept for the family, in their own words"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Kept in the book"
+msgstr ""
+
+#: app/story/[id].tsx
+#: src/components/keepsake.tsx
+msgid "Kept in the family book"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Kept memories and stories appear here."
 msgstr ""
 
 #: app/my-memories.tsx
 msgid "Kept on {when}. Only you can see it."
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Kept since {date}"
 msgstr ""
 
 #: app/my-memories.tsx
@@ -1876,6 +1929,10 @@ msgstr ""
 
 #: src/components/today-hero.tsx
 msgid "Last confirmed update"
+msgstr ""
+
+#: src/data/memories.ts
+msgid "last summer's tomatoes"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -1965,6 +2022,14 @@ msgstr ""
 msgid "Little things worth remembering from your own answers. Only you can see them."
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "Little things worth remembering, from {who}."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Little things worth remembering, from {who}. Keep the ones you love."
+msgstr ""
+
 #: app/morning-settings.tsx
 msgid "Loading morning settings…"
 msgstr ""
@@ -2019,12 +2084,12 @@ msgstr ""
 msgid "Looking for that exchange…"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Looking for your family's days…"
-msgstr ""
-
 #: app/my-memories.tsx
 msgid "Looking for your memories…"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "Looking forward"
 msgstr ""
 
 #: app/weekly-support-preview.tsx
@@ -2047,6 +2112,18 @@ msgstr ""
 
 #: app/my-memories.tsx
 msgid "Memories are not available here yet."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Memories are turned off in the chat, so this is not kept."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Memories fade after 30 days unless the family keeps them. Anything about health or private matters is never shown as a memory."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Memories you do not keep fade after 30 days, like everything else in the chat. Anything about health or private matters is never offered as a memory."
 msgstr ""
 
 #: app/my-memories.tsx
@@ -2080,6 +2157,7 @@ msgstr ""
 #: src/components/story-day.tsx
 #: src/data/exchanges.ts
 #: src/data/family.ts
+#: src/data/memories.ts
 #: src/data/onboarding.ts
 #: src/data/today.ts
 #: src/data/weekly.ts
@@ -2093,6 +2171,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Mom, Mẹ, 媽…"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Moments"
 msgstr ""
 
 #: app/conversation.tsx
@@ -2147,6 +2229,10 @@ msgstr ""
 #. a time zone
 #: src/data/onboarding.ts
 msgid "Mountain"
+msgstr ""
+
+#: src/data/memories.ts
+msgid "Mrs Lee next door brought dumplings and stayed to show me her grandson's school photos."
 msgstr ""
 
 #: src/data/onboarding.ts
@@ -2205,6 +2291,10 @@ msgstr ""
 msgid "No answer recorded today"
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "No memories yet. When {who} tells you something worth remembering, it appears here."
+msgstr ""
+
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr ""
@@ -2221,12 +2311,8 @@ msgstr ""
 msgid "No quiet notice in the last 12 months."
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "No stories have been kept here yet."
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "No stories yet. Choose a question on the Sunday tab, and what she tells is kept here."
+#: app/(tabs)/exchanges.tsx
+msgid "No stories yet. The first one appears when a subject comes up again."
 msgstr ""
 
 #: app/weekly-support-preview.tsx
@@ -2267,6 +2353,10 @@ msgstr ""
 msgid "Not enough notices yet to show a month."
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "Not kept yet"
+msgstr ""
+
 #: app/ask.tsx
 #: app/my-memories.tsx
 #: app/vela-light.tsx
@@ -2288,16 +2378,8 @@ msgstr ""
 msgid "Not sure yet"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Not this one"
-msgstr ""
-
 #: src/components/quiet-notice.tsx
 msgid "Not this time"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Nothing has happened yet. Her first morning will be here."
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -2308,8 +2390,8 @@ msgstr ""
 msgid "Nothing is charged during the pilot, and no card is asked for."
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "Nothing kept yet."
+#: src/components/keepsake.tsx
+msgid "Nothing kept yet. Tap a heart to start it."
 msgstr ""
 
 #: src/components/today-feed.tsx
@@ -2462,6 +2544,10 @@ msgstr ""
 msgid "Only on this device. Removed when you sign out."
 msgstr ""
 
+#: src/components/keepsake.tsx
+msgid "Open in the chat"
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Open my family"
 msgstr ""
@@ -2502,6 +2588,14 @@ msgstr ""
 
 #: src/components/family-book.tsx
 msgid "Opening the book…"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "Opening the memories…"
+msgstr ""
+
+#: app/story/[id].tsx
+msgid "Opening the story…"
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -2753,10 +2847,6 @@ msgstr ""
 msgid "Ready"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Recipe"
-msgstr ""
-
 #: src/components/family-book.tsx
 msgid "Recipes"
 msgstr ""
@@ -2982,7 +3072,7 @@ msgid "Say something short"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
-msgid "Search her words"
+msgid "Search memories"
 msgstr ""
 
 #: app/settings.tsx
@@ -3170,17 +3260,9 @@ msgstr ""
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "She asked not to keep this one."
-msgstr ""
-
 #: app/exchange/[id].tsx
 #: src/components/today-heart.tsx
 msgid "She has not answered yet, so there is nothing to reply to."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "She has turned memories off, so her answers are not kept."
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -3208,20 +3290,20 @@ msgstr ""
 msgid "Show {name}’s initials for now."
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Show originals"
-msgstr ""
-
 #: src/components/test-sign-in-details.tsx
 msgid "Show test sign-in details"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "Show translations"
+#: src/components/keepsake.tsx
+msgid "Shows all of it"
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
 msgid "Shows hearts, laughs and hugs to send"
+msgstr ""
+
+#: src/components/keepsake.tsx
+msgid "Shows less"
 msgstr ""
 
 #: app/parent.tsx
@@ -3364,16 +3446,7 @@ msgid "Stop recording"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
-#: src/components/family-book.tsx
 msgid "Stories"
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "Stories and kept answers"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Story"
 msgstr ""
 
 #: src/components/story-day.tsx
@@ -3418,11 +3491,11 @@ msgid "Take out “{ask}”"
 msgstr ""
 
 #: src/components/family-book.tsx
-msgid "Take this story out of the book"
+msgid "Take this page out of the book"
 msgstr ""
 
 #: src/components/family-book.tsx
-msgid "Take this story out of the family book?"
+msgid "Take this page out of the family book?"
 msgstr ""
 
 #: src/components/chat/chat-link.tsx
@@ -3432,6 +3505,10 @@ msgstr ""
 
 #: src/components/today-feed.tsx
 msgid "Talk with {recipient}"
+msgstr ""
+
+#: src/components/family-book.tsx
+msgid "Tap the heart on a memory, and it is kept here, long after the chat has let it go."
 msgstr ""
 
 #: src/data/useToday.ts
@@ -3488,6 +3565,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "That could not be kept just now. Try again."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -3561,6 +3642,10 @@ msgstr ""
 msgid "That link could not open. Use the address above to contact the founder."
 msgstr ""
 
+#: src/components/family-book.tsx
+msgid "That page could not be taken out. Try again."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
 msgstr ""
@@ -3588,10 +3673,6 @@ msgstr ""
 #: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "That recording did not save. Try again."
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "That story could not be removed. Try again."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3638,21 +3719,14 @@ msgstr ""
 msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "The exchanges could not be reached just now."
-msgstr ""
-
 #: app/book.tsx
 #: src/components/family-book.tsx
+#: src/components/keepsake.tsx
 msgid "The family book"
 msgstr ""
 
 #: src/components/family-book.tsx
 msgid "The family book could not be reached just now."
-msgstr ""
-
-#: src/components/family-book.tsx
-msgid "The family book fills with the stories she tells on story day."
 msgstr ""
 
 #: src/data/precision.ts
@@ -3675,6 +3749,10 @@ msgstr ""
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr ""
 
+#: src/components/family-book.tsx
+msgid "The first page is waiting."
+msgstr ""
+
 #: src/components/nearby-editor.tsx
 msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
 msgstr ""
@@ -3689,6 +3767,18 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
+msgstr ""
+
+#: src/data/memories.ts
+msgid "The little tomato plants are as tall as my hand now."
+msgstr ""
+
+#: src/data/memories.ts
+msgid "The little tomato plants are as tall as my hand now. I talk to them before the news."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "The memories could not be reached just now."
 msgstr ""
 
 #: app/my-memories.tsx
@@ -3751,8 +3841,8 @@ msgstr ""
 msgid "The send could not be confirmed. Retry the saved attempt to finish the same send."
 msgstr ""
 
-#: src/components/family-book.tsx
-msgid "The stories she tells on story day, the answers the family keeps, and the recipes she shares, stay here after the 30 days, with her voice."
+#: src/data/memories.ts
+msgid "The tomatoes finally turned."
 msgstr ""
 
 #: src/data/chat.ts
@@ -3808,7 +3898,7 @@ msgid "them"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
-msgid "There is no answer to keep yet."
+msgid "There is nothing to keep here yet."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -3833,10 +3923,6 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "This account already runs a family."
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "This answer mentions health or something private, so it is not kept."
 msgstr ""
 
 #: app/delete-account.tsx
@@ -3893,6 +3979,14 @@ msgstr ""
 msgid "This message could not be delivered. Their daily morning is unchanged."
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "This one mentions health or something private, so it is not kept."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "This one was taken out of the book, so it is not kept again."
+msgstr ""
+
 #: app/precision.tsx
 msgid "This page could not be reached just now."
 msgstr ""
@@ -3929,6 +4023,10 @@ msgstr ""
 msgid "This photo could not be used. Choose another."
 msgstr ""
 
+#: app/story/[id].tsx
+msgid "This story is no longer here. Its memories may have faded."
+msgstr ""
+
 #: src/audio/VoicePlayback.tsx
 msgid "This voice is no longer available."
 msgstr ""
@@ -3963,6 +4061,10 @@ msgstr ""
 
 #: src/device/VoiceAnswer.tsx
 msgid "To answer with your voice, Vela needs the microphone. Ask your family to turn it on in Settings."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "To keep"
 msgstr ""
 
 #: src/device/useParent.ts
@@ -4224,6 +4326,10 @@ msgstr ""
 msgid "Vela does not send notifications from here yet."
 msgstr ""
 
+#: app/story/[id].tsx
+msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
+msgstr ""
+
 #: app/vela-light.tsx
 msgid "Vela Light · for {name}"
 msgstr ""
@@ -4299,10 +4405,6 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "Vela suggests · from her own words"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Vela suggests answers you may want to keep. Kept answers stay in the family book instead of being deleted after 30 days."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -4440,6 +4542,10 @@ msgstr ""
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr ""
 
+#: src/data/memories.ts
+msgid "What are you planting this year?"
+msgstr ""
+
 #: app/ask.tsx
 msgid "What are you sending?"
 msgstr ""
@@ -4458,12 +4564,12 @@ msgstr ""
 msgid "What does {name} love to talk about?"
 msgstr ""
 
-#: src/data/today.ts
-msgid "What seeds did you save from last year's garden?"
+#: src/data/memories.ts
+msgid "What is the kitchen like in the morning?"
 msgstr ""
 
-#: app/(tabs)/exchanges.tsx
-msgid "What she told you this month, and the stories the family keeps for good."
+#: src/data/today.ts
+msgid "What seeds did you save from last year's garden?"
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -4490,6 +4596,10 @@ msgstr ""
 #. heading over the morning the ask arrives
 #: app/ask.tsx
 msgid "When"
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
 msgstr ""
 
 #: src/push/provider.tsx
@@ -4545,6 +4655,10 @@ msgstr ""
 msgid "Who are you keeping a light on for?"
 msgstr ""
 
+#: src/data/memories.ts
+msgid "Who came by this week?"
+msgstr ""
+
 #: app/ask.tsx
 msgid "Who is this for?"
 msgstr ""
@@ -4571,10 +4685,6 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Work & advice"
-msgstr ""
-
-#: app/(tabs)/exchanges.tsx
-msgid "Worth keeping?"
 msgstr ""
 
 #: src/components/weekly-support.tsx
@@ -4850,6 +4960,10 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "Your notification preference could not be loaded."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "your parent"
 msgstr ""
 
 #: app/conversation.tsx

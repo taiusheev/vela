@@ -572,9 +572,24 @@ export function readMemoryDiscovery(env: { readonly MEMORY_DISCOVERY?: string })
     : readOnOff(env.MEMORY_DISCOVERY, "MEMORY_DISCOVERY");
 }
 
+/**
+ * The var `MEMORY_STORIES` (stories.ts, ADR-51): "on" gathers her memories into stories; absent or
+ * "off" does not; anything else is refused.
+ */
+export function readMemoryStories(env: { readonly MEMORY_STORIES?: string }): boolean {
+  return env.MEMORY_STORIES === undefined ? false : readOnOff(env.MEMORY_STORIES, "MEMORY_STORIES");
+}
+
 function readOnOff(
   raw: string | undefined,
-  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME" | "RICH_MEMORIES" | "MEMORY_DISCOVERY",
+  name:
+    | "MEMORY"
+    | "BOOK"
+    | "WEEKLY_INSIGHT"
+    | "SEND_AS_ME"
+    | "RICH_MEMORIES"
+    | "MEMORY_DISCOVERY"
+    | "MEMORY_STORIES",
 ): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
@@ -701,6 +716,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     sendAsMe: readSendAsMe(env),
     richMemories: readRichMemories(env),
     memoryDiscovery: readMemoryDiscovery(env),
+    memoryStories: readMemoryStories(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),

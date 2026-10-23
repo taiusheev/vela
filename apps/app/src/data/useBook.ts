@@ -6,8 +6,10 @@ import type {
   ApiBookRecipe,
   ApiComingStory,
   ApiKeepSuggestion,
+  ApiMemoryStory,
+  ApiMoment,
 } from "@vela/contracts";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   apiConfigured,
   dismissKeepSuggestion,
@@ -19,6 +21,7 @@ import { useIdempotencyKey } from "../api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { type Exchange, exchangesFixture } from "./exchanges.ts";
 import { demoDataAllowed } from "./live-state.ts";
+import { demoBookEntry, demoMemories } from "./memories.ts";
 
 /** Why "Keep" kept nothing: she said "memories off", the words are private, or she took it out. */
 export type KeepRefusal = NonNullable<ApiBookKept["reason"]>;
@@ -31,6 +34,10 @@ export interface BookView {
   recipes: ApiBookRecipe[];
   /** Answers Vela suggests keeping, for organisers only (ADR-50). */
   suggestions: ApiKeepSuggestion[];
+  /** Her memories (ADR-51); undefined from a server that does not send them yet. */
+  moments: ApiMoment[] | undefined;
+  /** Stories gathered from her memories, in her words. */
+  stories: ApiMemoryStory[];
   /** Every exchange the book keeps: a story, or an answer someone kept. */
   keptIds: ReadonlySet<string>;
   /** The example family's book, kept only on this device. */
@@ -47,36 +54,39 @@ export interface BookView {
   keep(exchangeId: string): void;
   /** The exchange being kept just now. */
   keepingId: string | undefined;
+  /** Keeps several of her answers, one after another: a story is kept by keeping its memories. */
+  keepAll(exchangeIds: string[]): void;
+  /** The exchanges a keep or keepAll is keeping just now. */
+  keepingIds: ReadonlySet<string>;
   /** The last keep that kept nothing, and why. */
   refused: { exchangeId: string; reason: KeepRefusal } | undefined;
   keepFailed: boolean;
+  /** The exchange whose keep failed, to say so beside it. */
+  failedId: string | undefined;
   /** "Not this one" on a suggestion. */
   dismiss(exchangeId: string): void;
 }
 
-/** One of the example family's answers as a book entry. */
-function demoEntry(exchange: Exchange, keptBy: string | null): ApiBookEntry {
+/** A keep in the example family: the memory is marked kept, and the book gains its page. */
+function keptInDemo(book: ApiBook, exchangeId: string): ApiBook {
+  const moment = book.moments?.find((item) => item.exchange_id === exchangeId);
+  if (moment === undefined || moment.kept) return book;
+  const moments = (book.moments ?? []).map((item) =>
+    item.exchange_id === exchangeId
+      ? { ...item, kept: true, kept_by: "Mia", fades_at: null }
+      : item,
+  );
   return {
-    exchange_id: exchange.id,
-    member_id: exchange.recipientId ?? "m1",
-    member_name: exchange.recipient,
-    asked_by: exchange.asker,
-    question: exchange.ask,
-    photo_ids: [],
-    kept_at: new Date().toISOString(),
-    kept_by: keptBy,
-    answers:
-      exchange.answer === undefined
-        ? []
-        : [
-            {
-              kind: "text",
-              text: exchange.answer.text,
-              media_id: null,
-              media_kind: null,
-              at: new Date().toISOString(),
-            },
-          ],
+    ...book,
+    moments,
+    stories: (book.stories ?? []).map((story) => ({
+      ...story,
+      kept: story.moment_ids.every(
+        (id) => moments.find((item) => item.exchange_id === id)?.kept === true,
+      ),
+    })),
+    entries: [demoBookEntry({ ...moment, kept: true }, "Mia"), ...book.entries],
+    suggestions: book.suggestions.filter((item) => item.exchange_id !== exchangeId),
   };
 }
 
@@ -87,6 +97,7 @@ function demoEntry(exchange: Exchange, keptBy: string | null): ApiBookEntry {
 function demoBook(exchanges: Exchange[]): ApiBook {
   const suggested = exchanges.find((exchange) => exchange.id === "x2");
   return {
+    ...demoMemories(exchanges),
     entries: [],
     recipes: [],
     coming: [],
@@ -141,26 +152,40 @@ export function useBook(familyId: string | undefined): BookView {
       removeBookEntry(exchangeId, removeKey({ exchangeId }), await account.token()),
     onSuccess: reread,
   });
+  // What this reader kept just now, lit at once rather than after the book is read again.
+  const [keptNow, setKeptNow] = useState<ReadonlySet<string>>(new Set());
   const keeping = useMutation({
     mutationFn: async (exchangeId: string): Promise<ApiBookKept> => {
       if (!live) return { exchange_id: exchangeId, kept: true };
       return keepBookEntry(exchangeId, keepKey({ exchangeId }), await account.token());
     },
     onSuccess: async (kept) => {
+      if (kept.kept) setKeptNow((now) => new Set(now).add(kept.exchange_id));
       if (!live && kept.kept) {
-        queries.setQueryData<ApiBook>(queryKey, (book) => {
-          const exchange = exchangesFixture().find((x) => x.id === kept.exchange_id);
-          if (book === undefined || exchange === undefined) return book;
-          return {
-            ...book,
-            entries: [demoEntry(exchange, "Mia"), ...book.entries],
-            suggestions: book.suggestions.filter((item) => item.exchange_id !== kept.exchange_id),
-          };
-        });
+        queries.setQueryData<ApiBook>(queryKey, (book) =>
+          book === undefined ? book : keptInDemo(book, kept.exchange_id),
+        );
       }
       await reread();
     },
   });
+  // A story's memories, kept one after another with one key each, so a retry keeps none twice.
+  const [keepingAll, setKeepingAll] = useState<ReadonlySet<string>>(new Set());
+  const keepAll = (exchangeIds: string[]) => {
+    if (keepingAll.size > 0) return;
+    setKeepingAll(new Set(exchangeIds));
+    void (async () => {
+      try {
+        for (const exchangeId of exchangeIds) {
+          await keeping.mutateAsync(exchangeId);
+        }
+      } catch {
+        // keepFailed says so; what was kept stays kept.
+      } finally {
+        setKeepingAll(new Set());
+      }
+    })();
+  };
   const dismissing = useMutation({
     mutationFn: async (exchangeId: string) => {
       if (!live) return;
@@ -187,7 +212,13 @@ export function useBook(familyId: string | undefined): BookView {
     coming: read.data?.coming ?? [],
     recipes: read.data?.recipes ?? [],
     suggestions: read.data?.suggestions ?? [],
-    keptIds: new Set(entries.map((entry) => entry.exchange_id)),
+    moments: read.data?.moments,
+    stories: read.data?.stories ?? [],
+    keptIds: new Set([
+      ...entries.map((entry) => entry.exchange_id),
+      ...(read.data?.moments ?? []).filter((item) => item.kept).map((item) => item.exchange_id),
+      ...keptNow,
+    ]),
     demo,
     loading: live && read.isPending,
     trouble: read.isError,
@@ -198,11 +229,17 @@ export function useBook(familyId: string | undefined): BookView {
     removing: removing.isPending,
     keep: (exchangeId) => keeping.mutate(exchangeId),
     keepingId: keeping.isPending ? keeping.variables : undefined,
+    keepAll,
+    keepingIds:
+      keepingAll.size > 0
+        ? keepingAll
+        : new Set(keeping.isPending && keeping.variables !== undefined ? [keeping.variables] : []),
     refused:
       last !== undefined && !last.kept && last.reason !== undefined
         ? { exchangeId: last.exchange_id, reason: last.reason }
         : undefined,
     keepFailed: keeping.isError,
+    failedId: keeping.isError ? keeping.variables : undefined,
     dismiss: (exchangeId) => dismissing.mutate(exchangeId),
   };
 }

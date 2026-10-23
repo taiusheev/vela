@@ -1,25 +1,22 @@
-# Memories the family keeps (ADR-50), in the demo: Vela suggests one of her answers worth keeping,
-# an organiser keeps another with "Keep", and both are counted in the family book.
+# Memories the family keeps (ADR-50, ADR-51), in the demo: an organiser taps the heart on one of
+# her memories, it is lit as kept, and the family book opens with it as a page signed by her.
 url: ${APP_URL}
-name: An organiser keeps her answers for good, and Vela suggests one
+name: An organiser keeps a memory with the heart, and it is a page in the family book
 tags:
   - demo
 ---
 - launchApp
 - openLink: ${APP_URL}/exchanges
-- assertVisible: "Worth keeping?"
-- assertVisible: "“Both of you, but only Mia listened about the butter.”"
-- tapOn: "Not this one"
-- assertNotVisible: "Worth keeping?"
-# On the web, Maestro's id is the accessible label; the newest answer's Keep comes first.
+- assertVisible: "Little things worth remembering.*"
+# On the web, Maestro's id is the accessible label; the newest memory's heart comes first.
 - tapOn:
-    id: "Keep for good"
+    id: "Keep this memory"
     index: 0
 - assertVisible:
-    id: "Kept for good"
-- scrollUntilVisible:
-    element: "Family book"
-    direction: UP
-- tapOn: "Family book"
-- assertVisible: "0 stories · 1 kept answer · 0 recipes"
+    id: "Kept in the family book"
+- assertVisible: "Kept 1"
+- tapOn:
+    id: "The family book"
+- assertVisible: "1 memory"
 - assertVisible: "Kept by Mia"
+- assertVisible: "— .*"

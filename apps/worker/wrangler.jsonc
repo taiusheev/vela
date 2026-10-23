@@ -287,7 +287,9 @@
     // On: each person's own memories in the app (privacy-notice v7 wording, 22 Oct 2026).
     "RICH_MEMORIES": "on",
     // On: screened, ordinary answers may become private memory suggestions (founder, 23 Oct 2026).
-    "MEMORY_DISCOVERY": "on"
+    "MEMORY_DISCOVERY": "on",
+    // On: stories gathered from her memories, in her own words (ADR-51, notice v9 draft).
+    "MEMORY_STORIES": "on"
   },
 
   "env": {
@@ -416,6 +418,9 @@
         // On: staging holds test families only; the founder approved the screening after the live
         // eval run of 23 Oct 2026 and asked for it in the test version only.
         "MEMORY_DISCOVERY": "on",
+        // On: staging holds test families only. Stories gathered from memories (ADR-51); the
+        // notice v9 wording awaits the founder.
+        "MEMORY_STORIES": "on",
         // Technical plan 2.3: each reconcile reads production's health check from this account
         // and tells staging's admin chat when it stays down (src/peer-health.ts).
         "PEER_HEALTHZ_URL": "https://vela.vela-light.workers.dev/healthz"
@@ -531,6 +536,8 @@
         "RICH_MEMORIES": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, with RICH_MEMORIES.
         "MEMORY_DISCOVERY": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts, until notice v9 (stories) is live.
+        "MEMORY_STORIES": "off",
         // Technical plan 2.3: each reconcile reads staging's health check from this account, so
         // staging and production watch each other from different Cloudflare accounts.
         "PEER_HEALTHZ_URL": "https://vela.vela-light-staging.workers.dev/healthz"

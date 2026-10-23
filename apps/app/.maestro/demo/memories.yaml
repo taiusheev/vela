@@ -1,7 +1,7 @@
-# Memories in the demo (consumer flow rows 31–34): her words a week at a time, searchable, and
-# narrowed to her stories.
+# Memories in the demo (ADR-51): her memories a week at a time, found by a word, and a story
+# gathered from three mornings in her own words.
 url: ${APP_URL}
-name: Memories groups her words by week and finds a word
+name: Memories groups her memories by week, finds a word, and tells a story in her words
 tags:
   - demo
 ---
@@ -9,14 +9,16 @@ tags:
 # Opened by itself: Today stays mounted behind a tab it opened, and its words would count as shown.
 - openLink: ${APP_URL}/exchanges
 - assertVisible: "This week"
-# The oldest example is nine days old: on Monday/Tuesday it is two calendar weeks back.
-# Keep checking a distinct older-week heading without requiring one weekday's relative label.
+# The oldest example is twelve days old: always at least one calendar week back.
 - assertVisible: "Last week|Week of .*"
-- tapOn: "Search her words"
+- tapOn:
+    id: "Search memories"
 - inputText: "butter"
-- assertVisible: "Both of you, but only Mia listened about the butter."
-- assertNotVisible: "The tomatoes finally turned. I picked three before breakfast and left them on the sill."
+- assertVisible: ".*only Mia listened about the butter.*"
+- assertNotVisible: ".*The tomatoes finally turned.*"
 - eraseText
-- tapOn: "Stories"
-- assertVisible: "It was a bakery, then a bookshop. We queued there for bread in the winter."
-- assertNotVisible: "Both of you, but only Mia listened about the butter."
+- tapOn: "Stories.*"
+- assertVisible: ".*Last summer's tomatoes.*"
+- tapOn: ".*Last summer's tomatoes.*"
+- assertVisible: "Told across 3 mornings"
+- assertVisible: "I saved the seeds from last summer's tomatoes in an envelope by the radio."
