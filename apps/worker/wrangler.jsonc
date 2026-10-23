@@ -282,6 +282,9 @@
     "BOOK": "on",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
     "WEEKLY_INSIGHT": "on",
+    "WEEKLY_SUPPORT": "off",
+    "WEEKLY_SUPPORT_NOTICE": "",
+    "WEEKLY_SUPPORT_FAMILIES": "",
     // On: an organiser may have Vela's suggestion sent in their name (first test, 16 Oct 2026).
     "SEND_AS_ME": "on",
     // On: each person's own memories in the app (privacy-notice v7 wording, 22 Oct 2026).
@@ -408,6 +411,9 @@
         "BOOK": "on",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
+        "WEEKLY_SUPPORT": "off",
+        "WEEKLY_SUPPORT_NOTICE": "",
+        "WEEKLY_SUPPORT_FAMILIES": "",
         // On: staging holds test families only (first test, 16 Oct 2026).
         "SEND_AS_ME": "on",
         // On: staging holds test families only; the founder asked to try Memories on iPhone there
@@ -522,6 +528,9 @@
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
+        "WEEKLY_SUPPORT": "off",
+        "WEEKLY_SUPPORT_NOTICE": "",
+        "WEEKLY_SUPPORT_FAMILIES": "",
         // On since privacy-notice.v5 and consent-script.v4 say an organiser may let Vela send its
         // suggestion in their name (ADR-49, founder's approval of 17 Oct 2026). It does nothing for a
         // family until one of its organisers chooses "Send it as me" in the app.

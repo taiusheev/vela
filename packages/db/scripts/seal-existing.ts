@@ -27,6 +27,9 @@ type FieldSpec = {
 };
 
 const fields: readonly FieldSpec[] = [
+  { table: "weekly_support_permissions", keys: ["member_id"], column: "audience", kind: "jsonb" },
+  { table: "weekly_support_presentations", keys: ["id"], column: "audience", kind: "jsonb" },
+  { table: "weekly_support_selections", keys: ["id"], column: "source_digest", kind: "text" },
   { table: "answers", keys: ["id"], column: "transcript", kind: "text" },
   {
     table: "answers",

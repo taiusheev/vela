@@ -731,3 +731,42 @@ In her chat, "memories off" (`關閉回憶` / `关闭回忆`) sets `members.memo
 entry of hers out of the book as removed by her (stories included), and deletes her suggestions;
 "memories on" (`開啟回憶` / `开启回忆`) clears it without bringing anything back.
 
+
+
+## Private-test weekly support report (new purpose, off by default)
+
+Authenticated, no-store routes under `/v1/families/:familyId/weekly-support/:memberId`.
+These are separate from `weekly-read` and founder-only insights. Requires explicit environment
+switch, exact approved-purpose version and a bounded family allowlist; all actual configs are off.
+The parent must have their own authenticated linked app membership. Session and normal pilot
+admission apply. Missing/unauthorised scope returns 404 without revealing source existence.
+Parent-only permission attempted by an organiser returns 403. Stale/expired consent or source,
+invalid relevance and full 3-offer capacity return 409. Strict schemas/bodies and missing write
+keys return 400. Writes require `Idempotency-Key`, active session and `runApiMutation`; response
+is `{saved:true}` (prepare: `{id}`). Receipts hold no report words. Stop is not gated by processing,
+notice approval or the cohort list, but always requires the author's current identity/membership.
+
+| Method/suffix | Behaviour |
+| --- | --- |
+| GET base | Support for the current local week, source-backed reviewed draft and current permission; organiser source review list only after the parent's yes and only for named organisers. Parent sees own approved draft without activity counts/private organiser notes. |
+| POST `/presentations` `{}` | Parent only; five-minute, one-use permission screen ID bound to current owner/account/membership, prior consent revision and named organiser list. |
+| GET `/presentations/:id` | Parent only; exact proposed purpose text and current named readers. Stale names/roster/account/consent/version conflict. |
+| POST `/permission` `{presentation_id,answer:"yes"|"no"}` | Parent choice only. Rotates permission revision and clears old review selections. Yes permits only subsequent source messages. |
+| POST `/review` `{source_id,source_digest,kind,ordinary_confirmed:true,valid_until}` | Named organiser only, full-message review; fixed `shared_interest`/`company`/`practical_help` kind; future deadline at most seven days. No authored advice or model output. Source is reloaded/screened; digest binds review to exact words. |
+| POST `/remove` `{source_id}` | Author or currently named organiser removes a contribution. |
+| POST `/stop` `{}` | Author only; rotates/withdraws permission, clears audience and selection/presentation references atomically, including when processing/config/cohort is off. |
+
+Contract schemas are in `packages/contracts/src/weekly-support.ts`. Every read revalidates current
+source revision/digest, expiry, sensitivity, author and recipient membership/account grants,
+permission version/text fingerprint and reviewed template. No rendered quotation is stored. No
+messenger send, AI request, subscription write, share expansion or data export is performed.
+Client reports remain session-memory only; read errors hide prior quotes. Source correction,
+withdrawal/deletion and retention cannot be bypassed through historical rendered reports. Parent
+membership locks serialise mutations; independent PostgreSQL tests cover review vs stop in both
+orders. Full cohort, notice and signed-device gates: `infra/runbooks/weekly-support-private-test.md`.
+
+Approved sources are loaded by exact ID, separately from the bounded current-week discovery list.
+A still-relevant offer survives the Sunday/Monday boundary and newer messages until its own
+deadline. The source's original week/date is revalidated independently; the report range names the
+current support week. Capacity counts all still-valid approvals, not just the discovery page, and
+invalid/expired references are pruned inside the same locked mutation.

@@ -52,6 +52,14 @@ msgstr "{count, plural, other {到目前有 # 天有訊息}}"
 msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
 msgstr "{count, plural, other {這週有 # 天有訊息}}"
 
+#: app/weekly-report.tsx
+msgid "{count} days"
+msgstr "{count} 天"
+
+#: app/weekly-report.tsx
+msgid "{count} days · selected"
+msgstr "{count} 天・已選擇"
+
 #: src/components/onboarding/questions.tsx
 msgid "{count} of 4 panes lit · {chapterName}"
 msgstr "{count} / 4 扇窗已點亮 · {chapterName}"
@@ -347,12 +355,17 @@ msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on
 msgstr "{name}的 30 天試用已經結束了。每天的提問和問答會照常進行。"
 
 #: app/(tabs)/sunday.tsx
+#: app/weekly-report.tsx
 msgid "{name}'s week"
 msgstr "{name}的這一週"
 
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s window is ready."
 msgstr "{name}的窗已經準備好了。"
+
+#: app/weekly-report.tsx
+msgid "{name}'s words · {date}"
+msgstr "{name}的原話・{date}"
 
 #: src/components/first-week.tsx
 msgid "{name}'s words this week"
@@ -466,9 +479,29 @@ msgstr "📷 用照片回覆"
 msgid "$79 a year"
 msgstr "每年 79 美元"
 
+#: app/weekly-report.tsx
+msgid "1 day"
+msgstr "1 天"
+
+#: app/weekly-report.tsx
+msgid "1 day · selected"
+msgstr "1 天・已選擇"
+
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "完成連結不代表早晨訊息已送達或已收到回覆。"
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words as an interest to ask about."
+msgstr "家庭聯絡人選了這段話，可以聊聊這個興趣。"
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words for an optional invitation."
+msgstr "家庭聯絡人選了這段話，可以問問是否想有人陪伴。"
+
+#: app/weekly-report.tsx
+msgid "A family organiser selected these words for an optional offer of help."
+msgstr "家庭聯絡人選了這段話，可以問問是否需要幫忙。"
 
 #: app/(tabs)/index.tsx
 msgid "A hello for {recipient}"
@@ -732,6 +765,10 @@ msgstr "今天已回覆"
 msgid "Anyone"
 msgstr "大家"
 
+#: app/weekly-report.tsx
+msgid "Approve this offer for {count} days"
+msgstr "確認這項提議，保留 {count} 天"
+
 #: src/components/reminders.tsx
 #: src/components/today-hero.tsx
 msgid "Ask {name}"
@@ -926,6 +963,10 @@ msgstr "再次確認連結"
 msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 msgstr "請確認你使用的是加入時的電子郵件地址。如果沒有收到驗證碼，請查看垃圾郵件資料夾，再試一次。"
 
+#: app/weekly-report.tsx
+msgid "Check this offer"
+msgstr "確認這項提議"
+
 #: app/help.tsx
 msgid "Check Today and your parent's usual chat. If the message still has not arrived, contact Vela support. You can always contact your family directly."
 msgstr "請查看「今天」和爸媽平常使用的聊天室。如果訊息仍未送達，請聯絡 Vela 支援。你隨時都可以直接聯絡家人。"
@@ -998,6 +1039,10 @@ msgstr "選一個早晨，Vela 會在那天送出。"
 msgid "Choose this exchange's family on Today to play or send attachments."
 msgstr "請在「今天」選擇這段對話所屬的家庭，再播放或傳送附件。"
 
+#: app/weekly-report.tsx
+msgid "Choose words you understand. Check the whole message for sensitive details and confirm the offer still fits."
+msgstr "請選擇你讀得懂的內容。查看整則訊息是否含有敏感細節，並確認提議仍然合適。"
+
 #: app/sign-in.tsx
 msgid "Choose your country, type your number as you would at home, and we text you a code."
 msgstr "選擇您的國家，照平常的方式輸入手機號碼，我們會用簡訊傳驗證碼給您。"
@@ -1015,6 +1060,10 @@ msgstr "關閉"
 #: src/components/onboarding/questions.tsx
 msgid "Close by"
 msgstr "住在附近的人"
+
+#: app/weekly-report.tsx
+msgid "Close message review"
+msgstr "關閉訊息確認"
 
 #: src/components/today-feed.tsx
 msgid "Close notifications"
@@ -1126,11 +1175,16 @@ msgstr "這週有沒有需要我幫忙準備一餐、跑腿或接送？跟我說
 msgid "Could someone help carry my groceries home next Friday?"
 msgstr "下星期五有人可以幫我把買的東西提回家嗎？"
 
+#: app/weekly-report.tsx
+msgid "Could someone help me sort the old photos?"
+msgstr "有人可以幫我整理舊照片嗎？"
+
 #: src/components/telegram-family-link.tsx
 msgid "Create a new connection"
 msgstr "建立新的連結"
 
 #. who the light is for
+#: app/weekly-report.tsx
 #: src/data/onboarding.ts
 #: src/data/today.ts
 msgid "Dad"
@@ -1193,6 +1247,10 @@ msgstr "請說明發生了什麼問題，以及發生的時間。請勿傳送密
 msgid "Disappears on {until} unless you keep it."
 msgstr "若不保留，將在{until}消失。"
 
+#: app/weekly-report.tsx
+msgid "Discard this draft"
+msgstr "放棄這份草稿"
+
 #: app/(tabs)/index.tsx
 msgid "Dismiss"
 msgstr "關閉"
@@ -1234,6 +1292,10 @@ msgstr "這個月稍早"
 msgid "Eastern"
 msgstr "東部時間"
 
+#: app/weekly-report.tsx
+msgid "Edit an offer before sending"
+msgstr "編輯提議，再傳送"
+
 #: app/sign-in.tsx
 msgid "Email"
 msgstr "電子郵件"
@@ -1245,6 +1307,10 @@ msgstr "寄信給 Vela 支援"
 #: app/settings.tsx
 msgid "English pilot"
 msgstr "英語試辦"
+
+#: app/weekly-report.tsx
+msgid "English private-test wording"
+msgstr "私人測試的英文說明"
 
 #: app/morning-settings.tsx
 msgid "Enter a time such as 08:30 and choose a supported language."
@@ -1265,6 +1331,10 @@ msgstr "錯誤代碼：{code}"
 #: src/components/onboarding/questions.tsx
 msgid "Every morning starts with it."
 msgstr "每天的早安訊息都從這個稱呼開始。"
+
+#: app/weekly-report.tsx
+msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
+msgstr "以下每項提議都經過家庭聯絡人確認。收到提議的人自行決定是否有幫助，不會自動傳送訊息。"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Everyone"
@@ -1289,6 +1359,10 @@ msgstr "範例早晨"
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
 msgstr "這只是範例，沒有送出任何訊息。"
+
+#: app/weekly-report.tsx
+msgid "Example private report · no messages sent"
+msgstr "私人報告範例・不會傳送訊息"
 
 #: app/weekly-support-preview.tsx
 msgid "Example report · Dad · 19–25 October"
@@ -1585,6 +1659,10 @@ msgstr "{name}喜歡怎麼回覆？"
 msgid "How it reaches {name}"
 msgstr "{name}收到的樣子"
 
+#: app/weekly-report.tsx
+msgid "How long will this offer still be relevant?"
+msgstr "這項提議在多久以內仍然合適？"
+
 #: app/settings.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
 msgstr "安靜通知最後的結果，包括您家和整個 Vela"
@@ -1606,6 +1684,10 @@ msgstr "Vela 的表現"
 msgid "Hug"
 msgstr "抱抱"
 
+#: app/weekly-report.tsx
+msgid "I agree for these named people"
+msgstr "我同意讓以上列出的人閱讀"
+
 #: src/components/onboarding/story.tsx
 msgid "I already have an account"
 msgstr "我已經有帳號了"
@@ -1613,6 +1695,10 @@ msgstr "我已經有帳號了"
 #: app/weekly-support-preview.tsx
 msgid "I can help bring the groceries home. What time next Friday would suit you?"
 msgstr "我可以幫你把買的東西提回家，下星期五什麼時候方便？"
+
+#: app/weekly-report.tsx
+msgid "I checked: ordinary words, understood, still relevant"
+msgstr "我已確認：一般內容、讀得懂、仍然合適"
 
 #: src/components/onboarding/finish.tsx
 msgid "I have sent it"
@@ -2034,6 +2120,10 @@ msgstr "正在載入家人的問答…"
 msgid "Looking for your memories…"
 msgstr "正在找你的回憶…"
 
+#: app/weekly-report.tsx
+msgid "Make time for an interest"
+msgstr "留點時間聊聊興趣"
+
 #: app/weekly-support-preview.tsx
 msgid "Make time for something Dad enjoys"
 msgstr "留點時間一起做爸爸喜歡的事"
@@ -2212,6 +2302,10 @@ msgstr "媽媽今天還沒回覆。"
 msgid "No answer recorded today"
 msgstr "今天還沒有收到回覆"
 
+#: app/weekly-report.tsx
+msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
+msgstr "本週同意之後，還沒有符合條件的訊息。不需要憑空補上內容。"
+
 #: app/ask.tsx
 msgid "No morning in the next two weeks is free for a photo ask. Send it as words, or try again later."
 msgstr "接下來兩週都沒有空出來的早上可以放照片提問。請改用文字提問，或稍後再試一次。"
@@ -2227,6 +2321,10 @@ msgstr "這支手機上沒有照片"
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "過去 12 個月沒有安靜通知。"
+
+#: app/weekly-report.tsx
+msgid "No reviewed offers yet. There is limited information here; Vela will not fill the gaps with assumptions."
+msgstr "還沒有確認過的提議。目前資訊有限，Vela 不會用猜測填補空白。"
 
 #: src/components/family-book.tsx
 msgid "No stories have been kept here yet."
@@ -2253,6 +2351,10 @@ msgstr "今天還沒有回覆。"
 #: app/exchange/[id].tsx
 msgid "No word yet."
 msgstr "還沒有回覆。"
+
+#: app/weekly-report.tsx
+msgid "No, keep reports off"
+msgstr "不同意，維持關閉報告"
 
 #: src/components/today-feed.tsx
 msgid "Nobody has written back yet"
@@ -2395,9 +2497,14 @@ msgstr "問問要不要聊個電話或一起坐坐，留點時間聽聽這週的
 msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
 msgstr "問問需不需要幫忙準備一餐、跑腿或接送，看看怎樣能讓這週輕鬆一點。"
 
+#: app/weekly-report.tsx
 #: src/components/weekly-support.tsx
 msgid "Offer practical help"
 msgstr "問問需要什麼幫忙"
+
+#: app/weekly-report.tsx
+msgid "Offer some company"
+msgstr "問問是否想有人陪伴"
 
 #: src/components/weekly-support.tsx
 msgid "Offer some time together"
@@ -2454,6 +2561,7 @@ msgstr "一天一次"
 
 #: app/(tabs)/sunday.tsx
 #: app/parent.tsx
+#: app/weekly-report.tsx
 msgid "One moment…"
 msgstr "請稍等…"
 
@@ -2473,6 +2581,10 @@ msgstr "照片只留在這部裝置，登出時會移除。"
 msgid "Open my family"
 msgstr "開啟我的家人"
 
+#: src/components/private-report-entry.tsx
+msgid "Open private report example"
+msgstr "開啟私人報告範例"
+
 #: app/settings.tsx
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
@@ -2482,6 +2594,10 @@ msgstr "開啟設定"
 #: src/components/telegram-family-link.tsx
 msgid "Open Telegram again"
 msgstr "再次開啟 Telegram"
+
+#: src/components/private-report-entry.tsx
+msgid "Open the weekly support report"
+msgstr "開啟每週支持報告"
 
 #: app/(tabs)/index.tsx
 msgid "Open this exchange"
@@ -2592,6 +2708,10 @@ msgstr "{name}附近的人"
 msgid "People nearby"
 msgstr "附近的聯絡人"
 
+#: app/weekly-report.tsx
+msgid "People who can read this report"
+msgstr "可以閱讀這份報告的人"
+
 #: src/data/onboarding.ts
 msgid "Perth"
 msgstr "伯斯"
@@ -2696,6 +2816,10 @@ msgstr "隱私與協助"
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
 
+#: app/weekly-report.tsx
+msgid "Private test · reviewed family support"
+msgstr "私人測試・家人確認過的支持提議"
+
 #: app/profile.tsx
 msgid "Profile"
 msgstr "個人資料"
@@ -2737,6 +2861,10 @@ msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr "看家庭故事書"
+
+#: app/weekly-report.tsx
+msgid "Read the original conversation"
+msgstr "閱讀原本的對話"
 
 #: app/my-memories.tsx
 #: app/settings.tsx
@@ -2792,6 +2920,10 @@ msgstr "錄音中… {time}"
 msgid "Relative"
 msgstr "親戚"
 
+#: app/weekly-report.tsx
+msgid "Reload report"
+msgstr "重新載入報告"
+
 #: src/components/reminders.tsx
 msgid "Remind me to ask how it went"
 msgstr "之後提醒我問問看"
@@ -2830,6 +2962,10 @@ msgstr "移除求助訊息範例"
 #: app/my-memories.tsx
 msgid "Remove this memory?"
 msgstr "要移除這則回憶嗎？"
+
+#: app/weekly-report.tsx
+msgid "Remove this offer"
+msgstr "移除這項提議"
 
 #: app/my-memories.tsx
 msgid "Removed from your memories."
@@ -2888,9 +3024,29 @@ msgstr "重新送出已保存的提問"
 msgid "Retry saved reply"
 msgstr "重新送出已保存的回覆"
 
+#: app/weekly-report.tsx
+msgid "Review confirmed"
+msgstr "已確認內容"
+
 #: app/weekly-support-preview.tsx
 msgid "Review draft with example messages. Nothing is sent."
 msgstr "使用範例訊息的審閱草稿，不會送出任何訊息。"
+
+#: app/weekly-report.tsx
+msgid "Review more messages"
+msgstr "查看其他訊息"
+
+#: app/weekly-report.tsx
+msgid "Review this week's messages"
+msgstr "確認本週的訊息"
+
+#: app/weekly-report.tsx
+msgid "Review who can read my report"
+msgstr "查看誰可以閱讀我的報告"
+
+#: app/weekly-report.tsx
+msgid "Reviewed by {reviewer} · available until {date}"
+msgstr "由{reviewer}確認・保留至 {date}"
 
 #: src/device/useParent.ts
 msgid "Rice porridge"
@@ -3169,6 +3325,10 @@ msgstr "在平常使用的聊天中分享專屬連結。長輩會在 Telegram �
 msgid "Share their chat link"
 msgstr "分享對方的聊天連結"
 
+#: app/weekly-report.tsx
+msgid "Shared with you and: {readerNames}"
+msgstr "你和以下的人可以閱讀：{readerNames}"
+
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr "無法開啟分享。請選取並複製下方連結，再傳給長輩。若連結已到期，請再次分享以取得新連結。"
@@ -3370,6 +3530,10 @@ msgstr "先停下來聽一次"
 msgid "Stop recording"
 msgstr "停止錄音"
 
+#: app/weekly-report.tsx
+msgid "Stop reports about me"
+msgstr "停止關於我的報告"
+
 #: app/(tabs)/exchanges.tsx
 #: src/components/family-book.tsx
 msgid "Stories"
@@ -3530,6 +3694,10 @@ msgstr "沒有成功，什麼都沒有改變。請再試一次。"
 #: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "沒有成功。請稍後再試一次。"
+
+#: app/weekly-report.tsx
+msgid "That did not save. Try again when you are connected."
+msgstr "未能儲存，請在連線後再試一次。"
 
 #: app/sign-in.tsx
 msgid "That did not work. Check it and try again."
@@ -3706,6 +3874,10 @@ msgstr "回憶問題的內容已更新"
 msgid "The message comes half an hour later, so it’s there when {name} first picks up the phone."
 msgstr "訊息會在半小時後送到，{name}一拿起手機就看得到。"
 
+#: app/weekly-report.tsx
+msgid "The message or permission changed. Reload and review it again."
+msgstr "訊息或同意狀態已變更，請重新載入並確認。"
+
 #: app/(tabs)/index.tsx
 msgid "The next morning will appear here once it arrives. You can get an ask ready now."
 msgstr "下一則晨間訊息到來後，會顯示在這裡。你現在就可以準備一個問題。"
@@ -3749,6 +3921,10 @@ msgstr "試辦免費，不需要付款，也不需要信用卡。試辦期間，
 #: app/(tabs)/index.tsx
 msgid "The quiet notice could not be reached just now. Contact your parent directly if you are concerned."
 msgstr "暫時無法取得安靜通知。如果您擔心，請直接聯絡您的父母。"
+
+#: app/weekly-report.tsx
+msgid "The report could not be reached. Reload to check current access."
+msgstr "目前無法取得報告，請重新載入以確認閱讀權限。"
 
 #: src/components/onboarding/questions.tsx
 msgid "The same time as yours."
@@ -3935,6 +4111,14 @@ msgstr "這支手機已經不再設定給 Vela 了。請家人重新設定。"
 #: src/components/photo-slots.tsx
 msgid "This photo could not be used. Choose another."
 msgstr "這張照片無法使用，請換一張。"
+
+#: app/weekly-report.tsx
+msgid "This private report is not available for this account or family."
+msgstr "這個帳號或家庭目前無法使用私人報告。"
+
+#: app/weekly-report.tsx
+msgid "This report needs the parent's own permission. An organiser cannot agree for them."
+msgstr "這份報告需要爸媽本人同意，家庭聯絡人不能代為同意。"
 
 #: src/audio/VoicePlayback.tsx
 msgid "This voice is no longer available."
@@ -4345,6 +4529,14 @@ msgstr "驗證代碼"
 msgid "Vietnam"
 msgstr "越南"
 
+#: app/weekly-report.tsx
+msgid "View as family organiser"
+msgstr "查看家庭聯絡人的畫面"
+
+#: app/weekly-report.tsx
+msgid "View as parent"
+msgstr "查看爸媽的畫面"
+
 #: src/components/today-hero.tsx
 msgid "View quiet notice"
 msgstr "查看今天還沒回覆的提醒"
@@ -4485,6 +4677,7 @@ msgstr "家人看得到您的哪些資訊"
 msgid "What they call you"
 msgstr "對方怎麼稱呼您"
 
+#: app/weekly-report.tsx
 #: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
 msgid "What would help this week?"
@@ -4584,9 +4777,21 @@ msgstr "工作與建議"
 msgid "Worth keeping?"
 msgstr "值得保留嗎？"
 
+#: app/weekly-report.tsx
+msgid "Would a little help with this be welcome? Tell me what would work for you."
+msgstr "這件事需要我幫點忙嗎？跟我說怎樣比較方便。"
+
 #: src/components/weekly-support.tsx
 msgid "Would you like a call or some company this week? When would suit you?"
 msgstr "這週想不想聊個電話，或找個時間一起坐坐？什麼時候方便？"
+
+#: app/weekly-report.tsx
+msgid "Would you like a call or some company? What would suit you?"
+msgstr "想通個電話，或有人陪陪你嗎？怎樣比較方便？"
+
+#: app/weekly-report.tsx
+msgid "Would you like to tell me more about this on our next call?"
+msgstr "下次通電話時，想再跟我聊聊這件事嗎？"
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {parentName}"
@@ -4688,6 +4893,10 @@ msgstr "等這位家人回覆之後，您就可以回應。"
 msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
 msgstr "您已選擇分享連結，但尚未確認送達。長輩同意後，Vela 會顯示狀態。"
 
+#: app/weekly-report.tsx
+msgid "You decide whether Vela can help prepare this report from messages you share after agreeing."
+msgstr "是否讓 Vela 使用你同意後分享的訊息協助準備報告，由你決定。"
+
 #: src/components/family-book.tsx
 msgid "You need"
 msgstr "材料"
@@ -4743,6 +4952,10 @@ msgstr "給{outcomeRecipient}的問題已準備好，將於 {date}傳送。"
 #: app/(tabs)/index.tsx
 msgid "Your ask for {outcomeRecipient} is waiting for an available morning."
 msgstr "給{outcomeRecipient}的問題正在等待有空的早晨。"
+
+#: app/weekly-report.tsx
+msgid "Your choice about weekly reports"
+msgstr "你對每週報告的選擇"
 
 #: src/components/app-privacy.tsx
 msgid "Your choice could not be saved. Please try again."
