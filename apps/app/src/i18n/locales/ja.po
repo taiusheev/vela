@@ -2289,10 +2289,6 @@ msgstr ""
 msgid "No answer from Mom yet today."
 msgstr ""
 
-#: src/components/today-hero.tsx
-msgid "No answer recorded today"
-msgstr ""
-
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
 msgstr ""
@@ -2343,12 +2339,11 @@ msgstr ""
 msgid "No word yet."
 msgstr ""
 
-#: src/components/today-glance.tsx
 #: app/weekly-report.tsx
 msgid "No, keep reports off"
 msgstr ""
 
-#: src/components/today-feed.tsx
+#: src/components/today-glance.tsx
 msgid "Nobody has written back yet"
 msgstr ""
 
@@ -2587,12 +2582,11 @@ msgstr ""
 msgid "Open Telegram again"
 msgstr ""
 
-#: src/components/today-glance.tsx
 #: src/components/private-report-entry.tsx
 msgid "Open the weekly support report"
 msgstr ""
 
-#: app/(tabs)/index.tsx
+#: src/components/today-glance.tsx
 msgid "Open this exchange"
 msgstr ""
 
@@ -4505,7 +4499,6 @@ msgstr ""
 msgid "Vietnam"
 msgstr ""
 
-#: src/components/today-glance.tsx
 #: app/weekly-report.tsx
 msgid "View as family organiser"
 msgstr ""
@@ -4514,7 +4507,7 @@ msgstr ""
 msgid "View as parent"
 msgstr ""
 
-#: src/components/today-hero.tsx
+#: src/components/today-glance.tsx
 msgid "View quiet notice"
 msgstr ""
 

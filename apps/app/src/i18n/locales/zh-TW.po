@@ -2296,10 +2296,6 @@ msgstr "下一個空的早上"
 msgid "No answer from Mom yet today."
 msgstr "媽媽今天還沒回覆。"
 
-#: src/components/today-hero.tsx
-msgid "No answer recorded today"
-msgstr "今天還沒有收到回覆"
-
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
 msgstr "本週同意之後，還沒有符合條件的訊息。不需要憑空補上內容。"
@@ -2350,12 +2346,11 @@ msgstr "今天還沒有回覆。"
 msgid "No word yet."
 msgstr "還沒有回覆。"
 
-#: src/components/today-glance.tsx
 #: app/weekly-report.tsx
 msgid "No, keep reports off"
 msgstr "不同意，維持關閉報告"
 
-#: src/components/today-feed.tsx
+#: src/components/today-glance.tsx
 msgid "Nobody has written back yet"
 msgstr "還沒有人回覆"
 
@@ -2594,12 +2589,11 @@ msgstr "開啟設定"
 msgid "Open Telegram again"
 msgstr "再次開啟 Telegram"
 
-#: src/components/today-glance.tsx
 #: src/components/private-report-entry.tsx
 msgid "Open the weekly support report"
 msgstr "開啟每週支持報告"
 
-#: app/(tabs)/index.tsx
+#: src/components/today-glance.tsx
 msgid "Open this exchange"
 msgstr "打開這次交流"
 
@@ -4512,7 +4506,6 @@ msgstr "驗證代碼"
 msgid "Vietnam"
 msgstr "越南"
 
-#: src/components/today-glance.tsx
 #: app/weekly-report.tsx
 msgid "View as family organiser"
 msgstr "查看家庭聯絡人的畫面"
@@ -4521,7 +4514,7 @@ msgstr "查看家庭聯絡人的畫面"
 msgid "View as parent"
 msgstr "查看爸媽的畫面"
 
-#: src/components/today-hero.tsx
+#: src/components/today-glance.tsx
 msgid "View quiet notice"
 msgstr "查看今天還沒回覆的提醒"
 
