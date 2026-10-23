@@ -70,6 +70,7 @@ export function ChatComposer({
         }}
       >
         <TextInput
+          testID="chat-input"
           accessibilityLabel={placeholder}
           value={value}
           onChangeText={onChangeText}

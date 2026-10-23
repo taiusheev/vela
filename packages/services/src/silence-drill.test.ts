@@ -201,15 +201,12 @@ const helloArrival = (date: LocalDate = "2026-09-14") =>
     t("en", "arrival.hint"),
   ].join("\n");
 
-const helloRepeat = (date: LocalDate = "2026-09-14") =>
+const helloRepeat = (_date: LocalDate = "2026-09-14") =>
   [
     t("en", "arrival.repeat"),
-    t("en", greetingKeyFor(date), { address: "Mrs Chen" }),
     "",
     t("en", "arrival.hello"),
     t("en", "arrival.hello_signature"),
-    "",
-    t("en", "arrival.hint"),
   ].join("\n");
 
 describe("silence", () => {

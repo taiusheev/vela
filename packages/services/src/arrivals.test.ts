@@ -1286,11 +1286,9 @@ describe("sendRepeat", () => {
     });
     expect(rows[0]?.payload).toMatchObject({
       message: {
-        text: [
-          "In case you missed it:\nHello Mrs Chen, good morning.",
-          "Which soup today?\n— Mia",
-          "Reply with a voice message, or tap a button.",
-        ].join("\n\n"),
+        text: ["No rush — here’s the message from this morning.", "Which soup today?\n— Mia"].join(
+          "\n\n",
+        ),
         media: [{ kind: "image", providerFileId: "photo-1" }],
       },
       ref: { purpose: "repeat", exchangeId: ask.id },
