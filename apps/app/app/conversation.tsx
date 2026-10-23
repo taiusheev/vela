@@ -118,6 +118,7 @@ function Conversation() {
   // The words of a send on its way: "sending" until Vela has them, then "sent" until the
   // conversation, read again, holds them itself (so they never blink out in between).
   const [pending, setPending] = useState<PendingChatMessage[]>([]);
+  const sending = useRef(false);
   const calling = useCallingNumber(day.familyId, light?.memberId);
   const reactKey = useIdempotencyKey("chat-reaction");
   const herId = light?.memberId;
@@ -206,6 +207,9 @@ function Conversation() {
     },
     onError: (_error, { localId }) =>
       setPending((current) => current.filter((message) => message.localId !== localId)),
+    onSettled: () => {
+      sending.current = false;
+    },
   });
 
   const react = useMutation({
@@ -269,8 +273,13 @@ function Conversation() {
   });
   const outstanding = pending.filter((message) => !pendingHasArrived(message, built));
   useEffect(() => {
-    if (outstanding.length !== pending.length) setPending(outstanding);
-  }, [outstanding, pending.length]);
+    if (outstanding.length !== pending.length) {
+      const arrived = pending.filter((message) => !outstanding.includes(message));
+      setPending((current) =>
+        current.filter((message) => !arrived.some((sent) => sent.localId === message.localId)),
+      );
+    }
+  }, [outstanding, pending]);
   for (const message of outstanding) {
     const date = new Date(message.since);
     messages.push({
@@ -417,7 +426,8 @@ function Conversation() {
           placeholder={t`Write to ${name}`}
           sendLabel={invited ? t`Save for when they say yes` : t`Send now`}
           onSend={() => {
-            if (send.isPending || !draft.text.trim()) return;
+            if (sending.current || !draft.text.trim()) return;
+            sending.current = true;
             send.mutate({ text: draft.text.trim(), localId: `pending:${Date.now()}` });
           }}
           {...(moreActions.length === 0 ? {} : { onMore: () => setSheet("more") })}
