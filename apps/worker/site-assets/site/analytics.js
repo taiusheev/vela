@@ -3,6 +3,7 @@
   const root = document.querySelector(".approved-home");
   if (!root) return;
   const key = "vela.analytics.v1";
+  const noticeVersion = "website-usage.v2";
   const language = document.documentElement.lang === "zh-TW" ? "zh-TW" : "en";
   const zh = language === "zh-TW";
   let choice = null;
@@ -11,6 +12,8 @@
   } catch {
     /* Private browsing is fine. */
   }
+  // An earlier yes does not authorise collection under a changed notice. Preserve a no.
+  if (choice?.allowed === true && choice.noticeVersion !== noticeVersion) choice = null;
   const blocked = navigator.doNotTrack === "1" || navigator.globalPrivacyControl === true;
   let enabled = false;
   let id = null;
@@ -21,6 +24,7 @@
     .map((node, i) => ({ node, name: ["hero", "idea", "exchange", "care", "faq", "join"][i] }))
     .filter((item) => item.name);
   const visible = new Set();
+  const pending = new Set();
   const sourceValue = new URLSearchParams(location.search).get("utm_source");
   const source = ["instagram", "facebook", "google", "university"].includes(sourceValue)
     ? sourceValue
@@ -31,13 +35,18 @@
         : "direct";
   function capture(event, properties = {}) {
     if (!enabled || !id || blocked) return;
+    const controller = new AbortController();
+    pending.add(controller);
     void fetch("/analytics/event", {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "omit",
       keepalive: true,
-      body: JSON.stringify({ id, event, language, ...properties }),
-    }).catch(() => {});
+      signal: controller.signal,
+      body: JSON.stringify({ id, event, language, noticeVersion, ...properties }),
+    })
+      .catch(() => {})
+      .finally(() => pending.delete(controller));
   }
   function flush() {
     for (const [section, value] of seconds)
@@ -78,10 +87,18 @@
       id = null;
       seconds.clear();
       seen.clear();
+      for (const controller of pending) controller.abort();
+      pending.clear();
     }
+    const decidedAt = new Date().toISOString();
     choice = allow
-      ? { allowed: true, id: choice?.allowed ? choice.id : crypto.randomUUID() }
-      : { allowed: false };
+      ? {
+          allowed: true,
+          id: choice?.allowed ? choice.id : crypto.randomUUID(),
+          noticeVersion,
+          decidedAt,
+        }
+      : { allowed: false, noticeVersion, decidedAt };
     try {
       localStorage.setItem(key, JSON.stringify(choice));
     } catch {
@@ -109,7 +126,7 @@
   void fetch("/analytics/config", { credentials: "omit" })
     .then((r) => r.json())
     .then((config) => {
-      if (!config.enabled) return;
+      if (!config.enabled || config.noticeVersion !== noticeVersion) return;
       const region = document.createElement("p");
       region.textContent =
         config.region === "eu"

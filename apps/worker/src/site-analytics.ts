@@ -5,9 +5,12 @@ import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { sameSiteOrigin } from "./site-host.ts";
 
+const NOTICE_VERSION = "website-usage.v2";
+
 const input = z
   .object({
     id: z.uuid(),
+    noticeVersion: z.literal(NOTICE_VERSION),
     event: z.enum([
       "site_viewed",
       "section_viewed",
@@ -39,7 +42,11 @@ export function siteAnalyticsApp() {
   const app = new Hono<{ Bindings: PilotEnv }>();
   app.get("/analytics/config", (c) =>
     c.json(
-      { enabled: configured(c.env), region: configured(c.env) ? c.env.POSTHOG_REGION : null },
+      {
+        enabled: configured(c.env),
+        region: configured(c.env) ? c.env.POSTHOG_REGION : null,
+        noticeVersion: NOTICE_VERSION,
+      },
       200,
       { "cache-control": "no-store" },
     ),

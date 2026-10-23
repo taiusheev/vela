@@ -12,6 +12,7 @@ const env = {
 const app = siteAnalyticsApp();
 const payload = {
   id: "11111111-1111-4111-8111-111111111111",
+  noticeVersion: "website-usage.v2",
   event: "section_viewed",
   section: "hero",
   language: "en",
@@ -41,7 +42,7 @@ describe("optional website analytics", () => {
       ).toBe(200);
       expect(
         await (await app.request("http://localhost:8787/analytics/config", {}, bindings)).json(),
-      ).toEqual({ enabled: false, region: null });
+      ).toEqual({ enabled: false, region: null, noticeVersion: "website-usage.v2" });
       expect((await send(payload, bindings)).status).toBe(404);
     }
     expect(fetch).not.toHaveBeenCalled();
@@ -62,6 +63,7 @@ describe("optional website analytics", () => {
       properties: {
         section: "hero",
         language: "en",
+        noticeVersion: "website-usage.v2",
         surface: "website",
         environment: "development",
         $process_person_profile: false,
@@ -71,6 +73,8 @@ describe("optional website analytics", () => {
     });
   });
   it.each([
+    { ...payload, noticeVersion: undefined },
+    { ...payload, noticeVersion: "website-usage.v1" },
     { ...payload, email: "synthetic@example.com" },
     { ...payload, section: "private family words" },
     { ...payload, event: "$snapshot" },
