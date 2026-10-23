@@ -1,8 +1,7 @@
-import { createFakeAi, fakeRecord } from "@vela/ai";
-import { answers, consents, memoryCandidates } from "@vela/db";
+import { fakeRecord } from "@vela/ai";
+import { answers } from "@vela/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { discoverMemories, hasSensitiveWords, screenForMemories } from "./memory-discovery.ts";
-import { RICH_MEMORY_CONSENT_VERSION } from "./rich-memories.ts";
+import { hasSensitiveWords, screenForMemories } from "./memory-discovery.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily } from "./testing/seed.ts";
 
@@ -23,18 +22,6 @@ beforeEach(async () => {
   day = 0;
 });
 
-async function yes(at: Date) {
-  await h.db.insert(consents).values({
-    memberId: seed.member.id,
-    subjectRef: `member:${seed.member.id}`,
-    kind: "rich_memories",
-    answer: "yes",
-    textVersion: RICH_MEMORY_CONSENT_VERSION,
-    lang: "en",
-    channel: "app",
-    givenAt: at,
-  });
-}
 let day = 0;
 async function answer(text: string) {
   day += 1;
@@ -72,7 +59,6 @@ const noFlag = {
   value: { flag: false, category: null, severity: null, evidenceQuote: null },
   record: fakeRecord("flag"),
 };
-const picks = () => h.ai.calls.filter((call) => call.call === "memory_pick");
 
 describe("the screen before any words reach the memory model", () => {
   it("keeps health, body, money and loss words out, in English and Traditional Chinese", () => {
@@ -111,75 +97,5 @@ describe("the screen before any words reach the memory model", () => {
         flag: noFlag,
       }),
     ).toBe("not_understood");
-  });
-});
-
-describe("discoverMemories", () => {
-  it("proposes her exact words as a private candidate after her yes", async () => {
-    await yes(new Date(h.clock.now().getTime() - 1000));
-    const ctx = await answer(WORDS);
-    const proposed = await discoverMemories(h.deps, ctx, {
-      understanding: understanding(),
-      flag: noFlag,
-    });
-    expect(proposed).toBe(1);
-    const [candidate] = await h.db.select().from(memoryCandidates);
-    expect(candidate).toMatchObject({ memberId: seed.member.id, sourceAnswerId: ctx.answer.id });
-    expect(WORDS.slice(candidate?.start ?? 0, candidate?.end ?? 0)).toBe(
-      "We took the night train to the sea.",
-    );
-  });
-
-  it("keeps nothing the model made up or changed", async () => {
-    await yes(new Date(h.clock.now().getTime() - 1000));
-    h.deps.ai = createFakeAi({
-      memoryPick: async () => ({
-        ok: true,
-        value: { picks: [{ quote: "We loved the seaside trip", kind: "story" }] },
-        record: fakeRecord("memory_pick"),
-      }),
-    });
-    const ctx = await answer(WORDS);
-    expect(
-      await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag }),
-    ).toBe(0);
-    expect(await h.db.select().from(memoryCandidates)).toEqual([]);
-  });
-
-  it("sends nothing to the model without her yes, before it, or with the switch off", async () => {
-    let ctx = await answer(WORDS);
-    await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag });
-    expect(picks()).toHaveLength(0);
-
-    await yes(new Date(h.clock.now().getTime() + 60_000));
-    ctx = await answer(WORDS);
-    await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag });
-    expect(picks()).toHaveLength(0);
-
-    await yes(new Date(h.clock.now().getTime() - 1000));
-    h.config.memoryDiscovery = false;
-    await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag });
-    expect(picks()).toHaveLength(0);
-  });
-
-  it("sends nothing to the model for an answer with sensitive words", async () => {
-    await yes(new Date(h.clock.now().getTime() - 1000));
-    const ctx = await answer("The garden is lovely but my back aches");
-    await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag });
-    expect(picks()).toHaveLength(0);
-    expect(await h.db.select().from(memoryCandidates)).toEqual([]);
-  });
-
-  it("never throws: a broken step is logged and proposes nothing", async () => {
-    await yes(new Date(h.clock.now().getTime() - 1000));
-    h.deps.ai = createFakeAi({
-      memoryPick: async () => {
-        throw new Error("synthetic failure");
-      },
-    });
-    const ctx = await answer(WORDS);
-    expect(
-      await discoverMemories(h.deps, ctx, { understanding: understanding(), flag: noFlag }),
-    ).toBe(0);
   });
 });

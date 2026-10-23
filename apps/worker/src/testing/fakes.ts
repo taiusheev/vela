@@ -862,6 +862,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       learningUntil: null,
       suggestionsSignedBy: null,
       answerStats: {},
+      memoriesOffAt: null,
       createdAt: new Date("2026-09-01T00:00:00.000Z"),
       leftAt: null,
       ...overrides,

@@ -7,7 +7,7 @@
  * Matching is language-independent because she may write in a language other than her setting.
  */
 
-export type ParentCommand = "stop" | "start" | "what_family_sees" | "memories_off";
+export type ParentCommand = "stop" | "start" | "what_family_sees" | "memories_off" | "memories_on";
 
 /**
  * The words she is told to use must stay here: English copy says "Say start", Traditional Chinese
@@ -69,8 +69,8 @@ export const PARENT_COMMAND_KEYWORDS: Readonly<Record<ParentCommand, readonly st
     "начать",
     "продолжить",
   ],
-  // Turns off memory suggestions and clears her memories in Vela (privacy-notice v7 wording): the
-  // words her chat's memory messages tell her to write.
+  // Stops her family keeping her answers as memories and removes what was kept (ADR-50): the words
+  // her chat's memory messages tell her to write.
   memories_off: [
     // en
     "memories off",
@@ -81,6 +81,15 @@ export const PARENT_COMMAND_KEYWORDS: Readonly<Record<ParentCommand, readonly st
     "关闭回忆",
     "停止回憶",
     "停止回忆",
+  ],
+  // Lets her family keep her answers as memories again after "memories off" (ADR-50).
+  memories_on: [
+    // en
+    "memories on",
+    "memory on",
+    // zh-TW
+    "開啟回憶",
+    "开启回忆",
   ],
   what_family_sees: [
     // en
@@ -123,7 +132,13 @@ function normalise(text: string): string {
   return text.normalize("NFKC").replace(EDGES, "").replace(INNER_SPACE, " ").toLowerCase();
 }
 
-const COMMANDS: readonly ParentCommand[] = ["stop", "start", "what_family_sees", "memories_off"];
+const COMMANDS: readonly ParentCommand[] = [
+  "stop",
+  "start",
+  "what_family_sees",
+  "memories_off",
+  "memories_on",
+];
 
 const LOOKUP: ReadonlyMap<string, ParentCommand> = new Map(
   COMMANDS.flatMap((command) =>

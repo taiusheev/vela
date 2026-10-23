@@ -32,7 +32,9 @@ export function FamilyBook({
 }) {
   const palette = usePalette();
   const { t } = useLingui();
-  const stories = book.entries.length;
+  // An answer the family kept with "Keep" (ADR-50) is counted as a memory, not a story.
+  const stories = book.entries.filter((entry) => entry.kept_by === null).length;
+  const memories = book.entries.length - stories;
   const recipes = book.recipes.length;
   return (
     <View style={{ gap: space.xl }}>
@@ -54,17 +56,20 @@ export function FamilyBook({
           <Trans>The family book</Trans>
         </Text>
         <Text style={[type.body, { color: palette.ink2 }]}>
-          {stories === 0 && recipes === 0
+          {stories === 0 && recipes === 0 && memories === 0
             ? t`Nothing kept yet.`
             : [
                 plural(stories, { one: "# story", other: "# stories" }),
+                ...(memories === 0
+                  ? []
+                  : [plural(memories, { one: "# kept answer", other: "# kept answers" })]),
                 plural(recipes, { one: "# recipe", other: "# recipes" }),
               ].join(" · ")}
         </Text>
         <Text style={[type.caption, { color: palette.ink2 }]}>
           <Trans>
-            The stories she tells on story day, and the recipes she shares, stay here after the 30
-            days, with her voice.
+            The stories she tells on story day, the answers the family keeps, and the recipes she
+            shares, stay here after the 30 days, with her voice.
           </Trans>
         </Text>
       </View>
@@ -116,7 +121,7 @@ export function FamilyBook({
         <Words variant="body" tone="ink2">
           <Trans>The family book could not be reached just now.</Trans>
         </Words>
-      ) : stories === 0 && recipes === 0 ? (
+      ) : book.entries.length === 0 && recipes === 0 ? (
         <Words variant="body" tone="ink2">
           {bookOn ? (
             <Trans>
@@ -128,10 +133,10 @@ export function FamilyBook({
         </Words>
       ) : null}
 
-      {stories === 0 ? null : (
+      {book.entries.length === 0 ? null : (
         <View style={{ gap: space.l }}>
           <Text accessibilityRole="header" style={[type.heading, { color: palette.ink }]}>
-            <Trans>Stories</Trans>
+            {memories === 0 ? <Trans>Stories</Trans> : <Trans>Stories and kept answers</Trans>}
           </Text>
           {book.entries.map((entry) => (
             <BookStory
@@ -173,6 +178,7 @@ function BookStory({
   const day = dayMonth(entry.kept_at);
   const name = entry.member_name;
   const asker = entry.asked_by;
+  const keeper = entry.kept_by;
   return (
     <View
       style={{
@@ -187,6 +193,9 @@ function BookStory({
       <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
         {asker === null ? t`${name} · ${day}` : t`${name} · ${day} · ${asker} asked`}
       </Text>
+      {keeper === null ? null : (
+        <Text style={[type.caption, { color: palette.ink3 }]}>{t`Kept by ${keeper}`}</Text>
+      )}
       {entry.question === null ? null : (
         <Text style={[type.heading, { color: palette.ink2 }]}>{entry.question}</Text>
       )}

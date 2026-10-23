@@ -1,10 +1,10 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Link, router, useFocusEffect } from "expo-router";
+import { Link, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
-import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyBook } from "../../src/components/family-book.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
@@ -18,10 +18,9 @@ import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { dayLabel, localDateIn } from "../../src/data/chat.ts";
 import type { Exchange } from "../../src/data/exchanges.ts";
 import { localDayMonth } from "../../src/data/format.ts";
-import { useBook } from "../../src/data/useBook.ts";
+import { type BookView, type KeepRefusal, useBook } from "../../src/data/useBook.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
-import { useMyMemories } from "../../src/data/useMyMemories.ts";
 import { usePortrait } from "../../src/data/usePortrait.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -54,6 +53,129 @@ function matches(exchange: Exchange, filter: Filter, query: string): boolean {
   );
 }
 
+/** "Keep" on one of her answers: kept, being kept, or why it could not be. */
+interface KeepControl {
+  id: string;
+  kept: boolean;
+  busy: boolean;
+  onKeep(): void;
+  refusal?: string;
+}
+
+/**
+ * Keeps one of her answers for good (ADR-50). Once kept it says so and does nothing more; taking it
+ * out again is the family book's.
+ */
+function KeepButton({ keep, featured }: { keep: KeepControl; featured: boolean }) {
+  const palette = usePalette();
+  const room = useRoom();
+  const { t } = useLingui();
+  const ink = featured ? room.ink : palette.action;
+  if (keep.kept) {
+    return (
+      <View
+        accessible
+        testID={`kept-${keep.id}`}
+        accessibilityLabel={t`Kept for good`}
+        style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+      >
+        <BrandIcon name="heart" color={featured ? room.ink : palette.lightDeep} size={16} />
+        <Text style={[type.caption, { color: featured ? room.ink : palette.lightDeep }]}>
+          {t`Kept`}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      testID={`keep-${keep.id}`}
+      accessibilityRole="button"
+      accessibilityLabel={t`Keep for good`}
+      accessibilityHint={t`Keeps this answer in the family book instead of deleting it after 30 days`}
+      accessibilityState={{ busy: keep.busy, disabled: keep.busy }}
+      disabled={keep.busy}
+      hitSlop={hitSlop}
+      onPress={keep.onKeep}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.xs,
+        minHeight: 32,
+        paddingHorizontal: space.s,
+        borderRadius: radius.chip,
+        borderWidth: 1,
+        borderColor: featured ? room.glassRule : palette.rule,
+        opacity: pressed || keep.busy ? 0.6 : 1,
+      })}
+    >
+      <BrandIcon name="heart" color={ink} size={16} />
+      <Text style={[type.caption, { color: ink }]}>{keep.busy ? t`Keeping…` : t`Keep`}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Vela's suggestions of answers worth keeping (ADR-50), for organisers: her exact words, with Keep
+ * and "Not this one". She is never asked; the first answer kept is told to her in her chat.
+ */
+function KeepSuggestions({ book }: { book: BookView }) {
+  const palette = usePalette();
+  const { t } = useLingui();
+  const shown = book.suggestions.slice(0, 2);
+  if (shown.length === 0) return null;
+  return (
+    <View style={{ gap: space.m }} testID="keep-suggestions">
+      <SectionTitle title={t`Worth keeping?`} />
+      {shown.map((suggestion) => {
+        const name = suggestion.member_name;
+        const question = suggestion.question;
+        return (
+          <SoftCard key={suggestion.exchange_id}>
+            <Text style={[type.caption, { color: palette.ink3 }]}>
+              {question === null ? t`${name} said` : t`${name}, asked “${question}”`}
+            </Text>
+            <Text style={[type.preview, { color: palette.ink }]}>{`“${suggestion.quote}”`}</Text>
+            <View style={{ flexDirection: "row", gap: space.s, flexWrap: "wrap" }}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t`Keep for good`}
+                disabled={book.keepingId === suggestion.exchange_id}
+                onPress={() => book.keep(suggestion.exchange_id)}
+                style={({ pressed }) => ({
+                  minHeight: 44,
+                  paddingHorizontal: space.l,
+                  borderRadius: radius.chip,
+                  backgroundColor: palette.action,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: space.xs,
+                  opacity: pressed ? 0.85 : 1,
+                })}
+              >
+                <BrandIcon name="heart" color={palette.onAction} size={16} />
+                <Text style={[type.button, { color: palette.onAction }]}>{t`Keep`}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => book.dismiss(suggestion.exchange_id)}
+                style={{ minHeight: 44, paddingHorizontal: space.m, justifyContent: "center" }}
+              >
+                <Text style={[type.button, { color: palette.ink2 }]}>{t`Not this one`}</Text>
+              </Pressable>
+            </View>
+          </SoftCard>
+        );
+      })}
+      <Words variant="caption" tone="ink3">
+        <Trans>
+          Vela suggests answers you may want to keep. Kept answers stay in the family book instead
+          of being deleted after 30 days.
+        </Trans>
+      </Words>
+    </View>
+  );
+}
+
 /** One thing she said, set as a keepsake: who and when, what she was asked, her words, her photo
  * or voice. The newest is `featured`: drawn as Today's lit room, the rest as the family's feed. */
 function MemoryCard({
@@ -61,11 +183,14 @@ function MemoryCard({
   originals,
   today,
   featured = false,
+  keep,
 }: {
   exchange: Exchange;
   originals: boolean;
   today: string;
   featured?: boolean;
+  /** An organiser's "Keep" (ADR-50), where the family book is on; absent for a story. */
+  keep?: KeepControl;
 }) {
   const palette = usePalette();
   const room = useRoom();
@@ -178,16 +303,38 @@ function MemoryCard({
       </View>
     </>
   );
-  return (
+  const opened = (
     <Link href={{ pathname: "/exchange/[id]", params: { id: exchange.id } }} asChild>
-      <Pressable accessibilityRole="button" hitSlop={hitSlop}>
-        {featured ? (
-          <RoomCard id={`memory-${exchange.id}`}>{body}</RoomCard>
-        ) : (
-          <SoftCard>{body}</SoftCard>
-        )}
+      <Pressable accessibilityRole="button" hitSlop={hitSlop} style={{ gap: space.m }}>
+        {body}
       </Pressable>
     </Link>
+  );
+  // "Keep" sits beside the card's link, not inside it, so a screen reader reaches it on its own.
+  const keeping =
+    keep === undefined ? null : (
+      <View style={{ gap: space.xs, alignItems: "flex-end" }}>
+        <KeepButton keep={keep} featured={featured} />
+        {keep.refusal === undefined ? null : (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[type.caption, { color: ink2, alignSelf: "stretch" }]}
+          >
+            {keep.refusal}
+          </Text>
+        )}
+      </View>
+    );
+  return featured ? (
+    <RoomCard id={`memory-${exchange.id}`}>
+      {opened}
+      {keeping}
+    </RoomCard>
+  ) : (
+    <SoftCard>
+      {opened}
+      {keeping}
+    </SoftCard>
   );
 }
 
@@ -208,8 +355,6 @@ export default function MemoriesScreen() {
   const { capabilities } = useCapabilities();
   const day = useToday();
   const book = useBook(day.familyId);
-  // Words a parent kept and shared with the reader from her chat.
-  const sharedCount = useMyMemories(day.familyId).shared.length;
   const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
   useFocusEffect(
     useCallback(() => {
@@ -217,7 +362,26 @@ export default function MemoriesScreen() {
       book.refresh();
     }, [refresh, book.refresh]),
   );
-  const bookOn = capabilities?.book === true;
+  const bookOn = capabilities?.book === true || book.demo;
+  // An organiser keeps any ordinary answer of hers for good (ADR-50); a story is kept already.
+  const canKeep = bookOn && day.organiser;
+  const refusalText: Record<KeepRefusal, string> = {
+    memories_off: t`She has turned memories off, so her answers are not kept.`,
+    sensitive: t`This answer mentions health or something private, so it is not kept.`,
+    not_kept: t`She asked not to keep this one.`,
+    no_answer: t`There is no answer to keep yet.`,
+  };
+  const keepFor = (exchange: Exchange): KeepControl | undefined => {
+    if (!canKeep || exchange.type === "story" || exchange.type === "recipe") return undefined;
+    const refused = book.refused?.exchangeId === exchange.id ? book.refused.reason : undefined;
+    return {
+      id: exchange.id,
+      kept: book.keptIds.has(exchange.id),
+      busy: book.keepingId === exchange.id,
+      onKeep: () => book.keep(exchange.id),
+      ...(refused === undefined ? {} : { refusal: refusalText[refused] }),
+    };
+  };
   const showing = bookOn ? section : "words";
   const today = localDateIn(Date.now());
   const answered = exchanges.filter(
@@ -262,19 +426,6 @@ export default function MemoriesScreen() {
           <Trans>What she told you this month, and the stories the family keeps for good.</Trans>
         }
       />
-      {sharedCount === 0 ? null : (
-        <FamilyAction
-          icon="heart"
-          title={
-            sharedCount === 1
-              ? t`A memory was shared with you`
-              : t`${sharedCount} memories were shared with you`
-          }
-          detail={t`Words your family chose to keep and share with you`}
-          onPress={() => router.push("/my-memories")}
-          testID="memories-shared-with-you"
-        />
-      )}
       {bookOn ? (
         <View
           accessibilityRole="tablist"
@@ -412,6 +563,9 @@ export default function MemoriesScreen() {
             </Words>
           ) : null}
           {trouble ? <SecondaryButton label={t`Try again`} onPress={refresh} /> : null}
+          {canKeep && filter === "all" && query.trim().length === 0 ? (
+            <KeepSuggestions book={book} />
+          ) : null}
           {weeks.map((week) => (
             <View key={week.key} style={{ gap: space.m, paddingTop: space.s }}>
               <SectionTitle title={week.label} />
@@ -422,13 +576,19 @@ export default function MemoriesScreen() {
                   originals={originals}
                   today={today}
                   featured={exchange.id === featuredId}
+                  keep={keepFor(exchange)}
                 />
               ))}
             </View>
           ))}
           {more ? <SecondaryButton label={t`Earlier this month`} onPress={loadMore} /> : null}
           <Words variant="caption" tone="ink3">
-            {bookOn ? (
+            {canKeep ? (
+              <Trans>
+                Her words stay here for thirty days. Tap Keep on the ones you want to keep for good;
+                they and her stories stay in the family book.
+              </Trans>
+            ) : bookOn ? (
               <Trans>
                 Her words stay here for thirty days. The stories she tells are kept in the family
                 book.

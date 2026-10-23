@@ -704,14 +704,30 @@ An answer is refused (409) when its presentation is expired, used, for another a
 revision, for other words, or was issued before a later withdrawal; a current yes changes only
 through withdraw. Only the person answers for themselves: an organiser cannot answer for anyone.
 
-### Memories in the parent's chat (23 October 2026, staging only)
+### Memories the family keeps (23 October 2026, ADR-50, staging only)
 
-A parent who answers in Telegram or LINE has no app. With `RICH_MEMORIES` and `MEMORY_DISCOVERY` on
-(development and staging), after an answer of hers is understood Vela asks her once in her chat
-(`memory.question`, the approved consent.rich_memories@2 wording; buttons `m:<member>:y|n`), offers
-each new suggestion there (`memory.offer` / `memory.offer_share` with the keep@2 and share@1
-explanations; buttons `u:<candidate>:k|s|l` for Keep, Share with {organiser}, Leave out), and
-"memories off" (`关闭回忆` / `關閉回憶`) withdraws and clears, like the app's Turn off and clear.
-Every tap counts only from her own private chat. "Share" grants the one person who invited her, if
-they have the app; they read it at `GET /v1/families/:familyId/shared-memories`
-(`SharedKeptMemoryPage`), served by the memories group while the sharing group is unconfigured.
+The founder's decision of 23 October 2026: memories are the family's, for the adult child to
+remember their parent. The parent is told, never asked. This replaces the short-lived chat flow of
+the same day (`m:` and `u:` buttons), whose old buttons now only close and answer `memory.gone`.
+
+`POST /v1/book/:exchangeId/keep` with an empty body and an `Idempotency-Key` lets an organiser keep
+one of her answered exchanges in the family book (`book.keep:v1`, under her member row's lock). It
+answers 200 `ApiBookKept`: `kept: true`, or `kept: false` with `reason` `memories_off` (she wrote
+"memories off"), `sensitive` (an answer of hers is flagged, names a health mention, or holds a
+sensitive word), `no_answer`, or `not_kept` (she took it out herself). 404 for anyone but an
+organiser of her family, and wherever `BOOK` is off. The first keep of hers writes one note to her
+chat (`memory.told`, keyed by her member), handed to the queue after the commit.
+
+`ApiBookEntry.kept_by` names the organiser who kept an ordinary answer; null for a story.
+`ApiBook.suggestions` (organisers only, else empty) lists answers Vela suggests keeping, newest
+first: `exchange_id`, `member_id`, `member_name`, `question`, `quote` (her exact phrase, cut from
+her answer by offsets in `keep_suggestions`, never copied) and `at`. A suggestion is made after an
+answer is understood, only where `BOOK` and `MEMORY_DISCOVERY` are on, only for an ordinary answer
+(the screen in `memory-discovery.ts`), and goes with the answer at 30 days.
+`POST /v1/book/:exchangeId/dismiss` (`book.dismiss:v1`) is "Not this one" and answers 200
+`ApiKeepSuggestionDismissed`.
+
+In her chat, "memories off" (`關閉回憶` / `关闭回忆`) sets `members.memories_off_at`, takes every live
+entry of hers out of the book as removed by her (stories included), and deletes her suggestions;
+"memories on" (`開啟回憶` / `开启回忆`) clears it without bringing anything back.
+

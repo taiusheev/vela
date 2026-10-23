@@ -77,8 +77,7 @@ import { recordEvent } from "./events.ts";
 import { fitMessageText, formatAwayDate } from "./format.ts";
 import { type InsertResult, insertOutbound } from "./gateway.ts";
 import { storeInboundCopy } from "./inbound-media-copy.ts";
-import { askMemoryQuestion } from "./memory-chat.ts";
-import { discoverMemories } from "./memory-discovery.ts";
+import { suggestKeeping } from "./memories.ts";
 import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { offerRecipe } from "./recipes.ts";
 import {
@@ -1218,12 +1217,11 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
   if (exchange.type === "recipe" && deps.config.book) {
     await writeRecipeCard(deps, ctx);
   }
-  // Her private memory suggestions, from what the understanding calls saw before any wipe; screened
-  // and switched inside, and never able to fail her answer's understanding.
-  if (deps.config.richMemories === true && deps.config.memoryDiscovery === true && understood) {
-    await discoverMemories(deps, ctx, { understanding: modelUnderstanding, flag: modelFlag });
-    // Once, after an answer of hers: may Vela suggest memories? Asked in her own chat.
-    await askMemoryQuestion(deps, member, family);
+  // A suggestion to the organisers that this answer is worth keeping (ADR-50), from what the
+  // understanding calls saw before any wipe; screened and switched inside, and never able to fail
+  // her answer's understanding.
+  if (understood) {
+    await suggestKeeping(deps, ctx, { understanding: modelUnderstanding, flag: modelFlag });
   }
 
   if (!understood) {

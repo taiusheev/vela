@@ -840,3 +840,24 @@ Decision:
 - **Switch.** `SEND_AS_ME`, on in development and staging; production stays off, pinned by `wrangler-config.test.ts`, until the privacy notice and the consent script say that an organiser may let Vela send its suggested question in their name.
 
 Consequences: on those mornings she reads words her child did not write, under her child's name, by her child's prior choice. That is the point of the founder's request; the honesty rests on the organiser's explicit choice, on the family's view saying so, and on the notice once production uses it. Rejected: signing Vela's bank question with a person's name; drafting per turn holder (the holder is chosen only at the evening prompt, after drafts are written); a family-wide switch (one organiser could put words in another's mouth).
+
+## ADR-50 · Memories are the family's: an organiser keeps her answers, she is told and can stop it
+
+23 October 2026. Accepted (founder, 23 October: "why does the parent have to do all this, memories are made for the adult child to remember important memories about their parent, not for a parent"; "parent doesn't need to say yes, it is for child to remember"; then "draft the new notice wording for my approval, then rebuild memories child-first on the test version. No yes from Mom; she is told and can say memories off. Production stays off.").
+
+Context: the memories built on 22 and 23 October were hers: a consent question, private suggestions, her own Keep and Share, first in the app and then in her chat. Testing showed the parent doing all the work for a feature that serves her child. Her answers already reach the whole family group; what a memory adds is that chosen answers are not deleted at 30 days. ADR-39 already keeps her stories that way, by default, with her "don't keep that one", and named "families want to keep an ordinary answer too" as the reason to revisit it.
+
+Decision:
+
+- **Keeping is the family book.** An organiser's "Keep" on one of her answered exchanges makes a `book_entries` row with `kept_by`; retention's existing book rule then keeps the exchange's words and files. Nothing is copied. An organiser can take it out as a story is taken out.
+- **She is told, not asked.** The first time an answer of hers is kept, Vela writes once in her chat who kept it and that "memories off" stops it (`memory.told`). The privacy notice says so (v8 draft, `plan/materials/pilot/privacy-notice.v8-memories-draft.en.md`).
+- **"memories off" is hers and final for what it removed.** It sets `members.memories_off_at`, removes every live entry of hers as removed by her (stories included), and deletes her suggestions; while it is set nothing of hers is kept or suggested, and the book does not keep her stories. "memories on" clears it; an entry she removed is never kept again.
+- **Never health.** "Keep" refuses an exchange with an answer that is flagged, names a health mention, or holds a word on the sensitive list (`memory-discovery.ts`); a voice note not yet written out waits.
+- **Suggestions go to organisers.** After an answer is understood, an ordinary one (the screen of 22 October: flag and understand ran clean, no health mention, no sensitive word) may go to `memory_pick`; the first phrase found word for word is stored as offsets in `keep_suggestions` (one per exchange, cascade with the answer, expiring with its 30 days) and shown to organisers only, with "Keep" and "Not this one".
+- **Concurrency.** Keep takes her member row `for update` before reading anything, the row "memories off" updates; `postgres-tests/memories-keep-race.test.ts` shows a keep stalled after that read cannot survive her "memories off" (seen failing with the lock removed).
+- **Switches.** Keeping needs `BOOK`, suggestions also `MEMORY_DISCOVERY`: both on in development and staging, off in production and pinned, until the founder approves notice v8 and the families are told.
+
+Not done yet: a recording from her phone kept this way stays under its 32-day bucket prefix (the story path moves it; `moveOutOfExpiring` needs the media store the API routes do not have). The trial's Telegram voice notes are not stored copies, so nothing is lost there today. The older author-owned memory tables and routes (ADR of 22 October, `RICH_MEMORIES`) stay dormant and are removed in a later change.
+
+Consequences: the parent no longer chooses each memory; her protection is being told, the health screen, and "memories off". Rejected: her yes before any keep (the founder's call: the feature is the child's, and the answers already reach the family); copying kept words out of the answer (a second copy to seal and clear); asking her to confirm each keep (the work this replaces).
+

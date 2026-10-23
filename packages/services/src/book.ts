@@ -32,6 +32,7 @@ import type { Deps } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { extensionFor } from "./media-copy.ts";
+import { type ApiKeepSuggestion, liveSuggestions } from "./memories.ts";
 import { type ApiBookRecipe, keptRecipes } from "./recipes.ts";
 import { familyHasEnded, memberByChannelUser, type Queryable } from "./repo.ts";
 
@@ -48,7 +49,10 @@ export function keepsInBook(deps: Pick<Deps, "config">, exchange: Pick<Exchange,
 }
 
 /** The files an entry keeps: her answers' own, and the photo an old-photo ask showed her. */
-function keptFiles(exchange: Pick<Exchange, "type" | "mediaIds">, answerMediaId: string | null) {
+export function keptFiles(
+  exchange: Pick<Exchange, "type" | "mediaIds">,
+  answerMediaId: string | null,
+) {
   return [
     ...(answerMediaId === null ? [] : [answerMediaId]),
     ...(exchange.type === "memory_photo" ? exchange.mediaIds : []),
@@ -84,7 +88,9 @@ export async function keepInBook(
       subject === undefined ||
       subject.leftAt !== null ||
       subject.status === "left" ||
-      subject.status === "deceased"
+      subject.status === "deceased" ||
+      // Her "memories off" stops the book keeping her stories too (ADR-50).
+      subject.memoriesOffAt !== null
     )
       return null;
     const [currentExchange] = await tx
@@ -171,7 +177,7 @@ const EXPIRING = ["device/", "asks/", "replies/"] as const;
  * deletes only its own object; the winner then deletes the old object. Existing book keys stay
  * readable. A failed copy leaves the original for a later answer or the founder.
  */
-async function moveOutOfExpiring(
+export async function moveOutOfExpiring(
   deps: Pick<Deps, "db" | "clock" | "media" | "logger" | "random">,
   entry: BookEntry,
   mediaId: string,
@@ -297,7 +303,7 @@ async function moveOutOfExpiring(
  * again, its files no longer kept. The entry's row stays, removed, so the same story is never kept
  * again by a later answer. Returns false when there was nothing kept to remove.
  */
-async function removeEntry(
+export async function removeEntry(
   tx: Queryable,
   exchangeId: string,
   removedBy: string,
@@ -404,6 +410,8 @@ export interface ApiBookEntry {
   /** The old photo she told about, where the ask showed one and it is stored. */
   photo_ids: string[];
   kept_at: string;
+  /** The organiser who kept an ordinary answer with "Keep" (ADR-50); null for a story. */
+  kept_by: string | null;
   answers: {
     kind: string;
     /** Her words, or the transcript of her voice. */
@@ -424,19 +432,23 @@ export async function loadApiBook(
   db: Queryable,
   identity: SessionIdentity,
   familyId: string,
+  now: Date = new Date(),
 ): Promise<{
   entries: ApiBookEntry[];
   coming: ApiComingStory[];
   recipes: ApiBookRecipe[];
+  suggestions: ApiKeepSuggestion[];
 } | null> {
   if (!UUID.test(familyId)) return null;
   const access = await authorizeFamilyAccess(db, identity, familyId);
   if (access.kind !== "granted") return null;
+  const keeper = alias(members, "keeper");
   const rows = await db
-    .select({ entry: bookEntries, exchange: exchanges, her: members })
+    .select({ entry: bookEntries, exchange: exchanges, her: members, keptBy: keeper.displayName })
     .from(bookEntries)
     .innerJoin(exchanges, eq(exchanges.id, bookEntries.exchangeId))
     .innerJoin(members, eq(members.id, bookEntries.memberId))
+    .leftJoin(keeper, eq(keeper.id, bookEntries.keptBy))
     .where(and(eq(bookEntries.familyId, familyId), isNull(bookEntries.removedAt)))
     .orderBy(desc(bookEntries.keptAt));
   const entries: ApiBookEntry[] = [];
@@ -480,6 +492,7 @@ export async function loadApiBook(
                 )
             ).map((photo) => photo.id),
       kept_at: row.entry.keptAt.toISOString(),
+      kept_by: row.entry.keptBy === null ? null : (row.keptBy ?? null),
       answers: said.map(({ answer, file }) => {
         const words = (answer.payload as { text?: unknown }).text;
         const kind = file === null || file.storageKey === null ? null : file.kind;
@@ -497,6 +510,8 @@ export async function loadApiBook(
     entries,
     coming: await comingStories(db, familyId),
     recipes: await keptRecipes(db, familyId),
+    // Suggestions of answers worth keeping are for the organisers, who keep (ADR-50).
+    suggestions: access.access.role === "organiser" ? await liveSuggestions(db, familyId, now) : [],
   };
 }
 

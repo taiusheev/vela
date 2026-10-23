@@ -18,9 +18,11 @@ import {
 } from "@vela/core";
 import {
   answers,
+  bookEntries,
   consents,
   exchanges,
   type Family,
+  keepSuggestions,
   type Member,
   members,
   memoryCandidates,
@@ -33,6 +35,7 @@ import {
 import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { canAnswer } from "./answers.ts";
+import { removeEntry } from "./book.ts";
 import { withdrawHealthWords } from "./consent.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
@@ -351,13 +354,27 @@ async function whatFamilySees(
  * words and open questions in Vela, under her member lock, as the app's "Turn off and clear" does.
  * Her ordinary chats and other choices stay. Answered every time, so she always hears it worked.
  */
+/**
+ * Her "memories off" (ADR-50): under her member row, which a keep also takes, nothing of hers is
+ * kept past 30 days any more. Every live book entry of hers is removed by her (stories included, so
+ * neither her family nor the book keeps them again), suggestions go, and keeping and suggesting stop
+ * until "memories on". The older private-memories rows are cleared too.
+ */
 async function memoriesOff(deps: Deps, member: Member, event: InboundEvent, now: Date) {
   await deps.db.transaction(async (tx) => {
     await tx
-      .select({ id: members.id })
-      .from(members)
-      .where(eq(members.id, member.id))
+      .update(members)
+      .set({ memoriesOffAt: now })
+      .where(and(eq(members.id, member.id), isNull(members.memoriesOffAt)));
+    const kept = await tx
+      .select({ exchangeId: bookEntries.exchangeId })
+      .from(bookEntries)
+      .where(and(eq(bookEntries.memberId, member.id), isNull(bookEntries.removedAt)))
       .for("update");
+    for (const entry of kept) {
+      await removeEntry(tx, entry.exchangeId, member.id, now);
+    }
+    await tx.delete(keepSuggestions).where(eq(keepSuggestions.memberId, member.id));
     await tx
       .update(consents)
       .set({ withdrawnAt: now })
@@ -376,6 +393,17 @@ async function memoriesOff(deps: Deps, member: Member, event: InboundEvent, now:
       .where(eq(memoryPermissionPresentations.memberId, member.id));
   });
   await reply(deps, deps.db, member, event, "memories_off", t(member.language, "memory.off_done"));
+}
+
+/** Her "memories on": her family may keep her answers again. What was removed stays removed. */
+async function memoriesOn(deps: Deps, member: Member, event: InboundEvent) {
+  await deps.db.transaction(async (tx) => {
+    await tx
+      .update(members)
+      .set({ memoriesOffAt: null })
+      .where(and(eq(members.id, member.id), isNotNull(members.memoriesOffAt)));
+  });
+  await reply(deps, deps.db, member, event, "memories_on", t(member.language, "memory.on_done"));
 }
 
 /**
@@ -414,6 +442,9 @@ export async function handleParentCommand(
       return;
     case "memories_off":
       await memoriesOff(deps, member, event, now);
+      return;
+    case "memories_on":
+      await memoriesOn(deps, member, event);
       return;
   }
 }

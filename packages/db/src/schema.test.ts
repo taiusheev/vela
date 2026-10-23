@@ -60,6 +60,7 @@ import {
   flags,
   INVITE_CHANNELS,
   invites,
+  keepSuggestions,
   MEMORY_FACT_KINDS,
   MESSAGE_REF_PURPOSES,
   type Member,
@@ -387,6 +388,15 @@ async function seedEveryTable(): Promise<void> {
       })
       .returning(),
   );
+  await db.insert(keepSuggestions).values({
+    familyId,
+    memberId: seed.parent.id,
+    exchangeId: exchange.id,
+    answerId: answer.id,
+    start: 0,
+    end: 4,
+    expiresAt: new Date(Date.now() + 86_400_000),
+  });
   await db.insert(replies).values({
     exchangeId: exchange.id,
     memberId: seed.organiser.id,
@@ -2262,6 +2272,10 @@ describe("CHECK constraints on enumerated columns", () => {
         code: CHECK_VIOLATION,
         constraint: "memory_keeps_offsets_check",
       });
+      expect(await rejection(db.update(keepSuggestions).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "keep_suggestions_offsets_check",
+      });
     }
     expect(
       await rejection(
@@ -2354,6 +2368,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "memory_candidates_offsets_check",
       "memory_candidates_expiry_check",
       "memory_keeps_offsets_check",
+      "keep_suggestions_offsets_check",
       "memory_shares_fingerprint_check",
       "memory_sharing_presentations_fingerprint_check",
       "memory_sharing_presentations_audience_check",

@@ -1260,6 +1260,8 @@ export const ApiBookEntry = z.object({
   /** The old photo she told about (an old-photo ask), read through the family's media route. */
   photo_ids: z.array(z.uuid()),
   kept_at: z.iso.datetime({ offset: true }),
+  /** The organiser who kept an ordinary answer with "Keep" (ADR-50); null for a story. */
+  kept_by: z.string().nullable(),
   answers: z.array(
     z.object({
       kind: z.string(),
@@ -1299,8 +1301,24 @@ export const ApiBookRecipe = z.object({
 });
 export type ApiBookRecipe = z.infer<typeof ApiBookRecipe>;
 
+/**
+ * An answer Vela suggests the organisers keep (ADR-50): the phrase that made it worth keeping, in
+ * her exact words. Shown to organisers only.
+ */
+export const ApiKeepSuggestion = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  question: z.string().nullable(),
+  quote: z.string(),
+  at: z.iso.datetime({ offset: true }),
+});
+export type ApiKeepSuggestion = z.infer<typeof ApiKeepSuggestion>;
+
 export const ApiBook = z.object({
   entries: z.array(ApiBookEntry),
+  /** Answers worth keeping, newest first; empty for anyone but an organiser. */
+  suggestions: z.array(ApiKeepSuggestion),
   /** Her kept recipe cards, newest first. */
   recipes: z.array(ApiBookRecipe),
   /** Story asks not yet delivered, soonest first. */
@@ -1314,6 +1332,31 @@ export type RemoveBookEntry = z.infer<typeof RemoveBookEntry>;
 
 export const ApiBookRemoved = z.object({ exchange_id: z.uuid(), removed: z.literal(true) });
 export type ApiBookRemoved = z.infer<typeof ApiBookRemoved>;
+
+/** An organiser keeps one of her answers (`POST /v1/book/:exchangeId/keep`, ADR-50). */
+export const KeepBookEntry = z.strictObject({});
+export type KeepBookEntry = z.infer<typeof KeepBookEntry>;
+
+/**
+ * Kept, or why not: she said "memories off", the answer holds health or other sensitive words, it
+ * has no answer of hers, or she took it out herself.
+ */
+export const ApiBookKept = z.object({
+  exchange_id: z.uuid(),
+  kept: z.boolean(),
+  reason: z.enum(["not_kept", "memories_off", "sensitive", "no_answer"]).optional(),
+});
+export type ApiBookKept = z.infer<typeof ApiBookKept>;
+
+/** "Not this one" on a suggestion (`POST /v1/book/:exchangeId/dismiss`, ADR-50). */
+export const DismissKeepSuggestion = z.strictObject({});
+export type DismissKeepSuggestion = z.infer<typeof DismissKeepSuggestion>;
+
+export const ApiKeepSuggestionDismissed = z.object({
+  exchange_id: z.uuid(),
+  dismissed: z.literal(true),
+});
+export type ApiKeepSuggestionDismissed = z.infer<typeof ApiKeepSuggestionDismissed>;
 
 /**
  * Something she said will happen on a known day (spec §12, build plan 5.3), offered to a family

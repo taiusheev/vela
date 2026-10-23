@@ -5,6 +5,7 @@ import type {
   ApiAskConflict,
   ApiAway,
   ApiBook,
+  ApiBookKept,
   ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
@@ -14,6 +15,7 @@ import type {
   ApiExchangePage,
   ApiExchangeSummary,
   ApiFamily,
+  ApiKeepSuggestionDismissed,
   ApiLeft,
   ApiLinkStatus,
   ApiLookInAsk,
@@ -51,7 +53,6 @@ import type {
   MemoryPermissionState,
   RegisterPushDevice,
   SetAway,
-  SharedKeptMemoryPage,
 } from "@vela/contracts";
 import {
   MEMORY_KEEP_EXPLANATION_SHA256,
@@ -231,6 +232,29 @@ export function removeBookEntry(
   token: string | null,
 ): Promise<ApiBookRemoved> {
   return call<ApiBookRemoved>({ path: `/v1/book/${exchangeId}/remove`, token, key, body: {} });
+}
+
+/** An organiser keeps one of her answers in the family book (ADR-50), or hears why not. */
+export function keepBookEntry(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiBookKept> {
+  return call<ApiBookKept>({ path: `/v1/book/${exchangeId}/keep`, token, key, body: {} });
+}
+
+/** "Not this one" on a suggestion to keep (ADR-50). */
+export function dismissKeepSuggestion(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiKeepSuggestionDismissed> {
+  return call<ApiKeepSuggestionDismissed>({
+    path: `/v1/book/${exchangeId}/dismiss`,
+    token,
+    key,
+    body: {},
+  });
 }
 
 /** The caller's reminders and the family's coming plans (`GET /v1/families/:familyId/reminders`, spec §12). */
@@ -801,14 +825,6 @@ export function keepMemory(
       confirmation_sha256: MEMORY_KEEP_EXPLANATION_SHA256,
     },
   });
-}
-
-/** What other members chose to share with the reader by name (a parent sharing from her chat). */
-export function fetchSharedMemories(
-  familyId: string,
-  token: string | null,
-): Promise<SharedKeptMemoryPage> {
-  return read<SharedKeptMemoryPage>(`/v1/families/${familyId}/shared-memories`, token);
 }
 
 export function fetchKeptMemories(familyId: string, token: string | null): Promise<KeptMemoryPage> {

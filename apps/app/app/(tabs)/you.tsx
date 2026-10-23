@@ -11,7 +11,6 @@ import { Hairline } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import type { KeptLightRow } from "../../src/data/family.ts";
 import { useFamily } from "../../src/data/useFamily.ts";
-import { useMyMemories } from "../../src/data/useMyMemories.ts";
 import { usePortrait } from "../../src/data/usePortrait.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { space, type } from "../../src/theme/tokens.ts";
@@ -49,8 +48,6 @@ export default function YouScreen() {
   const { family, loading } = useFamily(day.familyId, day.familyId !== undefined);
   const myName = family.me.name;
   const familyName = family.familyName;
-  // Shown only where the server offers Memories; everywhere else it answers 404 and stays hidden.
-  const memories = useMyMemories(day.familyId);
   return (
     <WarmPage>
       <ScreenHeading title={<Trans context="tab">You</Trans>} />
@@ -90,18 +87,6 @@ export default function YouScreen() {
       </Pressable>
       <SoftCard padding={space.s}>
         <View style={{ paddingHorizontal: space.s }}>
-          {memories.available ? (
-            <>
-              <FamilyAction
-                icon="heart"
-                title={t`Your memories`}
-                detail={t`Little things worth remembering from your own answers`}
-                onPress={() => router.push("/my-memories")}
-                testID="you-my-memories"
-              />
-              <Hairline />
-            </>
-          ) : null}
           <FamilyAction
             icon="you"
             title={t`Settings`}

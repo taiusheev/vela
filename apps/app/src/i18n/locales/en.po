@@ -31,10 +31,6 @@ msgstr "{asker} asked {recipient}"
 msgid "{asker} asked {recipient} · written by Vela"
 msgstr "{asker} asked {recipient} · written by Vela"
 
-#: app/my-memories.tsx
-msgid "{author} kept these words on {when} and shared them with you."
-msgstr "{author} kept these words on {when} and shared them with you."
-
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr "{away} away"
@@ -138,6 +134,10 @@ msgstr "{label}: still to come"
 #: src/data/precision.ts
 msgid "{later} answered later"
 msgstr "{later} answered later"
+
+#: src/components/family-book.tsx
+msgid "{memories, plural, one {# kept answer} other {# kept answers}}"
+msgstr "{memories, plural, one {# kept answer} other {# kept answers}}"
 
 #: src/components/onboarding/plan.tsx
 msgid "{mornings, plural, one {# morning, ready.} other {# mornings, ready.}}"
@@ -252,6 +252,10 @@ msgstr "{name} opened the invitation."
 msgid "{name} reads"
 msgstr "{name} reads"
 
+#: app/(tabs)/exchanges.tsx
+msgid "{name} said"
+msgstr "{name} said"
+
 #: src/components/calling-number-editor.tsx
 msgid "{name} said I may save this number on my iPhone."
 msgstr "{name} said I may save this number on my iPhone."
@@ -271,6 +275,10 @@ msgstr "{name} says yes"
 #: src/components/quiet-notice.tsx
 msgid "{name} will look in."
 msgstr "{name} will look in."
+
+#: app/(tabs)/exchanges.tsx
+msgid "{name}, asked “{question}”"
+msgstr "{name}, asked “{question}”"
 
 #: src/components/reminders.tsx
 msgid "{name}: {what}, {day}"
@@ -409,10 +417,6 @@ msgstr "{relation} · asked after setup"
 msgid "{replies, plural, one {# reply} other {# replies}}"
 msgstr "{replies, plural, one {# reply} other {# replies}}"
 
-#: app/(tabs)/exchanges.tsx
-msgid "{sharedCount} memories were shared with you"
-msgstr "{sharedCount} memories were shared with you"
-
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr "{someone} nearby, for quiet days"
@@ -496,10 +500,6 @@ msgstr "A little light from home."
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "A live connection has not been set up."
-
-#: app/(tabs)/exchanges.tsx
-msgid "A memory was shared with you"
-msgstr "A memory was shared with you"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -1501,6 +1501,10 @@ msgid "Her words stay here for thirty days."
 msgstr "Her words stay here for thirty days."
 
 #: app/(tabs)/exchanges.tsx
+msgid "Her words stay here for thirty days. Tap Keep on the ones you want to keep for good; they and her stories stay in the family book."
+msgstr "Her words stay here for thirty days. Tap Keep on the ones you want to keep for good; they and her stories stay in the family book."
+
+#: app/(tabs)/exchanges.tsx
 msgid "Her words stay here for thirty days. The stories she tells are kept in the family book."
 msgstr "Her words stay here for thirty days. The stories she tells are kept in the family book."
 
@@ -1742,6 +1746,14 @@ msgstr "Japan"
 msgid "Kazakhstan"
 msgstr "Kazakhstan"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Keep"
+msgstr "Keep"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Keep for good"
+msgstr "Keep for good"
+
 #: app/delete-account.tsx
 msgid "Keep my account"
 msgstr "Keep my account"
@@ -1774,10 +1786,24 @@ msgstr "Keep this story"
 msgid "Keeping {name}’s mornings safe…"
 msgstr "Keeping {name}’s mornings safe…"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Keeping…"
+msgstr "Keeping…"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Keeps this answer in the family book instead of deleting it after 30 days"
+msgstr "Keeps this answer in the family book instead of deleting it after 30 days"
+
+#: app/(tabs)/exchanges.tsx
 #: app/my-memories.tsx
 msgid "Kept"
 msgstr "Kept"
 
+#: src/components/family-book.tsx
+msgid "Kept by {keeper}"
+msgstr "Kept by {keeper}"
+
+#: app/(tabs)/exchanges.tsx
 #: src/components/family-book.tsx
 msgid "Kept for good"
 msgstr "Kept for good"
@@ -1881,7 +1907,6 @@ msgstr "Listen to the family’s voice ask"
 msgid "Listen to your recording"
 msgstr "Listen to your recording"
 
-#: app/(tabs)/you.tsx
 #: app/profile.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr "Little things worth remembering from your own answers"
@@ -2204,6 +2229,10 @@ msgstr "Not sure where to start? Tap one to put it in the box."
 #: src/components/onboarding/questions.tsx
 msgid "Not sure yet"
 msgstr "Not sure yet"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Not this one"
+msgstr "Not this one"
 
 #: src/components/quiet-notice.tsx
 msgid "Not this time"
@@ -3035,10 +3064,6 @@ msgstr "Share one personal link in your usual chat. Your parent decides in Teleg
 msgid "Share their chat link"
 msgstr "Share their chat link"
 
-#: app/my-memories.tsx
-msgid "Shared with you"
-msgstr "Shared with you"
-
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
@@ -3047,10 +3072,18 @@ msgstr "Sharing could not open. Select and copy the link below, then send it to 
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr "She answers when she likes: a few words, a photo, or her voice."
 
+#: app/(tabs)/exchanges.tsx
+msgid "She asked not to keep this one."
+msgstr "She asked not to keep this one."
+
 #: app/exchange/[id].tsx
 #: src/components/today-heart.tsx
 msgid "She has not answered yet, so there is nothing to reply to."
 msgstr "She has not answered yet, so there is nothing to reply to."
+
+#: app/(tabs)/exchanges.tsx
+msgid "She has turned memories off, so her answers are not kept."
+msgstr "She has turned memories off, so her answers are not kept."
 
 #: app/exchange/[id].tsx
 msgid "She hears it in her read-back tomorrow morning."
@@ -3236,6 +3269,10 @@ msgstr "Stop recording"
 #: src/components/family-book.tsx
 msgid "Stories"
 msgstr "Stories"
+
+#: src/components/family-book.tsx
+msgid "Stories and kept answers"
+msgstr "Stories and kept answers"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Story"
@@ -3621,8 +3658,8 @@ msgid "The send could not be confirmed. Retry the saved attempt to finish the sa
 msgstr "The send could not be confirmed. Retry the saved attempt to finish the same send."
 
 #: src/components/family-book.tsx
-msgid "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
-msgstr "The stories she tells on story day, and the recipes she shares, stay here after the 30 days, with her voice."
+msgid "The stories she tells on story day, the answers the family keeps, and the recipes she shares, stay here after the 30 days, with her voice."
+msgstr "The stories she tells on story day, the answers the family keeps, and the recipes she shares, stay here after the 30 days, with her voice."
 
 #: src/data/chat.ts
 #: src/data/exchanges.ts
@@ -3672,6 +3709,10 @@ msgstr "Their name"
 msgid "them"
 msgstr "them"
 
+#: app/(tabs)/exchanges.tsx
+msgid "There is no answer to keep yet."
+msgstr "There is no answer to keep yet."
+
 #: src/components/onboarding/questions.tsx
 msgid "There’s no one nearby yet"
 msgstr "There’s no one nearby yet"
@@ -3695,6 +3736,10 @@ msgstr "They will no longer receive requests to look in. You can invite someone 
 #: src/components/onboarding/finish.tsx
 msgid "This account already runs a family."
 msgstr "This account already runs a family."
+
+#: app/(tabs)/exchanges.tsx
+msgid "This answer mentions health or something private, so it is not kept."
+msgstr "This answer mentions health or something private, so it is not kept."
 
 #: app/delete-account.tsx
 msgid "This cannot be undone."
@@ -4154,6 +4199,10 @@ msgstr "Vela suggests"
 msgid "Vela suggests · from her own words"
 msgstr "Vela suggests · from her own words"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Vela suggests answers you may want to keep. Kept answers stay in the family book instead of being deleted after 30 days."
+msgstr "Vela suggests answers you may want to keep. Kept answers stay in the family book instead of being deleted after 30 days."
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr "Vela suggests questions about what {name} enjoys. Choose as many as fit."
@@ -4409,10 +4458,6 @@ msgstr "With your light on, they also see whether you answered each morning and 
 msgid "Words & sayings"
 msgstr "Words & sayings"
 
-#: app/(tabs)/exchanges.tsx
-msgid "Words your family chose to keep and share with you"
-msgstr "Words your family chose to keep and share with you"
-
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "Words, photos and voice messages you sent stay with the family, as they are part of their days."
@@ -4420,6 +4465,10 @@ msgstr "Words, photos and voice messages you sent stay with the family, as they 
 #: src/data/onboarding.ts
 msgid "Work & advice"
 msgstr "Work & advice"
+
+#: app/(tabs)/exchanges.tsx
+msgid "Worth keeping?"
+msgstr "Worth keeping?"
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {parentName}"
@@ -4599,7 +4648,6 @@ msgid "Your email"
 msgstr "Your email"
 
 #: app/(tabs)/you.tsx
-#: app/my-memories.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
 msgid "Your family"
@@ -4642,10 +4690,6 @@ msgstr "Your first days"
 msgid "Your first question"
 msgstr "Your first question"
 
-#: src/data/my-memories-demo.ts
-msgid "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
-msgstr "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
-
 #: app/settings.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
 msgstr "Your light is off, so nothing about your mornings is shown."
@@ -4654,7 +4698,6 @@ msgstr "Your light is off, so nothing about your mornings is shown."
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "Your light is paused from your own chat, where your mornings arrive."
 
-#: app/(tabs)/you.tsx
 #: app/my-memories.tsx
 #: app/profile.tsx
 msgid "Your memories"
