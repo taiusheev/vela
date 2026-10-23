@@ -187,8 +187,15 @@
     {
       "idx": 26,
       "version": "7",
-      "when": 1792779972168,
-      "tag": "0026_memory_stories",
+      "when": 1792777349085,
+      "tag": "0026_weekly_support_private_test",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792786869609,
+      "tag": "0027_memory_stories",
       "breakpoints": true
     }
   ]

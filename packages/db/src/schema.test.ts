@@ -112,6 +112,9 @@ import {
   type WeeklyRead,
   waitlistSignups,
   weeklyReads,
+  weeklySupportPermissions,
+  weeklySupportPresentations,
+  weeklySupportSelections,
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
@@ -627,6 +630,44 @@ async function seedEveryTable(): Promise<void> {
     confirmationVersion: "memory.share@1",
     fingerprint: "a".repeat(64),
     grantedAt: new Date("2026-09-14T00:00:00Z"),
+  });
+  const reportRevision = crypto.randomUUID();
+  await db.insert(weeklySupportPermissions).values({
+    memberId: seed.parent.id,
+    familyId,
+    userId: user.id,
+    revision: reportRevision,
+    ownerRevision: seed.parent.memoryMembershipRevision,
+    version: "weekly.support.review@1",
+    noticeVersion: "weekly-support-private-test@1",
+    textSha256: "a".repeat(64),
+    state: "yes",
+    audience: [],
+    givenAt: new Date("2026-09-14T00:00:00Z"),
+  });
+  await db.insert(weeklySupportPresentations).values({
+    memberId: seed.parent.id,
+    familyId,
+    userId: user.id,
+    ownerRevision: seed.parent.memoryMembershipRevision,
+    textSha256: "a".repeat(64),
+    permissionRevision: reportRevision,
+    audience: [],
+    issuedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-14T00:05:00Z"),
+  });
+  await db.insert(weeklySupportSelections).values({
+    memberId: seed.parent.id,
+    familyId,
+    answerId: answer.id,
+    permissionRevision: reportRevision,
+    sourceDigest: "a".repeat(64),
+    templateVersion: "weekly.support.templates@1",
+    kind: "practical_help",
+    reviewerId: seed.organiser.id,
+    reviewerRevision: seed.organiser.memoryMembershipRevision,
+    reviewedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-15T00:00:00Z"),
   });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
@@ -2174,6 +2215,12 @@ describe("deletion proofs", () => {
 
 describe("CHECK constraints on enumerated columns", () => {
   const enumerated: { table: string; column: string; values: readonly string[] }[] = [
+    { table: "weekly_support_permissions", column: "state", values: ["yes", "no", "withdrawn"] },
+    {
+      table: "weekly_support_selections",
+      column: "kind",
+      values: ["shared_interest", "company", "practical_help"],
+    },
     { table: "users", column: "language", values: LANGS },
     { table: "waitlist_signups", column: "language", values: ["en", "zh-TW"] },
     { table: "waitlist_signups", column: "role", values: ["organiser", "parent", "other"] },

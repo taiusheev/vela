@@ -807,6 +807,52 @@ CREATE TABLE "weekly_reads" (
 	CONSTRAINT "weekly_reads_sent_lines_sent_suggestion_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null) and ("sent_suggestion" is null) = ("sent_at" is null))
 );
 
+CREATE TABLE "weekly_support_permissions" (
+	"member_id" uuid PRIMARY KEY NOT NULL,
+	"family_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"revision" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"version" text NOT NULL,
+	"notice_version" text NOT NULL,
+	"text_sha256" text NOT NULL,
+	"state" text NOT NULL,
+	"audience" jsonb NOT NULL,
+	"given_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_permissions_state_check" CHECK ("weekly_support_permissions"."state" in ('yes', 'no', 'withdrawn'))
+);
+
+CREATE TABLE "weekly_support_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"text_sha256" text NOT NULL,
+	"permission_revision" uuid,
+	"audience" jsonb NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone
+);
+
+CREATE TABLE "weekly_support_selections" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"permission_revision" uuid NOT NULL,
+	"source_digest" text NOT NULL,
+	"template_version" text NOT NULL,
+	"kind" text NOT NULL,
+	"reviewer_id" uuid NOT NULL,
+	"reviewer_revision" uuid NOT NULL,
+	"reviewed_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_member_answer_key" UNIQUE("member_id","answer_id"),
+	CONSTRAINT "weekly_support_selections_kind_check" CHECK ("weekly_support_selections"."kind" in ('shared_interest', 'company', 'practical_help'))
+);
+
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -917,6 +963,16 @@ ALTER TABLE "turns" ADD CONSTRAINT "turns_recipient_id_members_id_fk" FOREIGN KE
 ALTER TABLE "turns" ADD CONSTRAINT "turns_holder_id_members_id_fk" FOREIGN KEY ("holder_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_reviewer_id_members_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "account_link_challenges_user_idx" ON "account_link_challenges" USING btree ("user_id");
 CREATE INDEX "account_link_challenges_expiry_idx" ON "account_link_challenges" USING btree ("expires_at");
 CREATE INDEX "account_link_challenges_completed_idx" ON "account_link_challenges" USING btree ("completed_at");
@@ -981,6 +1037,8 @@ CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
 CREATE UNIQUE INDEX "suggestions_one_per_day" ON "suggestions" USING btree ("about_member_id","local_day");
+CREATE INDEX "weekly_support_presentations_expiry_idx" ON "weekly_support_presentations" USING btree ("expires_at");
+CREATE INDEX "weekly_support_selection_expiry_idx" ON "weekly_support_selections" USING btree ("expires_at");
 
 -- Explicit schema names also support the isolated Worker schema generator.
 CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_source"() RETURNS trigger
