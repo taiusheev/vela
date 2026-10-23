@@ -74,6 +74,9 @@ function fixture(enabled = true) {
     removeKeptMemory: vi
       .fn<Services["removeKeptMemory"]>()
       .mockResolvedValue(ok({ removed: true })),
+    loadSharedKeptMemories: vi
+      .fn<Services["loadSharedKeptMemories"]>()
+      .mockResolvedValue({ items: [], next_cursor: null }),
   };
   const config = { richMemories: true } as NonNullable<ApiRuntime["memories"]>["config"];
   const verifySession = vi.fn<ApiRuntime["verifySession"]>().mockResolvedValue(IDENTITY);
@@ -109,6 +112,7 @@ const ROUTES = [
   [`${BASE}/memory-permission-presentations/${PRESENTATION}`, undefined],
   [`${BASE}/memory-suggestions`, undefined],
   [`${BASE}/memories`, undefined],
+  [`${BASE}/shared-memories`, undefined],
   [`${BASE}/memory-permission/presentations`, { lang: "en" }],
   [`${BASE}/memory-permission/answer`, ANSWER],
   [`${BASE}/memory-permission/withdraw`, {}],

@@ -85,6 +85,18 @@ export function MEMORIES_DEMO(): MyMemoriesPort {
       ];
     },
     kept: async () => kept,
+    // Mom shared one memory with the reader from her chat.
+    shared: async () => [
+      {
+        id: id(51),
+        member_id: "m1",
+        kind: "story",
+        quote: t`Your grandfather sang to the tomatoes every morning, and they grew the sweetest.`,
+        lang: "en",
+        occurred_at: "2026-10-19T00:30:00.000Z",
+        kept_at: "2026-10-19T01:00:00.000Z",
+      },
+    ],
     remove: async (memory) => {
       kept = kept.filter((item) => item.id !== memory);
     },

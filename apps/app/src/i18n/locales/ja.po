@@ -25,6 +25,10 @@ msgstr ""
 msgid "{asker} asked {recipient} · written by Vela"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "{author} kept these words on {when} and shared them with you."
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr ""
@@ -399,6 +403,10 @@ msgstr ""
 msgid "{replies, plural, one {# reply} other {# replies}}"
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "{sharedCount} memories were shared with you"
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr ""
@@ -481,6 +489,10 @@ msgstr ""
 
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
+msgstr ""
+
+#: app/(tabs)/exchanges.tsx
+msgid "A memory was shared with you"
 msgstr ""
 
 #: app/help.tsx
@@ -3017,6 +3029,10 @@ msgstr ""
 msgid "Share their chat link"
 msgstr ""
 
+#: app/my-memories.tsx
+msgid "Shared with you"
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr ""
@@ -4387,6 +4403,10 @@ msgstr ""
 msgid "Words & sayings"
 msgstr ""
 
+#: app/(tabs)/exchanges.tsx
+msgid "Words your family chose to keep and share with you"
+msgstr ""
+
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr ""
@@ -4573,6 +4593,7 @@ msgid "Your email"
 msgstr ""
 
 #: app/(tabs)/you.tsx
+#: app/my-memories.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
 msgid "Your family"
@@ -4613,6 +4634,10 @@ msgstr ""
 
 #: src/components/onboarding/plan.tsx
 msgid "Your first question"
+msgstr ""
+
+#: src/data/my-memories-demo.ts
+msgid "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
 msgstr ""
 
 #: app/settings.tsx

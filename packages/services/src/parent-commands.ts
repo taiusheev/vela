@@ -18,15 +18,19 @@ import {
 } from "@vela/core";
 import {
   answers,
+  consents,
   exchanges,
   type Family,
   type Member,
   members,
+  memoryCandidates,
+  memoryKeeps,
+  memoryPermissionPresentations,
   translations,
   type VelaTransaction,
   weeklyReads,
 } from "@vela/db";
-import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { canAnswer } from "./answers.ts";
 import { withdrawHealthWords } from "./consent.ts";
@@ -343,6 +347,38 @@ async function whatFamilySees(
 }
 
 /**
+ * "memories off": withdraws her memory yes and her keep proofs, and clears her suggestions, kept
+ * words and open questions in Vela, under her member lock, as the app's "Turn off and clear" does.
+ * Her ordinary chats and other choices stay. Answered every time, so she always hears it worked.
+ */
+async function memoriesOff(deps: Deps, member: Member, event: InboundEvent, now: Date) {
+  await deps.db.transaction(async (tx) => {
+    await tx
+      .select({ id: members.id })
+      .from(members)
+      .where(eq(members.id, member.id))
+      .for("update");
+    await tx
+      .update(consents)
+      .set({ withdrawnAt: now })
+      .where(
+        and(
+          eq(consents.memberId, member.id),
+          inArray(consents.kind, ["rich_memories", "memory_keep"]),
+          eq(consents.answer, "yes"),
+          isNull(consents.withdrawnAt),
+        ),
+      );
+    await tx.delete(memoryKeeps).where(eq(memoryKeeps.memberId, member.id));
+    await tx.delete(memoryCandidates).where(eq(memoryCandidates.memberId, member.id));
+    await tx
+      .delete(memoryPermissionPresentations)
+      .where(eq(memoryPermissionPresentations.memberId, member.id));
+  });
+  await reply(deps, deps.db, member, event, "memories_off", t(member.language, "memory.off_done"));
+}
+
+/**
  * One command from the kept-light member in her private chat. The caller matched the words; the
  * gate of §3.9 is checked again here. `tick` runs her schedule after a start.
  */
@@ -375,6 +411,9 @@ export async function handleParentCommand(
     }
     case "what_family_sees":
       await whatFamilySees(deps, member, family, event);
+      return;
+    case "memories_off":
+      await memoriesOff(deps, member, event, now);
       return;
   }
 }

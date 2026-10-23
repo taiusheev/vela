@@ -31,6 +31,10 @@ msgstr "{asker} asked {recipient}"
 msgid "{asker} asked {recipient} · written by Vela"
 msgstr "{asker} asked {recipient} · written by Vela"
 
+#: app/my-memories.tsx
+msgid "{author} kept these words on {when} and shared them with you."
+msgstr "{author} kept these words on {when} and shared them with you."
+
 #: src/data/precision.ts
 msgid "{away} away"
 msgstr "{away} away"
@@ -405,6 +409,10 @@ msgstr "{relation} · asked after setup"
 msgid "{replies, plural, one {# reply} other {# replies}}"
 msgstr "{replies, plural, one {# reply} other {# replies}}"
 
+#: app/(tabs)/exchanges.tsx
+msgid "{sharedCount} memories were shared with you"
+msgstr "{sharedCount} memories were shared with you"
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr "{someone} nearby, for quiet days"
@@ -488,6 +496,10 @@ msgstr "A little light from home."
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "A live connection has not been set up."
+
+#: app/(tabs)/exchanges.tsx
+msgid "A memory was shared with you"
+msgstr "A memory was shared with you"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -3023,6 +3035,10 @@ msgstr "Share one personal link in your usual chat. Your parent decides in Teleg
 msgid "Share their chat link"
 msgstr "Share their chat link"
 
+#: app/my-memories.tsx
+msgid "Shared with you"
+msgstr "Shared with you"
+
 #: src/components/parent-link-settings.tsx
 msgid "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
 msgstr "Sharing could not open. Select and copy the link below, then send it to your parent. If it has expired, try sharing again for a fresh link."
@@ -4393,6 +4409,10 @@ msgstr "With your light on, they also see whether you answered each morning and 
 msgid "Words & sayings"
 msgstr "Words & sayings"
 
+#: app/(tabs)/exchanges.tsx
+msgid "Words your family chose to keep and share with you"
+msgstr "Words your family chose to keep and share with you"
+
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "Words, photos and voice messages you sent stay with the family, as they are part of their days."
@@ -4579,6 +4599,7 @@ msgid "Your email"
 msgstr "Your email"
 
 #: app/(tabs)/you.tsx
+#: app/my-memories.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
 msgid "Your family"
@@ -4620,6 +4641,10 @@ msgstr "Your first days"
 #: src/components/onboarding/plan.tsx
 msgid "Your first question"
 msgstr "Your first question"
+
+#: src/data/my-memories-demo.ts
+msgid "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
+msgstr "Your grandfather sang to the tomatoes every morning, and they grew the sweetest."
 
 #: app/settings.tsx
 msgid "Your light is off, so nothing about your mornings is shown."

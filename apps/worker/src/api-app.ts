@@ -314,6 +314,8 @@ export interface ApiRuntime {
       keepMemoryCandidate: typeof keepMemoryCandidate;
       loadKeptMemories: typeof loadKeptMemories;
       removeKeptMemory: typeof removeKeptMemory;
+      /** What other members named the reader to read (a parent sharing from her chat included). */
+      loadSharedKeptMemories: typeof loadSharedKeptMemories;
     };
   };
   parentConnection?: typeof loadApiParentConnection;
@@ -1308,6 +1310,29 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return page === null ? c.json(NOT_FOUND, 404) : c.json(KeptMemoryPage.parse(page), 200);
       },
     );
+    // The sharing group serves the same read once it is configured; until then the memories group
+    // does, so what a parent shared from her chat reaches the people she named.
+    if (sharing === undefined) {
+      app.get(
+        "/v1/families/:familyId/shared-memories",
+        authenticate,
+        sharingIds,
+        withDatabase,
+        async (c) => {
+          const cursor = cursorOf(c);
+          if (cursor === undefined) return c.json(INVALID, 400);
+          const page = await memories.services.loadSharedKeptMemories(
+            memoryReadDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            cursor,
+          );
+          return page === null
+            ? c.json(NOT_FOUND, 404)
+            : c.json(SharedKeptMemoryPage.parse(page), 200);
+        },
+      );
+    }
   }
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {

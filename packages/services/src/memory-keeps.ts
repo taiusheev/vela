@@ -94,6 +94,167 @@ export async function lockMemoryOwner(
   if (!user) throw absent();
 }
 
+type KeepLocked = {
+  candidate: typeof memoryCandidates.$inferSelect;
+  answer: typeof answers.$inferSelect;
+  quote: string;
+  lang: string;
+};
+
+/**
+ * Locks a candidate and everything that must still hold for its words to be kept: her source,
+ * her current memory yes, an unchanged source digest, and no earlier removal. `lockOwner` takes
+ * the author's lock first, the same way for the app and for her chat. Throws when anything fails.
+ */
+async function lockKeepable(
+  deps: KeepDeps,
+  tx: Queryable,
+  familyId: string,
+  candidateId: string,
+  lockOwner: (memberId: string) => Promise<void>,
+): Promise<KeepLocked> {
+  const [location] = await tx
+    .select({ candidate: memoryCandidates, exchangeId: answers.exchangeId })
+    .from(memoryCandidates)
+    .innerJoin(answers, eq(answers.id, memoryCandidates.sourceAnswerId))
+    .where(and(eq(memoryCandidates.id, candidateId), eq(memoryCandidates.familyId, familyId)));
+  if (!location) throw absent();
+  await lockOwner(location.candidate.memberId);
+  const [exchange] = await tx
+    .select({ id: exchanges.id })
+    .from(exchanges)
+    .where(and(eq(exchanges.id, location.exchangeId), eq(exchanges.familyId, familyId)))
+    .for("share");
+  if (!exchange) throw unavailable();
+  const [answer] = await tx
+    .select()
+    .from(answers)
+    .where(eq(answers.id, location.candidate.sourceAnswerId))
+    .for("no key update");
+  const [candidate] = await tx
+    .select()
+    .from(memoryCandidates)
+    .where(eq(memoryCandidates.id, location.candidate.id))
+    .for("update");
+  if (
+    !answer ||
+    !candidate ||
+    candidate.dismissedAt !== null ||
+    candidate.expiresAt <= deps.clock.now() ||
+    answer.memberId !== candidate.memberId ||
+    answer.exchangeId !== exchange.id ||
+    answer.wordsExpiredAt !== null
+  )
+    throw unavailable();
+  const [consent] = await tx
+    .select()
+    .from(consents)
+    .where(and(eq(consents.memberId, candidate.memberId), eq(consents.kind, "rich_memories")))
+    .orderBy(desc(consents.givenAt), desc(consents.id))
+    .limit(1)
+    .for("share");
+  const words = sourceWords(answer);
+  if (
+    !exchange ||
+    !words ||
+    answer.flag ||
+    (Array.isArray(answer.mentions.health) && answer.mentions.health.length > 0) ||
+    (await sourceDigest(answer)) !== candidate.sourceDigest ||
+    !consent ||
+    consent.id !== candidate.consentId ||
+    consent.answer !== "yes" ||
+    consent.textVersion !== RICH_MEMORY_CONSENT_VERSION ||
+    consent.withdrawnAt !== null ||
+    consent.subjectDeletedAt !== null ||
+    consent.givenAt > answer.receivedAt ||
+    consent.givenAt > deps.clock.now()
+  )
+    throw unavailable();
+  const quote = words.text.slice(candidate.start, candidate.end);
+  if (!quote.trim() || !words.lang.trim() || words.lang.length > 35) throw unavailable();
+  const [existing] = await tx
+    .select()
+    .from(memoryKeeps)
+    .where(eq(memoryKeeps.candidateId, candidate.id));
+  if (candidate.keptAt !== null && !existing) throw unavailable();
+  if (existing) {
+    const [grant] = await tx
+      .select()
+      .from(consents)
+      .where(eq(consents.id, existing.keepConsentId))
+      .for("share");
+    if (
+      existing.removedAt !== null ||
+      !grant ||
+      grant.kind !== "memory_keep" ||
+      grant.answer !== "yes" ||
+      grant.withdrawnAt !== null ||
+      grant.subjectDeletedAt !== null ||
+      grant.textVersion !== MEMORY_KEEP_VERSION
+    )
+      throw unavailable();
+  }
+  return { candidate, answer, quote, lang: words.lang };
+}
+
+/** Writes the keep proof and the kept quote, or answers with the keep already there. */
+async function insertKeep(
+  deps: KeepDeps,
+  tx: Queryable,
+  familyId: string,
+  locked: KeepLocked,
+  provenance: { channel: string; evidence: Record<string, unknown> },
+): Promise<{ status: 200; body: { kept: true; id: string } }> {
+  const { candidate, answer, quote, lang } = locked;
+  const [existing] = await tx
+    .select()
+    .from(memoryKeeps)
+    .where(eq(memoryKeeps.candidateId, candidate.id));
+  if (existing) return { status: 200, body: { kept: true, id: existing.id } };
+  const now = deps.clock.now();
+  if (candidate.expiresAt <= now) throw unavailable();
+  const [proof] = await tx
+    .insert(consents)
+    .values({
+      memberId: candidate.memberId,
+      subjectRef: `member:${candidate.memberId}`,
+      kind: "memory_keep",
+      answer: "yes",
+      textVersion: MEMORY_KEEP_VERSION,
+      lang: "en",
+      channel: provenance.channel,
+      givenAt: now,
+      evidence: provenance.evidence,
+    })
+    .returning();
+  if (!proof) throw unavailable();
+  const [kept] = await tx
+    .insert(memoryKeeps)
+    .values({
+      familyId,
+      memberId: candidate.memberId,
+      candidateId: candidate.id,
+      sourceAnswerId: answer.id,
+      discoveryConsentId: candidate.consentId,
+      keepConsentId: proof.id,
+      kind: candidate.kind,
+      start: candidate.start,
+      end: candidate.end,
+      sourceDigest: candidate.sourceDigest,
+      quote,
+      lang,
+      occurredAt: answer.receivedAt,
+      keptAt: now,
+    })
+    .returning();
+  if (!kept) throw unavailable();
+  await tx
+    .update(memoryCandidates)
+    .set({ keptAt: now })
+    .where(eq(memoryCandidates.id, candidate.id));
+  return { status: 200, body: { kept: true, id: kept.id } };
+}
+
 /** Exact selection + purpose consent + own confirmation, serialized with source/privacy changes.
  * Receipts contain IDs only, never a second quote copy. Every replay rechecks eligibility. */
 export async function keepMemoryCandidate(
@@ -110,162 +271,69 @@ export async function keepMemoryCandidate(
   if (deps.config.richMemories !== true) throw absent();
   if (choice.confirmation_sha256 !== (await sha256Hex(MEMORY_KEEP_EXPLANATION_EN)))
     throw unavailable();
-  let locked: {
-    candidate: typeof memoryCandidates.$inferSelect;
-    answer: typeof answers.$inferSelect;
-    quote: string;
-    lang: string;
-  } | null = null;
+  let locked: KeepLocked | null = null;
   return runApiMutation(
     deps,
     identity,
     { key, operation: "memory.keep:v1", familyId, input: choice },
     {
       authorize: async (tx) => {
-        const [location] = await tx
-          .select({ candidate: memoryCandidates, exchangeId: answers.exchangeId })
-          .from(memoryCandidates)
-          .innerJoin(answers, eq(answers.id, memoryCandidates.sourceAnswerId))
-          .where(
-            and(
-              eq(memoryCandidates.id, choice.candidate_id),
-              eq(memoryCandidates.familyId, familyId),
-            ),
-          );
-        if (!location) throw absent();
-        await lockMemoryOwner(tx, identity, familyId, location.candidate.memberId);
-        const [exchange] = await tx
-          .select({ id: exchanges.id })
-          .from(exchanges)
-          .where(and(eq(exchanges.id, location.exchangeId), eq(exchanges.familyId, familyId)))
-          .for("share");
-        if (!exchange) throw unavailable();
-        const [answer] = await tx
-          .select()
-          .from(answers)
-          .where(eq(answers.id, location.candidate.sourceAnswerId))
-          .for("no key update");
-        const [candidate] = await tx
-          .select()
-          .from(memoryCandidates)
-          .where(eq(memoryCandidates.id, location.candidate.id))
-          .for("update");
-        if (
-          !answer ||
-          !candidate ||
-          candidate.dismissedAt !== null ||
-          candidate.expiresAt <= deps.clock.now() ||
-          answer.memberId !== candidate.memberId ||
-          answer.exchangeId !== exchange.id ||
-          answer.wordsExpiredAt !== null
-        )
-          throw unavailable();
-        const [consent] = await tx
-          .select()
-          .from(consents)
-          .where(and(eq(consents.memberId, candidate.memberId), eq(consents.kind, "rich_memories")))
-          .orderBy(desc(consents.givenAt), desc(consents.id))
-          .limit(1)
-          .for("share");
-        const words = sourceWords(answer);
-        if (
-          !exchange ||
-          !words ||
-          answer.flag ||
-          (Array.isArray(answer.mentions.health) && answer.mentions.health.length > 0) ||
-          (await sourceDigest(answer)) !== candidate.sourceDigest ||
-          !consent ||
-          consent.id !== candidate.consentId ||
-          consent.answer !== "yes" ||
-          consent.textVersion !== RICH_MEMORY_CONSENT_VERSION ||
-          consent.withdrawnAt !== null ||
-          consent.subjectDeletedAt !== null ||
-          consent.givenAt > answer.receivedAt ||
-          consent.givenAt > deps.clock.now()
-        )
-          throw unavailable();
-        const quote = words.text.slice(candidate.start, candidate.end);
-        if (!quote.trim() || !words.lang.trim() || words.lang.length > 35) throw unavailable();
-        const [existing] = await tx
-          .select()
-          .from(memoryKeeps)
-          .where(eq(memoryKeeps.candidateId, candidate.id));
-        if (candidate.keptAt !== null && !existing) throw unavailable();
-        if (existing) {
-          const [grant] = await tx
-            .select()
-            .from(consents)
-            .where(eq(consents.id, existing.keepConsentId))
-            .for("share");
-          if (
-            existing.removedAt !== null ||
-            !grant ||
-            grant.kind !== "memory_keep" ||
-            grant.answer !== "yes" ||
-            grant.withdrawnAt !== null ||
-            grant.subjectDeletedAt !== null ||
-            grant.textVersion !== MEMORY_KEEP_VERSION
-          )
-            throw unavailable();
-        }
-        locked = { candidate, answer, quote, lang: words.lang };
+        locked = await lockKeepable(deps, tx, familyId, choice.candidate_id, (memberId) =>
+          lockMemoryOwner(tx, identity, familyId, memberId),
+        );
       },
       mutate: async (tx) => {
         if (locked === null) throw unavailable();
-        const { candidate, answer, quote, lang } = locked;
-        const [existing] = await tx
-          .select()
-          .from(memoryKeeps)
-          .where(eq(memoryKeeps.candidateId, candidate.id));
-        if (existing) return { status: 200, body: { kept: true, id: existing.id } };
-        const now = deps.clock.now();
-        if (candidate.expiresAt <= now) throw unavailable();
-        const [proof] = await tx
-          .insert(consents)
-          .values({
-            memberId: candidate.memberId,
-            subjectRef: `member:${candidate.memberId}`,
-            kind: "memory_keep",
-            answer: "yes",
-            textVersion: MEMORY_KEEP_VERSION,
-            lang: "en",
-            channel: "app",
-            givenAt: now,
-            evidence: {
-              params: { candidate_id: candidate.id },
-              text_sha256: choice.confirmation_sha256,
-            },
-          })
-          .returning();
-        if (!proof) throw unavailable();
-        const [kept] = await tx
-          .insert(memoryKeeps)
-          .values({
-            familyId,
-            memberId: candidate.memberId,
-            candidateId: candidate.id,
-            sourceAnswerId: answer.id,
-            discoveryConsentId: candidate.consentId,
-            keepConsentId: proof.id,
-            kind: candidate.kind,
-            start: candidate.start,
-            end: candidate.end,
-            sourceDigest: candidate.sourceDigest,
-            quote,
-            lang,
-            occurredAt: answer.receivedAt,
-            keptAt: now,
-          })
-          .returning();
-        if (!kept) throw unavailable();
-        await tx
-          .update(memoryCandidates)
-          .set({ keptAt: now })
-          .where(eq(memoryCandidates.id, candidate.id));
-        return { status: 200, body: { kept: true, id: kept.id } };
+        return insertKeep(deps, tx, familyId, locked, {
+          channel: "app",
+          evidence: {
+            params: { candidate_id: locked.candidate.id },
+            text_sha256: choice.confirmation_sha256,
+          },
+        });
       },
     },
   );
+}
+
+/**
+ * Her own "Keep" tap in her chat (Telegram or LINE), with the keep explanation in the message she
+ * tapped under: the same checks as the app's keep, under her member lock. Returns the kept id, or
+ * null when the words can no longer be kept (expired, removed, withdrawn, changed source).
+ */
+export async function keepMemoryFromChat(
+  deps: KeepDeps,
+  memberId: string,
+  candidateId: string,
+  provenance: { channel: string; evidence: Record<string, unknown> },
+): Promise<string | null> {
+  if (deps.config.richMemories !== true) return null;
+  try {
+    return await deps.db.transaction(async (tx) => {
+      const [member] = await tx
+        .select()
+        .from(members)
+        .where(
+          and(eq(members.id, memberId), isNull(members.leftAt), inArray(members.status, active)),
+        )
+        .for("share");
+      if (!member) return null;
+      const [family] = await tx
+        .select()
+        .from(families)
+        .where(and(eq(families.id, member.familyId), isNull(families.deletedAt)))
+        .for("share");
+      if (!family) return null;
+      const locked = await lockKeepable(deps, tx, family.id, candidateId, async (owner) => {
+        if (owner !== member.id) throw absent();
+      });
+      const result = await insertKeep(deps, tx, family.id, locked, provenance);
+      return result.body.id;
+    });
+  } catch (error) {
+    if (error instanceof VelaError) return null;
+    throw error;
+  }
 }
 
 const discovery = alias(consents, "kept_discovery_consent");
@@ -381,7 +449,9 @@ async function readKeptMemoryPage(
     .innerJoin(grant, and(eq(grant.id, memoryKeeps.keepConsentId), eq(grant.memberId, members.id)))
     .innerJoin(viewer, eq(viewer.id, access.access.memberId))
     .innerJoin(users, eq(users.id, viewer.userId))
-    .innerJoin(ownerAccount, eq(ownerAccount.id, members.userId))
+    // A parent who answers in her chat has no app account; her shared words still reach the people
+    // she named. An account she had and deleted hides everything, as before.
+    .leftJoin(ownerAccount, eq(ownerAccount.id, members.userId))
     .where(
       and(
         eq(memoryKeeps.familyId, familyId),
@@ -412,8 +482,10 @@ async function readKeptMemoryPage(
         isNull(memoryKeeps.removedAt),
         isNull(members.leftAt),
         inArray(members.status, active),
-        isNull(ownerAccount.deletedAt),
-        isNotNull(ownerAccount.authSubject),
+        or(
+          isNull(members.userId),
+          and(isNull(ownerAccount.deletedAt), isNotNull(ownerAccount.authSubject)),
+        ),
         eq(viewer.familyId, familyId),
         eq(users.id, access.access.userId),
         eq(users.authSubject, identity.authSubject),

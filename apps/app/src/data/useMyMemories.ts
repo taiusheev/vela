@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ApiKeptMemory,
   ApiMemoryCandidate,
+  ApiSharedKeptMemory,
   MemoryPermissionPreview,
   MemoryPermissionState,
 } from "@vela/contracts";
@@ -14,6 +15,7 @@ import {
   fetchKeptMemories,
   fetchMemoryPermission,
   fetchMemorySuggestions,
+  fetchSharedMemories,
   keepMemory,
   openMemoryPermission,
   removeKeptMemory,
@@ -34,6 +36,8 @@ export interface MyMemoriesPort {
   dismiss(id: string, key: string): Promise<void>;
   keep(id: string, key: string): Promise<void>;
   kept(): Promise<ApiKeptMemory[]>;
+  /** Memories others named the reader to read, newest last as the server pages them. */
+  shared(): Promise<ApiSharedKeptMemory[]>;
   remove(id: string, key: string): Promise<void>;
 }
 
@@ -65,6 +69,7 @@ function livePort(familyId: string, token: () => Promise<string | null>): MyMemo
       await keepMemory(familyId, id, key, await token());
     },
     kept: async () => (await fetchKeptMemories(familyId, await token())).items,
+    shared: async () => (await fetchSharedMemories(familyId, await token())).items,
     remove: async (id, key) => {
       await removeKeptMemory(familyId, id, key, await token());
     },
@@ -83,6 +88,8 @@ export interface MyMemoriesView {
   question: MemoryPermissionPreview | null;
   suggestions: ApiMemoryCandidate[];
   kept: ApiKeptMemory[];
+  /** What others shared with the reader by name; readable whatever the reader's own choice is. */
+  shared: ApiSharedKeptMemory[];
   pending: MemoryWrite | null;
   failed: MemoryWrite | null;
   /** The question expired or changed (409): it must be asked for again. */
@@ -141,6 +148,12 @@ export function useMyMemories(familyId: string | undefined): MyMemoriesView {
     enabled: port !== null && permission.data != null,
     queryFn: () => port?.kept() ?? Promise.resolve([]),
   });
+  // What a parent shared from her chat: the reader's own memory choice has nothing to do with it.
+  const shared = useQuery({
+    queryKey: [...scope, "shared"],
+    enabled: port !== null && permission.data != null,
+    queryFn: () => port?.shared() ?? Promise.resolve([]),
+  });
   const [question, setQuestion] = useState<MemoryPermissionPreview | null>(null);
   const [failed, setFailed] = useState<MemoryWrite | null>(null);
   const [stale, setStale] = useState(false);
@@ -175,6 +188,7 @@ export function useMyMemories(familyId: string | undefined): MyMemoriesView {
     question,
     suggestions: on ? (suggestions.data ?? []) : [],
     kept: kept.data ?? [],
+    shared: shared.data ?? [],
     pending: write.isPending ? (write.variables?.kind ?? null) : null,
     failed,
     stale,
