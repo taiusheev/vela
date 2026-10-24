@@ -32,6 +32,19 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Check the frozen 100 weekly-report personas
+        env:
+          WEEKLY_PERSONA_RESULTS: ${{ runner.temp }}/weekly-report-personas.json
+          WEEKLY_PERSONA_HEAD: ${{ github.sha }}
+        run: pnpm --filter @vela/services exec vitest run --config vitest.weekly-personas.config.ts
+      - name: Save synthetic weekly-report persona results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: weekly-report-personas
+          path: ${{ runner.temp }}/weekly-report-personas.json
+          if-no-files-found: ignore
+          retention-days: 7
 
   silence-drill:
     name: silence drill

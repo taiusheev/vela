@@ -69,9 +69,19 @@ reports. The ordinary chat composer still requires a deliberate Send; an unfinis
   week, after permission, before 30-day expiry. No private organiser feedback, admin readings,
   kept-memory copies, media bytes or family observations. Source messages are not duplicated.
 - Existing understanding must have completed; flags, health mentions, unsupported language labels,
-  scripts incompatible with the English/Chinese screening lexicons,
-  sensitive whole text, withdrawn exchanges and expired/deleted words exclude a source. Typed messages use the parent's declared language (they have no voice-language field). Human
+  mixed/non-Latin scripts, insufficient English phrase evidence,
+  sensitive whole text, withdrawn exchanges and expired/deleted words exclude a source. The first
+  cohort now screens English source text only. Typed messages use the parent's declared language
+  (they have no voice-language field), plus independent English phrase evidence; a label alone does
+  not grant eligibility. Short or uncertain fragments remain hidden. Human
   review is still required; a model never declares its own input safe. No content goes to AI here.
+- The report-only deterministic screen normalises compatibility/diacritic/formatting variants for
+  analysis, handles additional sensitive wording and permits narrow ordinary contexts such as a
+  birthday party or photos on a tablet. It retains the rest of the whole message for screening.
+  Original quotes and digests never change. The stricter shared memory/AI screen is unchanged.
+  This bounded language/word screen is not exhaustive language detection or a guarantee against
+  every paraphrase. Keep the feature off until the frozen persona evaluation, supplemental cases,
+  signed-device checks and reviewed human-screening process are accepted.
 - Persisted: permission version/notice/text fingerprint, encrypted named-audience snapshots with
   membership/account bindings; exact-source digests, fixed category/template version, reviewer,
   review time and expiry. No rendered quote, advice or complete report is stored.
