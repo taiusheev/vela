@@ -257,6 +257,25 @@ describe("a morning with two parents", () => {
       },
     ]);
   });
+  it("knows the reader's own heart on her answer, and no one else's", () => {
+    const heart = (from_id: string, kind: "heart" | "laugh" = "heart") => ({
+      from: "Anna",
+      from_id,
+      kind,
+      text: null,
+      photo: null,
+      audio: null,
+    });
+    const read = (replies: ReturnType<typeof heart>[], viewer?: string) =>
+      toToday(
+        ApiToday.parse({ lights: [light()], exchanges: [exchange({ replies })], tomorrow: [] }),
+        viewer,
+      ).exchanges[0]?.heartedByMe;
+    expect(read([heart(ANNA)], ANNA)).toBe(true);
+    expect(read([heart(DAD)], ANNA)).toBeUndefined();
+    expect(read([heart(ANNA, "laugh")], ANNA)).toBeUndefined();
+    expect(read([heart(ANNA)])).toBeUndefined();
+  });
   it("has no invented exchange when the API has no delivered day", () => {
     expect(
       toToday(ApiToday.parse({ lights: [light()], exchanges: [], tomorrow: [] })).exchanges,

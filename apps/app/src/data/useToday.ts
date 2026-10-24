@@ -235,6 +235,10 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
       const light = day.lights.find((row) => row.member_id === exchange.recipient_id);
       return {
         ...toTodayExchange(exchange, light?.tz),
+        ...(viewerMemberId !== undefined &&
+        exchange.replies.some((reply) => reply.kind === "heart" && reply.from_id === viewerMemberId)
+          ? { heartedByMe: true as const }
+          : {}),
         ...(exchange.answer === null &&
         exchange.delivery_status !== "pending" &&
         exchange.delivery_status !== "failed"
