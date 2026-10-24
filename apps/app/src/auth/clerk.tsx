@@ -6,6 +6,7 @@ import { clearAudioCache } from "../audio/cache.ts";
 import { clearPhotoCache } from "../data/photos.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
 import { activatePortraitSession, clearPortraitSession } from "../storage/portraits.ts";
+import { signedInToken } from "./session.ts";
 
 /**
  * Sign-in is Clerk's (build plan 3.1). The key is public by design and arrives through the
@@ -58,7 +59,7 @@ function ClerkAccount({ children }: { children: ReactNode }) {
       sessionId: sessionId ?? null,
       token: (options) =>
         sessionRequests.credential(scope, () =>
-          getToken(options?.fresh === true ? { skipCache: true } : undefined),
+          signedInToken(getToken, isSignedIn === true, options?.fresh === true),
         ),
       signOut: async () => {
         sessionRequests.assertScope(scope);

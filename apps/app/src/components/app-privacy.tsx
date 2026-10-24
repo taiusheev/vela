@@ -96,6 +96,8 @@ export function AppPrivacy({
   );
 }
 
+const SLOW_ACCOUNT_MS = 10_000;
+
 /** Server permission is authoritative; onboarding's explicit choice is saved without asking again. */
 export function AppPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
@@ -153,6 +155,16 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
       void queries.invalidateQueries({ queryKey: ["me"] });
     },
   });
+  // A read still waiting after this long is offered again, so no one is left on a loading screen.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (decision !== "loading") {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), SLOW_ACCOUNT_MS);
+    return () => clearTimeout(timer);
+  }, [decision]);
   const saveChoice = save.mutate;
   useEffect(() => {
     if (decision === "save" && save.status === "idle") saveChoice();
@@ -185,8 +197,19 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
                 <Trans>Saving your choice…</Trans>
               )}
             </Words>
-            {decision === "unavailable" ? (
-              <SecondaryButton label={t`Try again`} onPress={() => void me.refetch()} />
+            {decision === "loading" && slow ? (
+              <Words variant="body" tone="ink2">
+                <Trans>This is taking longer than it should.</Trans>
+              </Words>
+            ) : null}
+            {decision === "unavailable" || (decision === "loading" && slow) ? (
+              <SecondaryButton
+                label={t`Try again`}
+                onPress={() => {
+                  setSlow(false);
+                  void me.refetch({ cancelRefetch: true });
+                }}
+              />
             ) : save.isError ? (
               <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
             ) : null}
