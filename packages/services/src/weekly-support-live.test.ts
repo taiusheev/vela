@@ -493,6 +493,53 @@ it("screens compatibility-width health words without changing the original sourc
   expect((await read()).sources).toEqual([]);
 });
 
+it("keeps the exact ordinary quote while retaining health-marker precedence", async () => {
+  await permit();
+  const text = "I used brown sugar in the cookies.";
+  const a = await source(text);
+  await review();
+  expect((await read(parent)).suggestions[0]?.source.quote).toBe(text);
+  await h.db
+    .update(answers)
+    .set({ mentions: { health: ["synthetic-marker"] } })
+    .where(eq(answers.id, a.id));
+  expect((await read()).sources).toEqual([]);
+  expect((await read(parent)).suggestions).toEqual([]);
+});
+
+it("rejects a mislabelled language and a disguised sensitive source without upstream flags", async () => {
+  await permit();
+  const a = await source("My medi\u200bcine changed.");
+  expect((await read()).sources).toEqual([]);
+  await h.db
+    .update(answers)
+    .set({ payload: { text: "Me duele la rodilla desde ayer." } })
+    .where(eq(answers.id, a.id));
+  expect((await read()).sources).toEqual([]);
+  await h.db
+    .update(answers)
+    .set({ payload: { text: "My flowers opened." }, transcriptLang: "zh-TW" })
+    .where(eq(answers.id, a.id));
+  expect((await read()).sources).toEqual([]);
+});
+
+it("never replaces an unknown voice-transcript language with the profile language", async () => {
+  await permit();
+  const a = await source();
+  await h.db
+    .update(answers)
+    .set({
+      kind: "voice",
+      payload: {},
+      transcript: "Could someone help me sort photos?",
+      transcriptLang: "und",
+    })
+    .where(eq(answers.id, a.id));
+  expect((await read()).sources).toEqual([]);
+  await h.db.update(answers).set({ transcriptLang: "en" }).where(eq(answers.id, a.id));
+  expect((await read()).sources).toHaveLength(1);
+});
+
 it("keeps a Sunday-reviewed offer visible on Monday until its relevance deadline", async () => {
   h.clock.advance(6 * 86400000);
   await permit();

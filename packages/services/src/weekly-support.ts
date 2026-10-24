@@ -8,7 +8,7 @@ import {
   type WeeklySupportSource,
   type WeeklySupportSuggestion,
 } from "@vela/core/weekly-support";
-import { hasSensitiveWords } from "./memory-discovery.ts";
+import { isOrdinaryWeeklySupportSource } from "./weekly-support-screen.ts";
 
 export function prepareWeeklySupportReview(
   context: WeeklySupportContext,
@@ -19,6 +19,10 @@ export function prepareWeeklySupportReview(
   // Screen the entire source, not just the selected quote. A benign excerpt cannot hide health.
   return eligible.filter((item) => {
     const source = sources.find((row) => row.id === item.source.id);
-    return source !== undefined && source.text.length <= 10_000 && !hasSensitiveWords(source.text);
+    return (
+      source !== undefined &&
+      source.text.length <= 10_000 &&
+      isOrdinaryWeeklySupportSource(source.text, "en")
+    );
   });
 }
