@@ -652,10 +652,6 @@ msgstr "A voice note"
 msgid "A vote"
 msgstr "A vote"
 
-#: src/components/connection-windows.tsx
-msgid "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
-msgstr "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
-
 #: src/data/ask.ts
 msgid "A word to teach"
 msgstr "A word to teach"
@@ -885,6 +881,10 @@ msgstr "Ask the founder for access, correction, deletion, or to withdraw consent
 msgid "Ask them to look in"
 msgstr "Ask them to look in"
 
+#: src/components/weekly-support.tsx
+msgid "Ask what would help"
+msgstr "Ask what would help"
+
 #: src/components/quiet-notice.tsx
 msgid "Asked at {time}"
 msgstr "Asked at {time}"
@@ -1075,10 +1075,6 @@ msgstr "Choose a photo"
 #: app/morning-settings.tsx
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
 msgstr "Choose a time in {zone}. Everything waits until they accept the invitation."
-
-#: src/components/weekly-support.tsx
-msgid "Choose an offer to edit it before sending."
-msgstr "Choose an offer to edit it before sending."
 
 #: src/components/photo-reply.tsx
 msgid "Choose another"
@@ -1550,10 +1546,6 @@ msgstr "From {name}'s own words"
 msgid "Garden & plants"
 msgstr "Garden & plants"
 
-#: src/components/weekly-support.tsx
-msgid "General ways to offer support. Let {name} choose what feels helpful."
-msgstr "General ways to offer support. Let {name} choose what feels helpful."
-
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
@@ -1901,6 +1893,10 @@ msgstr "Invitation sent"
 #: app/settings.tsx
 msgid "Is {name} away?"
 msgstr "Is {name} away?"
+
+#: src/components/weekly-support.tsx
+msgid "Is there anything that would make this week easier for you? Big or small, just tell me."
+msgstr "Is there anything that would make this week easier for you? Big or small, just tell me."
 
 #: src/components/onboarding/finish.tsx
 msgid "It comes from you, in {app}, so {name} knows it’s really you."
@@ -2650,26 +2646,13 @@ msgstr "Off: nothing when {her} answers or when your turn comes."
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 msgstr "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 
-#: src/components/weekly-support.tsx
-msgid "Offer a call or some company. Make room to listen to how the week has felt."
-msgstr "Offer a call or some company. Make room to listen to how the week has felt."
-
-#: src/components/weekly-support.tsx
-msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
-msgstr "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
-
 #: app/weekly-report.tsx
-#: src/components/weekly-support.tsx
 msgid "Offer practical help"
 msgstr "Offer practical help"
 
 #: app/weekly-report.tsx
 msgid "Offer some company"
 msgstr "Offer some company"
-
-#: src/components/weekly-support.tsx
-msgid "Offer some time together"
-msgstr "Offer some time together"
 
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -2919,6 +2902,10 @@ msgstr "Photos are not switched on here yet."
 #: app/conversation.tsx
 msgid "Photos for her morning"
 msgstr "Photos for her morning"
+
+#: src/components/weekly-support.tsx
+msgid "Pick one to send {name}. You can change the words first."
+msgstr "Pick one to send {name}. You can change the words first."
 
 #: src/data/useToday.ts
 msgid "picked a photo"
@@ -4312,7 +4299,6 @@ msgid "This voice is no longer available."
 msgstr "This voice is no longer available."
 
 #: app/(tabs)/exchanges.tsx
-#: src/components/connection-windows.tsx
 #: src/components/today-glance.tsx
 msgid "This week"
 msgstr "This week"

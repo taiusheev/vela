@@ -9,10 +9,10 @@ tags:
 - tapOn: "Dad"
 - assertVisible: "Dad's first weekly read: .*"
 - scrollUntilVisible:
-    element: "Offer practical help"
+    element: "A little practical help"
     direction: DOWN
 - assertVisible: "What would help this week.*"
-- tapOn: "Offer practical help"
+- tapOn: "A little practical help"
 - assertVisible: "Your words reach Dad.*"
 - assertNotVisible: "Example only. Nothing was sent."
 - tapOn:
