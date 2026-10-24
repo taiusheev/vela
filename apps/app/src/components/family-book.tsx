@@ -1,268 +1,139 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ApiBookEntry, ApiBookRecipe } from "@vela/contracts";
-import { useState } from "react";
+import { router } from "expo-router";
+import { type ReactNode, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { apiConfigured } from "../api/client.ts";
 import { VoicePlayback } from "../audio/VoicePlayback.tsx";
-import { dayMonth, localDayMonth } from "../data/format.ts";
+import { dayMonth, longDate, monthYear } from "../data/format.ts";
+import { byMonth, type MemoryStory, memoryText, saidAt } from "../data/memories.ts";
 import type { BookView } from "../data/useBook.ts";
 import { useToday } from "../data/useToday.ts";
-import { usePalette } from "../theme/theme.tsx";
+import { usePalette, useTheme } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { ConfirmationDialog } from "./confirmation-dialog.tsx";
-import { ReplyPhoto } from "./family-photo.tsx";
+import { FamilyPhoto } from "./family-photo.tsx";
+import { titleCase, useQuoted } from "./keepsake.tsx";
+import { RoomWindow, useRoom } from "./today-hero.tsx";
 import { SecondaryButton, Words } from "./ui.tsx";
+import { RoomCard } from "./warm.tsx";
+
+/** The book's paper: a page a shade warmer than the app, its edge, and the ink of a printed book. */
+export function usePaper() {
+  const palette = usePalette();
+  const { scheme } = useTheme();
+  return scheme === "dark"
+    ? { page: "#241E19", edge: "#3A3129", spine: "rgba(0, 0, 0, 0.35)", ink: palette.ink }
+    : { page: "#FFFBF2", edge: "#EADFCB", spine: "rgba(107, 74, 43, 0.10)", ink: "#2B231C" };
+}
+
+/** Her words as a printed book sets them: the story serif, a little roomier. */
+const pageWords = { ...type.story, fontSize: 20, lineHeight: 33 };
 
 /**
- * The family book (spec §10, A10; ADR-39): the stories she told and the recipes she kept, beyond
- * the 30 days, newest first, each with its question, who asked it, her words and her voice. Every
- * member reads it; an organiser can take a story out. Reading never needs Vela Light. Shown in
- * Memories and on its own screen.
+ * A sheet of the book: warm paper with a shadow down its left edge where it meets the spine, wide
+ * margins, and room between what is on it.
  */
-export function FamilyBook({
-  book,
-  organiser,
-  bookOn,
-}: {
-  book: BookView;
-  organiser: boolean;
-  bookOn: boolean;
-}) {
-  const palette = usePalette();
-  const { t } = useLingui();
-  // An answer the family kept with "Keep" (ADR-50) is counted as a memory, not a story.
-  const stories = book.entries.filter((entry) => entry.kept_by === null).length;
-  const memories = book.entries.length - stories;
-  const recipes = book.recipes.length;
+export function BookPage({ children }: { children: ReactNode }) {
+  const paper = usePaper();
   return (
-    <View style={{ gap: space.xl }}>
-      <View
-        style={{
-          backgroundColor: palette.lightSoft,
-          borderRadius: radius.card + 8,
-          padding: space.l,
-          gap: space.s,
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-          <BrandIcon name="book" color={palette.lightDeep} size={20} />
-          <Text style={[type.label, { color: palette.ink2, textTransform: "uppercase" }]}>
-            <Trans>Kept for good</Trans>
-          </Text>
-        </View>
-        <Text accessibilityRole="header" style={[type.title, { color: palette.ink }]}>
-          <Trans>The family book</Trans>
-        </Text>
-        <Text style={[type.body, { color: palette.ink2 }]}>
-          {stories === 0 && recipes === 0 && memories === 0
-            ? t`Nothing kept yet.`
-            : [
-                plural(stories, { one: "# story", other: "# stories" }),
-                ...(memories === 0
-                  ? []
-                  : [plural(memories, { one: "# kept answer", other: "# kept answers" })]),
-                plural(recipes, { one: "# recipe", other: "# recipes" }),
-              ].join(" · ")}
-        </Text>
-        <Text style={[type.caption, { color: palette.ink2 }]}>
-          <Trans>
-            The stories she tells on story day, the answers the family keeps, and the recipes she
-            shares, stay here after the 30 days, with her voice.
-          </Trans>
-        </Text>
-      </View>
-
-      {book.trouble ? <SecondaryButton label={t`Try again`} onPress={book.refresh} /> : null}
-      {book.removeFailed ? (
-        <Words variant="body" tone="ink2">
-          <Trans>That story could not be removed. Try again.</Trans>
-        </Words>
-      ) : null}
-
-      {book.coming.map((story) => {
-        const asker = story.asked_by;
-        const day = localDayMonth(story.date);
-        const name = story.member_name;
-        return (
-          <View
-            key={story.exchange_id}
-            style={{
-              borderRadius: radius.card + 6,
-              borderWidth: 1,
-              borderStyle: "dashed",
-              borderColor: palette.control,
-              padding: space.l,
-              gap: space.s,
-            }}
-          >
-            <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
-              {asker === null
-                ? t`Coming up · ${name} · ${day}`
-                : t`Coming up · ${name} · ${day} · chosen by ${asker}`}
-            </Text>
-            {story.question === null ? null : (
-              <Text style={[type.preview, { color: palette.ink }]}>{story.question}</Text>
-            )}
-          </View>
-        );
-      })}
-
-      {!apiConfigured() ? (
-        <Words variant="body" tone="ink2">
-          <Trans>The family book fills with the stories she tells on story day.</Trans>
-        </Words>
-      ) : book.loading ? (
-        <Words variant="body" tone="ink2">
-          <Trans>Opening the book…</Trans>
-        </Words>
-      ) : book.trouble ? (
-        <Words variant="body" tone="ink2">
-          <Trans>The family book could not be reached just now.</Trans>
-        </Words>
-      ) : book.entries.length === 0 && recipes === 0 ? (
-        <Words variant="body" tone="ink2">
-          {bookOn ? (
-            <Trans>
-              No stories yet. Choose a question on the Sunday tab, and what she tells is kept here.
-            </Trans>
-          ) : (
-            <Trans>No stories have been kept here yet.</Trans>
-          )}
-        </Words>
-      ) : null}
-
-      {book.entries.length === 0 ? null : (
-        <View style={{ gap: space.l }}>
-          <Text accessibilityRole="header" style={[type.heading, { color: palette.ink }]}>
-            {memories === 0 ? <Trans>Stories</Trans> : <Trans>Stories and kept answers</Trans>}
-          </Text>
-          {book.entries.map((entry) => (
-            <BookStory
-              key={entry.exchange_id}
-              entry={entry}
-              {...(organiser ? { onRemove: () => book.remove(entry.exchange_id) } : {})}
-              removing={book.removing}
-            />
-          ))}
-        </View>
-      )}
-      {recipes === 0 ? null : (
-        <View style={{ gap: space.l }}>
-          <Text accessibilityRole="header" style={[type.heading, { color: palette.ink }]}>
-            <Trans>Recipes</Trans>
-          </Text>
-          {book.recipes.map((recipe) => (
-            <BookRecipe key={recipe.id} recipe={recipe} />
-          ))}
-        </View>
-      )}
+    <View
+      style={{
+        backgroundColor: paper.page,
+        borderRadius: 6,
+        borderTopRightRadius: radius.panel,
+        borderBottomRightRadius: radius.panel,
+        borderWidth: 1,
+        borderColor: paper.edge,
+        borderLeftWidth: 6,
+        borderLeftColor: paper.spine,
+        paddingVertical: space.xxl,
+        paddingHorizontal: space.xl,
+        gap: space.xl,
+        shadowColor: "#6B4A2B",
+        shadowOpacity: 0.12,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 2,
+      }}
+    >
+      {children}
     </View>
   );
 }
 
-/** One kept story, set like a page: who and when, the question, her words, her voice. */
-function BookStory({
-  entry,
-  onRemove,
-  removing,
-}: {
-  entry: ApiBookEntry;
-  onRemove?: () => void;
-  removing: boolean;
-}) {
+/** The small mark between two pages' worth of words: a rule, her lit window, a rule. */
+export function Ornament() {
   const palette = usePalette();
-  const { t } = useLingui();
-  const [confirming, confirm] = useState(false);
-  const day = dayMonth(entry.kept_at);
-  const name = entry.member_name;
-  const asker = entry.asked_by;
-  const keeper = entry.kept_by;
+  return (
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}
+    >
+      <View style={{ width: 36, height: 1, backgroundColor: palette.rule }} />
+      <View
+        style={{
+          width: 8,
+          height: 10,
+          borderTopLeftRadius: 4,
+          borderTopRightRadius: 4,
+          backgroundColor: palette.light,
+        }}
+      />
+      <View style={{ width: 36, height: 1, backgroundColor: palette.rule }} />
+    </View>
+  );
+}
+
+/** A chapter's heading: the month, set small and spaced between two rules. */
+function Chapter({ title }: { title: string }) {
+  const palette = usePalette();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: palette.rule }} />
+      <Text
+        accessibilityRole="header"
+        style={[
+          type.label,
+          { color: palette.lightDeep, textTransform: "uppercase", letterSpacing: 2 },
+        ]}
+      >
+        {title}
+      </Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: palette.rule }} />
+    </View>
+  );
+}
+
+/** Her photo as a print laid in the book: a white border, a wider foot, a slight tilt. */
+function Print({ id, tilt }: { id: string; tilt: number }) {
+  const { familyId } = useToday();
   return (
     <View
       style={{
-        backgroundColor: palette.surface,
-        borderRadius: radius.card + 6,
-        borderWidth: 1,
-        borderColor: palette.rule,
-        padding: space.l,
-        gap: space.m,
+        alignSelf: "center",
+        width: "86%",
+        backgroundColor: "#FFFFFF",
+        padding: 8,
+        paddingBottom: 28,
+        borderRadius: 3,
+        transform: [{ rotate: `${tilt}deg` }],
+        shadowColor: "#4A2E14",
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
       }}
     >
-      <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
-        {asker === null ? t`${name} · ${day}` : t`${name} · ${day} · ${asker} asked`}
-      </Text>
-      {keeper === null ? null : (
-        <Text style={[type.caption, { color: palette.ink3 }]}>{t`Kept by ${keeper}`}</Text>
-      )}
-      {entry.question === null ? null : (
-        <Text style={[type.heading, { color: palette.ink2 }]}>{entry.question}</Text>
-      )}
-      {entry.photo_ids.map((id) => (
-        <ReplyPhoto key={id} photo={{ id, width: null, height: null, stored: true }} size="full" />
-      ))}
-      {entry.answers.map((answer) => (
-        <View key={`${answer.at}:${answer.media_id ?? ""}`} style={{ gap: space.s }}>
-          {answer.text === null ? null : (
-            <Text selectable style={[type.story, { color: palette.ink }]}>
-              {answer.text}
-            </Text>
-          )}
-          {answer.media_id !== null && answer.media_kind === "audio" ? (
-            <BookVoice mediaId={answer.media_id} />
-          ) : null}
-          {answer.media_id !== null && answer.media_kind === "image" ? (
-            <ReplyPhoto
-              photo={{ id: answer.media_id, width: null, height: null, stored: true }}
-              size="full"
-            />
-          ) : null}
-        </View>
-      ))}
-      {onRemove === undefined ? null : (
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={hitSlop}
-          disabled={removing}
-          onPress={() => confirm(true)}
-          style={{ alignSelf: "flex-start", minHeight: 44, justifyContent: "center" }}
-        >
-          <Words variant="caption" tone="ink3">
-            <Trans>Take this story out of the book</Trans>
-          </Words>
-        </Pressable>
-      )}
-      {confirming ? (
-        <ConfirmationDialog
-          onClose={() => {
-            if (!removing) confirm(false);
-          }}
-        >
-          <Words variant="body">
-            <Trans>Take this story out of the family book?</Trans>
-          </Words>
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              It will stop being kept as a story. The exchange still follows the usual retention
-              period.
-            </Trans>
-          </Words>
-          <SecondaryButton
-            label={t`Take it out`}
-            disabled={removing}
-            onPress={() => {
-              onRemove?.();
-              confirm(false);
-            }}
-          />
-          <SecondaryButton
-            label={t`Keep this story`}
-            disabled={removing}
-            onPress={() => confirm(false)}
-          />
-        </ConfirmationDialog>
-      ) : null}
+      <FamilyPhoto
+        familyId={familyId}
+        photo={{ id, width: null, height: null, stored: true }}
+        size="full"
+        aspectRatio={4 / 3}
+      />
     </View>
   );
 }
@@ -273,12 +144,207 @@ function BookVoice({ mediaId }: { mediaId: string }) {
   return familyId === undefined ? null : <VoicePlayback familyId={familyId} mediaId={mediaId} />;
 }
 
-/** A recipe card she kept (spec §10, ADR-41): her ingredients, steps and tips, as she told them. */
-function BookRecipe({ recipe }: { recipe: ApiBookRecipe }) {
+/**
+ * One kept memory as a page: the day she said it, what she was asked, her words with the light's
+ * quotation mark above them, her name beneath as a signature, her voice and her photos. An
+ * organiser can take it out from a quiet mark at the foot.
+ */
+function EntryPage({
+  entry,
+  index,
+  onRemove,
+  removing,
+}: {
+  entry: ApiBookEntry;
+  index: number;
+  onRemove?: () => void;
+  removing: boolean;
+}) {
   const palette = usePalette();
+  const paper = usePaper();
+  const { t } = useLingui();
+  const quoted = useQuoted();
+  const [confirming, confirm] = useState(false);
+  const day = longDate(saidAt(entry));
+  const name = entry.member_name;
+  const asker = entry.asked_by;
+  const question = entry.question;
+  const keeper = entry.kept_by;
+  const asked = question === null ? "" : quoted(question);
+  const words = entry.answers.flatMap((answer) =>
+    answer.text === null || answer.text.trim().length === 0 ? [] : [answer.text.trim()],
+  );
+  const photos = [
+    ...entry.photo_ids,
+    ...entry.answers.flatMap((answer) =>
+      answer.media_id !== null && answer.media_kind === "image" ? [answer.media_id] : [],
+    ),
+  ];
+  const voices = entry.answers.flatMap((answer) =>
+    answer.media_id !== null && answer.media_kind === "audio" ? [answer.media_id] : [],
+  );
+  return (
+    <View style={{ gap: space.m }} testID={`page-${entry.exchange_id}`}>
+      <Text
+        style={[
+          type.label,
+          {
+            color: palette.ink3,
+            textAlign: "center",
+            textTransform: "uppercase",
+            letterSpacing: 1.5,
+          },
+        ]}
+      >
+        {day}
+      </Text>
+      {question === null ? null : (
+        <Text style={[type.caption, { color: palette.ink3, textAlign: "center" }]}>
+          {asker === null ? asked : t`${asker} asked, ${asked}`}
+        </Text>
+      )}
+      {photos.map((id, at) => (
+        <Print key={id} id={id} tilt={(index + at) % 2 === 0 ? -1.5 : 1.2} />
+      ))}
+      {words.length === 0 ? null : (
+        <View>
+          <Text
+            accessible={false}
+            style={{
+              fontFamily: type.display.fontFamily,
+              fontSize: 48,
+              lineHeight: 48,
+              height: 30,
+              color: palette.light,
+            }}
+          >
+            “
+          </Text>
+          <Text selectable style={[pageWords, { color: paper.ink }]}>
+            {words.join("\n\n")}
+          </Text>
+        </View>
+      )}
+      {voices.map((id) => (
+        <BookVoice key={id} mediaId={id} />
+      ))}
+      <Text
+        style={[
+          type.preview,
+          { fontSize: 17, lineHeight: 24, color: palette.ink2, textAlign: "right" },
+        ]}
+      >
+        {`— ${name}`}
+      </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: space.s,
+        }}
+      >
+        <Text style={[type.caption, { fontSize: 13, color: palette.ink3 }]}>
+          {keeper === null ? t`Kept in the book` : t`Kept by ${keeper}`}
+        </Text>
+        {onRemove === undefined ? null : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t`Take this page out of the book`}
+            hitSlop={hitSlop}
+            disabled={removing}
+            onPress={() => confirm(true)}
+            style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}
+          >
+            <BrandIcon name="more" color={palette.ink3} size={18} />
+          </Pressable>
+        )}
+      </View>
+      {confirming ? (
+        <ConfirmationDialog
+          onClose={() => {
+            if (!removing) confirm(false);
+          }}
+        >
+          <Words variant="body">
+            <Trans>Take this page out of the family book?</Trans>
+          </Words>
+          <Words variant="caption" tone="ink2">
+            <Trans>
+              It stops being kept. Like everything in the chat, it is then deleted 30 days after it
+              was said.
+            </Trans>
+          </Words>
+          <SecondaryButton
+            label={t`Take it out`}
+            disabled={removing}
+            onPress={() => {
+              onRemove?.();
+              confirm(false);
+            }}
+          />
+          <SecondaryButton label={t`Keep it`} disabled={removing} onPress={() => confirm(false)} />
+        </ConfirmationDialog>
+      ) : null}
+    </View>
+  );
+}
+
+/** A kept story as its own chapter: its title in her words, then each morning's words in turn. */
+function StoryChapter({ story }: { story: MemoryStory }) {
+  const palette = usePalette();
+  const paper = usePaper();
+  const { t } = useLingui();
+  const quoted = useQuoted();
+  const name = story.memberName;
+  const count = story.memories.length;
+  return (
+    <View style={{ gap: space.l }} testID={`book-story-${story.id}`}>
+      <View style={{ gap: space.xs, alignItems: "center" }}>
+        <Text style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}>
+          {t`A story in ${name}'s words`}
+        </Text>
+        <Text
+          accessibilityRole="header"
+          style={[type.title, { color: paper.ink, textAlign: "center" }]}
+        >
+          {quoted(titleCase(story.title))}
+        </Text>
+        <Text style={[type.caption, { color: palette.ink3 }]}>
+          {plural(count, { one: "Told on # morning", other: "Told across # mornings" })}
+        </Text>
+      </View>
+      {story.memories.map((memory) => {
+        const date = dayMonth(memory.at);
+        return (
+          <View key={memory.id} style={{ gap: space.xs }}>
+            <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
+              {date}
+            </Text>
+            <Text selectable style={[pageWords, { color: paper.ink }]}>
+              {memoryText(memory)}
+            </Text>
+          </View>
+        );
+      })}
+      <Text
+        style={[
+          type.preview,
+          { fontSize: 17, lineHeight: 24, color: palette.ink2, textAlign: "right" },
+        ]}
+      >
+        {`— ${name}`}
+      </Text>
+    </View>
+  );
+}
+
+/** A recipe card she kept (spec §10, ADR-41): her ingredients, steps and tips, as she told them. */
+function RecipePage({ recipe }: { recipe: ApiBookRecipe }) {
+  const palette = usePalette();
+  const paper = usePaper();
   const { t } = useLingui();
   const name = recipe.member_name;
-  const day = dayMonth(recipe.kept_at);
   const section = (heading: string, lines: string[], numbered: boolean) =>
     lines.length === 0 ? null : (
       <View style={{ gap: space.s }}>
@@ -286,39 +352,231 @@ function BookRecipe({ recipe }: { recipe: ApiBookRecipe }) {
           {heading}
         </Text>
         {lines.map((line, index) => (
-          <View key={`${heading}:${line}`} style={{ flexDirection: "row", gap: space.m }}>
+          <View
+            key={`${heading}:${line}`}
+            style={{
+              flexDirection: "row",
+              gap: space.m,
+              paddingBottom: space.xs,
+              borderBottomWidth: 1,
+              borderBottomColor: palette.rule,
+            }}
+          >
             <Text style={[type.bodyMedium, { color: palette.lightDeep, minWidth: 18 }]}>
               {numbered ? `${index + 1}` : "•"}
             </Text>
-            <Text style={[type.body, { color: palette.ink, flex: 1 }]}>{line}</Text>
+            <Text style={[type.body, { color: paper.ink, flex: 1 }]}>{line}</Text>
           </View>
         ))}
       </View>
     );
   return (
-    <View
-      style={{
-        backgroundColor: palette.surface,
-        borderRadius: radius.card + 6,
-        borderWidth: 1,
-        borderColor: palette.rule,
-        overflow: "hidden",
-      }}
-    >
-      <View style={{ height: 6, backgroundColor: palette.light }} />
-      <View style={{ padding: space.l, gap: space.l }}>
-        <View style={{ gap: space.xs }}>
-          <Text style={[type.label, { color: palette.ink3, textTransform: "uppercase" }]}>
-            <Trans>
-              {name}'s recipe · {day}
-            </Trans>
-          </Text>
-          <Text style={[type.title, { color: palette.ink }]}>{recipe.title}</Text>
-        </View>
-        {section(t`You need`, recipe.ingredients, false)}
-        {section(t`How`, recipe.steps, true)}
-        {section(t`Tips`, recipe.remarks, false)}
+    <View style={{ gap: space.l }}>
+      <View style={{ gap: space.xs, alignItems: "center" }}>
+        <Text style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}>
+          {t`From ${name}'s kitchen`}
+        </Text>
+        <Text style={[type.title, { color: paper.ink, textAlign: "center" }]}>{recipe.title}</Text>
       </View>
+      {section(t`You need`, recipe.ingredients, false)}
+      {section(t`How`, recipe.steps, true)}
+      {section(t`Tips`, recipe.remarks, false)}
+    </View>
+  );
+}
+
+/** The cover: the logo's ink, her window lit on it once anything is kept, the family's name. */
+function Cover({
+  familyName,
+  kept,
+  stories,
+  recipes,
+  since,
+}: {
+  familyName: string | undefined;
+  kept: number;
+  stories: number;
+  recipes: number;
+  since: string | undefined;
+}) {
+  const room = useRoom();
+  const { t } = useLingui();
+  const held = [
+    plural(kept, { one: "# memory", other: "# memories" }),
+    ...(stories === 0 ? [] : [plural(stories, { one: "# story", other: "# stories" })]),
+    ...(recipes === 0 ? [] : [plural(recipes, { one: "# recipe", other: "# recipes" })]),
+  ].join(" · ");
+  const date = since === undefined ? "" : monthYear(since);
+  return (
+    <RoomCard id="book-cover" strong={kept > 0}>
+      <View style={{ alignItems: "center", gap: space.m, paddingVertical: space.l }}>
+        <RoomWindow>
+          <View
+            style={{
+              width: 26,
+              height: 34,
+              borderTopLeftRadius: 13,
+              borderTopRightRadius: 13,
+              borderWidth: 1.5,
+              borderColor: room.muted,
+              backgroundColor: kept > 0 ? room.hot : "transparent",
+            }}
+          />
+        </RoomWindow>
+        <Text
+          accessibilityRole="header"
+          style={[type.display, { color: room.ink, textAlign: "center" }]}
+        >
+          {t`The family book`}
+        </Text>
+        {familyName === undefined || familyName.length === 0 ? null : (
+          <Text style={[type.preview, { fontSize: 18, color: room.muted, textAlign: "center" }]}>
+            {familyName}
+          </Text>
+        )}
+        <View style={{ width: 40, height: 1, backgroundColor: room.glassRule }} />
+        <View style={{ gap: 2, alignItems: "center" }}>
+          <Text style={[type.caption, { color: room.muted, textAlign: "center" }]}>
+            {kept === 0 && recipes === 0 ? t`Kept for the family, in their own words` : held}
+          </Text>
+          {kept === 0 || date.length === 0 ? null : (
+            <Text style={[type.caption, { color: room.muted, textAlign: "center" }]}>
+              {t`Kept since ${date}`}
+            </Text>
+          )}
+        </View>
+      </View>
+    </RoomCard>
+  );
+}
+
+/**
+ * The family book (spec §10, A10; ADR-39, ADR-50, ADR-51), read as a book: a cover, then her kept
+ * memories a month at a time, oldest first, each set as a page in her words and signed with her
+ * name; the stories the family kept as chapters of their own; then her recipes. Every member reads
+ * it; an organiser can take a page out. Reading never needs Vela Light.
+ */
+export function FamilyBook({
+  book,
+  stories,
+  organiser,
+}: {
+  book: BookView;
+  /** Stories gathered from her memories; the kept ones are chapters here. */
+  stories: MemoryStory[];
+  organiser: boolean;
+}) {
+  const palette = usePalette();
+  const paper = usePaper();
+  const { t } = useLingui();
+  const { families, familyId } = useToday();
+  const familyName = families.find((family) => family.id === familyId)?.name;
+  const keptStories = stories.filter((story) => story.kept);
+  const inStory = new Set(keptStories.flatMap((story) => story.memories.map((m) => m.id)));
+  const pages = book.entries
+    .filter((entry) => !inStory.has(entry.exchange_id))
+    .sort((a, b) => saidAt(a).localeCompare(saidAt(b)));
+  type Leaf =
+    | { kind: "page"; at: string; entry: ApiBookEntry }
+    | { kind: "story"; at: string; story: MemoryStory };
+  const leaves: Leaf[] = [
+    ...pages.map((entry) => ({ kind: "page" as const, at: saidAt(entry), entry })),
+    ...keptStories.map((story) => ({ kind: "story" as const, at: story.from, story })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+  const chapters = byMonth(leaves, (leaf) => leaf.at.slice(0, 7));
+  const since = leaves[0]?.at.slice(0, 7);
+  const empty = book.entries.length === 0 && book.recipes.length === 0;
+  return (
+    <View style={{ gap: space.xl }}>
+      <Cover
+        familyName={familyName}
+        kept={book.entries.length}
+        stories={keptStories.length}
+        recipes={book.recipes.length}
+        since={since}
+      />
+      {book.trouble ? (
+        <View style={{ gap: space.m }}>
+          <Words variant="body" tone="ink2">
+            <Trans>The family book could not be reached just now.</Trans>
+          </Words>
+          <SecondaryButton label={t`Try again`} onPress={book.refresh} />
+        </View>
+      ) : null}
+      {book.removeFailed ? (
+        <Words variant="body" tone="ink2">
+          <Trans>That page could not be taken out. Try again.</Trans>
+        </Words>
+      ) : null}
+      {book.loading ? (
+        <Words variant="body" tone="ink2">
+          <Trans>Opening the book…</Trans>
+        </Words>
+      ) : !book.trouble && empty ? (
+        <BookPage>
+          <View style={{ gap: space.m, alignItems: "center" }}>
+            <Ornament />
+            <Text style={[pageWords, { textAlign: "center", color: paper.ink }]}>
+              <Trans>The first page is waiting.</Trans>
+            </Text>
+            <Text style={[type.body, { color: palette.ink2, textAlign: "center" }]}>
+              {apiConfigured() || book.demo ? (
+                <Trans>
+                  Tap the heart on a memory, and it is kept here, long after the chat has let it go.
+                </Trans>
+              ) : (
+                <Trans>Kept memories and stories appear here.</Trans>
+              )}
+            </Text>
+            <SecondaryButton
+              label={t`Find a memory to keep`}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace("/exchanges"))}
+            />
+          </View>
+        </BookPage>
+      ) : null}
+      {chapters.map((chapter) => (
+        <BookPage key={chapter.month}>
+          <Chapter title={monthYear(chapter.month)} />
+          {chapter.items.map((leaf, index) => (
+            <View
+              key={leaf.kind === "page" ? leaf.entry.exchange_id : leaf.story.id}
+              style={{ gap: space.xl }}
+            >
+              {index === 0 ? null : <Ornament />}
+              {leaf.kind === "page" ? (
+                <EntryPage
+                  entry={leaf.entry}
+                  index={index}
+                  removing={book.removing}
+                  {...(organiser ? { onRemove: () => book.remove(leaf.entry.exchange_id) } : {})}
+                />
+              ) : (
+                <StoryChapter story={leaf.story} />
+              )}
+            </View>
+          ))}
+        </BookPage>
+      ))}
+      {book.recipes.length === 0 ? null : (
+        <BookPage>
+          <Chapter title={t`Recipes`} />
+          {book.recipes.map((recipe, index) => (
+            <View key={recipe.id} style={{ gap: space.xl }}>
+              {index === 0 ? null : <Ornament />}
+              <RecipePage recipe={recipe} />
+            </View>
+          ))}
+        </BookPage>
+      )}
+      {empty ? null : (
+        <Text style={[type.caption, { color: palette.ink3, textAlign: "center" }]}>
+          <Trans>
+            Everything here stays until an organiser takes it out, or memories are turned off in the
+            chat.
+          </Trans>
+        </Text>
+      )}
     </View>
   );
 }

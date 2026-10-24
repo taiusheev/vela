@@ -79,6 +79,14 @@ export function weekday(instant: string): string {
   return at === null ? "" : at.toLocaleDateString(dateLocale(), { weekday: "long" });
 }
 
+/** "Tuesday 21 October", or "10月21日 星期二": a day as a book prints it, in the reader's zone. */
+export function longDate(instant: string): string {
+  const at = valid(instant);
+  return at === null
+    ? ""
+    : at.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
+}
+
 /** A local date as the day it names, for copy that must not say "tomorrow" about Thursday. */
 export function dayName(date: string): string {
   const day = valid(`${date}T00:00:00Z`);

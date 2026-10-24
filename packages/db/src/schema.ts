@@ -1287,6 +1287,8 @@ export const keepSuggestions = pgTable(
       .references(() => answers.id, { onDelete: "cascade" }),
     start: integer("start_offset").notNull(),
     end: integer("end_offset").notNull(),
+    /** What the memory model saw in the phrase (a story, something she likes…); null before it. */
+    kind: text("kind"),
     createdAt: createdAt(),
     expiresAt: timestamptz("expires_at").notNull(),
     dismissedAt: timestamptz("dismissed_at"),
@@ -1300,7 +1302,59 @@ export const keepSuggestions = pgTable(
       "keep_suggestions_offsets_check",
       sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
     ),
+    check("keep_suggestions_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
   ],
+);
+
+/**
+ * A story Vela gathered from her own words (ADR-51): two to five of her memories on one subject,
+ * told across mornings. It holds no words of hers: its title points by offsets at a phrase in one
+ * of its answers, and its moments are those answers' exchanges, so a story fades with them and is
+ * kept when the family keeps them. Gone with her family, her member row or "memories off".
+ */
+export const memoryStories = pgTable(
+  "memory_stories",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Whose words: the kept-light member. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    /** The answer whose phrase is the story's title. */
+    titleAnswerId: uuid("title_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    titleStart: integer("title_start").notNull(),
+    titleEnd: integer("title_end").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("memory_stories_family_idx").on(t.familyId, t.createdAt),
+    index("memory_stories_member_idx").on(t.memberId),
+    index("memory_stories_title_answer_idx").on(t.titleAnswerId),
+    check(
+      "memory_stories_title_check",
+      sql`${t.titleStart} >= 0 and ${t.titleEnd} > ${t.titleStart} and ${t.titleEnd} - ${t.titleStart} <= 200`,
+    ),
+  ],
+);
+
+/** One memory in a story: an exchange is in one story at most, which keeps two weavings apart. */
+export const memoryStoryMoments = pgTable(
+  "memory_story_moments",
+  {
+    storyId: uuid("story_id")
+      .notNull()
+      .references(() => memoryStories.id, { onDelete: "cascade" }),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .unique("memory_story_moments_exchange_id_key")
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ name: "memory_story_moments_pkey", columns: [t.storyId, t.exchangeId] })],
 );
 
 export const weeklyReads = pgTable(

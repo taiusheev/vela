@@ -142,6 +142,12 @@ export interface PilotEnv extends SharedEnv {
    * staging, off in production; pinned in src/wrangler-config.test.ts.
    */
   readonly MEMORY_DISCOVERY?: string;
+  /**
+   * `MEMORY_STORIES`: "on" gathers her memories into stories with `story_weave` (ADR-51; only with
+   * MEMORY_DISCOVERY and BOOK on). On in development and staging, off in production; pinned in
+   * src/wrangler-config.test.ts.
+   */
+  readonly MEMORY_STORIES?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

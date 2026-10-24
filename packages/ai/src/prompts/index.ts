@@ -5,6 +5,7 @@ import * as hello from "./hello.v4.ts";
 import * as memoryPick from "./memory_pick.v1.ts";
 import * as readback from "./readback.v1.ts";
 import * as recipe from "./recipe.v1.ts";
+import * as storyWeave from "./story_weave.v1.ts";
 import * as suggest from "./suggest.v5.ts";
 import * as translate from "./translate.v2.ts";
 import * as understand from "./understand.v6.ts";
@@ -29,6 +30,7 @@ export const PROMPTS: Readonly<Record<AiCallName, Prompt>> = {
   recipe,
   weekly_insight: weeklyInsight,
   memory_pick: memoryPick,
+  story_weave: storyWeave,
 };
 
 /** The tag pair every system prompt names as the boundary of untrusted family content. */

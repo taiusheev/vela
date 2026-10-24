@@ -242,6 +242,12 @@ export interface Config {
    */
   memoryDiscovery?: boolean;
   /**
+   * Stories gathered from her memories (`MEMORY_STORIES`, stories.ts, ADR-51): only with
+   * `memoryDiscovery` and the book. Absent means off; off in production until the notice describes
+   * it, pinned by apps/worker/src/wrangler-config.test.ts.
+   */
+  memoryStories?: boolean;
+  /**
    * Whether her answers to a story ask are kept in the family book beyond 30 days (ADR-39, `BOOK`).
    * Off in production until the privacy notice describes the book: version 1 says it comes later.
    */

@@ -641,6 +641,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // Stories send her screened phrases to an AI call again (ADR-51): on where only test families are,
+  // off in production until the notice describes them. The commit that turns it on changes this.
+  it("gathers stories from memories in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY_STORIES,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
   it("never holds EXPO_ACCESS_TOKEN as a var, in either Worker or any environment", () => {
     for (const config of configs) {

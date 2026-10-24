@@ -27,6 +27,7 @@ import {
   TimeZone,
   WhenRule,
 } from "./domain.ts";
+import { FamilyMemoryKind } from "./rich-memories.ts";
 
 export const API_ERROR_CODES = [
   "unauthenticated",
@@ -1336,6 +1337,46 @@ export const ApiKeepSuggestion = z.object({
 });
 export type ApiKeepSuggestion = z.infer<typeof ApiKeepSuggestion>;
 
+/**
+ * One of her memories (ADR-51): an answer worth remembering and safe to show as one, from the last
+ * 30 days or kept. `quote` is the phrase that makes it one, in her exact words, where Vela found it.
+ */
+export const ApiMoment = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  asked_by: z.string().nullable(),
+  question: z.string().nullable(),
+  words: z.string().nullable(),
+  quote: z.string().nullable(),
+  kind: FamilyMemoryKind.nullable(),
+  at: z.iso.datetime({ offset: true }),
+  /** Her photo, read through `GET /v1/families/:familyId/media/:id`. */
+  photo_id: z.uuid().nullable(),
+  voice: z.object({ media_id: z.uuid(), duration_ms: z.number().int().nullable() }).nullable(),
+  kept: z.boolean(),
+  kept_by: z.string().nullable(),
+  story_id: z.uuid().nullable(),
+  /** When it fades with her words unless kept; null once kept. */
+  fades_at: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ApiMoment = z.infer<typeof ApiMoment>;
+
+/** A story Vela gathered from two to five of her memories on one subject, all in her words. */
+export const ApiMemoryStory = z.object({
+  id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  /** A phrase of hers, word for word. */
+  title: z.string(),
+  /** Its memories in `moments`, oldest first. */
+  moment_ids: z.array(z.uuid()).min(2),
+  kept: z.boolean(),
+  from: z.iso.datetime({ offset: true }),
+  to: z.iso.datetime({ offset: true }),
+});
+export type ApiMemoryStory = z.infer<typeof ApiMemoryStory>;
+
 export const ApiBook = z.object({
   entries: z.array(ApiBookEntry),
   /** Answers worth keeping, newest first; empty for anyone but an organiser. */
@@ -1344,6 +1385,10 @@ export const ApiBook = z.object({
   recipes: z.array(ApiBookRecipe),
   /** Story asks not yet delivered, soonest first. */
   coming: z.array(ApiComingStory),
+  /** Her memories, newest first; absent from a server before ADR-51. */
+  moments: z.array(ApiMoment).optional(),
+  /** Stories gathered from them, newest first. */
+  stories: z.array(ApiMemoryStory).optional(),
 });
 export type ApiBook = z.infer<typeof ApiBook>;
 

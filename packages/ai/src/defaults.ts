@@ -58,4 +58,6 @@ export const SAFE_DEFAULTS: {
   weekly_insight: () => ({ readings: [], feedback: [] }),
   // Nothing picked: no suggestion is offered, which is always safe.
   memory_pick: () => ({ picks: [] }),
+  // No story: her moments stay as they are, which is always safe.
+  story_weave: () => ({ stories: [] }),
 };

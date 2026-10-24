@@ -85,6 +85,7 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
     recipe: (input) => invoke(client, { call: "recipe" }, input),
     memoryPick: (input) => invoke(client, { call: "memory_pick" }, input),
+    storyWeave: (input) => invoke(client, { call: "story_weave" }, input),
     weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }

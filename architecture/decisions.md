@@ -861,3 +861,19 @@ Not done yet: a recording from her phone kept this way stays under its 32-day bu
 
 Consequences: the parent no longer chooses each memory; her protection is being told, the health screen, and "memories off". Rejected: her yes before any keep (the founder's call: the feature is the child's, and the answers already reach the family); copying kept words out of the answer (a second copy to seal and clear); asking her to confirm each keep (the work this replaces).
 
+
+## ADR-51 · Memories, not messages: her moments to keep, and stories in her own words
+
+24 October 2026. Proposed (founder, 24 October: "we don't need to keep all messages (they are in the chat already) - instead we want to keep all memories (not negative)"; "stories … we can make stories from parent's chatting, make sure the stories are accurate"; the family book "should feel special").
+
+Context: the Memories tab listed every answer of the last 30 days, the same words the chat already holds, with "Keep" beside each and two suggestions above them. Stories meant only story-day answers, so the Stories filter was mostly empty.
+
+Decision:
+
+- **A memory is an answer worth remembering and safe to show as one.** `GET /v1/families/:id/book` carries `moments`: her answered exchanges, from the last 30 days or kept, that pass the "Keep" rule (no flag, no health mention, no sensitive word) and are kept, or have a phrase `memory_pick` found, or her stored photo, or say more than a greeting. The phrase is shown as her words, the rest of the answer behind it. Everything else stays in the chat. `keep_suggestions.kind` now stores what the memory model saw in the phrase.
+- **A story is several of her memories on one subject, every word hers.** After a new memory is found, `story_weave` reads her newest screened phrases not yet in a story (up to 12, from 3) with what she was asked, and points at two to five that share one subject and at a phrase of one of them for the title. Code keeps a story only when each pointer is one of those sent, none is used twice, and the title (two to eight words, or two to twenty characters) is found word for word in its memory's phrase with no sensitive word. `memory_stories` holds the title as offsets into her answer and `memory_story_moments` its exchanges, one story per exchange (unique), so a story holds none of her words, fades with its memories, and is kept when they are. "memories off" deletes her stories.
+- **Keeping a story is keeping its memories**, through the existing Keep route; there is no story route.
+- **Concurrency.** A weaving inserts under her member row taken `for share`, reading "memories off" again there, and gives up a story whose memories the other weaving took (`postgres-tests/story-weave-race.test.ts`, both seen failing with the guards removed).
+- **Switch.** `MEMORY_STORIES`, with `MEMORY_DISCOVERY` and `BOOK`: on in development and staging, off in production and pinned. It sends her already screened phrases to the AI a second time, so production needs a notice line (v9 draft, `plan/materials/pilot/privacy-notice.v9-stories-draft.en.md`) approved by the founder and the families told.
+
+Consequences: Memories shows fewer, better things, and an answer about health is never offered as a memory even where the chat shows it. Rejected: an AI-written story or summary (it could add what she did not say; the founder asked for accuracy); copying her words into the story (a second copy to seal and clear).

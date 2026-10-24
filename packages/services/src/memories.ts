@@ -40,6 +40,7 @@ import { insertOutbound, type OutboundRequest } from "./gateway.ts";
 import { hasSensitiveWords, screenForMemories } from "./memory-discovery.ts";
 import { channelLinkOfMember, isMessenger, memberByChannelUser, type Queryable } from "./repo.ts";
 import { sourceWords } from "./rich-memories.ts";
+import { weaveStories } from "./stories.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SUGGESTION_DAYS = 30;
@@ -344,12 +345,15 @@ export async function suggestKeeping(
           answerId: answer.id,
           start,
           end: start + quote.length,
+          kind: pick.kind,
           expiresAt: new Date(answer.receivedAt.getTime() + SUGGESTION_DAYS * 86_400_000),
           createdAt: now,
         })
         .onConflictDoNothing()
         .returning({ id: keepSuggestions.id });
       deps.logger.info("keep_suggestion", { answerId: answer.id, made: inserted.length });
+      // A new memory may complete a story she has been telling across mornings (ADR-51).
+      if (inserted.length > 0) await weaveStories(deps, member);
       return inserted.length > 0;
     }
     deps.logger.info("keep_suggestion", { answerId: answer.id, made: 0 });

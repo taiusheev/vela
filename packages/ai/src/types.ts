@@ -29,6 +29,7 @@ export const AI_CALL_NAMES = [
   "recipe",
   "weekly_insight",
   "memory_pick",
+  "story_weave",
 ] as const;
 export const AiCallName = z.enum(AI_CALL_NAMES);
 export type AiCallName = z.infer<typeof AiCallName>;
@@ -598,6 +599,46 @@ export const MemoryPicks = z.object({
 });
 export type MemoryPicks = z.infer<typeof MemoryPicks>;
 
+// story_weave --------------------------------------------------------------------------------------
+
+/**
+ * Her memories not yet in a story: each an exact phrase of hers that `memory_pick` found and code
+ * screened, with what she was asked and when, under a short label for the model to point at.
+ */
+export const StoryWeaveInput = z.object({
+  lang: Lang,
+  addressForm: Name,
+  moments: z
+    .array(
+      z.object({
+        id: z.string().regex(/^m\d{1,2}$/),
+        ask: ShortText.nullable(),
+        quote: FamilyText.min(1),
+        date: LocalDate,
+      }),
+    )
+    .min(2)
+    .max(12),
+});
+export type StoryWeaveInput = z.infer<typeof StoryWeaveInput>;
+
+/**
+ * Up to two stories, each two to five of her moments on one subject with a title copied from one of
+ * them. Code keeps a story only when every label is hers and the title is found word for word.
+ */
+export const StoryWeave = z.object({
+  stories: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        title_from: z.string().min(1).max(8),
+        moments: z.array(z.string().min(1).max(8)).min(2).max(5),
+      }),
+    )
+    .max(2),
+});
+export type StoryWeave = z.infer<typeof StoryWeave>;
+
 // ports --------------------------------------------------------------------------------------------
 
 /** The input and output types of each call, keyed by call name. */
@@ -613,6 +654,7 @@ export interface AiCallTypes {
   recipe: { input: RecipeInput; output: RecipeCard };
   weekly_insight: { input: WeeklyInsightInput; output: WeeklyInsight };
   memory_pick: { input: MemoryPickInput; output: MemoryPicks };
+  story_weave: { input: StoryWeaveInput; output: StoryWeave };
 }
 
 /** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
@@ -628,6 +670,7 @@ export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[
   recipe: RecipeInput,
   weekly_insight: WeeklyInsightInput,
   memory_pick: MemoryPickInput,
+  story_weave: StoryWeaveInput,
 };
 
 /** Each call's output schema, which is also the structured-output format sent to Claude. */
@@ -643,6 +686,7 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
   recipe: RecipeCard,
   weekly_insight: WeeklyInsight,
   memory_pick: MemoryPicks,
+  story_weave: StoryWeave,
 };
 
 /**
@@ -663,6 +707,7 @@ export interface Ai {
   recipe(input: RecipeInput): Promise<AiOutcome<RecipeCard>>;
   weeklyInsight(input: WeeklyInsightInput): Promise<AiOutcome<WeeklyInsight>>;
   memoryPick(input: MemoryPickInput): Promise<AiOutcome<MemoryPicks>>;
+  storyWeave(input: StoryWeaveInput): Promise<AiOutcome<StoryWeave>>;
 }
 
 export interface TranscribeInput {
