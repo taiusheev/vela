@@ -101,7 +101,8 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                       style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
                       onPress={() => setRemoving({ id: contact.id, name: who })}
                     >
-                      <Words variant="button" tone="action">
+                      {/* Removing someone is the one action here that undoes a yes, so it is red. */}
+                      <Words variant="button" tone="error">
                         <Trans>Remove</Trans>
                       </Words>
                     </Pressable>

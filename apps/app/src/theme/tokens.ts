@@ -54,9 +54,11 @@ export const darkPalette: Palette = {
   light: "#E9A23B",
   lightDeep: "#F0B65A",
   lightSoft: "#3B2E19",
-  action: "#F0B65A",
+  // At night, buttons are warm paper on the dark room; amber is kept for a lit window and a heart,
+  // so the light still means "she answered" (design review, 24 Oct 2026).
+  action: "#EFE5D8",
   onAction: "#1B1714",
-  actionSoft: "#3B2E19",
+  actionSoft: "#332B24",
   error: "#F28B82",
 };
 
@@ -72,6 +74,12 @@ export const space = {
   xxxl: 40,
   huge: 56,
 } as const;
+
+/**
+ * Every page reads as one phone-width column. On an iPad the column stays centred instead of
+ * stretching her words into one long line; a phone is never this wide, so it changes nothing there.
+ */
+export const readingColumn = 640;
 
 export const radius = {
   card: 10,
@@ -91,29 +99,74 @@ export interface TextStyle {
 }
 
 /**
- * Inter and Literata have no Chinese characters. On the web a face is a CSS font stack, so each role
- * names Noto TC first, used wherever it is installed, then the platform's own Traditional Chinese
- * face (design system, Typography: Noto Serif TC for Voice and Titles, Noto Sans TC or PingFang TC
- * for the interface). Nothing is fetched from Google: the app contacts no third party on its own. A
- * phone takes one registered name per face and draws what it lacks from the system's CJK font,
- * chosen by the phone's own languages, so a stack would do nothing there (ADR-30).
+ * Inter and Literata have no Chinese characters. Her words and the titles are set in a book face in
+ * both languages, so Vela ships one Noto Serif TC weight cut to everyday Traditional Chinese (Big5
+ * common characters and punctuation, about 6,300 glyphs, `assets/fonts/NotoSerifTC-Voice.ttf`). On
+ * the web a face is a CSS font stack, so Literata draws the Latin letters and the Chinese serif the
+ * rest. A phone takes one registered name per face, so in Chinese the book roles use the Chinese
+ * serif outright, whose Latin letters are a serif too; a rare character it lacks falls back to the
+ * phone's own Chinese face. Nothing is fetched from Google: the app contacts no third party (ADR-30).
  */
 const SANS_TC =
   '"Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
+export const SERIF_TC = "NotoSerifTC_Voice";
 
 function face(name: string, fallback: string): string {
   return Platform.OS === "web" ? `${name}, ${fallback}` : name;
 }
 
+let chineseBookFace = false;
+
+/** Set when the app's language changes; the book roles below read it each time they are drawn. */
+export function setChineseBookFace(on: boolean): void {
+  chineseBookFace = on;
+}
+
+function book(name: string): string {
+  if (Platform.OS === "web") return `${name}, ${SERIF_TC}, ${SANS_TC}`;
+  return chineseBookFace ? SERIF_TC : name;
+}
+
 /**
- * Conversation-first hierarchy: family words and titles in Literata; controls in Inter.
+ * Conversation-first hierarchy: family words and titles in a book face; controls in Inter. The book
+ * roles name their face through a getter, so a change of language reaches the next drawing.
  */
 export const type = {
-  display: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 34, lineHeight: 42 },
-  title: { fontFamily: face("Literata_500Medium", SANS_TC), fontSize: 28, lineHeight: 36 },
-  voice: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 27, lineHeight: 40 },
-  story: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 34 },
-  preview: { fontFamily: face("Literata_400Regular", SANS_TC), fontSize: 20, lineHeight: 30 },
+  display: {
+    get fontFamily() {
+      return book("Literata_500Medium");
+    },
+    fontSize: 34,
+    lineHeight: 42,
+  },
+  title: {
+    get fontFamily() {
+      return book("Literata_500Medium");
+    },
+    fontSize: 28,
+    lineHeight: 36,
+  },
+  voice: {
+    get fontFamily() {
+      return book("Literata_400Regular");
+    },
+    fontSize: 27,
+    lineHeight: 40,
+  },
+  story: {
+    get fontFamily() {
+      return book("Literata_400Regular");
+    },
+    fontSize: 20,
+    lineHeight: 34,
+  },
+  preview: {
+    get fontFamily() {
+      return book("Literata_400Regular");
+    },
+    fontSize: 20,
+    lineHeight: 30,
+  },
   heading: { fontFamily: face("Inter_600SemiBold", SANS_TC), fontSize: 17, lineHeight: 24 },
   body: { fontFamily: face("Inter_400Regular", SANS_TC), fontSize: 17, lineHeight: 24 },
   bodyMedium: { fontFamily: face("Inter_500Medium", SANS_TC), fontSize: 17, lineHeight: 24 },

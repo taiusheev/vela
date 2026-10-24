@@ -9,6 +9,8 @@ const drawings = {
   sunday: "M3 5c3-1 6-1 9 2 3-3 6-3 9-2v14c-3-1-6-1-9 2-3-3-6-3-9-2V5Zm9 2v14",
   you: "M12 3a4 4 0 1 0 0 8 4 4 0 1 0 0-8ZM4 21v-2a8 8 0 0 1 16 0v2",
   ask: "M4 20h4L20 8a3 3 0 0 0-4-4L4 16v4ZM14 6l4 4",
+  questions:
+    "M6 4h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-5l-5 4v-4H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z M10 8.6a2 2 0 1 1 2.8 1.83c-.5.22-.8.7-.8 1.24v.33M12 14.2v.1",
   reply: "M10 5 3 12l7 7M3 12h10a8 8 0 0 1 8 8",
   arrow: "M4 12h16m-6-6 6 6-6 6",
   back: "M20 12H4m6-6-6 6 6 6",
@@ -31,6 +33,8 @@ const drawings = {
   calendar: "M4 5h16v16H4V5Zm4-3v6m8-6v6M4 10h16m-12 5h2m4 0h2",
   mail: "M3 5h18v14H3V5Zm0 1 9 7 9-7",
   plus: "M12 5v14M5 12h14",
+  minus: "M5 12h14",
+  settings: "M4 7h9M17 7h3M15 5v4M4 17h3M11 17h9M9 15v4",
   send: "M12 20V5m-6 6 6-6 6 6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   book: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm0 13a3 3 0 0 1 3-3h11M9 8h6",

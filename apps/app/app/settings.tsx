@@ -6,8 +6,8 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiBaseUrl, apiConfigured } from "../src/api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../src/api/support.ts";
+import { apiConfigured } from "../src/api/client.ts";
+import { noticeUrl, SUPPORT_EMAIL } from "../src/api/support.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
 import { BrandIcon } from "../src/components/brand/icon.tsx";
@@ -57,8 +57,7 @@ function FamilyYou({ day }: { day: TodayView }) {
       setLinkFailed(true);
     }
   };
-  const openPage = (path: string) =>
-    void openLink(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}${path}`);
+  const openPage = (path: string) => void openLink(noticeUrl(path));
   const { t } = useLingui();
   const language = useAppLocale();
   const { familyId, noAccount, pushSent, loading: todayLoading } = day;
@@ -428,25 +427,19 @@ function FamilyYou({ day }: { day: TodayView }) {
             <>
               <SettingsNote>
                 <Trans>
-                  Your parent can ask “what does the family see” in their own Telegram chat.
-                  Health-word sharing is their separate choice, and saying stop pauses their light.
+                  Your parent can ask “what does the family see” in their own chat. Health-word
+                  sharing is their separate choice, and saying stop pauses their light.
                 </Trans>
               </SettingsNote>
-              <SettingsNote>
-                <Trans>
-                  Ask the founder for access, correction, deletion, or to withdraw consent. Never
-                  include private family content in a support message.
-                </Trans>
-              </SettingsNote>
-              <Words variant="caption" tone="ink2" selectable>
-                {SUPPORT_EMAIL}
-              </Words>
               {linkFailed ? (
-                <SettingsNote tone="ink2">
-                  <Trans>
-                    That link could not open. Use the address above to contact the founder.
-                  </Trans>
-                </SettingsNote>
+                <>
+                  <SettingsNote tone="ink2">
+                    <Trans>That page could not open. Write to Vela support instead.</Trans>
+                  </SettingsNote>
+                  <Words variant="caption" tone="ink2" selectable>
+                    {SUPPORT_EMAIL}
+                  </Words>
+                </>
               ) : null}
             </>
           }

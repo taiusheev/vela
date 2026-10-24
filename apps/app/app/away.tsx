@@ -5,8 +5,9 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { BackButton, backToFamily } from "../src/components/back-button.tsx";
+import { MorningCalendar } from "../src/components/morning-calendar.tsx";
+import { SoftCard } from "../src/components/today-hero.tsx";
 import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
-import { dayMonth, shortDayName } from "../src/data/format.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
 import { useAway } from "../src/data/useAway.ts";
 import { useToday } from "../src/data/useToday.ts";
@@ -27,14 +28,9 @@ function dateIn(days: number, localDate?: string): string {
   return `${at.getFullYear()}-${month}-${day}`;
 }
 
-/** "Thu 8 Oct": a day the chips name, short enough for two weeks of them. */
-function chipDay(date: string): string {
-  return `${shortDayName(date)} ${dayMonth(`${date}T12:00:00Z`)}`;
-}
-
 /**
  * Away mode (spec §8), opened from You: any member of the family says she is away, from today or
- * tomorrow until a day in the next two weeks, or until she is back. Her mornings still come, and
+ * tomorrow until she is back or until a day picked on the two-week calendar. Her mornings still come, and
  * nobody is told her morning went quiet while she is away.
  */
 export default function AwayScreen() {
@@ -49,7 +45,8 @@ export default function AwayScreen() {
   const { set } = useAway(familyId);
   const [from, setFrom] = useState(0);
   const [until, setUntil] = useState<number | null>(null);
-  const days = Array.from({ length: 14 }, (_, index) => index + from);
+  const [pickDay, setPickDay] = useState(false);
+  const dates = Array.from({ length: 14 }, (_, index) => dateIn(index + from, her?.localDate));
 
   if (her === undefined)
     return (
@@ -115,23 +112,27 @@ export default function AwayScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
             <Chip
               label={t`Until she's back`}
-              selected={until === null}
-              onPress={() => setUntil(null)}
+              selected={!pickDay}
+              onPress={() => {
+                setPickDay(false);
+                setUntil(null);
+              }}
             />
-            {days.map((offset) => (
-              <Chip
-                key={offset}
-                label={chipDay(dateIn(offset, her?.localDate))}
-                selected={until === offset}
-                onPress={() => setUntil(offset)}
-              />
-            ))}
+            <Chip label={t`Until a day`} selected={pickDay} onPress={() => setPickDay(true)} />
           </View>
-          {until === null ? (
+          {pickDay ? (
+            <SoftCard>
+              <MorningCalendar
+                dates={dates}
+                selected={until === null ? undefined : dateIn(until, her?.localDate)}
+                onSelect={(date) => setUntil(from + dates.indexOf(date))}
+              />
+            </SoftCard>
+          ) : (
             <Words variant="caption" tone="ink3">
               <Trans>It ends when she next answers, from a later day than today.</Trans>
             </Words>
-          ) : null}
+          )}
         </View>
 
         {set.isError ? (
@@ -141,7 +142,7 @@ export default function AwayScreen() {
         ) : null}
         <PrimaryButton
           label={set.isPending ? t`Saving…` : t`${name} is away`}
-          disabled={set.isPending || her === undefined}
+          disabled={set.isPending || her === undefined || (pickDay && until === null)}
           onPress={() => {
             if (!apiConfigured() || her === undefined) {
               backToFamily();
@@ -152,7 +153,10 @@ export default function AwayScreen() {
                 memberId: her.memberId,
                 away: {
                   from: dateIn(from, her.localDate),
-                  until: until === null ? null : dateIn(Math.max(until, from), her.localDate),
+                  until:
+                    !pickDay || until === null
+                      ? null
+                      : dateIn(Math.max(until, from), her.localDate),
                 },
               },
               { onSuccess: backToFamily },

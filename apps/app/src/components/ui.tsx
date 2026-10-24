@@ -5,7 +5,7 @@ import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 
 type Role = keyof typeof type;
-type Tone = "ink" | "ink2" | "ink3" | "action";
+type Tone = "ink" | "ink2" | "ink3" | "action" | "error";
 
 export function Words({
   variant = "body",
@@ -33,7 +33,9 @@ export function Words({
         ? palette.ink3
         : tone === "action"
           ? palette.action
-          : palette.ink;
+          : tone === "error"
+            ? palette.error
+            : palette.ink;
   return (
     <Text
       numberOfLines={numberOfLines}
@@ -94,9 +96,10 @@ export function PrimaryButton({
       hitSlop={hitSlop}
       disabled={disabled}
       onPress={onPress}
+      // Waiting reads as "not yet", a calm paper button, never as a faded dark one that looks broken.
       style={({ pressed }) => ({
-        backgroundColor: palette.action,
-        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+        backgroundColor: disabled ? palette.surface2 : palette.action,
+        opacity: pressed && !disabled ? 0.82 : 1,
         borderRadius: 12,
         minHeight: 46,
         paddingVertical: icon === undefined ? space.m : space.s,
@@ -107,12 +110,12 @@ export function PrimaryButton({
         justifyContent: icon === undefined ? "center" : "flex-start",
       })}
     >
-      {icon === undefined ? null : <IconTile name={icon} tone="onAction" />}
+      {icon === undefined ? null : <IconTile name={icon} tone={disabled ? "quiet" : "onAction"} />}
       <Text
         style={[
           type.button,
           {
-            color: palette.onAction,
+            color: disabled ? palette.ink3 : palette.onAction,
             textAlign: icon === undefined ? "center" : "left",
             flexShrink: 1,
           },
@@ -479,11 +482,13 @@ export function SecondaryButton({
       disabled={disabled}
       accessibilityState={{ disabled }}
       onPress={onPress}
+      // The second level is a soft filled button with no outline: outlines belong to choices (chips),
+      // so a button and a choice never look alike. Three levels in all: filled, soft, plain text.
       style={({ pressed }) => ({
-        backgroundColor: held ? palette.surface2 : palette.bg,
+        backgroundColor: held ? palette.surface2 : palette.actionSoft,
         borderColor: palette.control,
-        borderWidth: 1,
-        borderStyle: held ? "dashed" : "solid",
+        borderWidth: held ? 1 : 0,
+        borderStyle: "dashed",
         opacity: disabled && !held ? 0.45 : pressed ? 0.82 : 1,
         borderRadius: 12,
         minHeight: 46,

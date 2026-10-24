@@ -10,7 +10,7 @@ import {
   MemoryCard,
   StoryCard,
 } from "../../src/components/keepsake.tsx";
-import { ParentChooser } from "../../src/components/parent-chooser.tsx";
+import { initialOf } from "../../src/components/parent-chooser.tsx";
 import { SectionTitle } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { WarmPage } from "../../src/components/warm.tsx";
@@ -99,13 +99,83 @@ export default function MemoriesScreen() {
     .size;
   const filters = (
     [
-      { key: "all", label: t`All` },
       { key: "open", label: t`To keep` },
       { key: "kept", label: t`Kept` },
       { key: "photos", label: t`Photos` },
       { key: "voice", label: t`Voice` },
     ] as const
-  ).filter((option) => option.key === "all" || option.key === filter || counts[option.key] > 0);
+  ).filter((option) => option.key === filter || counts[option.key] > 0);
+  // One row of filters above the memories, as a phone's own photo library has: All, each parent,
+  // then what kind of memory, with search at the end. Tapping a chosen chip again lets it go.
+  const filterRow =
+    several || filters.length > 0 || counts.all > 0 ? (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", gap: space.s }}>
+            <Chip
+              label={t`All`}
+              selected={parent === undefined && (section === "stories" || filter === "all")}
+              onPress={() => {
+                setParent(undefined);
+                setFilter("all");
+              }}
+            />
+            {several
+              ? day.today.lights.map((light) => (
+                  <Chip
+                    key={light.memberId}
+                    label={light.displayName}
+                    initials={[{ key: light.memberId, initial: initialOf(light.displayName) }]}
+                    selected={parent === light.memberId}
+                    onPress={() =>
+                      setParent((current) =>
+                        current === light.memberId ? undefined : light.memberId,
+                      )
+                    }
+                  />
+                ))
+              : null}
+            {section === "moments"
+              ? filters.map((option) => (
+                  <Chip
+                    key={option.key}
+                    label={`${option.label} ${counts[option.key]}`}
+                    selected={filter === option.key}
+                    onPress={() =>
+                      setFilter((current) => (current === option.key ? "all" : option.key))
+                    }
+                  />
+                ))
+              : null}
+          </View>
+        </ScrollView>
+        {section === "moments" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t`Search memories`}
+            accessibilityState={{ expanded: searching }}
+            hitSlop={hitSlop}
+            onPress={() => {
+              setSearching((now) => !now);
+              setQuery("");
+            }}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <BrandIcon
+              name={searching ? "close" : "search"}
+              color={searching ? palette.action : palette.ink2}
+              size={22}
+            />
+          </Pressable>
+        ) : null}
+      </View>
+    ) : null;
   const waiting = trouble ? (
     <View style={{ gap: space.m }}>
       <Words variant="body" tone="ink2">
@@ -188,15 +258,7 @@ export default function MemoriesScreen() {
           ))}
         </View>
       ) : null}
-      <ParentChooser
-        lights={day.today.lights}
-        selected={parent}
-        onSelect={(id) => setParent((current) => (current === id ? undefined : id))}
-        everyone={{
-          label: names.length === 2 ? t`Both` : t`Everyone`,
-          onSelect: () => setParent(undefined),
-        }}
-      />
+      {filterRow}
 
       {section === "stories" && bookOn ? (
         <View style={{ gap: space.m }}>
@@ -232,49 +294,6 @@ export default function MemoriesScreen() {
         </View>
       ) : (
         <>
-          {filters.length > 1 || counts.all > 0 ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", gap: space.s }}>
-                  {filters.map((option) => (
-                    <Chip
-                      key={option.key}
-                      label={
-                        option.key === "all"
-                          ? option.label
-                          : `${option.label} ${counts[option.key]}`
-                      }
-                      selected={filter === option.key}
-                      onPress={() => setFilter(option.key)}
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t`Search memories`}
-                accessibilityState={{ expanded: searching }}
-                hitSlop={hitSlop}
-                onPress={() => {
-                  setSearching((now) => !now);
-                  setQuery("");
-                }}
-                style={({ pressed }) => ({
-                  width: 44,
-                  height: 44,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.6 : 1,
-                })}
-              >
-                <BrandIcon
-                  name={searching ? "close" : "search"}
-                  color={searching ? palette.action : palette.ink2}
-                  size={22}
-                />
-              </Pressable>
-            </View>
-          ) : null}
           {searching ? (
             <View
               style={{

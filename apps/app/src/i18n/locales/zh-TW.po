@@ -183,6 +183,10 @@ msgstr "{label}：還沒到"
 msgid "{later} answered later"
 msgstr "{later}次稍晚回覆"
 
+#: app/vela-light.tsx
+msgid "{monthly} a month"
+msgstr "每月{monthly}"
+
 #: src/components/onboarding/plan.tsx
 msgid "{mornings, plural, one {# morning, ready.} other {# mornings, ready.}}"
 msgstr "{mornings, plural, other {# 個早晨，準備好了。}}"
@@ -479,6 +483,14 @@ msgstr "{who}：{said}"
 msgid "{wrong} where something was wrong"
 msgstr "{wrong}次真的有狀況"
 
+#: app/vela-light.tsx
+msgid "{yearly} a year"
+msgstr "每年{yearly}"
+
+#: app/vela-light.tsx
+msgid "{yearlyMonth} a month"
+msgstr "每月{yearlyMonth}"
+
 #: app/parent.tsx
 msgid "▶ Play the voice message"
 msgstr "▶ 播放語音訊息"
@@ -495,10 +507,6 @@ msgstr "❤️ 我很好"
 msgid "📷 Reply with a photo"
 msgstr "📷 用照片回覆"
 
-#: app/vela-light.tsx
-msgid "$79 a year"
-msgstr "每年 79 美元"
-
 #: app/weekly-report.tsx
 msgid "1 day"
 msgstr "1 天"
@@ -506,6 +514,14 @@ msgstr "1 天"
 #: app/weekly-report.tsx
 msgid "1 day · selected"
 msgstr "1 天・已選擇"
+
+#: src/components/time-stepper.tsx
+msgid "15 minutes earlier"
+msgstr "提早 15 分鐘"
+
+#: src/components/time-stepper.tsx
+msgid "15 minutes later"
+msgstr "延後 15 分鐘"
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
@@ -603,6 +619,10 @@ msgstr "安靜的早上"
 #: app/help.tsx
 msgid "A quiet notice means Vela has not recorded an answer. Call or message your parent yourself. Vela cannot visit your parent or send help."
 msgstr "安靜通知表示 Vela 尚未記錄到回覆。請自行打電話或傳訊息給爸媽。Vela 無法探訪爸媽，也無法派人提供協助。"
+
+#: app/vela-light.tsx
+msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
+msgstr "早晨沒有回覆時的安靜通知 · 可以幫忙看看的附近親友 · 外出模式 · 每週小記"
 
 #: src/data/ask.ts
 msgid "A recipe"
@@ -721,6 +741,10 @@ msgstr "加入中…"
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "阿得雷德"
+
+#: app/vela-light.tsx
+msgid "After the 30 days"
+msgstr "30 天之後"
 
 #: src/components/app-privacy.tsx
 msgid "Agree and continue"
@@ -873,11 +897,6 @@ msgstr "週日問這個"
 msgid "Ask on Telegram"
 msgstr "在 Telegram 上問"
 
-#: app/help.tsx
-#: app/settings.tsx
-msgid "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
-msgstr "如需查閱、更正、刪除資料或撤回同意，請聯絡創辦人。請勿在客服訊息中附上家人的私人內容。"
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr "請對方過去看看"
@@ -945,13 +964,13 @@ msgstr "第一個回覆{recipient}吧。"
 msgid "Before you continue"
 msgstr "繼續之前"
 
+#: app/vela-light.tsx
+msgid "Best value · save {saving}%"
+msgstr "最划算 · 省{saving}%"
+
 #: src/components/onboarding/questions.tsx
 msgid "Big words, one message at a time. You set it up together."
 msgstr "大字顯示，一次一則訊息。由您陪著一起設定。"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Both"
-msgstr "兩位"
 
 #: src/data/chat.ts
 #: src/data/exchanges.ts
@@ -984,11 +1003,6 @@ msgstr "打給媽媽"
 msgid "Canada"
 msgstr "加拿大"
 
-#: app/morning-settings.tsx
-#: app/profile.tsx
-msgid "Cancel"
-msgstr "取消"
-
 #: src/components/telegram-family-link.tsx
 msgid "Cancel connection"
 msgstr "取消連結"
@@ -999,7 +1013,7 @@ msgstr "取消連結"
 msgid "Central"
 msgstr "中部時間"
 
-#: app/profile.tsx
+#: app/(tabs)/you.tsx
 msgid "Change"
 msgstr "更改"
 
@@ -1268,6 +1282,10 @@ msgstr "爸爸說的話 · {date}"
 msgid "Darwin"
 msgstr "達爾文"
 
+#: app/vela-light.tsx
+msgid "Day 30"
+msgstr "第 30 天"
+
 #: app/delete-account.tsx
 #: app/settings.tsx
 msgid "Delete account"
@@ -1374,10 +1392,6 @@ msgstr "英語試辦"
 msgid "English private-test wording"
 msgstr "私人測試的英文說明"
 
-#: app/morning-settings.tsx
-msgid "Enter a time such as 08:30 and choose a supported language."
-msgstr "請輸入時間，例如 08:30，並選擇支援的語言。"
-
 #: app/sign-in.tsx
 msgid "Enter the six digits from your message."
 msgstr "請輸入訊息中的六位數字。"
@@ -1397,10 +1411,6 @@ msgstr "每天的早安訊息都從這個稱呼開始。"
 #: app/weekly-report.tsx
 msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 msgstr "以下每項提議都經過家庭聯絡人確認。收到提議的人自行決定是否有幫助，不會自動傳送訊息。"
-
-#: app/(tabs)/exchanges.tsx
-msgid "Everyone"
-msgstr "每一位"
 
 #: src/components/today-glance.tsx
 msgid "Everyone's light is on today"
@@ -1502,6 +1512,10 @@ msgstr "若使用另一部裝置，請貼上完整代碼或整則 Telegram 私�
 #: src/components/chat/chat-bubble.tsx
 msgid "For her morning"
 msgstr "早安訊息"
+
+#: app/vela-light.tsx
+msgid "For one parent. Each extra parent adds half the price."
+msgstr "以一位長輩計算。每多一位長輩，加收一半價格。"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -1729,6 +1743,10 @@ msgstr "{name}收到的樣子"
 #: app/weekly-report.tsx
 msgid "How long will this offer still be relevant?"
 msgstr "這項提議在多久以內仍然合適？"
+
+#: app/vela-light.tsx
+msgid "How the 30 days work"
+msgstr "這 30 天怎麼運作"
 
 #: app/settings.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
@@ -2170,7 +2188,7 @@ msgstr "聽聽你的錄音"
 msgid "Lit on each day you and {name} shared a message."
 msgstr "你和{name}互傳訊息的那天，窗就會亮。"
 
-#: app/profile.tsx
+#: app/(tabs)/you.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr "從你自己的回答中，值得記住的小事"
 
@@ -2349,6 +2367,10 @@ msgstr "媽、阿母、Mom…"
 msgid "Moments"
 msgstr "片刻"
 
+#: app/vela-light.tsx
+msgid "Monthly"
+msgstr "月繳"
+
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "{name}的更多選項"
@@ -2378,8 +2400,8 @@ msgid "Morning settings saved."
 msgstr "早安設定已儲存。"
 
 #: app/morning-settings.tsx
-msgid "Morning time (24-hour HH:MM)"
-msgstr "早安時間（24 小時制 HH:MM）"
+msgid "Morning time"
+msgstr "早安訊息時間"
 
 #: src/components/onboarding/questions.tsx
 msgid "Mornings arrive on {name}’s clock, not yours."
@@ -2562,10 +2584,6 @@ msgstr "這次沒有"
 #: app/(tabs)/exchanges.tsx
 msgid "Nothing here matches. Try another word, or All."
 msgstr "沒有符合的內容。換個字試試，或選「全部」。"
-
-#: app/vela-light.tsx
-msgid "Nothing is charged during the pilot, and no card is asked for."
-msgstr "試辦期間不收任何費用，也不需要提供信用卡。"
 
 #: src/components/keepsake.tsx
 msgid "Nothing kept yet. Tap a heart to start it."
@@ -2780,10 +2798,6 @@ msgstr "正在打開回憶…"
 msgid "Opening the story…"
 msgstr "正在打開故事…"
 
-#: app/(tabs)/you.tsx
-msgid "Opens your name, your family and your own things"
-msgstr "打開你的名字、你的家人和你自己的東西"
-
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "選項 {number}"
@@ -2791,10 +2805,6 @@ msgstr "選項 {number}"
 #: src/components/calling-number-editor.tsx
 msgid "Optional calling number · {name}"
 msgstr "電話號碼（可不填）·{name}"
-
-#: app/vela-light.tsx
-msgid "or $9.99 a month · a second person +50%"
-msgstr "或每月 9.99 美元 · 第二位 +50%"
 
 #: app/parent.tsx
 msgid "Or say it in your own words"
@@ -2819,14 +2829,13 @@ msgstr "太平洋時間"
 msgid "Parent photo"
 msgstr "父母的照片"
 
-#: app/(tabs)/you.tsx
-#: app/profile.tsx
-msgid "Parent photos and links, notifications, language, and account"
-msgstr "父母的照片與連結、通知、語言及帳號"
-
 #: app/parent-settings.tsx
 msgid "Parent settings"
 msgstr "父母的設定"
+
+#: app/(tabs)/you.tsx
+msgid "Parents, notifications, language and account"
+msgstr "長輩、通知、語言與帳號"
 
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
@@ -2972,13 +2981,13 @@ msgstr "隱私與協助"
 msgid "Privacy details and terms"
 msgstr "隱私詳情與條款"
 
+#: app/vela-light.tsx
+msgid "Privacy notice"
+msgstr "隱私權告知事項"
+
 #: app/weekly-report.tsx
 msgid "Private test · reviewed family support"
 msgstr "私人測試・家人確認過的支持提議"
-
-#: app/profile.tsx
-msgid "Profile"
-msgstr "個人資料"
 
 #: src/components/ask-ideas.tsx
 msgid "Puts these words in your question, to send or change"
@@ -2997,10 +3006,6 @@ msgstr "問題已儲存。你可以在下方調整。"
 msgid "Questions"
 msgstr "問題"
 
-#: app/(tabs)/_layout.tsx
-msgid "Questions — add a question"
-msgstr "問題 — 新增問題"
-
 #: src/components/onboarding/plan.tsx
 msgid "Questions from what {name} loves: {topics}"
 msgstr "從{name}喜歡的事出發的問題：{topics}"
@@ -3013,10 +3018,6 @@ msgstr "比較安靜"
 #: src/components/onboarding/plan.tsx
 msgid "Quiet days covered, signed by you"
 msgstr "沒人寫的日子也有訊息，署名是您"
-
-#: app/vela-light.tsx
-msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
-msgstr "安靜通知與附近的聯絡人 · 外出模式 · 每週小記 · 記事與提醒 · 可以保存的家族故事書"
 
 #: src/components/story-day.tsx
 msgid "Read the family book"
@@ -3281,6 +3282,10 @@ msgstr "儲存問題"
 msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "已儲存。第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
 
+#: app/profile.tsx
+msgid "Saved. Your family sees {name} from now on."
+msgstr "已儲存。從現在起，家人會看到「{name}」。"
+
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
 msgstr "保存中"
@@ -3442,6 +3447,7 @@ msgid "sent a voice message"
 msgstr "傳了一則語音訊息"
 
 #: app/settings.tsx
+#: app/vela-light.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
 msgstr "服務條款"
@@ -3475,7 +3481,6 @@ msgid "Setting up…"
 msgstr "設定中…"
 
 #: app/(tabs)/you.tsx
-#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr "設定"
@@ -3590,10 +3595,6 @@ msgstr "登出沒有完成，您仍在登入狀態。請再試一次。"
 msgid "Signed “— Vela”. Your name is only on what you write."
 msgstr "署名「— Vela」。只有您自己寫的訊息才會署您的名字。"
 
-#: app/(tabs)/you.tsx
-msgid "Signed in as {myName}"
-msgstr "目前登入的是{myName}"
-
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr "目前還不能用手機號碼登入，請改用電子郵件。"
@@ -3657,8 +3658,8 @@ msgid "Spain"
 msgstr "西班牙"
 
 #: app/vela-light.tsx
-msgid "Start the 30 days"
-msgstr "開始 30 天試用"
+msgid "Start 30 free days"
+msgstr "開始 30 天免費試用"
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
@@ -3688,6 +3689,10 @@ msgstr "停止"
 #: src/components/voice-recorder.tsx
 msgid "Stop and listen first"
 msgstr "先停下來聽一次"
+
+#: app/vela-light.tsx
+msgid "Stop any time"
+msgstr "隨時可以停止"
 
 #: src/components/voice-recorder.tsx
 msgid "Stop recording"
@@ -3720,6 +3725,10 @@ msgstr "依{name}喜歡的事建議"
 #: src/data/exchanges.ts
 msgid "Sunday"
 msgstr "星期日"
+
+#: src/components/time-stepper.tsx
+msgid "Swipe up or down to move it by 15 minutes."
+msgstr "上下滑動，每次調整 15 分鐘。"
 
 #: src/data/onboarding.ts
 msgid "Sydney"
@@ -3889,14 +3898,13 @@ msgstr "無法開啟連結，請聯絡{SUPPORT_EMAIL}。"
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
 
-#: app/help.tsx
-#: app/settings.tsx
-msgid "That link could not open. Use the address above to contact the founder."
-msgstr "無法打開這個連結。請使用上方的地址聯絡創辦人。"
-
 #: src/components/family-book.tsx
 msgid "That page could not be taken out. Try again."
 msgstr "無法拿出這一頁，請再試一次。"
+
+#: app/settings.tsx
+msgid "That page could not open. Write to Vela support instead."
+msgstr "這個頁面打不開。請改寫信給 Vela 支援。"
 
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
@@ -4343,6 +4351,7 @@ msgid "today"
 msgstr "今天"
 
 #: app/away.tsx
+#: app/vela-light.tsx
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Today"
@@ -4524,6 +4533,10 @@ msgid "Until"
 msgstr "到"
 
 #: app/away.tsx
+msgid "Until a day"
+msgstr "直到某一天"
+
+#: app/away.tsx
 msgid "Until she's back"
 msgstr "直到回來"
 
@@ -4608,10 +4621,6 @@ msgstr "Vela 目前還不會從這裡傳送通知。"
 msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 msgstr "Vela 把這些話放在一起，是因為說的是同一件事。每個字都是{name}自己說的，一字不改，沒有增加任何內容。"
 
-#: app/vela-light.tsx
-msgid "Vela Light · for {name}"
-msgstr "Vela Light · 給{name}"
-
 #: src/data/family.ts
 msgid "Vela Light · payment due"
 msgstr "Vela Light · 待付款"
@@ -4627,6 +4636,10 @@ msgstr "{name}的 Vela Light 已開啟。"
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr "Vela Light 會讓您看到完整小記"
+
+#: app/vela-light.tsx
+msgid "Vela Light starts for {name}. No card is needed."
+msgstr "{name}的 Vela Light 開始，不需要信用卡。"
 
 #: src/data/family.ts
 msgid "Vela Light trial"
@@ -4865,6 +4878,10 @@ msgstr "家人看得到您的哪些資訊"
 msgid "What they call you"
 msgstr "對方怎麼稱呼您"
 
+#: app/vela-light.tsx
+msgid "What Vela Light adds"
+msgstr "Vela Light 多了什麼"
+
 #: app/weekly-report.tsx
 #: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
@@ -5000,6 +5017,10 @@ msgstr "寫點什麼，等{name}答應後送出。"
 msgid "Write to {name}"
 msgstr "寫給{name}"
 
+#: app/help.tsx
+msgid "Write to Vela support for a copy of your data, a correction, deletion, or to withdraw consent. Never include private family content in a support message."
+msgstr "如需取得資料副本、更正、刪除或撤回同意，請寫信給 Vela 支援。請勿在支援訊息中附上家人的私人內容。"
+
 #: src/components/story-day.tsx
 msgid "Write your own story question for {day}"
 msgstr "自己寫一個{day}的故事問題"
@@ -5011,6 +5032,10 @@ msgstr "Vela 代筆"
 #: src/components/today-glance.tsx
 msgid "Wrote to {recipient}"
 msgstr "寫給{recipient}"
+
+#: app/vela-light.tsx
+msgid "Yearly"
+msgstr "年繳"
 
 #: src/data/my-memories-demo.ts
 msgid "Yellow chrysanthemums on the balcony make the whole morning feel warm."
@@ -5083,6 +5108,10 @@ msgstr "你可以探索範例家庭。這裡不會傳送任何訊息。"
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr "等這位家人回覆之後，您就可以回應。"
+
+#: app/vela-light.tsx
+msgid "You choose whether to keep it. Nothing is charged unless you choose a plan."
+msgstr "由你決定要不要繼續。除非你選擇方案，否則不會收取任何費用。"
 
 #: src/components/parent-link-settings.tsx
 msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
@@ -5181,6 +5210,10 @@ msgstr "資料權利與刪除"
 msgid "Your email"
 msgstr "您的電子郵件"
 
+#: app/help.tsx
+msgid "Your email app did not open. Write to the address above instead."
+msgstr "郵件 App 沒有開啟。請改寄信到上面的地址。"
+
 #: app/(tabs)/you.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
@@ -5228,8 +5261,8 @@ msgstr "您的燈沒有亮著，所以不會顯示任何關於您早上的內容
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "您的燈要從您自己的聊天室暫停，也就是您收到早安訊息的地方。"
 
+#: app/(tabs)/you.tsx
 #: app/my-memories.tsx
-#: app/profile.tsx
 msgid "Your memories"
 msgstr "你的回憶"
 
@@ -5249,6 +5282,7 @@ msgstr "您的手機號碼。國碼會自動幫您加上。"
 msgid "Your morning message"
 msgstr "您的早晨訊息"
 
+#: app/(tabs)/you.tsx
 #: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
@@ -5281,20 +5315,12 @@ msgid "Your parent"
 msgstr "你的家長"
 
 #: app/settings.tsx
-msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
-msgstr "您的父母可以在自己的 Telegram 聊天室裡問「家人看到什麼」。是否轉告身體狀況由長輩另外決定，說「停止」就會暫停長輩的燈。"
+msgid "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
+msgstr "長輩可以在自己的聊天中問「家人看得到什麼」。是否分享健康相關的話，由長輩另外決定；說「停止」就會暫停燈光。"
 
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
-
-#: app/(tabs)/you.tsx
-msgid "Your profile"
-msgstr "你的個人資料"
-
-#: app/(tabs)/you.tsx
-msgid "Your profile, {myName}, {familyName}"
-msgstr "你的個人資料，{myName}，{familyName}"
 
 #: app/ask.tsx
 msgid "Your question for {name}"
