@@ -315,34 +315,27 @@ export function TodayHeader({
         accessibilityLabel={unread ? t`Notifications, something new` : t`Notifications`}
         hitSlop={hitSlop}
         onPress={onBell}
-        style={({ pressed }) => [
-          {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: p.surface,
-            borderWidth: 1,
-            borderColor: p.rule,
-            opacity: pressed ? 0.8 : 1,
-          },
-          softShadow,
-        ]}
+        style={({ pressed }) => ({
+          width: 44,
+          height: 44,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.6 : 1,
+        })}
       >
-        <BrandIcon name="bell" color={p.ink} size={20} strokeWidth={1.9} />
+        <BrandIcon name="bell" color={p.ink} size={24} strokeWidth={1.9} />
         {unread ? (
           <View
             style={{
               position: "absolute",
-              top: 10,
-              right: 11,
+              top: 9,
+              right: 10,
               width: 9,
               height: 9,
               borderRadius: 5,
               backgroundColor: p.light,
               borderWidth: 1.5,
-              borderColor: p.surface,
+              borderColor: p.bg,
             }}
           />
         ) : null}

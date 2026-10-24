@@ -259,21 +259,18 @@ export default function MemoriesScreen() {
                   setSearching((now) => !now);
                   setQuery("");
                 }}
-                style={{
+                style={({ pressed }) => ({
                   width: 44,
                   height: 44,
-                  borderRadius: 22,
-                  borderWidth: 1,
-                  borderColor: searching ? palette.action : palette.control,
-                  backgroundColor: searching ? palette.actionSoft : palette.surface,
                   alignItems: "center",
                   justifyContent: "center",
-                }}
+                  opacity: pressed ? 0.6 : 1,
+                })}
               >
                 <BrandIcon
                   name={searching ? "close" : "search"}
                   color={searching ? palette.action : palette.ink2}
-                  size={18}
+                  size={22}
                 />
               </Pressable>
             </View>
