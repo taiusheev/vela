@@ -1,0 +1,26 @@
+{
+  "skill_name": "writing-vela-voice",
+  "evals": [
+    {
+      "id": 1,
+      "should_trigger": true,
+      "prompt": "the push for a quiet morning feels cold, my sister said it scared her. can you make push.quiet_notice warmer but still clear? keep the chinese in step",
+      "expected_output": "Rewrites push.quiet_notice in en.ts and zh-TW.ts: names the parent, states facts (quiet, when the message arrived), says nothing worrying is known or keeps calm, ends with the one thing to do; no alert/alarm/check-in/monitor words, no exclamation marks, no her words or health on the lock screen; runs the copy tests.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "should_trigger": true,
+      "prompt": "Write the App Store description for Vela in English and Traditional Chinese. Short, 3-4 paragraphs, for adult kids whose mom lives alone in Taiwan.",
+      "expected_output": "Leads with the family asking one small question each morning; describes the quiet notice as a calm plan, not an alarm; honest that Vela is not an emergency service; avoids monitor/track/check on/keep an eye/safety/check-in/peace-of-mind hype; uses approved terms (organiser, quiet notice, weekly read, 每週小記, 安靜通知, 留一盞燈) and Taiwanese wording.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "should_trigger": false,
+      "prompt": "Rename the message key quiet.notice to quiet.notice_usual everywhere in packages/copy and the services that call it, and update the tests. Don't change any wording.",
+      "expected_output": "A mechanical rename of a key; no wording work, so the voice skill is not needed.",
+      "files": []
+    }
+  ]
+}
