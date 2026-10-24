@@ -32,9 +32,9 @@ import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
-import { hasSensitiveWords } from "./memory-discovery.ts";
 import { sourceDigest, sourceWords } from "./rich-memories.ts";
 import { prepareWeeklySupportReview } from "./weekly-support.ts";
+import { isOrdinaryWeeklySupportSource } from "./weekly-support-screen.ts";
 
 type Db = VelaTransaction;
 export interface WeeklySupportConfig {
@@ -47,9 +47,6 @@ export class WeeklySupportForbiddenError extends Error {
   override readonly name = "WeeklySupportForbiddenError";
 }
 const DAY = 86_400_000;
-// Typed answers have no STT language field. A declared English/Chinese profile cannot make
-// incompatible scripts safe for these two reviewed lexicons. Human understanding is still required.
-const SUPPORTED_SOURCE_SCRIPT = /^[\p{Script=Latin}\p{Script=Han}\P{Letter}]*$/u;
 const absent = () => new VelaError("not_found", "Report not found");
 const stale = () => new ApiIdempotencyError("conflict");
 function gated(deps: WeeklySupportDeps, familyId: string, stop = false) {
@@ -215,9 +212,10 @@ async function sources(tx: Db, a: Access, now: Date, approvedIds?: readonly stri
       answer.flag ||
       !answer.understoodAt ||
       (Array.isArray(answer.mentions.health) && answer.mentions.health.length > 0) ||
-      !["en", "zh-TW"].includes(words.lang === "und" ? a.owner.language : words.lang) ||
-      !SUPPORTED_SOURCE_SCRIPT.test(words.text) ||
-      hasSensitiveWords(words.text.normalize("NFKC"))
+      !isOrdinaryWeeklySupportSource(
+        words.text,
+        answer.kind === "text" && words.lang === "und" ? a.owner.language : words.lang,
+      )
     )
       continue;
     output.push({

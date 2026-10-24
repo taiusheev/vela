@@ -799,3 +799,11 @@ A still-relevant offer survives the Sunday/Monday boundary and newer messages un
 deadline. The source's original week/date is revalidated independently; the report range names the
 current support week. Capacity counts all still-valid approvals, not just the discovery page, and
 invalid/expired references are pruned inside the same locked mutation.
+
+The private cohort screens English source text only. A profile/transcript label alone is insufficient:
+compatible script and English phrase evidence are required; unknown voice language, mixed scripts and
+uncertain short fragments fail closed. A report-specific deterministic screen normalises analysis
+variants, rejects additional sensitive wording, and permits narrow ordinary contexts while screening
+all surrounding text. Discovery and saved-report reads use the same rule. Original source words and
+digests are unchanged, as are the stricter shared memory/AI screen and current upstream flag/health
+checks. This bounded safeguard is not exhaustive language or sensitive-content detection.

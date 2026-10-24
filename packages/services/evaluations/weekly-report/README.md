@@ -1,8 +1,8 @@
 # Weekly report: 100 synthetic service personas
 
-This opt-in evaluation deliberately challenges product expectations. It is separate from the regular
-regression suite: an expected exclusion admitting sensitive text must fail, rather than becoming an
-approved expectation to make CI green. It uses the actual report services and real migrated PGlite
+This evaluation deliberately challenges product expectations. It has a separate local command and
+now runs in CI after the regular regression suite: an expected exclusion admitting sensitive text
+must fail, rather than becoming an approved expectation to make CI green. It uses the actual report services and real migrated PGlite
 database. It does not contact an AI provider, send messages, enrol families or install an app.
 
 The fixed cohort has 40 distinct content scenarios and 20 permission/lifecycle scenarios across
@@ -35,6 +35,13 @@ Ordinary false exclusions include birthday parties, coming back from a walk, bak
 tablet, cold weather, autumn/fall colours, the name Bill, needle eyes and figurative language. Sensitive
 misses include Latin-script non-English input, zero-width/typo variants, vomiting, abuse and self-harm
 wording. See case IDs in `personas.ts`. Expected outcomes remain unchanged after the run.
+
+The improved report-only screen meets all 100 original expectations. It normalises screening text
+without changing quotes, adds language/obfuscation/sensitive-word checks and narrows ordinary-context
+exceptions to their ambiguous token. The independent saved-report builder uses the same rule as
+discovery. Additional tests cover 62 ordinary/sensitive/language cases and 400 mixed-message pairs;
+the stricter memory/model screen remains unchanged. Original corpus inputs and expected outcomes
+are frozen; preserve the 82/100 baseline as historical evidence rather than replacing its results.
 
 These results do not establish real-parent usefulness, prevalence of failures, signed-iPhone
 behaviour, offline UI recovery, accessibility, clinical safety or exhaustive language coverage.
