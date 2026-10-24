@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Animated, Pressable, Text, useWindowDimensions, View } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { VoicePlayback } from "../audio/VoicePlayback.tsx";
@@ -376,6 +376,7 @@ export function TodayAnswer({
   const p = usePalette();
   const name = selected.displayName;
   const answer = exchange?.answer;
+  const [heartTrouble, setHeartTrouble] = useState<string | null>(null);
   return (
     <View
       testID="portrait-lamp"
@@ -454,10 +455,21 @@ export function TodayAnswer({
               <Words variant="button">{name}</Words>
             </View>
             {exchange === undefined || exchange.deliveryPending === true ? null : (
-              <TodayHeart key={exchange.id} id={exchange.id} recipient={name} />
+              <TodayHeart
+                key={exchange.id}
+                id={exchange.id}
+                recipient={name}
+                given={exchange.heartedByMe === true}
+                onTrouble={setHeartTrouble}
+              />
             )}
           </View>
           <Text style={[type.preview, { color: p.ink }]}>{answer.text}</Text>
+          {heartTrouble === null ? null : (
+            <Words variant="caption" tone="ink2">
+              {heartTrouble}
+            </Words>
+          )}
           {answer.photo === undefined ? null : <ReplyPhoto photo={answer.photo} size="full" />}
           {answer.audio === undefined || familyId === undefined ? null : (
             <VoicePlayback

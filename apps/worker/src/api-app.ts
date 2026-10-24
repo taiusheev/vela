@@ -2640,12 +2640,14 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           c.req.param("exchangeId"),
           c.get("writeInput"),
         );
-        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+        // 200 is a reaction the member already gave (API contract: "a second … answers 200").
+        const status = result.response.status;
+        if ((status !== 201 && status !== 200) || typeof result.replayed !== "boolean") {
           throw new Error("Invalid API mutation response");
         }
         const reply = ApiReply.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
-        return c.json(reply, 201);
+        return c.json(reply, status);
       },
     );
     // Push (ADR-34): this installation's phone, registered or refreshed for the signed-in account,

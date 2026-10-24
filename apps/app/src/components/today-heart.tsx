@@ -19,7 +19,19 @@ const native = Platform.OS !== "web";
  * the light's amber once it is on its way, with one beat and a ring of warmth, and no words — the
  * heart itself says it was sent. A separate attempt cannot overwrite a text reply already saved.
  */
-export function TodayHeart({ id, recipient }: { id: string; recipient: string }) {
+export function TodayHeart({
+  id,
+  recipient,
+  given = false,
+  onTrouble,
+}: {
+  id: string;
+  recipient: string;
+  /** The reader's heart is already on her answer (Today knows it): drawn filled, still. */
+  given?: boolean;
+  /** Where the page shows why a heart did not go, as a line of its own, never beside the heart. */
+  onTrouble?: (message: string | null) => void;
+}) {
   const palette = usePalette();
   const { t } = useLingui();
   const account = useAccount();
@@ -46,9 +58,11 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
     },
   });
   // Filled from the tap on, so it answers at once; back to an outline only if sending failed.
-  const filled = post.isPending || post.isSuccess;
+  const filled = given || post.isPending || post.isSuccess;
+  const sent = given || post.isSuccess;
   useEffect(() => {
-    if (!filled || reduced !== false) return;
+    // Only a heart given here beats: one already given is simply shown.
+    if (!(post.isPending || post.isSuccess) || reduced !== false) return;
     ring.setValue(0);
     const beat = Animated.parallel([
       Animated.sequence([
@@ -69,7 +83,7 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
     ]);
     beat.start();
     return () => beat.stop();
-  }, [filled, reduced, scale, ring]);
+  }, [post.isPending, post.isSuccess, reduced, scale, ring]);
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
     refusal === "not_answered"
@@ -79,8 +93,11 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
         : post.isError
           ? t`That heart could not be sent just now. Tap to try again.`
           : null;
+  useEffect(() => {
+    onTrouble?.(trouble);
+  }, [trouble, onTrouble]);
   const sendHeart = () => {
-    if (busy.current || post.isSuccess || !draft.ready) return;
+    if (busy.current || sent || !draft.ready) return;
     busy.current = true;
     void post
       .mutateAsync()
@@ -89,14 +106,14 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
         busy.current = false;
       });
   };
-  const sentLabel = demo ? t`Example · heart sent` : t`Heart sent`;
+  const sentLabel = demo && !given ? t`Example · heart sent` : t`Heart sent`;
   return (
     <View accessibilityLiveRegion="polite" style={{ alignItems: "flex-end", gap: space.xs }}>
       <Pressable
         testID={`today-heart-${id}`}
         accessibilityRole="button"
-        accessibilityLabel={post.isSuccess ? sentLabel : t`Heart for ${recipient}`}
-        accessibilityState={{ disabled: !draft.ready || filled, selected: post.isSuccess }}
+        accessibilityLabel={sent ? sentLabel : t`Heart for ${recipient}`}
+        accessibilityState={{ disabled: !draft.ready || filled, selected: sent }}
         disabled={!draft.ready || filled}
         hitSlop={hitSlop}
         onPress={sendHeart}
@@ -132,7 +149,7 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
           />
         </Animated.View>
       </Pressable>
-      {trouble === null ? null : (
+      {trouble === null || onTrouble !== undefined ? null : (
         <Words variant="caption" tone="ink2">
           {trouble}
         </Words>

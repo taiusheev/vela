@@ -2365,6 +2365,17 @@ describe("replying to an exchange", () => {
     expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
   });
 
+  it("answers 200 with the heart already there when the member gave this reaction before", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.replyToApiExchange.mockResolvedValue({
+      response: { status: 200, body: REPLY },
+      replayed: false,
+    });
+    const response = await app.request(replyRequest({ reaction: "heart" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(REPLY);
+  });
+
   it("answers 404 when the service cannot find the exchange for this caller", async () => {
     const { app, writes } = fixture(true);
     writes.services.replyToApiExchange.mockRejectedValue(

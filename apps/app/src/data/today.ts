@@ -92,6 +92,8 @@ export interface TodayExchange {
    */
   unanswered?: string;
   replies: TodayReply[];
+  /** The reader already gave her answer a heart, here, in the chat or in the group. */
+  heartedByMe?: true;
   /** "Mom saw it · 8:12", shown only once she has. */
   receipt?: string;
   /** The ask's photos, in the order she saw them: a photo choice's first is her "1". */
