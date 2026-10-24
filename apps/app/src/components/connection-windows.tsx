@@ -1,6 +1,7 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Text, View } from "react-native";
+import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
 import { shortDayName } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
 import { weekWindows } from "../data/week-windows.ts";
@@ -8,9 +9,43 @@ import { usePalette } from "../theme/theme.tsx";
 import { radius, space, type } from "../theme/tokens.ts";
 import { Light } from "./light.tsx";
 
+const WINDOW = 46;
+
+/** The warm glow a lit window throws on the wall around it. */
+function WindowGlow({ id }: { id: string }) {
+  const palette = usePalette();
+  const size = WINDOW * 1.9;
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        width: size,
+        height: size,
+        left: "50%",
+        top: "50%",
+        marginLeft: -size / 2,
+        marginTop: -size / 2,
+      }}
+    >
+      <Svg width={size} height={size}>
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset={0} stopColor={palette.light} stopOpacity={0.45} />
+            <Stop offset={0.55} stopColor={palette.light} stopOpacity={0.14} />
+            <Stop offset={1} stopColor={palette.light} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx={size / 2} cy={size / 2} rx={size / 2} ry={size / 2} fill={`url(#${id})`} />
+      </Svg>
+    </View>
+  );
+}
+
 /**
  * This week's windows at the top of Sunday: a record of real messages between her and the family,
- * never an inferred wellbeing score, and never a streak that resets on a quiet day.
+ * never an inferred wellbeing score, and never a streak that resets on a quiet day. The windows
+ * speak for themselves, so the card carries no explanation; each day's label says it for a reader.
  */
 export function ConnectionWindows({ light }: { light: TodayLight }) {
   const palette = usePalette();
@@ -28,14 +63,12 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
         borderRadius: radius.card + 8,
         paddingHorizontal: space.l,
         paddingTop: space.l,
-        paddingBottom: space.l,
+        paddingBottom: space.m,
         gap: space.l,
+        overflow: "hidden",
       }}
     >
-      <View style={{ gap: space.xs }}>
-        <Text style={[type.label, { color: palette.ink2, textTransform: "uppercase" }]}>
-          <Trans>This week</Trans>
-        </Text>
+      <View style={{ gap: 2 }}>
         <Text accessibilityRole="header" style={[type.title, { color: palette.ink }]}>
           <Trans>You and {name}</Trans>
         </Text>
@@ -51,58 +84,79 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
               })}
         </Text>
       </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        {week.map((day) => {
-          const label = shortDayName(day.date);
-          return (
-            <View
-              key={day.date}
-              accessible
-              accessibilityLabel={
-                day.ahead
-                  ? t`${label}: still to come`
-                  : day.hasMessage
-                    ? t`${label}: a family message`
-                    : t`${label}: no message recorded`
-              }
-              style={{ alignItems: "center", gap: space.s, flex: 1 }}
-            >
+      <View>
+        <View style={{ flexDirection: "row" }}>
+          {week.map((day) => {
+            const label = shortDayName(day.date);
+            return (
               <View
-                style={{ opacity: day.ahead ? 0.35 : 1 }}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
+                key={day.date}
+                accessible
+                accessibilityLabel={
+                  day.ahead
+                    ? t`${label}: still to come`
+                    : day.hasMessage
+                      ? t`${label}: a family message`
+                      : t`${label}: no message recorded`
+                }
+                style={{ alignItems: "center", flex: 1 }}
               >
-                <Light state={day.hasMessage ? "lit" : "resting"} height={40} />
+                <View
+                  style={{
+                    height: WINDOW + space.m,
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    opacity: day.ahead ? 0.3 : 1,
+                  }}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {day.hasMessage ? <WindowGlow id={`week-glow-${day.date}`} /> : null}
+                  <Light state={day.hasMessage ? "lit" : "resting"} height={WINDOW} />
+                </View>
               </View>
-              <Text
-                style={[
-                  type.caption,
-                  {
-                    color: day.today ? palette.ink : palette.ink2,
-                    fontFamily: day.today ? type.heading.fontFamily : type.caption.fontFamily,
-                  },
-                ]}
-              >
-                {label}
-              </Text>
+            );
+          })}
+        </View>
+        {/* The sill the week's windows sit on. */}
+        <View
+          style={{
+            height: 3,
+            borderRadius: 2,
+            marginTop: space.s,
+            backgroundColor: palette.lightDeep,
+            opacity: 0.22,
+          }}
+        />
+        <View style={{ flexDirection: "row", marginTop: space.s }}>
+          {week.map((day) => (
+            <View key={day.date} style={{ flex: 1, alignItems: "center" }}>
               <View
                 style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: day.today ? palette.lightDeep : "transparent",
+                  paddingHorizontal: space.s,
+                  paddingVertical: 3,
+                  borderRadius: 999,
+                  backgroundColor: day.today ? palette.action : "transparent",
                 }}
-              />
+              >
+                <Text
+                  style={[
+                    type.caption,
+                    {
+                      fontSize: 13,
+                      lineHeight: 17,
+                      color: day.today ? palette.onAction : palette.ink2,
+                      fontFamily: day.today ? type.button.fontFamily : type.caption.fontFamily,
+                    },
+                  ]}
+                >
+                  {shortDayName(day.date)}
+                </Text>
+              </View>
             </View>
-          );
-        })}
+          ))}
+        </View>
       </View>
-      <Text style={[type.caption, { color: palette.ink2 }]}>
-        <Trans>
-          A window lights on each day you and {name} share a message. A quiet day never takes the
-          earlier lights away, and Monday starts a new row.
-        </Trans>
-      </Text>
     </View>
   );
 }

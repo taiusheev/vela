@@ -646,10 +646,6 @@ msgstr ""
 msgid "A vote"
 msgstr ""
 
-#: src/components/connection-windows.tsx
-msgid "A window lights on each day you and {name} share a message. A quiet day never takes the earlier lights away, and Monday starts a new row."
-msgstr ""
-
 #: src/data/ask.ts
 msgid "A word to teach"
 msgstr ""
@@ -879,6 +875,10 @@ msgstr ""
 msgid "Ask them to look in"
 msgstr ""
 
+#: src/components/weekly-support.tsx
+msgid "Ask what would help"
+msgstr ""
+
 #: src/components/quiet-notice.tsx
 msgid "Asked at {time}"
 msgstr ""
@@ -1068,10 +1068,6 @@ msgstr ""
 
 #: app/morning-settings.tsx
 msgid "Choose a time in {zone}. Everything waits until they accept the invitation."
-msgstr ""
-
-#: src/components/weekly-support.tsx
-msgid "Choose an offer to edit it before sending."
 msgstr ""
 
 #: src/components/photo-reply.tsx
@@ -1544,10 +1540,6 @@ msgstr ""
 msgid "Garden & plants"
 msgstr ""
 
-#: src/components/weekly-support.tsx
-msgid "General ways to offer support. Let {name} choose what feels helpful."
-msgstr ""
-
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Germany"
@@ -1894,6 +1886,10 @@ msgstr ""
 #: app/conversation.tsx
 #: app/settings.tsx
 msgid "Is {name} away?"
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Is there anything that would make this week easier for you? Big or small, just tell me."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -2644,25 +2640,12 @@ msgstr ""
 msgid "Off: nothing when {her} answers or when your turn comes. If a morning goes quiet, you are still told."
 msgstr ""
 
-#: src/components/weekly-support.tsx
-msgid "Offer a call or some company. Make room to listen to how the week has felt."
-msgstr ""
-
-#: src/components/weekly-support.tsx
-msgid "Offer help with a meal, an errand or getting somewhere. Ask what would make the week easier."
-msgstr ""
-
 #: app/weekly-report.tsx
-#: src/components/weekly-support.tsx
 msgid "Offer practical help"
 msgstr ""
 
 #: app/weekly-report.tsx
 msgid "Offer some company"
-msgstr ""
-
-#: src/components/weekly-support.tsx
-msgid "Offer some time together"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -2912,6 +2895,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "Photos for her morning"
+msgstr ""
+
+#: src/components/weekly-support.tsx
+msgid "Pick one to send {name}. You can change the words first."
 msgstr ""
 
 #: src/data/useToday.ts
@@ -4306,7 +4293,6 @@ msgid "This voice is no longer available."
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
-#: src/components/connection-windows.tsx
 #: src/components/today-glance.tsx
 msgid "This week"
 msgstr ""

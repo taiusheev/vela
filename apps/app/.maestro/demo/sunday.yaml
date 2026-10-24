@@ -8,6 +8,7 @@ tags:
 - openLink: ${APP_URL}/sunday
 - assertVisible: "Mom's week"
 - assertVisible: "You and Mom"
+- assertNotVisible: "A window lights on each day.*"
 - assertVisible: "Mom answered 6 of 7 days."
 - assertVisible: "On 1 morning nobody in the family asked, so Vela sent Mom a hello."
 - assertNotVisible: "Something to ask next week"
