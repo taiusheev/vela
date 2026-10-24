@@ -4200,6 +4200,10 @@ msgstr ""
 msgid "This is an example. No settings are sent to a family."
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "This is taking longer than it should."
+msgstr ""
+
 #: app/settings.tsx
 msgid "This is the example family, so nobody left."
 msgstr ""

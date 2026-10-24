@@ -4207,6 +4207,10 @@ msgstr "這是範例，不會檢查即時狀態。"
 msgid "This is an example. No settings are sent to a family."
 msgstr "這是範例，不會將設定送至任何家庭。"
 
+#: src/components/app-privacy.tsx
+msgid "This is taking longer than it should."
+msgstr "比平常久了一些。"
+
 #: app/settings.tsx
 msgid "This is the example family, so nobody left."
 msgstr "這是範例家庭，所以沒有人離開。"

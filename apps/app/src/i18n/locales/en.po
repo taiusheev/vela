@@ -4206,6 +4206,10 @@ msgstr "This is an example. No live status is checked."
 msgid "This is an example. No settings are sent to a family."
 msgstr "This is an example. No settings are sent to a family."
 
+#: src/components/app-privacy.tsx
+msgid "This is taking longer than it should."
+msgstr "This is taking longer than it should."
+
 #: app/settings.tsx
 msgid "This is the example family, so nobody left."
 msgstr "This is the example family, so nobody left."

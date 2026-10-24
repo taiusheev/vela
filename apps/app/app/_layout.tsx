@@ -9,7 +9,7 @@ import {
   Literata_500Medium,
   Literata_600SemiBold,
 } from "@expo-google-fonts/literata";
-import { focusManager, QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
@@ -24,6 +24,7 @@ import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { AppPrivacyGate } from "../src/components/app-privacy.tsx";
+import { followAppFocus } from "../src/data/app-focus.ts";
 import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
 import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
@@ -42,6 +43,8 @@ import {
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 
 void SplashScreen.preventAutoHideAsync();
+// Once for the whole app, never per session: a sign-in must not lose "back in front" (app-focus.ts).
+followAppFocus(AppState);
 
 function SessionQueries({ children, scope }: { children: ReactNode; scope: string }) {
   const [queries] = useState(() => {
@@ -55,12 +58,8 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
     sessionRequests.activate(scope);
     activatePrivateSession(scope);
     activatePortraitSession(scope);
-    const subscription = AppState.addEventListener("change", (state) =>
-      focusManager.setFocused(state === "active"),
-    );
     return () => {
       sessionRequests.end(scope);
-      subscription.remove();
       void queries.cancelQueries();
       queries.clear();
       clearPhotoCache();
