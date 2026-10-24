@@ -67,6 +67,8 @@ function runCall(ai: Ai, call: AiCallName, input: unknown): Promise<AiOutcome<un
       return ai.recipe(INPUT_SCHEMAS.recipe.parse(input));
     case "memory_pick":
       return ai.memoryPick(INPUT_SCHEMAS.memory_pick.parse(input));
+    case "story_weave":
+      return ai.storyWeave(INPUT_SCHEMAS.story_weave.parse(input));
     case "weekly_insight":
       return ai.weeklyInsight(INPUT_SCHEMAS.weekly_insight.parse(input));
   }

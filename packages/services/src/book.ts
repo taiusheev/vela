@@ -35,6 +35,7 @@ import { extensionFor } from "./media-copy.ts";
 import { type ApiKeepSuggestion, liveSuggestions } from "./memories.ts";
 import { type ApiBookRecipe, keptRecipes } from "./recipes.ts";
 import { familyHasEnded, memberByChannelUser, type Queryable } from "./repo.ts";
+import { type ApiMemoryStory, type ApiMoment, loadMemories } from "./stories.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -438,6 +439,8 @@ export async function loadApiBook(
   coming: ApiComingStory[];
   recipes: ApiBookRecipe[];
   suggestions: ApiKeepSuggestion[];
+  moments: ApiMoment[];
+  stories: ApiMemoryStory[];
 } | null> {
   if (!UUID.test(familyId)) return null;
   const access = await authorizeFamilyAccess(db, identity, familyId);
@@ -512,6 +515,8 @@ export async function loadApiBook(
     recipes: await keptRecipes(db, familyId),
     // Suggestions of answers worth keeping are for the organisers, who keep (ADR-50).
     suggestions: access.access.role === "organiser" ? await liveSuggestions(db, familyId, now) : [],
+    // Her memories and the stories gathered from them (ADR-51), read as her answers are.
+    ...(await loadMemories(db, familyId, now)),
   };
 }
 

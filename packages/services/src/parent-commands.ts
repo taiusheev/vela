@@ -28,6 +28,7 @@ import {
   memoryCandidates,
   memoryKeeps,
   memoryPermissionPresentations,
+  memoryStories,
   translations,
   type VelaTransaction,
   weeklyReads,
@@ -375,6 +376,7 @@ async function memoriesOff(deps: Deps, member: Member, event: InboundEvent, now:
       await removeEntry(tx, entry.exchangeId, member.id, now);
     }
     await tx.delete(keepSuggestions).where(eq(keepSuggestions.memberId, member.id));
+    await tx.delete(memoryStories).where(eq(memoryStories.memberId, member.id));
     await tx
       .update(consents)
       .set({ withdrawnAt: now })

@@ -42,16 +42,22 @@ const drawings = {
 
 export type BrandIconName = keyof typeof drawings;
 
+/** A drawing is a line unless it is filled. */
+const UNFILLED = "none";
+
 export function BrandIcon({
   name,
   color,
   size = 24,
   strokeWidth = 1.7,
+  fill,
 }: {
   name: BrandIconName;
   color: ColorValue;
   size?: number;
   strokeWidth?: number;
+  /** Fills a closed drawing, such as the heart of something kept. */
+  fill?: ColorValue;
 }) {
   return (
     <View
@@ -64,7 +70,7 @@ export function BrandIcon({
           d={drawings[name]}
           stroke={color}
           strokeWidth={strokeWidth}
-          fill="none"
+          fill={fill ?? UNFILLED}
           strokeLinecap="round"
           strokeLinejoin="round"
         />

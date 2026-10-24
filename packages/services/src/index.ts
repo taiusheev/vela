@@ -263,6 +263,7 @@ export {
   loadMemoryCandidates,
   proposeMemoryCandidate,
 } from "./rich-memories.ts";
+export { type ApiMemoryStory, type ApiMoment, loadMemories, weaveStories } from "./stories.ts";
 export {
   BANK_PROMPT_VERSION,
   pickBankItem,
