@@ -1,47 +1,16 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
-import { VoicePlayback } from "../audio/VoicePlayback.tsx";
-import { portraitInitials } from "../data/portrait-lamp.ts";
-import type { Today, TodayExchange, TodayReply } from "../data/today.ts";
+import type { Today, TodayReply } from "../data/today.ts";
 import type { PushView } from "../push/provider.tsx";
 import { readSetting, writeSetting } from "../storage/flags.ts";
 import { usePalette } from "../theme/theme.tsx";
-import { hitSlop, radius, sheetShadow, space, type } from "../theme/tokens.ts";
+import { hitSlop, radius, sheetShadow, space } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
-import { ReplyThumbnails } from "./family-photo.tsx";
-import { SoftCard } from "./today-hero.tsx";
 import { Words } from "./ui.tsx";
-
-/** A family member's initial in a warm circle, as the family's own chat shows who wrote. */
-function Initial({ name, size = 34 }: { name: string; size?: number }) {
-  const p = usePalette();
-  return (
-    <View
-      accessible={false}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: p.lightSoft,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text
-        style={[
-          type.bodyMedium,
-          { fontFamily: type.title.fontFamily, fontSize: size * 0.46, color: p.lightDeep },
-        ]}
-      >
-        {portraitInitials(name).slice(0, 1)}
-      </Text>
-    </View>
-  );
-}
 
 /**
  * The words of a reply without the name in front, which the card already shows above them. A reply
@@ -53,139 +22,6 @@ export function wordsOf(reply: TodayReply): string | undefined {
     if (reply.text.startsWith(prefix)) return reply.text.slice(prefix.length);
   }
   return undefined;
-}
-
-/**
- * What the family said about her morning today, as a feed: each reply its own card with who wrote
- * it and to whom, a heart or a reaction as one line, and her "saw it" at the end, as a chat would.
- */
-export function TodayFeed({
-  exchange,
-  familyId,
-}: {
-  exchange: TodayExchange;
-  familyId: string | undefined;
-}) {
-  const { t } = useLingui();
-  const p = usePalette();
-  const recipient = exchange.recipient;
-  const talk = () =>
-    router.push({ pathname: "/conversation", params: { recipient: exchange.recipientId } });
-  if (exchange.replies.length === 0) {
-    return (
-      <SoftCard>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-          <BrandIcon name="chat" color={p.ink2} size={20} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Words variant="bodyMedium">
-              <Trans>Nobody has written back yet</Trans>
-            </Words>
-            <Words variant="caption" tone="ink2">
-              <Trans>Be the first to answer {recipient}.</Trans>
-            </Words>
-          </View>
-        </View>
-        <Pressable accessibilityRole="button" hitSlop={hitSlop} onPress={talk}>
-          <Words variant="button" tone="action">
-            {t`Talk with ${recipient}`}
-          </Words>
-        </Pressable>
-      </SoftCard>
-    );
-  }
-  return (
-    <View style={{ gap: space.m }}>
-      {exchange.replies.map((reply) => {
-        const words = wordsOf(reply);
-        const from = reply.from;
-        const media = (
-          <>
-            {reply.photo === undefined ? null : <ReplyThumbnails photos={[reply.photo]} />}
-            {reply.audio === undefined || familyId === undefined ? null : (
-              <VoicePlayback
-                familyId={familyId}
-                mediaId={reply.audio.id}
-                durationMs={reply.audio.duration_ms}
-                expiresAt={reply.audio.expires_at}
-                state={reply.audio.state}
-                ready={reply.audio.state === "ready"}
-                label={t`Listen to ${from}’s voice reply`}
-              />
-            )}
-          </>
-        );
-        if (words === undefined) {
-          // A heart or a reaction: the line says it all, so it stays one line.
-          return (
-            <SoftCard key={`${reply.from}:${reply.text}`} padding={space.m}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-                <Initial name={reply.from} size={30} />
-                <View style={{ flex: 1 }}>
-                  <Words variant="body" tone="ink2">
-                    {reply.text}
-                  </Words>
-                </View>
-                <BrandIcon name="heart" color={p.lightDeep} size={18} strokeWidth={2} />
-              </View>
-              {media}
-            </SoftCard>
-          );
-        }
-        return (
-          <SoftCard key={`${reply.from}:${reply.text}`}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-              <Initial name={reply.from} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Words variant="bodyMedium">{reply.from}</Words>
-                <Words variant="caption" tone="ink3">
-                  {t`Wrote to ${recipient}`}
-                </Words>
-              </View>
-            </View>
-            <Words variant="body">{words}</Words>
-            {media}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: space.l,
-                paddingTop: space.s,
-                borderTopWidth: 1,
-                borderTopColor: p.rule,
-              }}
-            >
-              <Pressable
-                accessibilityRole="button"
-                hitSlop={hitSlop}
-                onPress={talk}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32 }}
-              >
-                <BrandIcon name="reply" color={p.ink2} size={16} strokeWidth={2} />
-                <Words variant="caption" tone="ink2">
-                  <Trans>Reply</Trans>
-                </Words>
-              </Pressable>
-            </View>
-          </SoftCard>
-        );
-      })}
-      {exchange.receipt === undefined ? null : (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            alignSelf: "flex-end",
-            paddingHorizontal: space.s,
-          }}
-        >
-          <BrandIcon name="check" color={p.ink3} size={14} strokeWidth={2.2} />
-          <Words variant="caption" tone="ink3">
-            {exchange.receipt}
-          </Words>
-        </View>
-      )}
-    </View>
-  );
 }
 
 export interface InboxItem {
