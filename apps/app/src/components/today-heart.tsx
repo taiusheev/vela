@@ -1,29 +1,25 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Platform, Pressable, View } from "react-native";
+import { useMotionPreference } from "../accessibility/use-reduced-motion.ts";
 import { apiConfigured, replyRefusal, replyTo } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "../data/live-state.ts";
 import { useDraft } from "../storage/useDraft.ts";
 import { usePalette } from "../theme/theme.tsx";
-import { radius, space, type } from "../theme/tokens.ts";
+import { hitSlop, space } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
-import { Chip, ReceiptChip, Words } from "./ui.tsx";
+import { Words } from "./ui.tsx";
 
-/** A separate attempt cannot overwrite a text reply the reader has already saved. */
-export function TodayHeart({
-  id,
-  recipient,
-  compact = false,
-  onRoom,
-}: {
-  id: string;
-  recipient: string;
-  compact?: boolean;
-  /** Drawn on Today's dark room: its ink and edge, and a sent heart as words in that ink. */
-  onRoom?: { ink: string; rule: string };
-}) {
+const native = Platform.OS !== "web";
+
+/**
+ * A heart for her answer, as the Memories heart is drawn: a bare outline to tap, then filled with
+ * the light's amber once it is on its way, with one beat and a ring of warmth, and no words — the
+ * heart itself says it was sent. A separate attempt cannot overwrite a text reply already saved.
+ */
+export function TodayHeart({ id, recipient }: { id: string; recipient: string }) {
   const palette = usePalette();
   const { t } = useLingui();
   const account = useAccount();
@@ -31,6 +27,9 @@ export function TodayHeart({
   const queries = useQueryClient();
   const busy = useRef(false);
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
+  const reduced = useMotionPreference();
+  const scale = useRef(new Animated.Value(1)).current;
+  const ring = useRef(new Animated.Value(0)).current;
   const post = useMutation({
     mutationFn: async () => {
       if (demo) return;
@@ -46,6 +45,31 @@ export function TodayHeart({
       }
     },
   });
+  // Filled from the tap on, so it answers at once; back to an outline only if sending failed.
+  const filled = post.isPending || post.isSuccess;
+  useEffect(() => {
+    if (!filled || reduced !== false) return;
+    ring.setValue(0);
+    const beat = Animated.parallel([
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.3,
+          duration: 140,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: native,
+        }),
+        Animated.spring(scale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: native }),
+      ]),
+      Animated.timing(ring, {
+        toValue: 1,
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: native,
+      }),
+    ]);
+    beat.start();
+    return () => beat.stop();
+  }, [filled, reduced, scale, ring]);
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
     refusal === "not_answered"
@@ -65,60 +89,53 @@ export function TodayHeart({
         busy.current = false;
       });
   };
+  const sentLabel = demo ? t`Example · heart sent` : t`Heart sent`;
   return (
-    <View
-      accessibilityLiveRegion="polite"
-      style={{
-        gap: space.s,
-        alignItems: "flex-start",
-        flexShrink: 1,
-        maxWidth: compact ? 160 : undefined,
-      }}
-    >
-      {compact && !post.isSuccess ? (
-        <Pressable
-          testID={`today-heart-${id}`}
-          accessibilityRole="button"
-          accessibilityLabel={t`Heart for ${recipient}`}
-          accessibilityState={{ disabled: !draft.ready || post.isPending || post.isSuccess }}
-          disabled={!draft.ready || post.isPending || post.isSuccess}
-          onPress={sendHeart}
-          style={({ pressed }) => ({
-            minHeight: onRoom === undefined ? 54 : 44,
-            minWidth: onRoom === undefined ? 54 : 44,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: onRoom?.rule ?? palette.control,
-            borderRadius: onRoom === undefined ? radius.button : 999,
-            backgroundColor: "transparent",
-            opacity: post.isPending ? 0.45 : pressed ? 0.8 : 1,
-          })}
-        >
-          <BrandIcon name="heart" color={onRoom?.ink ?? palette.ink} size={22} />
-        </Pressable>
-      ) : post.isSuccess && onRoom !== undefined ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: 44 }}>
-          <BrandIcon name="heart" color={palette.light} size={18} strokeWidth={2.2} />
-          <Text style={[type.caption, { color: onRoom.ink }]}>
-            {demo ? t`Example · heart sent` : t`Heart sent`}
-          </Text>
-        </View>
-      ) : post.isSuccess ? (
-        <ReceiptChip label={demo ? t`Example · heart sent` : t`Heart sent`} />
-      ) : (
-        <Chip
-          label={post.isPending ? t`Sending…` : t`Heart for ${recipient}`}
-          disabled={!draft.ready || post.isPending}
-          onPress={sendHeart}
+    <View accessibilityLiveRegion="polite" style={{ alignItems: "flex-end", gap: space.xs }}>
+      <Pressable
+        testID={`today-heart-${id}`}
+        accessibilityRole="button"
+        accessibilityLabel={post.isSuccess ? sentLabel : t`Heart for ${recipient}`}
+        accessibilityState={{ disabled: !draft.ready || filled, selected: post.isSuccess }}
+        disabled={!draft.ready || filled}
+        hitSlop={hitSlop}
+        onPress={sendHeart}
+        style={({ pressed }) => ({
+          width: 44,
+          height: 44,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.6 : 1,
+        })}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: palette.light,
+            opacity: ring.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.35, 0] }),
+            transform: [
+              { scale: ring.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.6] }) },
+            ],
+          }}
         />
-      )}
-      {trouble === null ? null : onRoom === undefined ? (
-        <Words variant="body" tone="ink2">
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <BrandIcon
+            name="heart"
+            size={26}
+            strokeWidth={filled ? 2 : 1.8}
+            color={filled ? palette.lightDeep : palette.ink2}
+            {...(filled ? { fill: palette.light } : {})}
+          />
+        </Animated.View>
+      </Pressable>
+      {trouble === null ? null : (
+        <Words variant="caption" tone="ink2">
           {trouble}
         </Words>
-      ) : (
-        <Text style={[type.caption, { color: onRoom.ink }]}>{trouble}</Text>
       )}
     </View>
   );

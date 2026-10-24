@@ -454,13 +454,7 @@ export function TodayAnswer({
               <Words variant="button">{name}</Words>
             </View>
             {exchange === undefined || exchange.deliveryPending === true ? null : (
-              <TodayHeart
-                key={exchange.id}
-                id={exchange.id}
-                recipient={name}
-                compact
-                onRoom={{ ink: p.ink, rule: p.control }}
-              />
+              <TodayHeart key={exchange.id} id={exchange.id} recipient={name} />
             )}
           </View>
           <Text style={[type.preview, { color: p.ink }]}>{answer.text}</Text>
@@ -629,13 +623,11 @@ function MarkCircle({ icon, size = 32 }: { icon: BrandIconName; size?: number })
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
-        backgroundColor: p.surface2,
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <BrandIcon name={icon} color={p.ink2} size={15} strokeWidth={2.2} />
+      <BrandIcon name={icon} color={p.ink3} size={20} strokeWidth={2} />
     </View>
   );
 }
@@ -862,7 +854,13 @@ export function FamilyFeed({
                   <View style={{ flex: 1, minWidth: 0 }}>{entry.line}</View>
                   {entry.icon === undefined ? null : (
                     <View style={{ paddingTop: 3 }}>
-                      <BrandIcon name={entry.icon} color={p.lightDeep} size={16} strokeWidth={2} />
+                      <BrandIcon
+                        name={entry.icon}
+                        color={p.lightDeep}
+                        size={18}
+                        strokeWidth={2}
+                        {...(entry.icon === "heart" ? { fill: p.light } : {})}
+                      />
                     </View>
                   )}
                 </View>

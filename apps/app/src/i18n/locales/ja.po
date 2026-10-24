@@ -3402,7 +3402,6 @@ msgstr ""
 #: src/components/chat/chat-bubble.tsx
 #: src/components/photo-reply.tsx
 #: src/components/story-day.tsx
-#: src/components/today-heart.tsx
 #: src/components/voice-recorder.tsx
 #: src/device/VoiceAnswer.tsx
 msgid "Sending…"
