@@ -12,6 +12,7 @@
  * are redacted from anything LINE or the runtime says.
  */
 import { ChannelSendError, type ChannelSendErrorCode } from "@vela/contracts";
+import { readBoundedBody } from "../bounded-body.ts";
 import { GROUP_ID, MESSAGE_ID, ROOM_ID, USER_ID } from "./ids.ts";
 
 export const LINE_API_BASE_URL = "https://api.line.me";
@@ -287,15 +288,13 @@ export function createLineClient(options: LineApiOptions): LineClient {
       const answer = { status: response.status, body: parseJson(text) };
       throw failure(name, answer, lineContentErrorCode(answer.status, reasonOf(answer.body)));
     }
-    const declaredBytes = Number(response.headers.get("content-length") ?? "0");
-    if (declaredBytes > maxBytes) throw tooLarge(name, maxBytes);
-    let body: ArrayBuffer;
+    let body: ArrayBuffer | null;
     try {
-      body = await response.arrayBuffer();
+      body = await readBoundedBody(response, maxBytes);
     } catch (error) {
       throw networkError(name, error, DOWNLOAD_TIMEOUT_MS);
     }
-    if (body.byteLength > maxBytes) throw tooLarge(name, maxBytes);
+    if (body === null) throw tooLarge(name, maxBytes);
     return { ready: true, body, contentType: response.headers.get("content-type") };
   }
 
