@@ -84,6 +84,10 @@ msgstr "{count} 天・已選擇"
 msgid "{count} of 4 panes lit · {chapterName}"
 msgstr "{count} / 4 扇窗已點亮 · {chapterName}"
 
+#: app/(tabs)/questions.tsx
+msgid "{count} of the next 14 mornings"
+msgstr "未來 14 個早上中有 {count} 個"
+
 #: app/ask.tsx
 msgid "{day} morning"
 msgstr "{day}早上"
@@ -386,6 +390,14 @@ msgstr "{name}這週說的話"
 msgid "{name}’s world"
 msgstr "{name}的世界"
 
+#: src/components/morning-calendar.tsx
+msgid "{named}, a question is planned"
+msgstr "{named}，已安排問題"
+
+#: src/components/morning-calendar.tsx
+msgid "{named}, another question is planned"
+msgstr "{named}，已有其他問題"
+
 #: src/data/precision.ts
 msgid "{neverKnown} never known"
 msgstr "{neverKnown}次始終不清楚"
@@ -498,6 +510,10 @@ msgstr "1 天・已選擇"
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "完成連結不代表早晨訊息已送達或已收到回覆。"
+
+#: src/components/morning-calendar.tsx
+msgid "A dot means that morning already has a question."
+msgstr "有小圓點的早上已經有問題了。"
 
 #: app/weekly-report.tsx
 msgid "A family organiser selected these words as an interest to ask about."
@@ -1040,10 +1056,6 @@ msgstr "正在檢查 Vela…"
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "確認中…"
-
-#: app/ask.tsx
-msgid "Choose a day"
-msgstr "選擇日期"
 
 #: app/away.tsx
 msgid "Choose a parent in Settings before changing away dates."
@@ -2468,10 +2480,6 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 msgid "No photo on this phone"
 msgstr "這支手機上沒有照片"
 
-#: app/(tabs)/questions.tsx
-msgid "No questions planned yet. Start with one; there is no need to fill every day."
-msgstr "還沒有安排問題。先寫一個就好，不用每天都排滿。"
-
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "過去 12 個月沒有安靜通知。"
@@ -2570,6 +2578,14 @@ msgstr "還沒有保存任何內容。點一下愛心就開始。"
 #: src/components/today-feed.tsx
 msgid "Nothing new yet today."
 msgstr "今天還沒有新消息。"
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned for this morning. Vela sends a gentle hello on open days."
+msgstr "這個早上還沒有安排。沒人提問的日子，Vela 會送上一句問候。"
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned yet"
+msgstr "還沒有安排"
 
 #: app/my-memories.tsx
 msgid "Nothing to suggest yet. Suggestions come from answers you send from now on."
@@ -2928,6 +2944,10 @@ msgstr "暫時無法取得試辦設定。"
 #: src/data/onboarding.ts
 msgid "Places & travel"
 msgstr "地方與旅行"
+
+#: app/(tabs)/questions.tsx
+msgid "Plan a question for {day}"
+msgstr "為{day}安排一個問題"
 
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
@@ -4367,6 +4387,7 @@ msgstr "今天的提問在 {time} 送到{name}那裡。"
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "今天的提問在 08:00 送到{name}那裡，11:00 又送了一次。"
 
+#: app/(tabs)/questions.tsx
 #: app/away.tsx
 msgid "Tomorrow"
 msgstr "明天"
@@ -4403,9 +4424,9 @@ msgstr "明天早上"
 msgid "Tomorrow morning, {tomorrow}"
 msgstr "明天早上，{tomorrow}"
 
-#: app/ask.tsx
-msgid "Tomorrow, {tomorrow}"
-msgstr "明天，{tomorrow}"
+#: src/components/morning-calendar.tsx
+msgid "Tomorrow, {label}"
+msgstr "明天，{label}"
 
 #: app/sign-in.tsx
 msgid "Too many attempts. Wait a moment, then try again."
@@ -4984,10 +5005,6 @@ msgstr "下次通電話時，想再跟我聊聊這件事嗎？"
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {name}"
 msgstr "寫個問題給{name}"
-
-#: app/(tabs)/questions.tsx
-msgid "Write it, choose a morning, then save. You can change it here before it is prepared for delivery."
-msgstr "寫好問題，選個早上，再儲存。開始準備傳送前，都能在這裡修改。"
 
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
