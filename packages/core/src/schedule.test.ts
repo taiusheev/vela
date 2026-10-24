@@ -83,6 +83,7 @@ function day(date: LocalDate, fields: Partial<Omit<DayState, "date">> = {}): Day
     deliveryFailed: false,
     answeredAt: null,
     repeatSentAt: null,
+    wroteOvernight: false,
     quiet: null,
     ...fields,
   };
@@ -408,6 +409,19 @@ describe("a blocked link", () => {
 
 describe("repeat", () => {
   const unansweredToday = day(TODAY, { deliveredAt: taipei("08:00") });
+
+  // She wrote to Vela in the night, so she is up and well enough to write: the morning still goes
+  // and still waits for her, but no "in case you missed it" follows it.
+  it("sends no repeat after a morning she wrote to Vela the night before, and still turns it quiet", () => {
+    const afterNight = day(TODAY, { deliveredAt: taipei("08:00"), wroteOvernight: true });
+    const morning = decide({ now: taipei("08:00"), days: [afterNight] });
+    expect(morning.due).toEqual([]);
+    expect(iso(morning.nextWakeAt)).toBe(iso(taipei("14:00")));
+    expect(decide({ now: taipei("10:30"), days: [afterNight] }).due).toEqual([]);
+    expect(decide({ now: taipei("14:00"), days: [afterNight] }).due).toEqual([
+      { kind: "open_quiet", date: TODAY, notify: true },
+    ]);
+  });
 
   it("sends the repeat exactly 150 minutes after delivery", () => {
     expect(decide({ now: taipei("10:30"), days: [unansweredToday] }).due).toEqual([
