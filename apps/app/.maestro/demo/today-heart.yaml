@@ -5,11 +5,12 @@ tags:
   - demo
 ---
 - launchApp
+# By its accessible name: a CSS lookup waits minutes for the web page to settle.
 - tapOn:
-    css: '[data-testid="today-heart-x1"]'
+    id: "Heart for Mom"
 # Sent is shown, not written: the heart fills, and only its spoken label says so.
-- tapOn:
-    css: '[data-testid="today-heart-x1-sent"]'
+- assertVisible:
+    id: "Example · heart sent"
 - assertNotVisible: "Example · heart sent"
 - tapOn: "Talk with Mom"
 - assertVisible: "Write to Mom"

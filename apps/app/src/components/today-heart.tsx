@@ -93,7 +93,7 @@ export function TodayHeart({ id, recipient }: { id: string; recipient: string })
   return (
     <View accessibilityLiveRegion="polite" style={{ alignItems: "flex-end", gap: space.xs }}>
       <Pressable
-        testID={post.isSuccess ? `today-heart-${id}-sent` : `today-heart-${id}`}
+        testID={`today-heart-${id}`}
         accessibilityRole="button"
         accessibilityLabel={post.isSuccess ? sentLabel : t`Heart for ${recipient}`}
         accessibilityState={{ disabled: !draft.ready || filled, selected: post.isSuccess }}
