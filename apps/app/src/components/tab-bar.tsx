@@ -6,13 +6,15 @@ import { usePalette } from "../theme/theme.tsx";
 import { type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 
-/** Which drawing each tab wears; a route missing here is the centre add button. */
+/** Which drawing each tab wears. Every tab is a place with a label; adding happens inside a page. */
 const ICONS: Record<string, BrandIconName> = {
   index: "today",
   exchanges: "book",
+  questions: "questions",
   sunday: "calendar",
   you: "you",
 };
+const FALLBACK_ICON: BrandIconName = "today";
 
 /** Wide enough for five thumbs, narrow enough that an iPad does not stretch them apart. */
 const MAX_ROW = 560;
@@ -115,19 +117,15 @@ export function VelaTabBar({ state, descriptors, navigation, insets }: BottomTab
               onLongPress={onLongPress}
               style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
             >
-              {({ pressed }) =>
-                icon ? (
-                  <TabItem
-                    icon={icon}
-                    title={title}
-                    focused={focused}
-                    pressed={pressed}
-                    reduced={reduced}
-                  />
-                ) : (
-                  <AddButton pressed={pressed} reduced={reduced} />
-                )
-              }
+              {({ pressed }) => (
+                <TabItem
+                  icon={icon ?? FALLBACK_ICON}
+                  title={title}
+                  focused={focused}
+                  pressed={pressed}
+                  reduced={reduced}
+                />
+              )}
             </Pressable>
           );
         })}
@@ -236,27 +234,6 @@ function TabItem({
           {title}
         </Animated.Text>
       </View>
-    </Animated.View>
-  );
-}
-
-/** A rounded square, not a disc: it sits in the row as a key, the way the tabs beside it do. */
-function AddButton({ pressed, reduced }: { pressed: boolean; reduced: boolean }) {
-  const palette = usePalette();
-  const scale = usePress(pressed, reduced);
-  return (
-    <Animated.View
-      style={{
-        width: 48,
-        height: 36,
-        borderRadius: 12,
-        backgroundColor: palette.action,
-        alignItems: "center",
-        justifyContent: "center",
-        transform: [{ scale }],
-      }}
-    >
-      <BrandIcon name="plus" color={palette.onAction} size={22} strokeWidth={2.2} />
     </Animated.View>
   );
 }

@@ -1,8 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import { Linking, View } from "react-native";
-import { apiBaseUrl } from "../api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../api/support.ts";
+import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { space } from "../theme/tokens.ts";
 import { SecondaryButton, Words } from "./ui.tsx";
 
@@ -13,7 +12,7 @@ export function LegalLinks() {
   const open = async (path: string) => {
     setFailed(false);
     try {
-      await Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}${path}`);
+      await Linking.openURL(noticeUrl(path));
     } catch {
       setFailed(true);
     }

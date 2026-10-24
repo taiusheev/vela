@@ -10,8 +10,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Linking, Modal, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ApiError, apiBaseUrl, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../api/support.ts";
+import { ApiError, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
+import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { privacyGateDecision } from "../data/app-privacy-gate.ts";
 import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-draft.ts";
@@ -75,9 +75,7 @@ export function AppPrivacy({
         <SecondaryButton
           label={t`Read the privacy notice`}
           onPress={() => {
-            void Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`).catch(() =>
-              setLinkFailed(true),
-            );
+            void Linking.openURL(noticeUrl("/privacy")).catch(() => setLinkFailed(true));
           }}
         />
       ) : null}

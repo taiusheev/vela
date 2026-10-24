@@ -13,7 +13,8 @@ import {
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
-import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
+import { TimeStepper } from "../src/components/time-stepper.tsx";
+import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
@@ -76,9 +77,15 @@ export default function MorningSettingsScreen() {
         }}
       >
         {her === undefined ? (
-          <Words>
-            <Trans>Choose a parent in Settings before changing morning settings.</Trans>
-          </Words>
+          <>
+            <Words>
+              <Trans>Choose a parent in Settings before changing morning settings.</Trans>
+            </Words>
+            <SecondaryButton
+              label={t`Go to Settings`}
+              onPress={() => router.replace("/settings")}
+            />
+          </>
         ) : read.isError && data === undefined ? (
           <>
             <Words>
@@ -101,7 +108,6 @@ export default function MorningSettingsScreen() {
             invited={her.invited === true}
           />
         )}
-        <SecondaryButton label={t`Go to Settings`} onPress={() => router.replace("/settings")} />
       </ScrollView>
     </>
   );
@@ -195,18 +201,12 @@ function MorningForm({
           </Trans>
         )}
       </Words>
-      <TextField
-        label={t`Morning time (24-hour HH:MM)`}
+      <TimeStepper
+        label={t`Morning time`}
         value={time}
-        onChangeText={editTime}
-        placeholder="08:00"
+        onChange={editTime}
         disabled={change.isPending}
       />
-      {!valid ? (
-        <Words tone="ink2">
-          <Trans>Enter a time such as 08:30 and choose a supported language.</Trans>
-        </Words>
-      ) : null}
       <Words variant="heading">
         <Trans>Morning language</Trans>
       </Words>
@@ -274,11 +274,6 @@ function MorningForm({
           if (demo) setSaved(true);
           else change.mutate();
         }}
-      />
-      <SecondaryButton
-        label={t`Cancel`}
-        disabled={change.isPending}
-        onPress={() => router.back()}
       />
     </View>
   );

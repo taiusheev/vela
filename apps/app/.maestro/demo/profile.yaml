@@ -1,18 +1,19 @@
-# The card at the top of You opens the reader's own profile: their name (changeable), the family's
-# people and their own things. The example family's name changes on this screen only.
+# You is one page: the family card, then the reader's name, memories, Settings and Help. "Your name"
+# opens the name ready to edit. The example family's name changes on that screen only.
 url: ${APP_URL}
-name: The You card opens a profile where the reader can change their name
+name: You shows the family and changes the reader's name on one short page
 tags:
   - demo
 ---
 - launchApp
 - openLink: ${APP_URL}/you
-- tapOn: "Your profile"
-- assertVisible: "Your name"
 - assertVisible: "The Chens"
+- assertNotVisible: "Your profile"
 - tapOn: "Change"
+- assertVisible: "Your family sees this name on your questions and replies."
+- tapOn:
+    id: "Your name"
 - eraseText: 20
 - inputText: "Ann"
 - tapOn: "Save name"
-- assertVisible: "Ann"
-- assertNotVisible: "Save name"
+- assertVisible: "Saved. Your family sees Ann from now on."

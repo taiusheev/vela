@@ -7,6 +7,7 @@ import { VoicePlayback } from "../audio/VoicePlayback.tsx";
 import { shortDayName } from "../data/format.ts";
 import { portraitInitials, portraitLightOn } from "../data/portrait-lamp.ts";
 import type { TodayExchange, TodayLight } from "../data/today.ts";
+import { useFirstWeek } from "../data/useFirstWeek.ts";
 import { weekWindows } from "../data/week-windows.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, roomShadow, softShadow, space, type } from "../theme/tokens.ts";
@@ -119,6 +120,7 @@ export function FamilyWindows({
   const room = useRoom();
   const { fontScale } = useWindowDimensions();
   const { roomRef, source, slot, onRoomLayout } = useRoomLight();
+  const firstWeek = useFirstWeek();
   if (lights.length === 0) return null;
   const kept = lights.filter((light) => light.invited !== true && light.state !== "paused");
   const quiet = kept.find((light) => light.state === "quiet");
@@ -286,7 +288,7 @@ export function FamilyWindows({
               })}
             </View>
           )}
-          {allLit || quiet !== undefined || kept.length === 0 ? null : (
+          {!firstWeek || allLit || quiet !== undefined || kept.length === 0 ? null : (
             <Text style={[type.caption, { color: room.muted, paddingHorizontal: space.xs }]}>
               {t`A light comes on when they answer their morning.`}
             </Text>
@@ -537,6 +539,7 @@ export function TodayAnswer({
 export function WeekWindowsCard({ light }: { light: TodayLight }) {
   const { t } = useLingui();
   const p = usePalette();
+  const firstWeek = useFirstWeek();
   const days = light.connectionDays;
   if (days === undefined || days.length === 0) return null;
   const week = weekWindows(days);
@@ -592,9 +595,11 @@ export function WeekWindowsCard({ light }: { light: TodayLight }) {
             );
           })}
         </View>
-        <Words variant="caption" tone="ink2">
-          {t`Lit on each day you and ${name} shared a message.`}
-        </Words>
+        {firstWeek ? (
+          <Words variant="caption" tone="ink2">
+            {t`Lit on each day you and ${name} shared a message.`}
+          </Words>
+        ) : null}
       </SoftCard>
     </Pressable>
   );

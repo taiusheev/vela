@@ -1,59 +1,24 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, updateAccount } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
-import { FamilyAction } from "../src/components/brand/experience.tsx";
 import { Portrait } from "../src/components/portrait-lamp.tsx";
-import { SoftCard } from "../src/components/today-hero.tsx";
-import {
-  Hairline,
-  PrimaryButton,
-  SecondaryButton,
-  TextField,
-  Words,
-} from "../src/components/ui.tsx";
+import { PrimaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { useFamily } from "../src/data/useFamily.ts";
-import { useMyMemories } from "../src/data/useMyMemories.ts";
-import { usePortrait } from "../src/data/usePortrait.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
-import { space, type } from "../src/theme/tokens.ts";
-
-/** One parent in the family list: their face, name and plan, opening their own settings. */
-function ParentRow({
-  familyId,
-  memberId,
-  name,
-  line,
-}: {
-  familyId: string;
-  memberId: string;
-  name: string;
-  line: string;
-}) {
-  const photo = usePortrait(familyId, memberId);
-  const p = usePalette();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
-      <Portrait uri={photo.uri} name={name} width={36} height={36} round />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[type.button, { color: p.ink }]}>{name}</Text>
-        <Text style={[type.caption, { color: p.ink2 }]}>{line}</Text>
-      </View>
-    </View>
-  );
-}
+import { space } from "../src/theme/tokens.ts";
 
 /**
- * The reader's own profile, opened from the card at the top of You: who they are in the family
- * (the name everyone sees on their asks and replies, which they can change here), the family and
- * its people, and the places their own things live. Settings keep the family's controls.
+ * The reader's name, opened from "Your name" on You: the name everyone sees on their questions and
+ * replies. You already shows the family and the reader's own things, so this page holds only the
+ * name, ready to edit.
  */
 export default function ProfileScreen() {
   const p = usePalette();
@@ -63,13 +28,13 @@ export default function ProfileScreen() {
   const account = useAccount();
   const queries = useQueryClient();
   const { family, loading } = useFamily(day.familyId, day.familyId !== undefined);
-  const memories = useMyMemories(day.familyId);
   const nameKey = useIdempotencyKey("profile-name");
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
   // The example family has no account to change; its name changes on this screen only.
   const [exampleName, setExampleName] = useState<string | null>(null);
   const name = exampleName ?? family.me.name;
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? (loading ? "" : name);
+  const [saved, setSaved] = useState(false);
   const rename = useMutation({
     mutationFn: async (next: string) => {
       if (!apiConfigured()) {
@@ -86,15 +51,18 @@ export default function ProfileScreen() {
         queries.invalidateQueries({ queryKey: ["family"] }),
       ]);
     },
-    onSuccess: () => setEditing(false),
+    onSuccess: () => {
+      setDraft(null);
+      setSaved(true);
+    },
   });
-  const trimmed = draft.trim();
+  const trimmed = shown.trim();
   const canSave = trimmed.length > 0 && trimmed.length <= 80 && trimmed !== name;
 
   return (
     <>
       <Stack.Screen
-        options={{ headerShown: true, title: t`Profile`, headerLeft: () => <BackButton /> }}
+        options={{ headerShown: true, title: t`Your name`, headerLeft: () => <BackButton /> }}
       />
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -115,105 +83,35 @@ export default function ProfileScreen() {
             {family.me.line}
           </Words>
         </View>
-
-        <SoftCard>
-          {editing ? (
-            <View style={{ gap: space.m }}>
-              <TextField
-                label={t`Your name`}
-                value={draft}
-                onChangeText={setDraft}
-                helper={t`Your family sees this name on your questions and replies.`}
-                autoCapitalize="words"
-                autoCorrect={false}
-                autoFocus
-                maxLength={80}
-                onSubmit={() => {
-                  if (canSave) rename.mutate(trimmed);
-                }}
-              />
-              <PrimaryButton
-                label={rename.isPending ? t`Saving…` : t`Save name`}
-                disabled={!canSave || rename.isPending}
-                onPress={() => rename.mutate(trimmed)}
-              />
-              <SecondaryButton
-                label={t`Cancel`}
-                onPress={() => {
-                  setEditing(false);
-                  rename.reset();
-                }}
-              />
-              {rename.isError ? (
-                <Words variant="caption" tone="ink2">
-                  <Trans>Your name could not be saved. Nothing changed. Try again.</Trans>
-                </Words>
-              ) : null}
-            </View>
-          ) : (
-            <FamilyAction
-              icon="you"
-              title={t`Your name`}
-              detail={name}
-              actionLabel={t`Change`}
-              testID="profile-name"
-              onPress={() => {
-                setDraft(name);
-                setEditing(true);
-              }}
-            />
-          )}
-        </SoftCard>
-
-        <View style={{ gap: space.m }}>
-          <Words variant="heading" accessibilityRole="header">
-            {family.familyName}
+        <TextField
+          label={t`Your name`}
+          value={shown}
+          onChangeText={(value) => {
+            setSaved(false);
+            setDraft(value);
+          }}
+          helper={t`Your family sees this name on your questions and replies.`}
+          autoCapitalize="words"
+          autoCorrect={false}
+          maxLength={80}
+          onSubmit={() => {
+            if (canSave) rename.mutate(trimmed);
+          }}
+        />
+        <PrimaryButton
+          label={rename.isPending ? t`Saving…` : t`Save name`}
+          disabled={!canSave || rename.isPending}
+          onPress={() => rename.mutate(trimmed)}
+        />
+        {rename.isError ? (
+          <Words variant="caption" tone="ink2">
+            <Trans>Your name could not be saved. Nothing changed. Try again.</Trans>
           </Words>
-          <SoftCard>
-            <View style={{ gap: space.m }}>
-              {family.keptLight.map((parent) => (
-                <ParentRow
-                  key={parent.memberId}
-                  familyId={day.familyId ?? ""}
-                  memberId={parent.memberId}
-                  name={parent.name}
-                  line={parent.line}
-                />
-              ))}
-              {family.others === undefined ? null : (
-                <>
-                  <Hairline />
-                  <View>
-                    <Text style={[type.button, { color: p.ink }]}>{family.others.names}</Text>
-                    <Text style={[type.caption, { color: p.ink2 }]}>{family.others.line}</Text>
-                  </View>
-                </>
-              )}
-            </View>
-          </SoftCard>
-        </View>
-
-        <SoftCard padding={space.s}>
-          <View style={{ paddingHorizontal: space.s }}>
-            {memories.available ? (
-              <>
-                <FamilyAction
-                  icon="heart"
-                  title={t`Your memories`}
-                  detail={t`Little things worth remembering from your own answers`}
-                  onPress={() => router.push("/my-memories")}
-                />
-                <Hairline />
-              </>
-            ) : null}
-            <FamilyAction
-              icon="you"
-              title={t`Settings`}
-              detail={t`Parent photos and links, notifications, language, and account`}
-              onPress={() => router.push("/settings")}
-            />
-          </View>
-        </SoftCard>
+        ) : saved ? (
+          <Words variant="caption" tone="ink2">
+            <Trans>Saved. Your family sees {name} from now on.</Trans>
+          </Words>
+        ) : null}
       </ScrollView>
     </>
   );

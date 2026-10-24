@@ -1,10 +1,11 @@
 import { useLingui } from "@lingui/react/macro";
 import { Tabs } from "expo-router";
+import { ReadingColumn } from "../../src/components/reading-column.tsx";
 import { VelaTabBar } from "../../src/components/tab-bar.tsx";
 import { usePalette } from "../../src/theme/theme.tsx";
 
 /**
- * Today · Memories · Questions (+) · Week · You, and no badge counts anywhere (spec §14.1 A6). The chat with a
+ * Today · Memories · Questions · Week · You, and no badge counts anywhere (spec §14.1 A6). The chat with a
  * parent opens from Today, as a messenger opens a conversation; Memories keeps her words and the
  * family book (consumer flow, apps/app/docs/consumer-flow.md). The bar itself is drawn by
  * VelaTabBar, which picks each tab's icon by route name.
@@ -15,6 +16,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <VelaTabBar {...props} />}
+      screenLayout={({ children }) => <ReadingColumn>{children}</ReadingColumn>}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: palette.bg },
@@ -36,7 +38,6 @@ export default function TabsLayout() {
         name="questions"
         options={{
           title: t`Questions`,
-          tabBarAccessibilityLabel: t`Questions — add a question`,
           tabBarButtonTestID: "questions-tab",
         }}
       />

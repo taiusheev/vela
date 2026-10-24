@@ -4,8 +4,7 @@ import { Stack, useFocusEffect } from "expo-router";
 import { type ReactNode, useCallback, useState } from "react";
 import { Linking, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiBaseUrl } from "../src/api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN } from "../src/api/support.ts";
+import { noticeUrl } from "../src/api/support.ts";
 import { BackButton } from "../src/components/back-button.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
@@ -113,7 +112,7 @@ export default function MyMemoriesScreen() {
         <SecondaryButton
           label={t`Read the privacy notice`}
           icon="privacy"
-          onPress={() => void Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`)}
+          onPress={() => void Linking.openURL(noticeUrl("/privacy"))}
         />
         <PrimaryButton
           label={t`Allow memory suggestions`}

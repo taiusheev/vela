@@ -13,7 +13,7 @@ tags:
     timeout: 20000
 - assertVisible: "Updated .*"
 - assertNotVisible: "Connect your Telegram family"
-- assertNotVisible: "Start the 30 days"
+- assertNotVisible: "Start 30 free days"
 - tapOn: "Memories"
 - assertNotVisible: "Who are you keeping a light on for?"
 - tapOn: "Today"

@@ -182,6 +182,10 @@ msgstr "{label}: still to come"
 msgid "{later} answered later"
 msgstr "{later} answered later"
 
+#: app/vela-light.tsx
+msgid "{monthly} a month"
+msgstr "{monthly} a month"
+
 #: src/components/onboarding/plan.tsx
 msgid "{mornings, plural, one {# morning, ready.} other {# mornings, ready.}}"
 msgstr "{mornings, plural, one {# morning, ready.} other {# mornings, ready.}}"
@@ -478,6 +482,14 @@ msgstr "{who}: {said}"
 msgid "{wrong} where something was wrong"
 msgstr "{wrong} where something was wrong"
 
+#: app/vela-light.tsx
+msgid "{yearly} a year"
+msgstr "{yearly} a year"
+
+#: app/vela-light.tsx
+msgid "{yearlyMonth} a month"
+msgstr "{yearlyMonth} a month"
+
 #: app/parent.tsx
 msgid "▶ Play the voice message"
 msgstr "▶ Play the voice message"
@@ -494,10 +506,6 @@ msgstr "❤️ I'm fine"
 msgid "📷 Reply with a photo"
 msgstr "📷 Reply with a photo"
 
-#: app/vela-light.tsx
-msgid "$79 a year"
-msgstr "$79 a year"
-
 #: app/weekly-report.tsx
 msgid "1 day"
 msgstr "1 day"
@@ -505,6 +513,14 @@ msgstr "1 day"
 #: app/weekly-report.tsx
 msgid "1 day · selected"
 msgstr "1 day · selected"
+
+#: src/components/time-stepper.tsx
+msgid "15 minutes earlier"
+msgstr "15 minutes earlier"
+
+#: src/components/time-stepper.tsx
+msgid "15 minutes later"
+msgstr "15 minutes later"
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
@@ -602,6 +618,10 @@ msgstr "A quiet morning"
 #: app/help.tsx
 msgid "A quiet notice means Vela has not recorded an answer. Call or message your parent yourself. Vela cannot visit your parent or send help."
 msgstr "A quiet notice means Vela has not recorded an answer. Call or message your parent yourself. Vela cannot visit your parent or send help."
+
+#: app/vela-light.tsx
+msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
+msgstr "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
 
 #: src/data/ask.ts
 msgid "A recipe"
@@ -720,6 +740,10 @@ msgstr "Adding…"
 #: src/data/onboarding.ts
 msgid "Adelaide"
 msgstr "Adelaide"
+
+#: app/vela-light.tsx
+msgid "After the 30 days"
+msgstr "After the 30 days"
 
 #: src/components/app-privacy.tsx
 msgid "Agree and continue"
@@ -872,11 +896,6 @@ msgstr "Ask it on Sunday"
 msgid "Ask on Telegram"
 msgstr "Ask on Telegram"
 
-#: app/help.tsx
-#: app/settings.tsx
-msgid "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
-msgstr "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr "Ask them to look in"
@@ -944,13 +963,13 @@ msgstr "Be the first to answer {recipient}."
 msgid "Before you continue"
 msgstr "Before you continue"
 
+#: app/vela-light.tsx
+msgid "Best value · save {saving}%"
+msgstr "Best value · save {saving}%"
+
 #: src/components/onboarding/questions.tsx
 msgid "Big words, one message at a time. You set it up together."
 msgstr "Big words, one message at a time. You set it up together."
-
-#: app/(tabs)/exchanges.tsx
-msgid "Both"
-msgstr "Both"
 
 #: src/data/chat.ts
 #: src/data/exchanges.ts
@@ -983,11 +1002,6 @@ msgstr "Call Mom"
 msgid "Canada"
 msgstr "Canada"
 
-#: app/morning-settings.tsx
-#: app/profile.tsx
-msgid "Cancel"
-msgstr "Cancel"
-
 #: src/components/telegram-family-link.tsx
 msgid "Cancel connection"
 msgstr "Cancel connection"
@@ -998,7 +1012,7 @@ msgstr "Cancel connection"
 msgid "Central"
 msgstr "Central"
 
-#: app/profile.tsx
+#: app/(tabs)/you.tsx
 msgid "Change"
 msgstr "Change"
 
@@ -1267,6 +1281,10 @@ msgstr "Dad's words · {date}"
 msgid "Darwin"
 msgstr "Darwin"
 
+#: app/vela-light.tsx
+msgid "Day 30"
+msgstr "Day 30"
+
 #: app/delete-account.tsx
 #: app/settings.tsx
 msgid "Delete account"
@@ -1373,10 +1391,6 @@ msgstr "English pilot"
 msgid "English private-test wording"
 msgstr "English private-test wording"
 
-#: app/morning-settings.tsx
-msgid "Enter a time such as 08:30 and choose a supported language."
-msgstr "Enter a time such as 08:30 and choose a supported language."
-
 #: app/sign-in.tsx
 msgid "Enter the six digits from your message."
 msgstr "Enter the six digits from your message."
@@ -1396,10 +1410,6 @@ msgstr "Every morning starts with it."
 #: app/weekly-report.tsx
 msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 msgstr "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
-
-#: app/(tabs)/exchanges.tsx
-msgid "Everyone"
-msgstr "Everyone"
 
 #: src/components/today-glance.tsx
 msgid "Everyone's light is on today"
@@ -1501,6 +1511,10 @@ msgstr "For another device: paste the full code or the whole private Telegram me
 #: src/components/chat/chat-bubble.tsx
 msgid "For her morning"
 msgstr "For her morning"
+
+#: app/vela-light.tsx
+msgid "For one parent. Each extra parent adds half the price."
+msgstr "For one parent. Each extra parent adds half the price."
 
 #: src/auth/phone.ts
 msgid "France"
@@ -1728,6 +1742,10 @@ msgstr "How it reaches {name}"
 #: app/weekly-report.tsx
 msgid "How long will this offer still be relevant?"
 msgstr "How long will this offer still be relevant?"
+
+#: app/vela-light.tsx
+msgid "How the 30 days work"
+msgstr "How the 30 days work"
 
 #: app/settings.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
@@ -2169,7 +2187,7 @@ msgstr "Listen to your recording"
 msgid "Lit on each day you and {name} shared a message."
 msgstr "Lit on each day you and {name} shared a message."
 
-#: app/profile.tsx
+#: app/(tabs)/you.tsx
 msgid "Little things worth remembering from your own answers"
 msgstr "Little things worth remembering from your own answers"
 
@@ -2348,6 +2366,10 @@ msgstr "Mom, Mẹ, 媽…"
 msgid "Moments"
 msgstr "Moments"
 
+#: app/vela-light.tsx
+msgid "Monthly"
+msgstr "Monthly"
+
 #: app/conversation.tsx
 msgid "More for {name}"
 msgstr "More for {name}"
@@ -2377,8 +2399,8 @@ msgid "Morning settings saved."
 msgstr "Morning settings saved."
 
 #: app/morning-settings.tsx
-msgid "Morning time (24-hour HH:MM)"
-msgstr "Morning time (24-hour HH:MM)"
+msgid "Morning time"
+msgstr "Morning time"
 
 #: src/components/onboarding/questions.tsx
 msgid "Mornings arrive on {name}’s clock, not yours."
@@ -2561,10 +2583,6 @@ msgstr "Not this time"
 #: app/(tabs)/exchanges.tsx
 msgid "Nothing here matches. Try another word, or All."
 msgstr "Nothing here matches. Try another word, or All."
-
-#: app/vela-light.tsx
-msgid "Nothing is charged during the pilot, and no card is asked for."
-msgstr "Nothing is charged during the pilot, and no card is asked for."
 
 #: src/components/keepsake.tsx
 msgid "Nothing kept yet. Tap a heart to start it."
@@ -2779,10 +2797,6 @@ msgstr "Opening the memories…"
 msgid "Opening the story…"
 msgstr "Opening the story…"
 
-#: app/(tabs)/you.tsx
-msgid "Opens your name, your family and your own things"
-msgstr "Opens your name, your family and your own things"
-
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "Option {number}"
@@ -2790,10 +2804,6 @@ msgstr "Option {number}"
 #: src/components/calling-number-editor.tsx
 msgid "Optional calling number · {name}"
 msgstr "Optional calling number · {name}"
-
-#: app/vela-light.tsx
-msgid "or $9.99 a month · a second person +50%"
-msgstr "or $9.99 a month · a second person +50%"
 
 #: app/parent.tsx
 msgid "Or say it in your own words"
@@ -2818,14 +2828,13 @@ msgstr "Pacific"
 msgid "Parent photo"
 msgstr "Parent photo"
 
-#: app/(tabs)/you.tsx
-#: app/profile.tsx
-msgid "Parent photos and links, notifications, language, and account"
-msgstr "Parent photos and links, notifications, language, and account"
-
 #: app/parent-settings.tsx
 msgid "Parent settings"
 msgstr "Parent settings"
+
+#: app/(tabs)/you.tsx
+msgid "Parents, notifications, language and account"
+msgstr "Parents, notifications, language and account"
 
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
@@ -2971,13 +2980,13 @@ msgstr "Privacy and help"
 msgid "Privacy details and terms"
 msgstr "Privacy details and terms"
 
+#: app/vela-light.tsx
+msgid "Privacy notice"
+msgstr "Privacy notice"
+
 #: app/weekly-report.tsx
 msgid "Private test · reviewed family support"
 msgstr "Private test · reviewed family support"
-
-#: app/profile.tsx
-msgid "Profile"
-msgstr "Profile"
 
 #: src/components/ask-ideas.tsx
 msgid "Puts these words in your question, to send or change"
@@ -2996,10 +3005,6 @@ msgstr "Question saved. You can adjust it below."
 msgid "Questions"
 msgstr "Questions"
 
-#: app/(tabs)/_layout.tsx
-msgid "Questions — add a question"
-msgstr "Questions — add a question"
-
 #: src/components/onboarding/plan.tsx
 msgid "Questions from what {name} loves: {topics}"
 msgstr "Questions from what {name} loves: {topics}"
@@ -3012,10 +3017,6 @@ msgstr "quiet"
 #: src/components/onboarding/plan.tsx
 msgid "Quiet days covered, signed by you"
 msgstr "Quiet days covered, signed by you"
-
-#: app/vela-light.tsx
-msgid "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
-msgstr "Quiet notices with the people nearby · away mode · the weekly read · memory and reminders · the family book to keep"
 
 #: src/components/story-day.tsx
 msgid "Read the family book"
@@ -3280,6 +3281,10 @@ msgstr "Save question"
 msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 
+#: app/profile.tsx
+msgid "Saved. Your family sees {name} from now on."
+msgstr "Saved. Your family sees {name} from now on."
+
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
 msgstr "Saving"
@@ -3441,6 +3446,7 @@ msgid "sent a voice message"
 msgstr "sent a voice message"
 
 #: app/settings.tsx
+#: app/vela-light.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
 msgstr "Service terms"
@@ -3474,7 +3480,6 @@ msgid "Setting up…"
 msgstr "Setting up…"
 
 #: app/(tabs)/you.tsx
-#: app/profile.tsx
 #: app/settings.tsx
 msgid "Settings"
 msgstr "Settings"
@@ -3589,10 +3594,6 @@ msgstr "Sign-out did not finish. You are still signed in. Try again."
 msgid "Signed “— Vela”. Your name is only on what you write."
 msgstr "Signed “— Vela”. Your name is only on what you write."
 
-#: app/(tabs)/you.tsx
-msgid "Signed in as {myName}"
-msgstr "Signed in as {myName}"
-
 #: app/sign-in.tsx
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr "Signing in with a number is not open yet. Use your email instead."
@@ -3656,8 +3657,8 @@ msgid "Spain"
 msgstr "Spain"
 
 #: app/vela-light.tsx
-msgid "Start the 30 days"
-msgstr "Start the 30 days"
+msgid "Start 30 free days"
+msgstr "Start 30 free days"
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
@@ -3687,6 +3688,10 @@ msgstr "Stop"
 #: src/components/voice-recorder.tsx
 msgid "Stop and listen first"
 msgstr "Stop and listen first"
+
+#: app/vela-light.tsx
+msgid "Stop any time"
+msgstr "Stop any time"
 
 #: src/components/voice-recorder.tsx
 msgid "Stop recording"
@@ -3719,6 +3724,10 @@ msgstr "Suggested from what {name} loves"
 #: src/data/exchanges.ts
 msgid "Sunday"
 msgstr "Sunday"
+
+#: src/components/time-stepper.tsx
+msgid "Swipe up or down to move it by 15 minutes."
+msgstr "Swipe up or down to move it by 15 minutes."
 
 #: src/data/onboarding.ts
 msgid "Sydney"
@@ -3888,14 +3897,13 @@ msgstr "That link could not open. Contact {SUPPORT_EMAIL}."
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "That link could not open. Contact Vela at the address below."
 
-#: app/help.tsx
-#: app/settings.tsx
-msgid "That link could not open. Use the address above to contact the founder."
-msgstr "That link could not open. Use the address above to contact the founder."
-
 #: src/components/family-book.tsx
 msgid "That page could not be taken out. Try again."
 msgstr "That page could not be taken out. Try again."
+
+#: app/settings.tsx
+msgid "That page could not open. Write to Vela support instead."
+msgstr "That page could not open. Write to Vela support instead."
 
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
@@ -4342,6 +4350,7 @@ msgid "today"
 msgstr "today"
 
 #: app/away.tsx
+#: app/vela-light.tsx
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Today"
@@ -4523,6 +4532,10 @@ msgid "Until"
 msgstr "Until"
 
 #: app/away.tsx
+msgid "Until a day"
+msgstr "Until a day"
+
+#: app/away.tsx
 msgid "Until she's back"
 msgstr "Until she's back"
 
@@ -4607,10 +4620,6 @@ msgstr "Vela does not send notifications from here yet."
 msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 msgstr "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 
-#: app/vela-light.tsx
-msgid "Vela Light · for {name}"
-msgstr "Vela Light · for {name}"
-
 #: src/data/family.ts
 msgid "Vela Light · payment due"
 msgstr "Vela Light · payment due"
@@ -4626,6 +4635,10 @@ msgstr "Vela Light is on for {name}."
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr "Vela Light shows you the read"
+
+#: app/vela-light.tsx
+msgid "Vela Light starts for {name}. No card is needed."
+msgstr "Vela Light starts for {name}. No card is needed."
 
 #: src/data/family.ts
 msgid "Vela Light trial"
@@ -4864,6 +4877,10 @@ msgstr "What the family sees about you"
 msgid "What they call you"
 msgstr "What they call you"
 
+#: app/vela-light.tsx
+msgid "What Vela Light adds"
+msgstr "What Vela Light adds"
+
 #: app/weekly-report.tsx
 #: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
@@ -4999,6 +5016,10 @@ msgstr "Write something for when {name} says yes."
 msgid "Write to {name}"
 msgstr "Write to {name}"
 
+#: app/help.tsx
+msgid "Write to Vela support for a copy of your data, a correction, deletion, or to withdraw consent. Never include private family content in a support message."
+msgstr "Write to Vela support for a copy of your data, a correction, deletion, or to withdraw consent. Never include private family content in a support message."
+
 #: src/components/story-day.tsx
 msgid "Write your own story question for {day}"
 msgstr "Write your own story question for {day}"
@@ -5010,6 +5031,10 @@ msgstr "written by Vela"
 #: src/components/today-glance.tsx
 msgid "Wrote to {recipient}"
 msgstr "Wrote to {recipient}"
+
+#: app/vela-light.tsx
+msgid "Yearly"
+msgstr "Yearly"
 
 #: src/data/my-memories-demo.ts
 msgid "Yellow chrysanthemums on the balcony make the whole morning feel warm."
@@ -5082,6 +5107,10 @@ msgstr "You can explore an example family. No messages are sent."
 #: app/exchange/[id].tsx
 msgid "You can reply once she has answered."
 msgstr "You can reply once she has answered."
+
+#: app/vela-light.tsx
+msgid "You choose whether to keep it. Nothing is charged unless you choose a plan."
+msgstr "You choose whether to keep it. Nothing is charged unless you choose a plan."
 
 #: src/components/parent-link-settings.tsx
 msgid "You chose to share the link. Delivery is not confirmed; Vela will show when your parent agrees."
@@ -5180,6 +5209,10 @@ msgstr "Your data and deletion"
 msgid "Your email"
 msgstr "Your email"
 
+#: app/help.tsx
+msgid "Your email app did not open. Write to the address above instead."
+msgstr "Your email app did not open. Write to the address above instead."
+
 #: app/(tabs)/you.tsx
 #: app/precision.tsx
 #: src/components/family-chooser.tsx
@@ -5227,8 +5260,8 @@ msgstr "Your light is off, so nothing about your mornings is shown."
 msgid "Your light is paused from your own chat, where your mornings arrive."
 msgstr "Your light is paused from your own chat, where your mornings arrive."
 
+#: app/(tabs)/you.tsx
 #: app/my-memories.tsx
-#: app/profile.tsx
 msgid "Your memories"
 msgstr "Your memories"
 
@@ -5248,6 +5281,7 @@ msgstr "Your mobile number. The country code is added for you."
 msgid "Your morning message"
 msgstr "Your morning message"
 
+#: app/(tabs)/you.tsx
 #: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
@@ -5280,20 +5314,12 @@ msgid "Your parent"
 msgstr "Your parent"
 
 #: app/settings.tsx
-msgid "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
-msgstr "Your parent can ask “what does the family see” in their own Telegram chat. Health-word sharing is their separate choice, and saying stop pauses their light."
+msgid "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
+msgstr "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 
 #: app/settings.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
-
-#: app/(tabs)/you.tsx
-msgid "Your profile"
-msgstr "Your profile"
-
-#: app/(tabs)/you.tsx
-msgid "Your profile, {myName}, {familyName}"
-msgstr "Your profile, {myName}, {familyName}"
 
 #: app/ask.tsx
 msgid "Your question for {name}"
