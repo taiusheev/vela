@@ -3,28 +3,37 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiPlannedAsk } from "@vela/contracts";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { RefreshControl, View } from "react-native";
 import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { MorningCalendar } from "../../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
-import { Card, Eyebrow, PrimaryButton, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { SoftCard } from "../../src/components/today-hero.tsx";
+import {
+  ActionGroup,
+  ActionRow,
+  Eyebrow,
+  Hairline,
+  PrimaryButton,
+  SecondaryButton,
+  Words,
+} from "../../src/components/ui.tsx";
+import { WarmPage } from "../../src/components/warm.tsx";
 import { dayName, localDayMonth } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
+import { questionDates } from "../../src/data/question-schedule.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
+import { tomorrowIn } from "../../src/data/story.ts";
 import { usePlannedQuestions } from "../../src/data/usePlannedQuestions.ts";
 import { useToday } from "../../src/data/useToday.ts";
-import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
 
 export default function QuestionsScreen() {
   const { t } = useLingui();
-  const palette = usePalette();
-  const insets = useSafeAreaInsets();
   const day = useToday();
-  const params = useLocalSearchParams<{ recipient?: string; saved?: string }>();
+  const params = useLocalSearchParams<{ recipient?: string; saved?: string; day?: string }>();
   const schedule = usePlannedQuestions(day.familyId);
   const parent = selectedLight(day.today.lights, params.recipient);
   const turn = day.today.tomorrow.find((item) => item.recipientId === parent?.memberId);
@@ -42,16 +51,9 @@ export default function QuestionsScreen() {
     }, [refresh]),
   );
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
+    <WarmPage
+      gap={space.l}
       refreshControl={<RefreshControl refreshing={day.loading} onRefresh={refresh} />}
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.l,
-      }}
     >
       <ScreenHeading title={<Trans>Questions</Trans>} />
       <Words variant="body" tone="ink2">
@@ -67,7 +69,7 @@ export default function QuestionsScreen() {
       <ParentChooser
         lights={day.today.lights}
         selected={parent?.memberId}
-        onSelect={(recipient) => router.setParams({ recipient, saved: undefined })}
+        onSelect={(recipient) => router.setParams({ recipient, saved: undefined, day: undefined })}
       />
       {day.loading ? (
         <Words variant="body" tone="ink2">
@@ -86,58 +88,45 @@ export default function QuestionsScreen() {
               router.push({ pathname: "/ask", params: { recipient: parent.memberId } })
             }
           />
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              Write it, choose a morning, then save. You can change it here before it is prepared
-              for delivery.
-            </Trans>
-          </Words>
-          <View style={{ gap: space.m }}>
-            <Words variant="heading">
-              <Trans>Planned questions</Trans>
-            </Words>
-            {schedule.isError ? (
-              <>
-                <Words variant="body" tone="ink2">
-                  <Trans>
-                    Your schedule could not be loaded. Your saved questions are unchanged.
-                  </Trans>
-                </Words>
-                <SecondaryButton
-                  label={t`Reload schedule`}
-                  onPress={() => void schedule.refetch()}
-                />
-              </>
-            ) : schedule.isFetching && schedule.data === undefined && day.live ? (
-              <Words variant="body" tone="ink2">
-                <Trans>Loading your schedule…</Trans>
-              </Words>
-            ) : questions.length > 0 ? (
-              questions.map((question) => <PlannedQuestion key={question.id} question={question} />)
-            ) : turn?.asked ? (
-              <Card>
-                <Eyebrow>
-                  <Trans>Tomorrow morning</Trans>
-                </Eyebrow>
-                <Words variant="voice">{turn.asked.text}</Words>
-                <Words variant="caption" tone="ink2">
-                  {t`From ${fromName}`}
-                </Words>
-              </Card>
-            ) : (
+          {schedule.isError ? (
+            <>
               <Words variant="body" tone="ink2">
                 <Trans>
-                  No questions planned yet. Start with one; there is no need to fill every day.
+                  Your schedule could not be loaded. Your saved questions are unchanged.
                 </Trans>
               </Words>
-            )}
-          </View>
+              <SecondaryButton label={t`Reload schedule`} onPress={() => void schedule.refetch()} />
+            </>
+          ) : schedule.isFetching && schedule.data === undefined && day.live ? (
+            <Words variant="body" tone="ink2">
+              <Trans>Loading your schedule…</Trans>
+            </Words>
+          ) : (
+            <MorningPlan
+              key={parent.memberId}
+              recipientId={parent.memberId}
+              timeZone={parent.timeZone}
+              questions={questions}
+              focus={params.day}
+            />
+          )}
+          {questions.length === 0 && turn?.asked ? (
+            <SoftCard>
+              <Eyebrow>
+                <Trans>Tomorrow morning</Trans>
+              </Eyebrow>
+              <Words variant="preview">{turn.asked.text}</Words>
+              <Words variant="caption" tone="ink2">
+                {t`From ${fromName}`}
+              </Words>
+            </SoftCard>
+          ) : null}
           {turn?.suggestion ? (
-            <Card>
+            <SoftCard tone="paper">
               <Eyebrow>
                 <Trans>A starting point</Trans>
               </Eyebrow>
-              <Words variant="voice">{turn.suggestion.text}</Words>
+              <Words variant="preview">{turn.suggestion.text}</Words>
               <SecondaryButton
                 icon="ask"
                 label={t`Make it mine`}
@@ -151,15 +140,117 @@ export default function QuestionsScreen() {
               <Words variant="caption" tone="ink2">
                 <Trans>Change any words before you send.</Trans>
               </Words>
-            </Card>
+            </SoftCard>
           ) : null}
         </>
       )}
-    </ScrollView>
+    </WarmPage>
   );
 }
 
-function PlannedQuestion({ question }: { question: ApiPlannedAsk }) {
+/**
+ * The next two weeks as one calendar with the chosen morning under it, so a family sees the whole
+ * plan at a glance and opens one question at a time, instead of scrolling a card per question
+ * (founder, 24 Oct 2026). Questions waiting for any free morning have no day, so they follow below.
+ */
+function MorningPlan({
+  recipientId,
+  timeZone,
+  questions,
+  focus,
+}: {
+  recipientId: string;
+  timeZone: string | undefined;
+  questions: readonly ApiPlannedAsk[];
+  focus: string | undefined;
+}) {
+  const { t } = useLingui();
+  const tomorrow = tomorrowIn(new Date(), timeZone);
+  const dates = questionDates(tomorrow);
+  const onDay = new Map(
+    questions.flatMap((question) =>
+      question.date !== null && dates.includes(question.date) ? [[question.date, question]] : [],
+    ),
+  );
+  const waiting = questions.filter(
+    (question) => question.date === null || !dates.includes(question.date),
+  );
+  const firstPlanned = dates.find((date) => onDay.has(date));
+  const [picked, setPicked] = useState<string | undefined>(undefined);
+  const chosen = [picked, focus, firstPlanned, tomorrow].find(
+    (date): date is string => date !== undefined && dates.includes(date),
+  );
+  const question = chosen === undefined ? undefined : onDay.get(chosen);
+  const planned = new Map(Array.from(onDay.keys(), (date) => [date, "planned" as const]));
+  const count = onDay.size;
+  return (
+    <>
+      <SoftCard>
+        <View style={{ gap: space.xs }}>
+          <Words variant="heading" accessibilityRole="header">
+            <Trans>Planned questions</Trans>
+          </Words>
+          <Words variant="caption" tone="ink2">
+            {count === 0 ? t`Nothing planned yet` : t`${count} of the next 14 mornings`}
+          </Words>
+        </View>
+        <MorningCalendar
+          dates={dates}
+          selected={chosen}
+          marks={planned}
+          tomorrow={tomorrow}
+          onSelect={setPicked}
+        />
+        <Hairline />
+        {chosen === undefined ? null : question === undefined ? (
+          <FreeMorning recipientId={recipientId} date={chosen} tomorrow={tomorrow} />
+        ) : (
+          <PlannedQuestion question={question} tomorrow={tomorrow} />
+        )}
+      </SoftCard>
+      {waiting.map((item) => (
+        <SoftCard key={item.id}>
+          <PlannedQuestion question={item} tomorrow={tomorrow} />
+        </SoftCard>
+      ))}
+    </>
+  );
+}
+
+/** "Tomorrow · Sunday, 25 Oct": the chosen morning, named so nobody has to count. */
+function morningName(date: string | null, tomorrow: string, nextFree: string, soon: string) {
+  if (date === null) return nextFree;
+  const named = `${dayName(date)}, ${localDayMonth(date)}`;
+  return date === tomorrow ? `${soon} · ${named}` : named;
+}
+
+function FreeMorning({
+  recipientId,
+  date,
+  tomorrow,
+}: {
+  recipientId: string;
+  date: string;
+  tomorrow: string;
+}) {
+  const { t } = useLingui();
+  const day = dayName(date);
+  return (
+    <View style={{ gap: space.m }}>
+      <Eyebrow>{morningName(date, tomorrow, t`Next free morning`, t`Tomorrow`)}</Eyebrow>
+      <Words variant="body" tone="ink2">
+        <Trans>Nothing planned for this morning. Vela sends a gentle hello on open days.</Trans>
+      </Words>
+      <SecondaryButton
+        icon="plus"
+        label={t`Plan a question for ${day}`}
+        onPress={() => router.push({ pathname: "/ask", params: { recipient: recipientId, date } })}
+      />
+    </View>
+  );
+}
+
+function PlannedQuestion({ question, tomorrow }: { question: ApiPlannedAsk; tomorrow: string }) {
   const { t } = useLingui();
   const account = useAccount();
   const askerName = question.asker_name;
@@ -187,18 +278,14 @@ function PlannedQuestion({ question }: { question: ApiPlannedAsk }) {
     },
   });
   return (
-    <Card>
-      <Eyebrow>
-        {question.date === null
-          ? t`Next free morning`
-          : `${dayName(question.date)}, ${localDayMonth(question.date)}`}
-      </Eyebrow>
-      <Words variant="bodyMedium">{question.text}</Words>
+    <View style={{ gap: space.m }}>
+      <Eyebrow>{morningName(question.date, tomorrow, t`Next free morning`, t`Tomorrow`)}</Eyebrow>
+      <Words variant="preview">{question.text}</Words>
       <Words variant="caption" tone="ink2">{t`From ${askerName}`}</Words>
       {question.editable ? (
         <>
           {confirm ? (
-            <>
+            <View style={{ gap: space.s }}>
               <Words variant="body">
                 <Trans>Remove this planned question?</Trans>
               </Words>
@@ -212,10 +299,11 @@ function PlannedQuestion({ question }: { question: ApiPlannedAsk }) {
                 disabled={remove.isPending}
                 onPress={() => setConfirm(false)}
               />
-            </>
+            </View>
           ) : (
-            <View style={{ gap: space.s }}>
-              <SecondaryButton
+            <ActionGroup>
+              <ActionRow
+                first
                 icon="ask"
                 label={t`Edit question or day`}
                 onPress={() =>
@@ -225,8 +313,13 @@ function PlannedQuestion({ question }: { question: ApiPlannedAsk }) {
                   })
                 }
               />
-              <SecondaryButton label={t`Remove question`} onPress={() => setConfirm(true)} />
-            </View>
+              <ActionRow
+                icon="trash"
+                careful
+                label={t`Remove question`}
+                onPress={() => setConfirm(true)}
+              />
+            </ActionGroup>
           )}
           {remove.isError ? (
             <Words variant="body" tone="ink2">
@@ -246,6 +339,6 @@ function PlannedQuestion({ question }: { question: ApiPlannedAsk }) {
           )}
         </Words>
       )}
-    </Card>
+    </View>
   );
 }

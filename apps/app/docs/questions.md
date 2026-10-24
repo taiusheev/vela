@@ -13,8 +13,12 @@ question preserves its original format and attachments without exposing the old 
 record for up to a minute, with stop, playback and discard; sending waits until recording stops.
 The server allows five seconds of stop headroom so a full-minute recording is not rejected by a late native duration tick.
 
-Tomorrow, a chosen date in the next two weeks, and next free morning cover planning. The initial
-date skips mornings already claimed in the loaded schedule. The recipient's calendar determines
+A date in the next two weeks, chosen on a small Monday-first calendar, or next free morning cover
+planning. Mornings that already hold a question carry a dot and cannot be chosen. The initial
+date skips mornings already claimed in the loaded schedule. The Questions page shows the same
+calendar with an amber dot on each planned morning and opens one morning at a time under it: the
+question with Edit and Remove, or a free morning with a way to plan one for that day. Questions
+waiting for any free morning have no date and follow below the calendar. The recipient's calendar determines
 the dates. The server remains authoritative during races. Saving returns to the same parent's
 schedule and confirms the save. Questions can be edited or removed by their own author until
 preparation starts. Prepared questions remain visible with an explanation. Edit text stays in screen memory and is not added to durable device storage. Existing new-question drafts keep their encrypted retry behavior. A rejected edit leaves

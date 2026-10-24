@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editablePlannedQuestion, questionDates } from "./question-schedule.ts";
+import { calendarWeeks, editablePlannedQuestion, questionDates } from "./question-schedule.ts";
 import { tomorrowIn } from "./story.ts";
 
 describe("question schedule", () => {
@@ -14,6 +14,26 @@ describe("question schedule", () => {
     const tomorrow = tomorrowIn(new Date("2026-11-01T03:00:00Z"), "America/New_York");
     expect(tomorrow).toBe("2026-11-01");
     expect(questionDates(tomorrow)[1]).toBe("2026-11-02");
+  });
+});
+
+describe("the calendar of mornings", () => {
+  it("lays fourteen mornings from a Sunday out as three full weeks from Monday", () => {
+    const weeks = calendarWeeks(questionDates("2026-10-25"));
+    expect(weeks).toHaveLength(3);
+    expect(weeks[0]?.[0]).toBe("2026-10-19");
+    expect(weeks[0]?.[6]).toBe("2026-10-25");
+    expect(weeks[2]?.[6]).toBe("2026-11-08");
+    expect(weeks.every((week) => week.length === 7)).toBe(true);
+  });
+  it("needs only two weeks when the first morning is a Monday", () => {
+    const weeks = calendarWeeks(questionDates("2026-10-26"));
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0]?.[0]).toBe("2026-10-26");
+    expect(weeks[1]?.[6]).toBe("2026-11-08");
+  });
+  it("draws nothing without mornings", () => {
+    expect(calendarWeeks([])).toEqual([]);
   });
 });
 

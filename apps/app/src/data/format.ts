@@ -95,6 +95,14 @@ export function dayName(date: string): string {
     : day.toLocaleDateString(dateLocale(), { weekday: "long", timeZone: "UTC" });
 }
 
+/** A scheduled date's month on its own, over a calendar: "October", or "10月". */
+export function localMonth(date: string): string {
+  const day = valid(`${date}T00:00:00Z`);
+  return day === null
+    ? date
+    : day.toLocaleDateString(dateLocale(), { month: "long", timeZone: "UTC" });
+}
+
 /** A local date as its short weekday, under each of a week's seven lights: "Mon", "週一". */
 export function shortDayName(date: string): string {
   const day = valid(`${date}T00:00:00Z`);

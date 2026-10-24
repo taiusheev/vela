@@ -20,8 +20,10 @@ import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { type AskIdea, AskIdeas } from "../src/components/ask-ideas.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
+import { MorningCalendar } from "../src/components/morning-calendar.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
+import { SoftCard } from "../src/components/today-hero.tsx";
 import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { VoiceRecorder } from "../src/components/voice-recorder.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
@@ -56,6 +58,8 @@ type AskParams = {
   text?: string;
   kind?: string;
   edit?: string;
+  /** A free morning chosen on the Questions calendar, to start the question on. */
+  date?: string;
 };
 
 /** The kinds the chat's "+" can open Ask on; anything else opens on a question. */
@@ -157,8 +161,7 @@ function AskComposer({
       : "question",
   );
   const [showIdeas, setShowIdeas] = useState(false);
-  const [chooseDate, setChooseDate] = useState(false);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(params.date ?? "");
   const schedule = usePlannedQuestions(familyId);
   const editing = editablePlannedQuestion(
     schedule.data?.questions ?? [],
@@ -167,7 +170,13 @@ function AskComposer({
   );
   const [editLoaded, setEditLoaded] = useState(false);
   const { text, setText } = draft;
-  const [when, setWhen] = useState<When>(recipient?.invited === true ? "whenever" : "tomorrow");
+  const [when, setWhen] = useState<When>(
+    recipient?.invited === true
+      ? "whenever"
+      : params.date !== undefined && params.date !== tomorrowIn(new Date(), recipient?.timeZone)
+        ? "date"
+        : "tomorrow",
+  );
   useEffect(() => {
     if (!editing || editLoaded) return;
     setWhen(editing.date === null ? "whenever" : "date");
@@ -182,6 +191,7 @@ function AskComposer({
       )
       .flatMap((question) => (question.date === null ? [] : [question.date])),
   );
+  const occupiedMarks = new Map(Array.from(occupiedDates, (value) => [value, "taken" as const]));
   const firstFreeDate = questionDates(tomorrowDate).find((value) => !occupiedDates.has(value));
   useEffect(() => {
     if (
@@ -317,6 +327,15 @@ function AskComposer({
   useEffect(() => {
     if (hello !== null && when === "whenever") setWhen("tomorrow");
   }, [hello, when]);
+  // The morning now chosen, so the Questions calendar opens on it after saving.
+  const chosenDate =
+    when === "tomorrow"
+      ? tomorrowDate
+      : when === "date"
+        ? date
+        : when === "another_day"
+          ? (taken?.date_alternative ?? undefined)
+          : undefined;
   const compose = useMutation({
     mutationFn: async ({ ask, saved = false }: { ask: ComposeAsk; saved?: boolean }) => {
       const token = await account.token();
@@ -348,7 +367,7 @@ function AskComposer({
       else
         router.replace({
           pathname: "/questions",
-          params: { recipient: recipient?.memberId, saved: "1" },
+          params: { recipient: recipient?.memberId, saved: "1", day: chosenDate },
         });
     },
     onError: (error: unknown) => {
@@ -395,7 +414,7 @@ function AskComposer({
       void draft.clear();
       router.replace({
         pathname: "/questions",
-        params: { recipient: recipient?.memberId, saved: "1" },
+        params: { recipient: recipient?.memberId, saved: "1", day: chosenDate },
       });
       return;
     }
@@ -684,60 +703,36 @@ function AskComposer({
                 <Trans>{holder} already has that morning.</Trans>
               </Words>
             )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-              <Chip
-                label={t`Tomorrow, ${tomorrow}`}
-                selected={when === "tomorrow"}
-                disabled={
-                  compose.isPending || taken !== null || invited || occupiedDates.has(tomorrowDate)
-                }
-                onPress={() => setWhen("tomorrow")}
-              />
-              {day === null ? null : (
-                <Chip
-                  label={t`${day} morning`}
-                  selected={when === "another_day"}
+            {invited || noMorning ? null : (
+              <SoftCard>
+                <MorningCalendar
+                  dates={questionDates(tomorrowDate)}
+                  selected={chosenDate}
+                  marks={occupiedMarks}
+                  tomorrow={tomorrowDate}
                   disabled={compose.isPending}
-                  onPress={() => setWhen("another_day")}
+                  onSelect={(value) => {
+                    // Tomorrow keeps its own meaning, so its line says "tomorrow's morning message".
+                    if (value === tomorrowDate && taken === null) setWhen("tomorrow");
+                    else {
+                      setDate(value);
+                      setWhen("date");
+                    }
+                    setTaken(null);
+                  }}
                 />
-              )}
-              <Chip
-                label={
-                  when === "date" && date
-                    ? `${dayName(date)}, ${localDayMonth(date)}`
-                    : t`Choose a day`
-                }
-                selected={when === "date"}
-                disabled={invited || compose.isPending}
-                onPress={() => setChooseDate((shown) => !shown)}
-              />
-              {photos.count > 0 || hello !== null || params.edit ? null : (
+              </SoftCard>
+            )}
+            {photos.count > 0 || hello !== null || params.edit ? null : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
                 <Chip
                   label={t`Next free morning`}
                   selected={when === "whenever"}
                   disabled={compose.isPending}
                   onPress={() => setWhen("whenever")}
                 />
-              )}
-            </View>
-            {chooseDate ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-                {questionDates(tomorrowIn(new Date(), recipient?.timeZone)).map((value) => (
-                  <Chip
-                    key={value}
-                    label={`${dayName(value)}, ${localDayMonth(value)}`}
-                    selected={when === "date" && date === value}
-                    disabled={compose.isPending || occupiedDates.has(value)}
-                    onPress={() => {
-                      setDate(value);
-                      setWhen("date");
-                      setChooseDate(false);
-                      setTaken(null);
-                    }}
-                  />
-                ))}
               </View>
-            ) : null}
+            )}
             {/* What the chosen morning means, in one line, so no choice has to be guessed. */}
             {noMorning ? null : (
               <Words variant="caption" tone="ink2">

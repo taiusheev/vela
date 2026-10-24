@@ -77,6 +77,10 @@ msgstr ""
 msgid "{count} of 4 panes lit · {chapterName}"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
+msgid "{count} of the next 14 mornings"
+msgstr ""
+
 #: app/ask.tsx
 msgid "{day} morning"
 msgstr ""
@@ -379,6 +383,14 @@ msgstr ""
 msgid "{name}’s world"
 msgstr ""
 
+#: src/components/morning-calendar.tsx
+msgid "{named}, a question is planned"
+msgstr ""
+
+#: src/components/morning-calendar.tsx
+msgid "{named}, another question is planned"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "{neverKnown} never known"
 msgstr ""
@@ -490,6 +502,10 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
+msgstr ""
+
+#: src/components/morning-calendar.tsx
+msgid "A dot means that morning already has a question."
 msgstr ""
 
 #: app/weekly-report.tsx
@@ -1032,10 +1048,6 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Checking…"
-msgstr ""
-
-#: app/ask.tsx
-msgid "Choose a day"
 msgstr ""
 
 #: app/away.tsx
@@ -2461,10 +2473,6 @@ msgstr ""
 msgid "No photo on this phone"
 msgstr ""
 
-#: app/(tabs)/questions.tsx
-msgid "No questions planned yet. Start with one; there is no need to fill every day."
-msgstr ""
-
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr ""
@@ -2562,6 +2570,14 @@ msgstr ""
 
 #: src/components/today-feed.tsx
 msgid "Nothing new yet today."
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned for this morning. Vela sends a gentle hello on open days."
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned yet"
 msgstr ""
 
 #: app/my-memories.tsx
@@ -2920,6 +2936,10 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Places & travel"
+msgstr ""
+
+#: app/(tabs)/questions.tsx
+msgid "Plan a question for {day}"
 msgstr ""
 
 #: app/(tabs)/questions.tsx
@@ -4360,6 +4380,7 @@ msgstr ""
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr ""
 
+#: app/(tabs)/questions.tsx
 #: app/away.tsx
 msgid "Tomorrow"
 msgstr ""
@@ -4396,8 +4417,8 @@ msgstr ""
 msgid "Tomorrow morning, {tomorrow}"
 msgstr ""
 
-#: app/ask.tsx
-msgid "Tomorrow, {tomorrow}"
+#: src/components/morning-calendar.tsx
+msgid "Tomorrow, {label}"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -4976,10 +4997,6 @@ msgstr ""
 
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {name}"
-msgstr ""
-
-#: app/(tabs)/questions.tsx
-msgid "Write it, choose a morning, then save. You can change it here before it is prepared for delivery."
 msgstr ""
 
 #: src/components/chat/chat-link.tsx

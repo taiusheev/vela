@@ -83,6 +83,10 @@ msgstr "{count} days · selected"
 msgid "{count} of 4 panes lit · {chapterName}"
 msgstr "{count} of 4 panes lit · {chapterName}"
 
+#: app/(tabs)/questions.tsx
+msgid "{count} of the next 14 mornings"
+msgstr "{count} of the next 14 mornings"
+
 #: app/ask.tsx
 msgid "{day} morning"
 msgstr "{day} morning"
@@ -385,6 +389,14 @@ msgstr "{name}'s words this week"
 msgid "{name}’s world"
 msgstr "{name}’s world"
 
+#: src/components/morning-calendar.tsx
+msgid "{named}, a question is planned"
+msgstr "{named}, a question is planned"
+
+#: src/components/morning-calendar.tsx
+msgid "{named}, another question is planned"
+msgstr "{named}, another question is planned"
+
 #: src/data/precision.ts
 msgid "{neverKnown} never known"
 msgstr "{neverKnown} never known"
@@ -497,6 +509,10 @@ msgstr "1 day · selected"
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "A connection is not a delivered morning message or a reply."
+
+#: src/components/morning-calendar.tsx
+msgid "A dot means that morning already has a question."
+msgstr "A dot means that morning already has a question."
 
 #: app/weekly-report.tsx
 msgid "A family organiser selected these words as an interest to ask about."
@@ -1039,10 +1055,6 @@ msgstr "Checking Vela…"
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "Checking…"
-
-#: app/ask.tsx
-msgid "Choose a day"
-msgstr "Choose a day"
 
 #: app/away.tsx
 msgid "Choose a parent in Settings before changing away dates."
@@ -2467,10 +2479,6 @@ msgstr "No number here: Vela asks them for it, with their yes."
 msgid "No photo on this phone"
 msgstr "No photo on this phone"
 
-#: app/(tabs)/questions.tsx
-msgid "No questions planned yet. Start with one; there is no need to fill every day."
-msgstr "No questions planned yet. Start with one; there is no need to fill every day."
-
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
 msgstr "No quiet notice in the last 12 months."
@@ -2569,6 +2577,14 @@ msgstr "Nothing kept yet. Tap a heart to start it."
 #: src/components/today-feed.tsx
 msgid "Nothing new yet today."
 msgstr "Nothing new yet today."
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned for this morning. Vela sends a gentle hello on open days."
+msgstr "Nothing planned for this morning. Vela sends a gentle hello on open days."
+
+#: app/(tabs)/questions.tsx
+msgid "Nothing planned yet"
+msgstr "Nothing planned yet"
 
 #: app/my-memories.tsx
 msgid "Nothing to suggest yet. Suggestions come from answers you send from now on."
@@ -2927,6 +2943,10 @@ msgstr "Pilot setup could not be reached just now."
 #: src/data/onboarding.ts
 msgid "Places & travel"
 msgstr "Places & travel"
+
+#: app/(tabs)/questions.tsx
+msgid "Plan a question for {day}"
+msgstr "Plan a question for {day}"
 
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
@@ -4366,6 +4386,7 @@ msgstr "Today's ask reached {name} at {time}."
 msgid "Today's ask reached {name} at 8:00, and again at 11:00."
 msgstr "Today's ask reached {name} at 8:00, and again at 11:00."
 
+#: app/(tabs)/questions.tsx
 #: app/away.tsx
 msgid "Tomorrow"
 msgstr "Tomorrow"
@@ -4402,9 +4423,9 @@ msgstr "Tomorrow morning"
 msgid "Tomorrow morning, {tomorrow}"
 msgstr "Tomorrow morning, {tomorrow}"
 
-#: app/ask.tsx
-msgid "Tomorrow, {tomorrow}"
-msgstr "Tomorrow, {tomorrow}"
+#: src/components/morning-calendar.tsx
+msgid "Tomorrow, {label}"
+msgstr "Tomorrow, {label}"
 
 #: app/sign-in.tsx
 msgid "Too many attempts. Wait a moment, then try again."
@@ -4983,10 +5004,6 @@ msgstr "Would you like to tell me more about this on our next call?"
 #: app/(tabs)/questions.tsx
 msgid "Write a question for {name}"
 msgstr "Write a question for {name}"
-
-#: app/(tabs)/questions.tsx
-msgid "Write it, choose a morning, then save. You can change it here before it is prepared for delivery."
-msgstr "Write it, choose a morning, then save. You can change it here before it is prepared for delivery."
 
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
