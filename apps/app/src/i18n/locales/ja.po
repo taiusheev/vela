@@ -420,6 +420,22 @@ msgstr ""
 msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
 msgstr ""
 
+#: src/components/store-choice.tsx
+msgid "{price} a month"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "{price} a month, renewing every month until you cancel. Cancel any time in your Apple account settings, at least a day before it renews."
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "{price} a year"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "{price} a year, renewing every year until you cancel. Cancel any time in your Apple account settings, at least a day before it renews."
+msgstr ""
+
 #: src/components/family-book.tsx
 msgid "{recipes, plural, one {# recipe} other {# recipes}}"
 msgstr ""
@@ -911,6 +927,10 @@ msgstr ""
 msgid "Asked at {time}. Waiting for {name}."
 msgstr ""
 
+#: src/components/store-choice.tsx
+msgid "Asking the App Store for its prices…"
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 #: src/components/quiet-notice.tsx
@@ -960,6 +980,10 @@ msgstr ""
 
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "Best value"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -1215,6 +1239,10 @@ msgstr ""
 #: app/sign-in.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "Continue · {price}"
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -2000,6 +2028,10 @@ msgstr ""
 msgid "Kazakhstan"
 msgstr ""
 
+#: src/components/store-choice.tsx
+msgid "Keep {name}'s light on"
+msgstr ""
+
 #: src/components/family-book.tsx
 msgid "Keep it"
 msgstr ""
@@ -2378,6 +2410,7 @@ msgid "Moments"
 msgstr ""
 
 #: app/vela-light.tsx
+#: src/components/store-choice.tsx
 msgid "Monthly"
 msgstr ""
 
@@ -2490,6 +2523,10 @@ msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "No earlier purchase was found for this Apple account."
 msgstr ""
 
 #: app/weekly-report.tsx
@@ -2797,6 +2834,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Opening Telegram…"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "Opening the App Store…"
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -3201,6 +3242,14 @@ msgstr ""
 
 #: app/weekly-support-preview.tsx
 msgid "Restore example review"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "Restore purchase"
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "Restoring…"
 msgstr ""
 
 #: app/settings.tsx
@@ -3883,6 +3932,10 @@ msgstr ""
 msgid "That did not go through. Nothing changed. Try again."
 msgstr ""
 
+#: src/components/store-choice.tsx
+msgid "That did not go through. Nothing was charged. Try again in a moment."
+msgstr ""
+
 #: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
@@ -3987,6 +4040,10 @@ msgstr ""
 
 #: app/vela-light.tsx
 msgid "The 30 days start after {name}'s first answer."
+msgstr ""
+
+#: src/components/store-choice.tsx
+msgid "The App Store's plans could not be reached just now. Try again later."
 msgstr ""
 
 #: app/settings.tsx
@@ -4663,6 +4720,10 @@ msgstr ""
 msgid "Vela Light is on for {name}."
 msgstr ""
 
+#: src/components/store-choice.tsx
+msgid "Vela Light is paid for. {name}'s light stays on."
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr ""
@@ -5064,6 +5125,7 @@ msgid "Wrote to {recipient}"
 msgstr ""
 
 #: app/vela-light.tsx
+#: src/components/store-choice.tsx
 msgid "Yearly"
 msgstr ""
 

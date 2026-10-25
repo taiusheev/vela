@@ -11,6 +11,7 @@ import { noticeUrl } from "../src/api/support.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
 import { Text } from "../src/components/scaled-text.tsx";
+import { StoreChoice } from "../src/components/store-choice.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { Card, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
@@ -133,7 +134,9 @@ export default function VelaLightScreen() {
               ? t`Vela Light is on for ${name}.`
               : t`Vela Light is on for ${name} until ${date}. Nothing is charged, and no card was asked for.`}
           </Words>
+          <StoreChoice memberId={her?.memberId} name={name} />
           <PrimaryButton label={t`Go to Today`} onPress={close} />
+          <LegalFooter />
         </>
       ) : ended ? (
         <>
@@ -142,7 +145,9 @@ export default function VelaLightScreen() {
               {name}'s thirty days have ended. The daily ask and the exchanges carry on as before.
             </Trans>
           </Words>
+          <StoreChoice memberId={her?.memberId} name={name} />
           <PrimaryButton label={t`Go to Today`} onPress={close} />
+          <LegalFooter />
         </>
       ) : (
         <>

@@ -427,6 +427,22 @@ msgstr "{open, plural, other {# 則還沒有結果。}}"
 msgid "{otherSigner} has this on now, so Vela’s question goes in their name. Choosing your name here uses yours instead."
 msgstr "目前是{otherSigner}開啟這個功能，所以 Vela 的問題會用對方的名字送出。在這裡選擇用您的名字，就會改成您的名字。"
 
+#: src/components/store-choice.tsx
+msgid "{price} a month"
+msgstr "每月 {price}"
+
+#: src/components/store-choice.tsx
+msgid "{price} a month, renewing every month until you cancel. Cancel any time in your Apple account settings, at least a day before it renews."
+msgstr "每月 {price}，取消前每月自動續訂。可隨時在 Apple 帳號設定中取消，請在續訂前至少一天取消。"
+
+#: src/components/store-choice.tsx
+msgid "{price} a year"
+msgstr "每年 {price}"
+
+#: src/components/store-choice.tsx
+msgid "{price} a year, renewing every year until you cancel. Cancel any time in your Apple account settings, at least a day before it renews."
+msgstr "每年 {price}，取消前每年自動續訂。可隨時在 Apple 帳號設定中取消，請在續訂前至少一天取消。"
+
 #: src/components/family-book.tsx
 msgid "{recipes, plural, one {# recipe} other {# recipes}}"
 msgstr "{recipes, plural, other {# 道食譜}}"
@@ -918,6 +934,10 @@ msgstr "提問時間 {time}"
 msgid "Asked at {time}. Waiting for {name}."
 msgstr "已在 {time} 問了，正在等{name}回覆。"
 
+#: src/components/store-choice.tsx
+msgid "Asking the App Store for its prices…"
+msgstr "正在向 App Store 查詢價格…"
+
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 #: src/components/quiet-notice.tsx
@@ -968,6 +988,10 @@ msgstr "第一個回覆{recipient}吧。"
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
 msgstr "繼續之前"
+
+#: src/components/store-choice.tsx
+msgid "Best value"
+msgstr "最划算"
 
 #: app/vela-light.tsx
 msgid "Best value · save {saving}%"
@@ -1223,6 +1247,10 @@ msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同�
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
 msgstr "繼續"
+
+#: src/components/store-choice.tsx
+msgid "Continue · {price}"
+msgstr "繼續 · {price}"
 
 #: app/exchange/[id].tsx
 msgid "Continue in chat"
@@ -2007,6 +2035,10 @@ msgstr "一起參與爸爸提過的計畫"
 msgid "Kazakhstan"
 msgstr "哈薩克"
 
+#: src/components/store-choice.tsx
+msgid "Keep {name}'s light on"
+msgstr "讓{name}的燈繼續亮著"
+
 #: src/components/family-book.tsx
 msgid "Keep it"
 msgstr "留著"
@@ -2385,6 +2417,7 @@ msgid "Moments"
 msgstr "片刻"
 
 #: app/vela-light.tsx
+#: src/components/store-choice.tsx
 msgid "Monthly"
 msgstr "月繳"
 
@@ -2498,6 +2531,10 @@ msgstr "下一個空的早上"
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
 msgstr "媽媽今天還沒回覆。"
+
+#: src/components/store-choice.tsx
+msgid "No earlier purchase was found for this Apple account."
+msgstr "這個 Apple 帳號沒有找到先前的購買紀錄。"
 
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
@@ -2805,6 +2842,10 @@ msgstr "正在開啟分享…"
 #: src/components/telegram-family-link.tsx
 msgid "Opening Telegram…"
 msgstr "正在開啟 Telegram…"
+
+#: src/components/store-choice.tsx
+msgid "Opening the App Store…"
+msgstr "正在開啟 App Store…"
 
 #: src/components/family-book.tsx
 msgid "Opening the book…"
@@ -3209,6 +3250,14 @@ msgstr "還原範例的使用許可"
 #: app/weekly-support-preview.tsx
 msgid "Restore example review"
 msgstr "還原範例審閱"
+
+#: src/components/store-choice.tsx
+msgid "Restore purchase"
+msgstr "恢復購買"
+
+#: src/components/store-choice.tsx
+msgid "Restoring…"
+msgstr "正在恢復…"
 
 #: app/settings.tsx
 msgid "Resume"
@@ -3890,6 +3939,10 @@ msgstr "目前無法傳送。您寫的內容都還在。"
 msgid "That did not go through. Nothing changed. Try again."
 msgstr "沒有成功，什麼都沒有改變。請再試一次。"
 
+#: src/components/store-choice.tsx
+msgid "That did not go through. Nothing was charged. Try again in a moment."
+msgstr "沒有成功，也沒有收取任何費用。請稍後再試。"
+
 #: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
@@ -3995,6 +4048,10 @@ msgstr "亮燈只代表一件事：媽媽回覆了。您可以回覆、聽語音
 #: app/vela-light.tsx
 msgid "The 30 days start after {name}'s first answer."
 msgstr "30 天會從{name}第一次回覆之後開始。"
+
+#: src/components/store-choice.tsx
+msgid "The App Store's plans could not be reached just now. Try again later."
+msgstr "目前無法取得 App Store 的方案，請稍後再試。"
 
 #: app/settings.tsx
 msgid "The app's words. Her mornings keep the language she reads."
@@ -4670,6 +4727,10 @@ msgstr "{name}的 Vela Light 已開啟，到 {date}為止。不收任何費用�
 msgid "Vela Light is on for {name}."
 msgstr "{name}的 Vela Light 已開啟。"
 
+#: src/components/store-choice.tsx
+msgid "Vela Light is paid for. {name}'s light stays on."
+msgstr "Vela Light 已付款。{name}的燈會一直亮著。"
+
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr "Vela Light 會讓您看到完整小記"
@@ -5071,6 +5132,7 @@ msgid "Wrote to {recipient}"
 msgstr "寫給{recipient}"
 
 #: app/vela-light.tsx
+#: src/components/store-choice.tsx
 msgid "Yearly"
 msgstr "年繳"
 
