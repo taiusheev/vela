@@ -316,7 +316,7 @@ export function MemoryCard({
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: space.s }}>
           <Text
             numberOfLines={1}
-            style={[type.label, { flex: 1, color: palette.lightDeep, textTransform: "uppercase" }]}
+            style={[type.label, { flex: 1, color: palette.lightInk, textTransform: "uppercase" }]}
           >
             {label}
           </Text>
@@ -474,7 +474,7 @@ export function StoryCard({
         >
           <Text
             numberOfLines={1}
-            style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}
+            style={[type.label, { color: palette.lightInk, textTransform: "uppercase" }]}
           >
             {t`A story in ${name}'s words`}
           </Text>

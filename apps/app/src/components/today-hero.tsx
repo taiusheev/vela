@@ -27,7 +27,7 @@ import { useMotionPreference } from "../accessibility/use-reduced-motion.ts";
 import type { TodayLight } from "../data/today.ts";
 import { usePortrait } from "../data/usePortrait.ts";
 import { usePalette, useTheme } from "../theme/theme.tsx";
-import { hitSlop, motion, radius, softShadow, space, type } from "../theme/tokens.ts";
+import { hitSlop, linkHitSlop, motion, radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { Portrait } from "./portrait-lamp.tsx";
 import { Text } from "./scaled-text.tsx";
@@ -430,7 +430,7 @@ export function SectionTitle({
         {title}
       </Words>
       {link === undefined || onLink === undefined ? null : (
-        <Pressable accessibilityRole="link" hitSlop={hitSlop} onPress={onLink}>
+        <Pressable accessibilityRole="link" hitSlop={linkHitSlop} onPress={onLink}>
           <Words variant="button" tone="action">
             {link}
           </Words>

@@ -72,7 +72,7 @@ export default function StoryScreen() {
             <KeptGlow id={`story-page-${story.id}`} lit={kept || keeping}>
               <View style={{ padding: space.xl, gap: space.s, alignItems: "center" }}>
                 <Text
-                  style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}
+                  style={[type.label, { color: palette.lightInk, textTransform: "uppercase" }]}
                 >
                   {t`A story in ${name}'s words`}
                 </Text>

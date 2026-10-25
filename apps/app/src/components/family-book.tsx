@@ -99,7 +99,7 @@ function Chapter({ title }: { title: string }) {
         accessibilityRole="header"
         style={[
           type.label,
-          { color: palette.lightDeep, textTransform: "uppercase", letterSpacing: 2 },
+          { color: palette.lightInk, textTransform: "uppercase", letterSpacing: 2 },
         ]}
       >
         {title}
@@ -302,7 +302,7 @@ function StoryChapter({ story }: { story: MemoryStory }) {
   return (
     <View style={{ gap: space.l }} testID={`book-story-${story.id}`}>
       <View style={{ gap: space.xs, alignItems: "center" }}>
-        <Text style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}>
+        <Text style={[type.label, { color: palette.lightInk, textTransform: "uppercase" }]}>
           {t`A story in ${name}'s words`}
         </Text>
         <Text
@@ -363,7 +363,7 @@ function RecipePage({ recipe }: { recipe: ApiBookRecipe }) {
               borderBottomColor: palette.rule,
             }}
           >
-            <Text style={[type.bodyMedium, { color: palette.lightDeep, minWidth: 18 }]}>
+            <Text style={[type.bodyMedium, { color: palette.lightInk, minWidth: 18 }]}>
               {numbered ? `${index + 1}` : "•"}
             </Text>
             <Text style={[type.body, { color: paper.ink, flex: 1 }]}>{line}</Text>
@@ -374,7 +374,7 @@ function RecipePage({ recipe }: { recipe: ApiBookRecipe }) {
   return (
     <View style={{ gap: space.l }}>
       <View style={{ gap: space.xs, alignItems: "center" }}>
-        <Text style={[type.label, { color: palette.lightDeep, textTransform: "uppercase" }]}>
+        <Text style={[type.label, { color: palette.lightInk, textTransform: "uppercase" }]}>
           {t`From ${name}'s kitchen`}
         </Text>
         <Text style={[type.title, { color: paper.ink, textAlign: "center" }]}>{recipe.title}</Text>

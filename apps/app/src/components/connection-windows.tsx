@@ -151,8 +151,7 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
                     },
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.5}
+                  maxFontSizeMultiplier={1.3}
                 >
                   {shortDayName(day.date)}
                 </Text>

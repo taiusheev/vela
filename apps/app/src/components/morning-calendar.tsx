@@ -49,8 +49,7 @@ export function MorningCalendar({
             key={date}
             importantForAccessibility="no"
             numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.5}
+            maxFontSizeMultiplier={1.3}
             style={[
               type.caption,
               { flex: 1, textAlign: "center", fontSize: 12, lineHeight: 16, color: p.ink3 },

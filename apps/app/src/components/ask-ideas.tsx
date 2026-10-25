@@ -77,7 +77,7 @@ export function AskIdeas({
             ]}
           >
             {idea.fromHerWords ? (
-              <Text style={[type.label, { letterSpacing: 0, color: p.lightDeep }]}>
+              <Text style={[type.label, { letterSpacing: 0, color: p.lightInk }]}>
                 <Trans>From {name}'s own words</Trans>
               </Text>
             ) : null}
