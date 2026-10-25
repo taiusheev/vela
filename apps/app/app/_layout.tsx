@@ -17,6 +17,7 @@ import { StatusBar } from "expo-status-bar";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import SERIF_TC_FILE from "../assets/fonts/NotoSerifTC-Voice.ttf";
 import { UsageAnalytics } from "../src/analytics/provider.tsx";
 import { apiConfigured, fetchMe } from "../src/api/client.ts";
 import { sessionRequests } from "../src/api/request-session.ts";
@@ -24,6 +25,7 @@ import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { AppPrivacyGate } from "../src/components/app-privacy.tsx";
+import { ReadingColumn } from "../src/components/reading-column.tsx";
 import { followAppFocus } from "../src/data/app-focus.ts";
 import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
 import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
@@ -41,6 +43,7 @@ import {
   closePortraitSession,
 } from "../src/storage/portraits.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
+import { SERIF_TC } from "../src/theme/tokens.ts";
 
 void SplashScreen.preventAutoHideAsync();
 // Once for the whole app, never per session: a sign-in must not lose "back in front" (app-focus.ts).
@@ -177,6 +180,7 @@ function Root() {
     Literata_400Regular,
     Literata_500Medium,
     Literata_600SemiBold,
+    [SERIF_TC]: SERIF_TC_FILE,
   });
 
   // Native text can retain its fallback face if mounted before its font is registered. Native
@@ -216,6 +220,10 @@ function Navigation() {
             headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
             contentStyle: { backgroundColor: palette.bg },
           }}
+          // The tab group keeps its bar full width and centres each tab page itself.
+          screenLayout={({ route, children }) =>
+            route.name === "(tabs)" ? children : <ReadingColumn>{children}</ReadingColumn>
+          }
         />
       </AppPrivacyGate>
     </>

@@ -1,26 +1,31 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { getLocales } from "expo-localization";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, startTrial, trialRefusal } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
+import { noticeUrl } from "../src/api/support.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { Light } from "../src/components/light.tsx";
+import { SoftCard } from "../src/components/today-hero.tsx";
 import { Card, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { dayMonth } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
+import { money, pricesFor, yearPerMonth, yearSaving } from "../src/data/plans.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
-import { space } from "../src/theme/tokens.ts";
+import { radius, space, type } from "../src/theme/tokens.ts";
 
 /**
  * A13 · Vela Light (spec §14.1, §16): shown once, after her first answer, and again only when
- * opened from You. The trial is thirty days with no card; nothing is charged in the pilot, and the
- * screen says so beside the price the plan will have.
+ * opened from You. The thirty days need no card. The screen says what happens on day 30 and what
+ * each plan will cost in the reader's currency (NT$ in Taiwan, plan/pricing-taiwan.md), with the
+ * terms and privacy notice under it, as a store's subscription screen must.
  */
 export default function VelaLightScreen() {
   const palette = usePalette();
@@ -36,6 +41,11 @@ export default function VelaLightScreen() {
   const her = family.keptLight.find((row) => row.memberId === member) ?? family.keptLight[0];
   const name = her?.name ?? t`Mom`;
   const [exampleStarted, setExampleStarted] = useState(false);
+  const prices = pricesFor(getLocales()[0]?.regionCode);
+  const yearly = money(prices.year, prices.currency);
+  const monthly = money(prices.month, prices.currency);
+  const yearlyMonth = money(yearPerMonth(prices), prices.currency);
+  const saving = yearSaving(prices);
 
   const start = useMutation({
     mutationFn: async () =>
@@ -141,22 +151,43 @@ export default function VelaLightScreen() {
               before you decide.
             </Trans>
           </Words>
+          <SoftCard>
+            <Words variant="heading">
+              <Trans>How the 30 days work</Trans>
+            </Words>
+            <TimelineStep
+              lit
+              when={t`Today`}
+              what={t`Vela Light starts for ${name}. No card is needed.`}
+            />
+            <TimelineStep
+              when={t`Day 30`}
+              what={t`You choose whether to keep it. Nothing is charged unless you choose a plan.`}
+            />
+          </SoftCard>
+          <Words variant="heading">
+            <Trans>After the 30 days</Trans>
+          </Words>
+          <View style={{ flexDirection: "row", gap: space.m }}>
+            <PlanCard
+              badge={t`Best value · save ${saving}%`}
+              title={t`Yearly`}
+              price={t`${yearly} a year`}
+              detail={t`${yearlyMonth} a month`}
+            />
+            <PlanCard title={t`Monthly`} price={t`${monthly} a month`} detail={t`Stop any time`} />
+          </View>
+          <Words variant="caption" tone="ink3">
+            <Trans>For one parent. Each extra parent adds half the price.</Trans>
+          </Words>
           <Card>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.m }}>
-              <Words variant="bodyMedium">
-                <Trans>Vela Light · for {name}</Trans>
-              </Words>
-              <Words variant="bodyMedium">
-                <Trans>$79 a year</Trans>
-              </Words>
-            </View>
-            <Words variant="caption" tone="ink3">
-              <Trans>or $9.99 a month · a second person +50%</Trans>
+            <Words variant="bodyMedium">
+              <Trans>What Vela Light adds</Trans>
             </Words>
             <Words variant="body" tone="ink2">
               <Trans>
-                Quiet notices with the people nearby · away mode · the weekly read · memory and
-                reminders · the family book to keep
+                A quiet notice when a morning goes unanswered · people nearby who can look in · away
+                mode · the weekly read
               </Trans>
             </Words>
           </Card>
@@ -170,9 +201,6 @@ export default function VelaLightScreen() {
               </Trans>
             </Words>
           </Card>
-          <Words variant="caption" tone="ink3">
-            <Trans>Nothing is charged during the pilot, and no card is asked for.</Trans>
-          </Words>
           {refusal === null ? null : (
             <Words variant="caption" tone="ink2">
               {refusal === "not_answered_yet"
@@ -186,7 +214,7 @@ export default function VelaLightScreen() {
             </Words>
           ) : null}
           <PrimaryButton
-            label={start.isPending ? t`Starting…` : t`Start the 30 days`}
+            label={start.isPending ? t`Starting…` : t`Start 30 free days`}
             onPress={() => {
               if (!live) setExampleStarted(true);
               else if (her !== undefined && !start.isPending) start.mutate();
@@ -201,8 +229,94 @@ export default function VelaLightScreen() {
               <Trans>Not now</Trans>
             </Words>
           </Pressable>
+          <LegalFooter />
         </>
       )}
     </ScrollView>
+  );
+}
+
+/** One step of the free month: a small window, lit for today, and what happens then. */
+function TimelineStep({ when, what, lit = false }: { when: string; what: string; lit?: boolean }) {
+  return (
+    <View style={{ flexDirection: "row", gap: space.m, alignItems: "flex-start" }}>
+      <View style={{ paddingTop: 2 }}>
+        <Light state={lit ? "lit" : "resting"} height={22} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Words variant="bodyMedium">{when}</Words>
+        <Words variant="caption" tone="ink2">
+          {what}
+        </Words>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * A plan, shown for reading, not chosen here: the choice comes on day 30. The yearly plan carries
+ * the "best value" mark and the stronger edge, as stores' own subscription screens do.
+ */
+function PlanCard({
+  title,
+  price,
+  detail,
+  badge,
+}: {
+  title: string;
+  price: string;
+  detail: string;
+  /** The yearly plan's mark; the card that has one gets the stronger edge. */
+  badge?: string;
+}) {
+  const palette = usePalette();
+  const best = badge !== undefined;
+  return (
+    <View
+      style={{
+        flex: 1,
+        gap: space.xs,
+        padding: space.l,
+        borderRadius: radius.panel,
+        borderWidth: best ? 2 : 1,
+        borderColor: best ? palette.action : palette.rule,
+        backgroundColor: palette.surface,
+      }}
+    >
+      {best ? (
+        <Text style={[type.label, { color: palette.lightDeep }]}>{badge}</Text>
+      ) : (
+        <Text style={[type.label, { color: palette.ink3 }]}> </Text>
+      )}
+      <Words variant="bodyMedium">{title}</Words>
+      <Text style={[type.heading, { color: palette.ink, fontVariant: ["tabular-nums"] }]}>
+        {price}
+      </Text>
+      <Words variant="caption" tone="ink2">
+        {detail}
+      </Words>
+    </View>
+  );
+}
+
+/** Terms and privacy, one tap away, under any price the app shows. */
+function LegalFooter() {
+  const { t } = useLingui();
+  const link = (label: string, path: string) => (
+    <Pressable
+      accessibilityRole="link"
+      hitSlop={8}
+      onPress={() => void Linking.openURL(noticeUrl(path)).catch(() => undefined)}
+    >
+      <Words variant="caption" tone="ink2">
+        {label}
+      </Words>
+    </Pressable>
+  );
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "center", gap: space.l }}>
+      {link(t`Service terms`, "/terms")}
+      {link(t`Privacy notice`, "/privacy")}
+    </View>
   );
 }

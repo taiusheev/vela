@@ -93,13 +93,13 @@ export default function HelpScreen() {
           <Words selectable>{SUPPORT_EMAIL}</Words>
           {failed ? (
             <Words tone="ink2">
-              <Trans>That link could not open. Use the address above to contact the founder.</Trans>
+              <Trans>Your email app did not open. Write to the address above instead.</Trans>
             </Words>
           ) : null}
           <Words variant="caption" tone="ink2">
             <Trans>
-              Ask the founder for access, correction, deletion, or to withdraw consent. Never
-              include private family content in a support message.
+              Write to Vela support for a copy of your data, a correction, deletion, or to withdraw
+              consent. Never include private family content in a support message.
             </Trans>
           </Words>
         </Card>
