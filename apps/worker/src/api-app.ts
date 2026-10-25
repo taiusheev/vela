@@ -197,6 +197,7 @@ import {
   type PilotAdmission,
   type pauseApiMember,
   type pilotApiAccountAllowed,
+  pilotSpeaks,
   type prepareMemoryPermission,
   type prepareWeeklySupportPermission,
   type provisionApiAccount,
@@ -1758,7 +1759,8 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             typeof input === "object" &&
             input !== null &&
             "language" in input &&
-            input.language !== "en"
+            typeof input.language === "string" &&
+            !pilotSpeaks(runtime.admission.config, input.language)
           )
             return c.json(
               {

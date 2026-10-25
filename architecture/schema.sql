@@ -37,7 +37,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove'))
 );
 
 CREATE TABLE "ai_calls" (
@@ -586,6 +586,11 @@ CREATE TABLE "outbound" (
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
 
+CREATE TABLE "pilot_families" (
+	"family_id" uuid PRIMARY KEY NOT NULL,
+	"approved_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE "pilot_roster" (
 	"telegram_user_id" text PRIMARY KEY NOT NULL,
 	"added_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -932,6 +937,7 @@ ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_invited_by_members
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "pilot_families" ADD CONSTRAINT "pilot_families_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_devices" ADD CONSTRAINT "push_devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_device_id_push_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."push_devices"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_outbound_id_outbound_id_fk" FOREIGN KEY ("outbound_id") REFERENCES "public"."outbound"("id") ON DELETE cascade ON UPDATE no action;

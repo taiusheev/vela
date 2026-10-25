@@ -972,6 +972,74 @@ describe("the trial roster page (ADR-45)", () => {
     expect(await response.text()).toContain("Nothing was changed.");
   });
 
+  it("lists families with approve and remove buttons, never their names", async () => {
+    const fake = createFakeAdminRuntime({
+      admin: "founder@vela.test",
+      services: {
+        loadPilotFamilies: async () => [
+          {
+            familyId: "0199a6b0-0000-7000-8000-000000000001",
+            createdAt: new Date("2026-10-25T02:00:00Z"),
+            language: "zh-TW",
+            members: 3,
+            messengers: ["line"],
+            approvedAt: null,
+          },
+          {
+            familyId: "0199a6b0-0000-7000-8000-000000000002",
+            createdAt: new Date("2026-10-24T02:00:00Z"),
+            language: "en",
+            members: 2,
+            messengers: ["telegram"],
+            approvedAt: new Date("2026-10-24T03:00:00Z"),
+          },
+        ],
+      },
+    });
+    const body = await (await send(fake, new Request(`${ORIGIN}/admin/roster`))).text();
+    expect(body).toContain(
+      'action="/admin/roster/families/0199a6b0-0000-7000-8000-000000000001/approve"',
+    );
+    expect(body).toContain(
+      'action="/admin/roster/families/0199a6b0-0000-7000-8000-000000000002/unapprove"',
+    );
+    expect(body).toContain("waiting");
+    expect(body).toContain("line");
+  });
+
+  it("approves and unapproves a family with the Access identity", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const family = "0199a6b0-0000-7000-8000-000000000001";
+    const approved = await send(
+      fake,
+      formRequest(`/admin/roster/families/${family}/approve`, {}, ORIGIN),
+    );
+    expect(approved.headers.get("location")).toBe("/admin/roster?result=approved");
+    const removed = await send(
+      fake,
+      formRequest(`/admin/roster/families/${family}/unapprove`, {}, ORIGIN),
+    );
+    expect(removed.headers.get("location")).toBe("/admin/roster?result=unapproved");
+    expect(argsOf(fake.calls, "approveFamily")).toEqual([[{ admin: "founder@vela.test" }, family]]);
+    expect(argsOf(fake.calls, "unapproveFamily")).toEqual([
+      [{ admin: "founder@vela.test" }, family],
+    ]);
+  });
+
+  it("refuses a family approval posted from another origin", async () => {
+    const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
+    const refused = await send(
+      fake,
+      formRequest(
+        "/admin/roster/families/0199a6b0-0000-7000-8000-000000000001/approve",
+        {},
+        "https://evil.example",
+      ),
+    );
+    expect(refused.status).toBeGreaterThanOrEqual(400);
+    expect(namesOf(fake.calls)).not.toContain("approveFamily");
+  });
+
   it("refuses a roster change posted from another origin", async () => {
     const fake = createFakeAdminRuntime({ admin: "founder@vela.test" });
     const refused = await send(

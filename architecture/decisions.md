@@ -877,3 +877,18 @@ Decision:
 - **Switch.** `MEMORY_STORIES`, with `MEMORY_DISCOVERY` and `BOOK`: on in development and staging, off in production and pinned. It sends her already screened phrases to the AI a second time, so production needs a notice line (v9 draft, `plan/materials/pilot/privacy-notice.v9-stories-draft.en.md`) approved by the founder and the families told.
 
 Consequences: Memories shows fewer, better things, and an answer about health is never offered as a memory even where the chat shows it. Rejected: an AI-written story or summary (it could add what she did not say; the founder asked for accuracy); copying her words into the story (a second copy to seal and clear).
+
+## ADR-52 · The closed test admits families the founder approves, on Telegram or LINE, in English or Chinese
+
+25 October 2026. Accepted (founder: test with about ten Taiwan families on LINE, in Traditional Chinese, before any public launch; risk accepted as for the Vietnam week, counsel in parallel).
+
+Context: the closed trial admits Telegram ids on the roster (ADR-42, ADR-45), and every admission check required English and a Telegram link. A LINE user id is opaque (`U` and 32 hex digits) and shown to nobody, so it cannot be read out to the founder and typed into a roster. Ten families are some forty people.
+
+Decision:
+- A table `pilot_families` (migration 0028) holds the families the founder approved. The admin page `/admin/roster` lists every family that is not deleted, with ids, dates, language, head count and messenger only (no names; the family's own page, which logs its view, says who it is), and approves or removes one. Each change writes one `admin_access_log` row (`family_approve`, `family_unapprove`).
+- `PILOT_FAMILY_APPROVAL=on` turns this on. Admission then reads the Telegram roster and the approved families together: an approved family takes part on any messenger, with everyone who joined it; removing approval pauses its automatic work at once, as roster removal does. Stop, privacy and deletion still answer.
+- `PILOT_LANGUAGES` (`en`, or `en,zh-TW`) replaces the fixed English of every admission check, onboarding step and system answer. Capabilities answer `english_only` only while Chinese is not listed.
+- On LINE, with family approval on, a newcomer gets through the first gate (`pilotAdmitsInbound`) so they can start a family or use an invite; someone whose family is known and not approved does not, nor does a group linked to such a family. Nothing automatic happens for a family until it is approved: her light cannot start (`pilotCanActivate` needs an approved family and an organiser to whom a message was delivered on their own messenger), and the family and member checks guard every arrival, repeat, notice and read. On Telegram a newcomer still needs the roster.
+- Production keeps `PILOT_FAMILY_APPROVAL=off` and `PILOT_LANGUAGES=en`, pinned by `wrangler-config.test.ts`, until privacy-notice v10 (LINE, Chinese) is the live notice and the founder says yes. The commit that turns them on changes the pin.
+
+Consequences: approving a family is one click per family, after its organiser has started it. A stranger who finds Vela's LINE account can start a family that waits, unapproved, with nothing sent to anyone in it beyond the onboarding replies; the founder removes or ignores it. The pilot's `telegram_first` app path is unchanged: linking the iPhone app to a LINE identity is separate work.

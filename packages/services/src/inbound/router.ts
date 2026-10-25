@@ -56,7 +56,7 @@ import {
 } from "../nearby-consent.ts";
 import { handleOnboarding } from "../onboarding.ts";
 import { handleParentCommand } from "../parent-commands.ts";
-import { pilotAllowsInbound } from "../pilot-admission.ts";
+import { pilotAdmitsInbound } from "../pilot-admission.ts";
 import { handleQuietButton } from "../quiet.ts";
 import { handleRecipeKeepButton } from "../recipes.ts";
 import { handleGroupReply, handleReaction } from "../replies.ts";
@@ -124,13 +124,13 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
       (event.kind === "button" && /^lr:/.test(event.buttonData ?? "")) ||
       action?.type === "book_drop");
   if (
-    !pilotAllowsInbound(deps.config.pilotAdmission, event) &&
     !rights &&
     event.kind !== "unsent" &&
     event.kind !== "member_left" &&
     event.kind !== "bot_removed" &&
     event.kind !== "blocked" &&
-    event.kind !== "unblocked"
+    event.kind !== "unblocked" &&
+    !(await pilotAdmitsInbound(deps.db, deps.config.pilotAdmission, event))
   ) {
     if (
       event.channel === "telegram" &&

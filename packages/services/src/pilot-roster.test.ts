@@ -4,9 +4,12 @@ import { pilotAllowsTelegram, pilotFamilyAllowed } from "./pilot-admission.ts";
 import {
   addToRoster,
   admissionWithRoster,
+  approveFamily,
+  loadPilotFamilies,
   loadRoster,
   removeFromRoster,
   rosterIds,
+  unapproveFamily,
 } from "./pilot-roster.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { seedFamily } from "./testing/seed.ts";
@@ -110,5 +113,63 @@ describe("admission with the roster", () => {
     expect(
       await pilotFamilyAllowed(h.db, await admissionWithRoster(h.db, base), seed.family.id),
     ).toBe(false);
+  });
+});
+
+describe("approved families on the admin page (ADR-52)", () => {
+  it("lists every family waiting, approves one once, logs it, and admits it", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    expect(await loadPilotFamilies(h.deps)).toEqual([
+      {
+        familyId: seed.family.id,
+        createdAt: seed.family.createdAt,
+        language: "en",
+        members: 2,
+        messengers: ["telegram"],
+        approvedAt: null,
+      },
+    ]);
+    expect(await approveFamily(h.deps, ctx, seed.family.id.toUpperCase())).toBe("approved");
+    expect(await approveFamily(h.deps, ctx, seed.family.id)).toBe("already");
+    expect((await loadPilotFamilies(h.deps))[0]?.approvedAt).toEqual(h.clock.now());
+    expect(
+      (await h.db.select().from(adminAccessLog)).map((row) => [
+        row.action,
+        row.familyId,
+        row.admin,
+      ]),
+    ).toEqual([["family_approve", seed.family.id, "founder@vela.test"]]);
+
+    const base = { telegramUserIds: [], familyIds: [], languages: ["en", "zh-TW"] };
+    const admission = await admissionWithRoster(h.db, base);
+    expect(admission?.familyIds).toEqual([seed.family.id]);
+    expect(await pilotFamilyAllowed(h.db, admission, seed.family.id)).toBe(true);
+    // With family approval off, the table is not read.
+    expect(await admissionWithRoster(h.db, { telegramUserIds: [] })).toEqual({
+      telegramUserIds: [],
+    });
+  });
+
+  it("removes approval, pausing the family, and says when there was none", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await approveFamily(h.deps, ctx, seed.family.id);
+    expect(await unapproveFamily(h.deps, ctx, seed.family.id)).toBe("unapproved");
+    expect(await unapproveFamily(h.deps, ctx, seed.family.id)).toBe("absent");
+    const admission = await admissionWithRoster(h.db, { telegramUserIds: [], familyIds: [] });
+    expect(await pilotFamilyAllowed(h.db, admission, seed.family.id)).toBe(false);
+    expect((await h.db.select().from(adminAccessLog)).map((row) => row.action)).toEqual([
+      "family_approve",
+      "family_unapprove",
+    ]);
+  });
+
+  it("refuses an id that is not a family, or a family that does not exist", async () => {
+    await expect(approveFamily(h.deps, ctx, "Mia")).rejects.toMatchObject({
+      code: "invalid_payload",
+    });
+    await expect(
+      approveFamily(h.deps, ctx, "00000000-0000-4000-8000-000000000000"),
+    ).rejects.toMatchObject({ code: "not_found" });
+    expect(await h.db.select().from(adminAccessLog)).toEqual([]);
   });
 });
