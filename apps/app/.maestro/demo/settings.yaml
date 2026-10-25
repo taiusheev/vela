@@ -6,7 +6,7 @@ tags:
 - launchApp
 - assertNotVisible: "Only on this device. Removed when you sign out."
 - tapOn: "You"
-- assertVisible: "Parent photos and links, notifications, language, and account"
+- assertVisible: "Parents, notifications, language and account"
 - tapOn: "Settings"
 - tapOn: "Mom’s photo and parent link"
 - assertVisible: "Parent settings"
