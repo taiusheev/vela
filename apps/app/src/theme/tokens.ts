@@ -17,6 +17,8 @@ export interface Palette {
   control: string;
   light: string;
   lightDeep: string;
+  /** Amber for words, such as a memory's label: dark enough to read at small sizes (4.5:1). */
+  lightInk: string;
   lightSoft: string;
   action: string;
   onAction: string;
@@ -35,6 +37,7 @@ export const lightPalette: Palette = {
   control: "#948779",
   light: "#E9A23B",
   lightDeep: "#C27612",
+  lightInk: "#9A5A08",
   lightSoft: "#FBEBCF",
   action: "#3A2A1F",
   onAction: "#FFF8EE",
@@ -53,6 +56,7 @@ export const darkPalette: Palette = {
   control: "#8F867B",
   light: "#E9A23B",
   lightDeep: "#F0B65A",
+  lightInk: "#F0B65A",
   lightSoft: "#3B2E19",
   // At night, buttons are warm paper on the dark room; amber is kept for a lit window and a heart,
   // so the light still means "she answered" (design review, 24 Oct 2026).
@@ -218,3 +222,6 @@ export const sheetShadow = {
 } as const;
 
 export const hitSlop = { top: 8, bottom: 8, left: 8, right: 8 } as const;
+
+/** For a one-line text link (about 20 pt tall): reaches the 44 pt a finger needs without new space. */
+export const linkHitSlop = { top: 12, bottom: 12, left: 8, right: 8 } as const;

@@ -10,7 +10,15 @@ import type { TodayExchange, TodayLight } from "../data/today.ts";
 import { useFirstWeek } from "../data/useFirstWeek.ts";
 import { weekWindows } from "../data/week-windows.ts";
 import { usePalette } from "../theme/theme.tsx";
-import { hitSlop, radius, roomShadow, softShadow, space, type } from "../theme/tokens.ts";
+import {
+  hitSlop,
+  linkHitSlop,
+  radius,
+  roomShadow,
+  softShadow,
+  space,
+  type,
+} from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "./family-photo.tsx";
 import { Light } from "./light.tsx";
@@ -581,8 +589,7 @@ export function WeekWindowsCard({ light }: { light: TodayLight }) {
                 </View>
                 <Text
                   numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.5}
+                  maxFontSizeMultiplier={1.3}
                   style={[
                     type.caption,
                     {
@@ -627,7 +634,7 @@ function Initial({ name, size = 32 }: { name: string; size?: number }) {
       <Text
         style={[
           type.bodyMedium,
-          { fontFamily: type.title.fontFamily, fontSize: size * 0.46, color: p.lightDeep },
+          { fontFamily: type.title.fontFamily, fontSize: size * 0.46, color: p.lightInk },
         ]}
       >
         {portraitInitials(name).slice(0, 1)}
@@ -890,7 +897,7 @@ export function FamilyFeed({
                 {entry.onReply === undefined ? null : (
                   <Pressable
                     accessibilityRole="button"
-                    hitSlop={hitSlop}
+                    hitSlop={linkHitSlop}
                     onPress={entry.onReply}
                     style={{
                       flexDirection: "row",

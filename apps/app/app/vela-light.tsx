@@ -20,7 +20,7 @@ import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
-import { radius, space, type } from "../src/theme/tokens.ts";
+import { linkHitSlop, radius, space, type } from "../src/theme/tokens.ts";
 
 /**
  * A13 · Vela Light (spec §14.1, §16): shown once, after her first answer, and again only when
@@ -285,7 +285,7 @@ function PlanCard({
       }}
     >
       {best ? (
-        <Text style={[type.label, { color: palette.lightDeep }]}>{badge}</Text>
+        <Text style={[type.label, { color: palette.lightInk }]}>{badge}</Text>
       ) : (
         <Text style={[type.label, { color: palette.ink3 }]}> </Text>
       )}
@@ -306,7 +306,7 @@ function LegalFooter() {
   const link = (label: string, path: string) => (
     <Pressable
       accessibilityRole="link"
-      hitSlop={8}
+      hitSlop={linkHitSlop}
       onPress={() => void Linking.openURL(noticeUrl(path)).catch(() => undefined)}
     >
       <Words variant="caption" tone="ink2">
