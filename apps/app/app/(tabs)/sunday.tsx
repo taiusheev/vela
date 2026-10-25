@@ -6,6 +6,7 @@ import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
 import { Light } from "../../src/components/light.tsx";
+import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { PrivateReportEntry } from "../../src/components/private-report-entry.tsx";
 import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
@@ -78,9 +79,7 @@ function FamilySunday({ day }: { day: TodayView }) {
       {windowsFor === undefined ? null : <ConnectionWindows light={windowsFor} />}
       {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
       {view.loading ? (
-        <Words variant="body" tone="ink2">
-          <Trans>One moment…</Trans>
-        </Words>
+        <LoadingShapes label={t`Opening the week`} />
       ) : !view.organiser ? (
         <Words variant="body" tone="ink2">
           <Trans>The weekly read goes to the family's organisers.</Trans>

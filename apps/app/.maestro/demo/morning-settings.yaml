@@ -23,5 +23,5 @@ tags:
     direction: DOWN
 - tapOn: "Preview settings"
 - assertVisible: "Example settings previewed."
-- tapOn: "Back"
+- tapOn: "Cancel"
 - assertVisible: "Settings"

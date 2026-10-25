@@ -301,13 +301,17 @@ export function TodayHeader({
 }) {
   const { t } = useLingui();
   const p = usePalette();
+  const { width } = useWindowDimensions();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[type.title, { fontSize: 24, lineHeight: 28, color: p.ink }]}>Vela</Text>
-        <Words variant="caption" tone="ink3" accessibilityRole="header">
-          <Trans>A little light from home.</Trans>
-        </Words>
+        {/* On the smallest phones the line gives its room to her answer and the Talk button. */}
+        {width < 360 ? null : (
+          <Words variant="caption" tone="ink3" accessibilityRole="header">
+            <Trans>A little light from home.</Trans>
+          </Words>
+        )}
       </View>
       <Pressable
         testID="today-bell"

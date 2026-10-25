@@ -515,7 +515,7 @@ function Conversation() {
             <Words variant="caption" tone="ink3">
               {invited
                 ? t`${name} has not said yes yet. Write a first hello now: it reaches ${name} the moment they say yes, so the chat is waiting for them.`
-                : t`Your words reach ${name}'s chat now, signed with your name. Their morning stays as it is.`}
+                : t`Your words reach ${name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned.`}
             </Words>
           </View>
           {history.more ? (

@@ -11,6 +11,11 @@ msgstr ""
 msgid "“{text}”"
 msgstr ""
 
+#. placeholder {0}: month.notices
+#: app/precision.tsx
+msgid "{0, plural, one {# notice} other {# notices}}"
+msgstr ""
+
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr ""
@@ -840,6 +845,10 @@ msgstr ""
 msgid "answered {time}"
 msgstr ""
 
+#: src/data/precision.ts
+msgid "Answered later"
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "Anyone"
 msgstr ""
@@ -935,6 +944,7 @@ msgid "away"
 msgstr ""
 
 #: app/away.tsx
+#: src/data/precision.ts
 msgid "Away"
 msgstr ""
 
@@ -994,6 +1004,10 @@ msgstr ""
 #: src/auth/phone.ts
 #: src/data/onboarding.ts
 msgid "Canada"
+msgstr ""
+
+#: src/components/back-button.tsx
+msgid "Cancel"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -1484,6 +1498,10 @@ msgstr ""
 
 #: src/components/family-book.tsx
 msgid "Find a memory to keep"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "Fine, the family knew"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -2232,7 +2250,7 @@ msgid "Loading your family…"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-msgid "Loading your family’s morning…"
+msgid "Loading your family’s morning"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -2452,6 +2470,10 @@ msgstr ""
 
 #: src/auth/phone.ts
 msgid "Netherlands"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "Never known"
 msgstr ""
 
 #: src/auth/phone.ts
@@ -2715,7 +2737,6 @@ msgstr ""
 msgid "One moment a day"
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -2784,11 +2805,15 @@ msgid "Opening the book…"
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
-msgid "Opening the memories…"
+msgid "Opening the memories"
 msgstr ""
 
 #: app/story/[id].tsx
 msgid "Opening the story…"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "Opening the week"
 msgstr ""
 
 #: src/components/vote-options.tsx
@@ -3639,6 +3664,10 @@ msgid "Something for her morning"
 msgstr ""
 
 #: src/data/precision.ts
+msgid "Something was wrong"
+msgstr ""
+
+#: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr ""
 
@@ -3672,6 +3701,10 @@ msgstr ""
 
 #: app/settings.tsx
 msgid "Stay"
+msgstr ""
+
+#: src/data/precision.ts
+msgid "Still open"
 msgstr ""
 
 #: app/parent.tsx
@@ -5344,5 +5377,5 @@ msgid "Your words appear here."
 msgstr ""
 
 #: app/conversation.tsx
-msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
+msgid "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."
 msgstr ""

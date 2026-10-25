@@ -1,3 +1,4 @@
+import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
@@ -5,19 +6,89 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../src/components/back-button.tsx";
 import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
-import type { PrecisionMonth } from "../src/data/precision.ts";
+import type { PrecisionMonth, PrecisionPart } from "../src/data/precision.ts";
 import { usePrecision } from "../src/data/usePrecision.ts";
 import { usePalette } from "../src/theme/theme.tsx";
-import { space } from "../src/theme/tokens.ts";
+import { type Palette, space } from "../src/theme/tokens.ts";
 
-/** A month as a card: its name, then its sentences. */
+/** Each ending's colour: the good endings are the light's two ambers, greys for the rest, one red. */
+function partColour(kind: PrecisionPart["kind"], palette: Palette): string {
+  switch (kind) {
+    case "answered_late":
+      return palette.light;
+    case "away":
+      return palette.control;
+    case "fine_known":
+      return palette.lightDeep;
+    case "true_concern":
+      return palette.error;
+    case "unknown":
+      return palette.ink3;
+    case "open":
+      return palette.rule;
+  }
+}
+
+/**
+ * A month as a card: its name and number of notices, one bar split by how they ended with a key
+ * under it, then the same in sentences for anyone who reads rather than looks.
+ */
 function Month({ month }: { month: PrecisionMonth }) {
+  const palette = usePalette();
   return (
     <Card>
-      <Words variant="heading">{month.label}</Words>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.m }}>
+        <Words variant="heading">{month.label}</Words>
+        <Words variant="caption" tone="ink2">
+          {plural(month.notices, { one: "# notice", other: "# notices" })}
+        </Words>
+      </View>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{
+          flexDirection: "row",
+          height: 14,
+          borderRadius: 7,
+          overflow: "hidden",
+          gap: 2,
+          backgroundColor: palette.surface2,
+        }}
+      >
+        {month.parts.map((part) => (
+          <View
+            key={part.kind}
+            style={{ flex: part.count, backgroundColor: partColour(part.kind, palette) }}
+          />
+        ))}
+      </View>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ flexDirection: "row", flexWrap: "wrap", columnGap: space.l, rowGap: space.xs }}
+      >
+        {month.parts.map((part) => (
+          <View
+            key={part.kind}
+            style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+          >
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: partColour(part.kind, palette),
+              }}
+            />
+            <Words variant="caption" tone="ink2">
+              {`${part.label} ${part.count}`}
+            </Words>
+          </View>
+        ))}
+      </View>
       <View style={{ gap: space.xs }}>
         {month.lines.map((line) => (
-          <Words key={line} variant="body" tone="ink2">
+          <Words key={line} variant="caption" tone="ink2">
             {line}
           </Words>
         ))}

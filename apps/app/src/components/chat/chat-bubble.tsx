@@ -5,6 +5,7 @@ import { VoicePlayback } from "../../audio/VoicePlayback.tsx";
 import type { ChatMessage, ChatReactionKind } from "../../data/chat.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
+import { BrandIcon } from "../brand/icon.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../family-photo.tsx";
 import { Light } from "../light.tsx";
 import { Words } from "../ui.tsx";
@@ -37,7 +38,7 @@ export function DayChip({ label }: { label: string }) {
 
 /**
  * One message. Hers on the left in Literata, as her words read everywhere in the app; the reader's
- * on the right in the action teal; the rest of the family on the left with their name; Vela's own
+ * on the right in the action colour; everyone else on the left with their name over each group; Vela's own
  * hello centred, since nobody in the family sent it. An ask that went into her morning says so.
  */
 export function ChatBubble({
@@ -213,7 +214,8 @@ export function ChatBubble({
         gap: space.xs,
       }}
     >
-      {first && side === "family" ? (
+      {/* In a family chat every voice but the reader's is named, hers included, as a group chat does. */}
+      {first && (side === "family" || hers) ? (
         <Text style={[type.caption, { color: palette.ink2, paddingHorizontal: space.s }]}>
           {from}
         </Text>
@@ -276,7 +278,17 @@ export function ChatBubble({
                   paddingVertical: 2,
                 }}
               >
-                <Text style={{ fontSize: 14 }}>{EMOJI[reaction.kind]}</Text>
+                {reaction.kind === "heart" ? (
+                  // The heart is the app's own, amber like a lit window, as on Today.
+                  <BrandIcon
+                    name="heart"
+                    color={palette.lightDeep}
+                    fill={palette.light}
+                    size={14}
+                  />
+                ) : (
+                  <Text style={{ fontSize: 14 }}>{EMOJI[reaction.kind]}</Text>
+                )}
                 <Text style={[type.caption, { color: palette.ink2 }]}>
                   {reaction.mine ? t`You` : reaction.from}
                 </Text>

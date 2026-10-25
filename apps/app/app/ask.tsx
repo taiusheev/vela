@@ -19,7 +19,7 @@ import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { type AskIdea, AskIdeas } from "../src/components/ask-ideas.tsx";
-import { BackButton } from "../src/components/back-button.tsx";
+import { CancelButton, SHEET } from "../src/components/back-button.tsx";
 import { MorningCalendar } from "../src/components/morning-calendar.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
@@ -471,9 +471,9 @@ function AskComposer({
       <>
         <Stack.Screen
           options={{
-            headerShown: true,
+            ...SHEET,
             title: params.edit ? t`Edit question` : t`Ask ${name} something`,
-            headerLeft: () => <BackButton />,
+            headerLeft: () => <CancelButton />,
           }}
         />
         <ScrollView
@@ -547,9 +547,9 @@ function AskComposer({
     <>
       <Stack.Screen
         options={{
-          headerShown: true,
+          ...SHEET,
           title: params.edit ? t`Edit question` : t`Ask ${name} something`,
-          headerLeft: () => <BackButton />,
+          headerLeft: () => <CancelButton />,
         }}
       />
       <KeyboardAvoidingView

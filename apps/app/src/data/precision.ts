@@ -8,10 +8,21 @@ import { listOf, monthYear } from "./format.ts";
  * after a morning stayed quiet, never that she failed to answer (spec §8, "No guilt").
  */
 
+/** One way a month's notices ended, sized for the month's bar. */
+export interface PrecisionPart {
+  kind: "answered_late" | "away" | "fine_known" | "true_concern" | "unknown" | "open";
+  count: number;
+  /** "Answered later", read in the key under the bar. */
+  label: string;
+}
+
 export interface PrecisionMonth {
   month: string;
   /** "September 2026". */
   label: string;
+  notices: number;
+  /** The parts of the bar, in reading order, with nothing that did not happen. */
+  parts: PrecisionPart[];
   /** "3 quiet notices.", then how they ended, then the share that were real, then the verdicts. */
   lines: string[];
 }
@@ -68,8 +79,28 @@ export function monthLines(month: ApiPrecisionMonth): string[] {
   return lines;
 }
 
+/** How a month's notices ended, as the parts of one bar, the commonest ending first. */
+export function monthParts(month: ApiPrecisionMonth): PrecisionPart[] {
+  const { outcomes, open } = month;
+  const parts: PrecisionPart[] = [
+    { kind: "answered_late", count: outcomes.answered_late, label: t`Answered later` },
+    { kind: "away", count: outcomes.away, label: t`Away` },
+    { kind: "fine_known", count: outcomes.fine_known, label: t`Fine, the family knew` },
+    { kind: "true_concern", count: outcomes.true_concern, label: t`Something was wrong` },
+    { kind: "unknown", count: outcomes.unknown, label: t`Never known` },
+    { kind: "open", count: open, label: t`Still open` },
+  ];
+  return parts.filter((part) => part.count > 0);
+}
+
 function monthOf(month: ApiPrecisionMonth): PrecisionMonth {
-  return { month: month.month, label: monthYear(month.month), lines: monthLines(month) };
+  return {
+    month: month.month,
+    label: monthYear(month.month),
+    notices: month.notices,
+    parts: monthParts(month),
+    lines: monthLines(month),
+  };
 }
 
 export function toPrecision(precision: ApiPrecision): Precision {

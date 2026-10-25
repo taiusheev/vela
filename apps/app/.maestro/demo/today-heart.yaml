@@ -14,4 +14,4 @@ tags:
 - assertNotVisible: "Example · heart sent"
 - tapOn: "Talk with Mom"
 - assertVisible: "Write to Mom"
-- assertVisible: "Your words reach Mom's chat now, signed with your name. Their morning stays as it is."
+- assertVisible: "Your words reach Mom's chat now, signed with your name. Tomorrow's morning question still comes as planned."

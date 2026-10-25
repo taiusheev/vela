@@ -17,6 +17,11 @@ msgstr ""
 msgid "“{text}”"
 msgstr "“{text}”"
 
+#. placeholder {0}: month.notices
+#: app/precision.tsx
+msgid "{0, plural, one {# notice} other {# notices}}"
+msgstr "{0, plural, one {# notice} other {# notices}}"
+
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr "{asker} asked"
@@ -846,6 +851,10 @@ msgstr "Answered"
 msgid "answered {time}"
 msgstr "answered {time}"
 
+#: src/data/precision.ts
+msgid "Answered later"
+msgstr "Answered later"
+
 #: src/data/useToday.ts
 msgid "Anyone"
 msgstr "Anyone"
@@ -941,6 +950,7 @@ msgid "away"
 msgstr "away"
 
 #: app/away.tsx
+#: src/data/precision.ts
 msgid "Away"
 msgstr "Away"
 
@@ -1001,6 +1011,10 @@ msgstr "Call Mom"
 #: src/data/onboarding.ts
 msgid "Canada"
 msgstr "Canada"
+
+#: src/components/back-button.tsx
+msgid "Cancel"
+msgstr "Cancel"
 
 #: src/components/telegram-family-link.tsx
 msgid "Cancel connection"
@@ -1491,6 +1505,10 @@ msgstr "Films, TV & books"
 #: src/components/family-book.tsx
 msgid "Find a memory to keep"
 msgstr "Find a memory to keep"
+
+#: src/data/precision.ts
+msgid "Fine, the family knew"
+msgstr "Fine, the family knew"
 
 #: src/components/onboarding/questions.tsx
 msgid "First morning · {time}"
@@ -2238,8 +2256,8 @@ msgid "Loading your family…"
 msgstr "Loading your family…"
 
 #: app/(tabs)/index.tsx
-msgid "Loading your family’s morning…"
-msgstr "Loading your family’s morning…"
+msgid "Loading your family’s morning"
+msgstr "Loading your family’s morning"
 
 #: app/vela-light.tsx
 msgid "Loading your family’s plan…"
@@ -2459,6 +2477,10 @@ msgstr "Neighbour"
 #: src/auth/phone.ts
 msgid "Netherlands"
 msgstr "Netherlands"
+
+#: src/data/precision.ts
+msgid "Never known"
+msgstr "Never known"
 
 #: src/auth/phone.ts
 msgid "New Zealand"
@@ -2721,7 +2743,6 @@ msgstr "One message from you"
 msgid "One moment a day"
 msgstr "One moment a day"
 
-#: app/(tabs)/sunday.tsx
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -2790,12 +2811,16 @@ msgid "Opening the book…"
 msgstr "Opening the book…"
 
 #: app/(tabs)/exchanges.tsx
-msgid "Opening the memories…"
-msgstr "Opening the memories…"
+msgid "Opening the memories"
+msgstr "Opening the memories"
 
 #: app/story/[id].tsx
 msgid "Opening the story…"
 msgstr "Opening the story…"
+
+#: app/(tabs)/sunday.tsx
+msgid "Opening the week"
+msgstr "Opening the week"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -3645,6 +3670,10 @@ msgid "Something for her morning"
 msgstr "Something for her morning"
 
 #: src/data/precision.ts
+msgid "Something was wrong"
+msgstr "Something was wrong"
+
+#: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "Something was wrong in {wrong} of {notices}."
 
@@ -3679,6 +3708,10 @@ msgstr "Starting…"
 #: app/settings.tsx
 msgid "Stay"
 msgstr "Stay"
+
+#: src/data/precision.ts
+msgid "Still open"
+msgstr "Still open"
 
 #: app/parent.tsx
 #: src/device/VoiceAnswer.tsx
@@ -5350,5 +5383,5 @@ msgid "Your words appear here."
 msgstr "Your words appear here."
 
 #: app/conversation.tsx
-msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
-msgstr "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
+msgid "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."
+msgstr "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."

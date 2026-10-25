@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
-import { BackButton, backToFamily } from "../src/components/back-button.tsx";
+import { backToFamily, CancelButton, SHEET } from "../src/components/back-button.tsx";
 import { MorningCalendar } from "../src/components/morning-calendar.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
@@ -51,9 +51,7 @@ export default function AwayScreen() {
   if (her === undefined)
     return (
       <>
-        <Stack.Screen
-          options={{ headerShown: true, title: t`Away`, headerLeft: () => <BackButton /> }}
-        />
+        <Stack.Screen options={{ ...SHEET, title: t`Away`, headerLeft: () => <CancelButton /> }} />
         <View style={{ padding: space.margin, gap: space.l }}>
           <Words variant="body">
             {day.loading ? (
@@ -72,9 +70,7 @@ export default function AwayScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{ headerShown: true, title: t`Away`, headerLeft: () => <BackButton /> }}
-      />
+      <Stack.Screen options={{ ...SHEET, title: t`Away`, headerLeft: () => <CancelButton /> }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: palette.bg }}
