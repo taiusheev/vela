@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, View } from "react-native";
 import { portraitInitials } from "../data/portrait-lamp.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { type } from "../theme/tokens.ts";
+import { Text } from "./scaled-text.tsx";
 
 export function Portrait({
   uri,

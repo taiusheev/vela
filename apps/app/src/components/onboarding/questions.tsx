@@ -2,7 +2,7 @@ import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { t as herWords } from "@vela/copy";
 import { type ReactNode, useState } from "react";
-import { Animated, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Image, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { clockTime, timeOfDay } from "../../data/format.ts";
@@ -37,6 +37,7 @@ import {
 } from "../../data/onboarding-portrait.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { Chip, PrimaryButton, TextField, Words } from "../ui.tsx";
 import { NightScene, night, useRise } from "./night-scene.tsx";
 import { PaneWindow } from "./pane-window.tsx";

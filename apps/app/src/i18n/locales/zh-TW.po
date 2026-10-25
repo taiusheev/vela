@@ -474,7 +474,7 @@ msgstr "{time} · 安靜的早晨"
 
 #: src/components/onboarding/story.tsx
 msgid "{time} · in her Telegram"
-msgstr "{time} · 在媽媽的 Telegram 裡"
+msgstr "{time} · 在媽媽的 LINE 裡"
 
 #: src/components/onboarding/story.tsx
 msgid "{time} · She answered"
@@ -793,7 +793,7 @@ msgstr "永遠免費"
 
 #: src/components/onboarding/story.tsx
 msgid "An example morning · {time} in Da Nang"
-msgstr "範例早晨 · 峴港 {time}"
+msgstr "範例早晨 · 台南 {time}"
 
 #: src/components/onboarding/story.tsx
 msgid "An example mother at her kitchen table with tea"
@@ -2904,7 +2904,7 @@ msgstr "菲律賓"
 
 #: src/components/onboarding/story.tsx
 msgid "Phở with Auntie Lan. Too much, as always."
-msgstr "跟蘭阿姨一起吃河粉。又煮太多了，每次都這樣。"
+msgstr "跟阿蘭阿姨去吃燒餅油條。又點太多了，每次都這樣。"
 
 #: app/sign-in.tsx
 msgid "Phone number"

@@ -1,10 +1,11 @@
 import { Trans } from "@lingui/react/macro";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { space, type as typography } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 export function backToFamily(): void {
   if (router.canGoBack()) router.back();

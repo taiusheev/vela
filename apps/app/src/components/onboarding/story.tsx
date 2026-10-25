@@ -2,7 +2,7 @@ import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Animated, Image, Pressable, Text, View } from "react-native";
+import { Animated, Image, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EXAMPLE_PORTRAIT from "../../../assets/onboarding/example-mom.jpg";
 import MORNING_TEA from "../../../assets/onboarding/morning-tea.jpg";
@@ -14,6 +14,7 @@ import {
   updateDraft,
 } from "../../data/onboarding-draft.ts";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { NightScene, night, useRise } from "./night-scene.tsx";
 
 /** The example organiser who signs the example question: a name, the same in every language. */

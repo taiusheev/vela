@@ -1,12 +1,13 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../../src/components/back-button.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { BookPage, Ornament, usePaper } from "../../src/components/family-book.tsx";
 import { KeptGlow, titleCase, useQuoted } from "../../src/components/keepsake.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
 import { PrimaryButton, Words } from "../../src/components/ui.tsx";
 import { dayLabel, localDateIn } from "../../src/data/chat.ts";
 import { memoriesOf, memoryText } from "../../src/data/memories.ts";

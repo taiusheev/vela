@@ -1,8 +1,9 @@
 import { Children, isValidElement, type ReactNode } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 /**
  * Settings as phones draw them: a short name above each group, the group's rows on one card, and a

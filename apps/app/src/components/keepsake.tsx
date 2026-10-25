@@ -10,7 +10,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
@@ -23,6 +22,7 @@ import { usePalette, useTheme } from "../theme/theme.tsx";
 import { hitSlop, motion, radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { FamilyPhoto, ReplyPhoto } from "./family-photo.tsx";
+import { Text } from "./scaled-text.tsx";
 import { useRoom } from "./today-hero.tsx";
 
 const native = Platform.OS !== "web";

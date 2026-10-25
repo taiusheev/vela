@@ -1,8 +1,9 @@
 import { type ReactNode, type Ref, useState } from "react";
-import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
+import { Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 type Role = keyof typeof type;
 type Tone = "ink" | "ink2" | "ink3" | "action" | "error";

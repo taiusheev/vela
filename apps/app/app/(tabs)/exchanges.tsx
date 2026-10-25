@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../../src/components/keepsake.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { initialOf } from "../../src/components/parent-chooser.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
 import { SectionTitle } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { WarmPage } from "../../src/components/warm.tsx";

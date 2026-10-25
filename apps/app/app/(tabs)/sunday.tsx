@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, Text, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
@@ -9,6 +9,7 @@ import { Light } from "../../src/components/light.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { PrivateReportEntry } from "../../src/components/private-report-entry.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
 import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";

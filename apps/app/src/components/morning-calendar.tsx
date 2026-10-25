@@ -1,9 +1,10 @@
 import { useLingui } from "@lingui/react/macro";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { dayName, localDayMonth, localMonth, shortDayName } from "../data/format.ts";
 import { calendarWeeks } from "../data/question-schedule.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space, type } from "../theme/tokens.ts";
+import { Text } from "./scaled-text.tsx";
 
 /** What a morning already holds: a question planned for her, or one that leaves no room for another. */
 export type MorningMark = "planned" | "taken";

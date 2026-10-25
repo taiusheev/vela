@@ -1,11 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { localDateIn } from "../data/chat.ts";
 import { localDayMonth } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
 import { useExchanges } from "../data/useExchanges.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space, type } from "../theme/tokens.ts";
+import { Text } from "./scaled-text.tsx";
 import { SectionTitle, SoftCard } from "./today-hero.tsx";
 import { Words } from "./ui.tsx";
 

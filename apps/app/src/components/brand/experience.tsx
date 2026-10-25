@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { Words } from "../ui.tsx";
 
 import { BrandIcon, type BrandIconName } from "./icon.tsx";

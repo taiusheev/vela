@@ -1,8 +1,9 @@
 import type { FamilyMemoryKind } from "@vela/contracts";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { MemoryReviewController, ReviewMemory } from "../data/memory-review.ts";
 import { lightPalette, radius, space, type } from "../theme/tokens.ts";
+import { Text } from "./scaled-text.tsx";
 
 /** Copy is injected so this reusable view does not bypass the app's locale layer. */
 export interface MemoryReviewCopy {

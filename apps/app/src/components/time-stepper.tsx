@@ -1,9 +1,10 @@
 import { useLingui } from "@lingui/react/macro";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { stepTime } from "../data/time-step.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 /**
  * A morning time chosen with two buttons a quarter hour apart, the time large between them, instead

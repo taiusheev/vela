@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
-import { Animated, Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Animated, Pressable, useWindowDimensions, View } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { VoicePlayback } from "../audio/VoicePlayback.tsx";
 import { shortDayName } from "../data/format.ts";
@@ -14,6 +14,7 @@ import { hitSlop, radius, roomShadow, softShadow, space, type } from "../theme/t
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 import { ExchangePhotos, ReplyPhoto, ReplyThumbnails } from "./family-photo.tsx";
 import { Light } from "./light.tsx";
+import { Text } from "./scaled-text.tsx";
 import { wordsOf } from "./today-feed.tsx";
 import { TodayHeart } from "./today-heart.tsx";
 import {
