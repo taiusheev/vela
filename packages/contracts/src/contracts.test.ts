@@ -322,6 +322,8 @@ describe("ADMIN_ACTIONS", () => {
       "create_invite",
       "roster_add",
       "roster_remove",
+      "family_approve",
+      "family_unapprove",
     ]);
     expect(AdminAction.safeParse("export_family").success).toBe(false);
   });
@@ -345,6 +347,9 @@ describe("ADMIN_ACTIONS", () => {
       // The roster is about an identity, not a family: the admin log is its whole record.
       roster_add: [],
       roster_remove: [],
+      // Approval is the founder's, about the whole family: the admin log is its whole record.
+      family_approve: [],
+      family_unapprove: [],
     };
     for (const [action, names] of Object.entries(recorded)) {
       for (const name of names) {

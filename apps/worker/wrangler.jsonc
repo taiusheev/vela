@@ -512,6 +512,11 @@
         "MEDIA_STORAGE": "r2",
         // Invitation-only English trial. Missing private roster refuses family work.
         "PILOT_ADMISSION": "on",
+        // ADR-52: off, and pinned off by src/wrangler-config.test.ts, until privacy-notice v10
+        // (LINE, Chinese) is the live notice: then the founder approves whole families on the admin
+        // page, on Telegram or LINE, in the languages PILOT_LANGUAGES lists.
+        "PILOT_FAMILY_APPROVAL": "off",
+        "PILOT_LANGUAGES": "en",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
         // pilot Worker at setup. Privacy notice v3 names Clerk.

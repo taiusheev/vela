@@ -70,6 +70,10 @@ export interface PilotEnv extends SharedEnv {
   /** Opt-in closed trial; absent is off. Participant IDs belong in a private Worker secret. */
   readonly PILOT_ADMISSION?: string;
   readonly PILOT_TELEGRAM_ALLOWLIST?: string;
+  /** ADR-52: `on` admits the families the founder approves on the admin page, on any messenger. */
+  readonly PILOT_FAMILY_APPROVAL?: string;
+  /** The closed test's languages, `en` or `en,zh-TW`; English alone when unset. */
+  readonly PILOT_LANGUAGES?: string;
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
   readonly PRIVACY_NOTICE_URL_EN: string;

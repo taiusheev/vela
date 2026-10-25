@@ -47,7 +47,7 @@ import {
   insertInvitedMember,
   NAME_MAX_LENGTH,
 } from "./invites.ts";
-import { pilotAllowsInbound } from "./pilot-admission.ts";
+import { pilotAdmitsInbound } from "./pilot-admission.ts";
 import { isMessenger, type MemberWithFamily, memberByChannelUser } from "./repo.ts";
 
 /** A session that hears nothing for a day is abandoned (flows §3.1). */
@@ -256,13 +256,16 @@ interface Prompt {
   buttons?: Button[][];
 }
 
-/** The question for a step, with its buttons; the name step opens with the welcome when `first`. */
+/**
+ * The question for a step, with its buttons; the name step opens with the welcome when `first`.
+ * In a closed test (`pilot`, the languages it runs in), only its languages and countries are offered.
+ */
 function promptFor(
   lang: Lang,
   step: OnboardingStep,
   data: SessionData,
   first: boolean,
-  pilot = false,
+  pilot: readonly string[] | null = null,
 ): Prompt {
   switch (step) {
     case "name":
@@ -277,8 +280,8 @@ function promptFor(
       return {
         text: t(lang, "onboarding.ask_language"),
         buttons: rows(
-          LANGUAGE_OPTIONS.filter((option) => !pilot || option.value === "en").map((option) =>
-            button("language", option.value, option.label),
+          LANGUAGE_OPTIONS.filter((option) => pilot === null || pilot.includes(option.value)).map(
+            (option) => button("language", option.value, option.label),
           ),
         ),
       };
@@ -287,7 +290,7 @@ function promptFor(
         text: t(lang, "onboarding.ask_country"),
         buttons: rows(
           COUNTRIES.filter(
-            (country) => !pilot || country.code === "VN" || country.code === "TW",
+            (country) => pilot === null || country.code === "VN" || country.code === "TW",
           ).map((country) => button("country", country.code, t(lang, country.key))),
         ),
       };
@@ -695,7 +698,16 @@ async function advance(
 ): Promise<Outcome | null> {
   const session = await lockSession(tx, event, now);
   const stored = session === null ? null : SessionData.safeParse(session.data);
-  const pilot = deps.config.pilotAdmission != null;
+  // A closed test runs in its own languages only: English alone in the Telegram trial (ADR-42),
+  // English and Chinese once the Taiwan test's notice allows it (ADR-52).
+  const pilot =
+    deps.config.pilotAdmission == null ? null : (deps.config.pilotAdmission.languages ?? ["en"]);
+  const pilotOnly = pilot?.length === 1 ? (pilot[0] as Lang) : null;
+  const speaks = (...languages: readonly (string | undefined)[]) =>
+    pilot === null ||
+    languages.every((language) => language === undefined || pilot.includes(language));
+  const within = (language: Lang): Lang =>
+    pilot === null || pilot.includes(language) ? language : ((pilot[0] ?? "en") as Lang);
   if (input.kind === "start") {
     if (stored?.success === true && stored.data.lastEventId === event.eventId) {
       return {
@@ -706,9 +718,7 @@ async function advance(
     if (
       stored?.success === true &&
       oldStep?.success === true &&
-      (!pilot ||
-        (stored.data.organiserLanguage === "en" &&
-          (stored.data.language === undefined || stored.data.language === "en")))
+      speaks(stored.data.organiserLanguage, stored.data.language)
     ) {
       const data = { ...stored.data, lastEventId: event.eventId };
       const message = prompt(
@@ -720,7 +730,7 @@ async function advance(
       await saveSession(tx, event, oldStep.data, { ...data, pendingPrompt: message }, now);
       return { messages: [message] };
     }
-    const lang = pilot ? "en" : languageOfSender(event.sender.languageCode, event.channel);
+    const lang = within(languageOfSender(event.sender.languageCode, event.channel));
     const data: SessionData = { organiserLanguage: lang, nearby: [], lastEventId: event.eventId };
     const message = prompt(event, lang, promptFor(lang, "name", data, true, pilot), event.eventId);
     await saveSession(tx, event, "name", { ...data, pendingPrompt: message }, now);
@@ -739,20 +749,20 @@ async function advance(
   if (data.lastEventId === event.eventId) {
     return { messages: data.pendingPrompt === undefined ? [] : [data.pendingPrompt] };
   }
-  const lang = pilot ? "en" : data.organiserLanguage;
+  const lang = within(data.organiserLanguage);
   const applied: StepResult =
-    pilot &&
+    pilot !== null &&
     step.data === "country" &&
     input.kind === "button" &&
     !["VN", "TW"].includes(input.value)
       ? { kind: "repeat" }
       : applyOnboardingStep(step.data, data, input, lang);
   const result =
-    pilot && applied.kind === "next" && applied.step === "language"
+    pilotOnly !== null && applied.kind === "next" && applied.step === "language"
       ? {
           ...applied,
           step: "country" as const,
-          data: { ...applied.data, organiserLanguage: "en" as const, language: "en" as const },
+          data: { ...applied.data, organiserLanguage: pilotOnly, language: pilotOnly },
         }
       : applied;
   switch (result.kind) {
@@ -787,20 +797,19 @@ async function advance(
     }
     case "complete": {
       if (
-        pilot &&
-        (result.data.language !== "en" ||
-          result.data.organiserLanguage !== "en" ||
+        pilot !== null &&
+        (!speaks(result.data.language, result.data.organiserLanguage) ||
           !["VN", "TW"].includes(result.data.country))
       ) {
         const next: SessionData = {
-          organiserLanguage: "en",
+          organiserLanguage: lang,
           nearby: [],
           lastEventId: event.eventId,
         };
         const message = prompt(
           event,
-          "en",
-          promptFor("en", "name", next, true, true),
+          lang,
+          promptFor(lang, "name", next, true, pilot),
           event.eventId,
         );
         await saveSession(tx, event, "name", { ...next, pendingPrompt: message }, now);
@@ -858,7 +867,7 @@ export async function handleOnboarding(deps: Deps, event: InboundEvent): Promise
   if (event.conversation.kind !== "private") {
     return false;
   }
-  if (!pilotAllowsInbound(deps.config.pilotAdmission, event)) return true;
+  if (!(await pilotAdmitsInbound(deps.db, deps.config.pilotAdmission, event))) return true;
   const adapter = deps.channels.get(event.channel);
   const input = readInput(event);
   if (event.kind === "button") {

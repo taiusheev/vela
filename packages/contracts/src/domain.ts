@@ -281,6 +281,9 @@ export const ADMIN_ACTIONS = [
   /** The trial roster (ADR-45): a Telegram identity approved, or no longer approved, for the pilot. */
   "roster_add",
   "roster_remove",
+  /** The closed test's families (ADR-52): a family approved, or no longer approved, to take part. */
+  "family_approve",
+  "family_unapprove",
 ] as const;
 export const AdminAction = z.enum(ADMIN_ACTIONS);
 export type AdminAction = z.infer<typeof AdminAction>;

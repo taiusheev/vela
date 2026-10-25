@@ -542,7 +542,41 @@ describe("closed pilot admission", () => {
     ).toBeNull();
     expect(
       readPilotAdmission({ PILOT_ADMISSION: " on ", PILOT_TELEGRAM_ALLOWLIST: "1001, 2001,1001" }),
-    ).toEqual({ telegramUserIds: ["1001", "2001"] });
+    ).toEqual({ telegramUserIds: ["1001", "2001"], languages: ["en"] });
+  });
+
+  // ADR-52: families the founder approves, on any messenger, in the languages the notice allows.
+  it("reads family approval and the test's languages, English alone and off by default", () => {
+    expect(
+      readPilotAdmission({
+        PILOT_ADMISSION: "on",
+        PILOT_FAMILY_APPROVAL: " on ",
+        PILOT_LANGUAGES: "en, zh-TW",
+      }),
+    ).toEqual({ telegramUserIds: [], familyIds: [], languages: ["en", "zh-TW"] });
+    expect(
+      readPilotAdmission({
+        PILOT_ADMISSION: "on",
+        PILOT_FAMILY_APPROVAL: "off",
+        PILOT_LANGUAGES: "",
+      }),
+    ).toEqual({ telegramUserIds: [], languages: ["en"] });
+    expect(readPilotAdmission({ PILOT_ADMISSION: "off", PILOT_FAMILY_APPROVAL: "on" })).toBeNull();
+  });
+
+  it.each(["fr", "en,en", "zh", "en,", "EN"])("fails closed for languages %j", (languages) => {
+    expect(
+      configErrorOf(() => readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_LANGUAGES: languages }))
+        .code,
+    ).toBe("PILOT_LANGUAGES");
+  });
+
+  it("rejects a misspelled family approval switch", () => {
+    expect(
+      configErrorOf(() =>
+        readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_FAMILY_APPROVAL: "yes" }),
+      ).code,
+    ).toBe("PILOT_FAMILY_APPROVAL");
   });
 
   // ADR-45: the founder approves ids on the admin page too, so an empty private allowlist is a
@@ -552,7 +586,7 @@ describe("closed pilot admission", () => {
     (roster) => {
       expect(
         readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_TELEGRAM_ALLOWLIST: roster }),
-      ).toEqual({ telegramUserIds: [] });
+      ).toEqual({ telegramUserIds: [], languages: ["en"] });
     },
   );
 
@@ -591,9 +625,11 @@ describe("closed pilot admission", () => {
     };
     expect(readApiConfig(configured)?.pilotAdmission).toEqual({
       telegramUserIds: ["1001", "2001"],
+      languages: ["en"],
     });
     expect(readConfig(configured, filled).pilotAdmission).toEqual({
       telegramUserIds: ["1001", "2001"],
+      languages: ["en"],
     });
     expect(readConfig({ ...configured, MEMORY: "on" }, filled).memory).toBe(false);
     // Memories stay off unless RICH_MEMORIES says on.
