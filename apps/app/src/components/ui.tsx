@@ -337,6 +337,7 @@ export function Chip({
               }}
             >
               <Text
+                maxFontSizeMultiplier={1}
                 style={[type.bodyMedium, { fontFamily: type.title.fontFamily, color: palette.ink }]}
               >
                 {initial}

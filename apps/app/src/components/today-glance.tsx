@@ -580,6 +580,9 @@ export function WeekWindowsCard({ light }: { light: TodayLight }) {
                   <Light state={day.hasMessage ? "lit" : "resting"} height={30} />
                 </View>
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
                   style={[
                     type.caption,
                     {

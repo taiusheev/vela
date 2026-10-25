@@ -36,7 +36,9 @@ export function Portrait({
         justifyContent: "center",
       }}
     >
+      {/* The initial fills a fixed circle, so it keeps its size at any text size. */}
       <Text
+        maxFontSizeMultiplier={1}
         style={[
           type.display,
           { color: p.ink2 },

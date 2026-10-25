@@ -1,9 +1,43 @@
-import type { ReactNode } from "react";
-import { type RefreshControlProps, ScrollView, View } from "react-native";
+import { type ReactNode, useRef } from "react";
+import { Animated, type RefreshControlProps, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePalette } from "../theme/theme.tsx";
 import { roomShadow, space } from "../theme/tokens.ts";
 import { MorningLight, RoomGlow, RoomLightContext, useRoom, useRoomLight } from "./today-hero.tsx";
+
+/** The page's scroll position, for the band behind the phone's clock. */
+export function useStatusBand() {
+  const y = useRef(new Animated.Value(0)).current;
+  const onScroll = Animated.event([{ nativeEvent: { contentOffset: { y } } }], {
+    useNativeDriver: true,
+  });
+  return { y, onScroll };
+}
+
+/**
+ * Paper behind the phone's clock and battery, fading in once the page scrolls, so words never
+ * slide under the status bar. At rest it is clear and the morning's light shows through.
+ */
+export function StatusBand({ y }: { y: Animated.Value }) {
+  const palette = usePalette();
+  const insets = useSafeAreaInsets();
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: insets.top,
+        backgroundColor: palette.bg,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
+        opacity: y.interpolate({ inputRange: [0, 24], outputRange: [0, 1], extrapolate: "clamp" }),
+      }}
+    />
+  );
+}
 
 /**
  * A tab's page as Today draws it: warm paper with the morning's light behind the heading, so every
@@ -20,12 +54,15 @@ export function WarmPage({
 }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const band = useStatusBand();
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <MorningLight />
-      <ScrollView
+      <Animated.ScrollView
         keyboardShouldPersistTaps="handled"
         {...(refreshControl === undefined ? {} : { refreshControl })}
+        onScroll={band.onScroll}
+        scrollEventThrottle={16}
         style={{ backgroundColor: "transparent" }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,
@@ -35,7 +72,8 @@ export function WarmPage({
         }}
       >
         {children}
-      </ScrollView>
+      </Animated.ScrollView>
+      <StatusBand y={band.y} />
     </View>
   );
 }

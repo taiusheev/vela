@@ -150,6 +150,9 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
                       fontFamily: day.today ? type.button.fontFamily : type.caption.fontFamily,
                     },
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
                 >
                   {shortDayName(day.date)}
                 </Text>
