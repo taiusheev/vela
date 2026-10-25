@@ -209,7 +209,8 @@ export function ActionRow({
       <Text style={[type.button, { color: careful ? palette.error : palette.ink, flex: 1 }]}>
         {label}
       </Text>
-      <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />
+      {/* A step that is hard to undo asks first rather than opening a page: no chevron. */}
+      {careful ? null : <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />}
     </Pressable>
   );
 }

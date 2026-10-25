@@ -98,9 +98,10 @@ export function SettingsRow({
   const palette = usePalette();
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale > 1.3;
+  // A step that is hard to undo opens a question, not a page, so it carries no chevron.
   const end =
     trailing ??
-    (onPress === undefined ? null : (
+    (onPress === undefined || careful ? null : (
       <View style={{ transform: [{ rotate: expanded === true ? "90deg" : "0deg" }] }}>
         <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />
       </View>
