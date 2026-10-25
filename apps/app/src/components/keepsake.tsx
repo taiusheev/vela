@@ -226,7 +226,7 @@ export function KeepHeart({
   );
 }
 
-/** What the memory model saw in a phrase, as a short label above it. */
+/** What the memory model saw in a phrase, as a short label above it, when that adds something. */
 export function useKindLabel(): (kind: FamilyMemoryKind | null, memory?: Memory) => string | null {
   const { t } = useLingui();
   return (kind, memory) => {
@@ -240,7 +240,8 @@ export function useKindLabel(): (kind: FamilyMemoryKind | null, memory?: Memory)
       case "person":
         return t`About someone`;
       case "moment":
-        return t`A moment`;
+        // Every memory is a moment, so the label would say nothing: the card shows only whose it is.
+        return null;
       case "follow_up":
         return t`Looking forward`;
       default:
