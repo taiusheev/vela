@@ -188,6 +188,14 @@ msgstr "{label}：還沒到"
 msgid "{later} answered later"
 msgstr "{later}次稍晚回覆"
 
+#: src/components/telegram-family-link.tsx
+msgid "{messenger} confirmed"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "{messenger} didn’t open."
+msgstr ""
+
 #: app/vela-light.tsx
 msgid "{monthly} a month"
 msgstr "每月{monthly}"
@@ -1120,6 +1128,10 @@ msgstr "從題庫選"
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr "請選擇一位家人，或回到「今天」。您的文字已保留。"
 
+#: src/components/telegram-family-link.tsx
+msgid "Choose the app where you chat with Vela. Your family and messages stay together."
+msgstr "請選擇您和 Vela 聊天的 app。您的家人和訊息都會保持不變。"
+
 #: app/conversation.tsx
 msgid "Choose the morning; Vela delivers it then."
 msgstr "選一個早晨，Vela 會在那天送出。"
@@ -1187,17 +1199,13 @@ msgstr "確認移除"
 msgid "Connect my family"
 msgstr "連結我的家人"
 
-#: src/components/telegram-family-link.tsx
-msgid "Connect my Telegram"
-msgstr "連結我的 Telegram"
-
 #: app/settings.tsx
 msgid "Connect your Telegram family"
 msgstr "連結您在 Telegram 上的家庭"
 
 #: src/components/telegram-family-link.tsx
-msgid "Connected Telegram account: {linkedMemberName}"
-msgstr "已確認的 Telegram 帳號：{linkedMemberName}"
+msgid "Connected {messenger} account: {linkedMemberName}"
+msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Connecting…"
@@ -1506,6 +1514,10 @@ msgstr "電影、電視與書"
 msgid "Find a memory to keep"
 msgstr "找一則回憶來保存"
 
+#: src/components/telegram-family-link.tsx
+msgid "Find my family"
+msgstr "找到我的家人"
+
 #: src/data/precision.ts
 msgid "Fine, the family knew"
 msgstr "沒事，家人知道原因"
@@ -1523,8 +1535,8 @@ msgid "For a particular morning message, check Today or your parent's chat."
 msgstr "若要確認某則早晨訊息，請查看「今天」或爸媽的聊天室。"
 
 #: src/components/telegram-family-link.tsx
-msgid "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
-msgstr "若使用另一部裝置，請貼上完整代碼或整則 Telegram 私人訊息。代碼在 15 分鐘後到期。"
+msgid "For another device: paste the full code or the whole private {messenger} message. It expires after 15 minutes."
+msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
 msgid "For her morning"
@@ -1870,10 +1882,6 @@ msgstr "如果家裡沒有人寫問題給{name}，Vela 可以把照您的語氣�
 msgid "If she doesn’t answer, you know the same day."
 msgstr "媽媽沒回覆的時候，您當天就會知道。"
 
-#: src/components/telegram-family-link.tsx
-msgid "If Telegram cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
-msgstr "若 Telegram 找不到家人，請確認您使用自己的帳號。較早測試版本中的家人需要協助才能轉到這個版本；刪除帳號並不會完成轉移。"
-
 #: src/components/onboarding/finish.tsx
 msgid "If the link doesn’t open for {name}, ask {name} to add you as a contact, then tap it again."
 msgstr "如果{name}點不開連結，請{name}先把您加為聯絡人，再點一次。"
@@ -1881,6 +1889,10 @@ msgstr "如果{name}點不開連結，請{name}先把您加為聯絡人，再點
 #: src/components/nearby-editor.tsx
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr "如果連結點不開，請先把我加為聯絡人，再點一次。"
+
+#: src/components/telegram-family-link.tsx
+msgid "If Vela cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
+msgstr "若 Vela 找不到家人，請確認您使用自己的帳號。較早測試版本中的家人需要協助才能轉到這個版本；刪除帳號並不會完成轉移。"
 
 #: app/my-memories.tsx
 msgid "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
@@ -2756,9 +2768,17 @@ msgstr "請只確認您剛從自己的 Vela 應用程式發起的要求。"
 msgid "Only on this device. Removed when you sign out."
 msgstr "照片只留在這部裝置，登出時會移除。"
 
+#: src/components/telegram-family-link.tsx
+msgid "Open {messenger} again"
+msgstr ""
+
 #: src/components/keepsake.tsx
 msgid "Open in the chat"
 msgstr "在聊天中打開"
+
+#: src/components/telegram-family-link.tsx
+msgid "Open LINE"
+msgstr "開啟 LINE"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open my family"
@@ -2775,8 +2795,8 @@ msgid "Open settings"
 msgstr "開啟設定"
 
 #: src/components/telegram-family-link.tsx
-msgid "Open Telegram again"
-msgstr "再次開啟 Telegram"
+msgid "Open Telegram"
+msgstr "開啟 Telegram"
 
 #: src/components/private-report-entry.tsx
 msgid "Open the weekly support report"
@@ -2802,10 +2822,6 @@ msgstr "正在開啟照片⋯"
 msgid "Opening sharing…"
 msgstr "正在開啟分享…"
 
-#: src/components/telegram-family-link.tsx
-msgid "Opening Telegram…"
-msgstr "正在開啟 Telegram…"
-
 #: src/components/family-book.tsx
 msgid "Opening the book…"
 msgstr "正在打開故事書…"
@@ -2821,6 +2837,10 @@ msgstr "正在打開故事…"
 #: app/(tabs)/sunday.tsx
 msgid "Opening the week"
 msgstr "正在打開本週"
+
+#: src/components/telegram-family-link.tsx
+msgid "Opening…"
+msgstr "正在開啟…"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -3490,8 +3510,8 @@ msgid "Set this up for my family"
 msgstr "為我的家人設定"
 
 #: src/components/telegram-family-link.tsx
-msgid "Set up a new family in Telegram"
-msgstr "在 Telegram 設定新家人"
+msgid "Set up a new family"
+msgstr "設定新家人"
 
 #: src/components/set-up-phone.tsx
 msgid "Set up this phone for {name}"
@@ -3703,8 +3723,8 @@ msgid "Start with your own words, the way you normally message {name}. You can u
 msgstr "先用自己的話寫，就像平常傳訊息給{name}一樣。想不到時，可以參考靈感。"
 
 #: src/components/telegram-family-link.tsx
-msgid "Start your family in Telegram."
-msgstr "在 Telegram 開始設定家人。"
+msgid "Start your family in {messenger}."
+msgstr "在{messenger}開始設定家人。"
 
 #: app/vela-light.tsx
 msgid "Starting…"
@@ -3809,14 +3829,6 @@ msgstr "在回憶上點愛心，它就會保存在這裡，即使聊天裡早已
 msgid "tapped an answer"
 msgstr "選了一個回答"
 
-#: src/components/telegram-family-link.tsx
-msgid "Telegram confirmed"
-msgstr "Telegram 已確認"
-
-#: src/components/telegram-family-link.tsx
-msgid "Telegram didn’t open."
-msgstr "Telegram 未能開啟。"
-
 #: src/auth/phone.ts
 msgid "Thailand"
 msgstr "泰國"
@@ -3854,8 +3866,8 @@ msgid "That code was right, but this account needs more than that to finish."
 msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入。"
 
 #: src/components/telegram-family-link.tsx
-msgid "That confirmation is no longer valid. Try a fresh connection using your own Telegram account."
-msgstr "該確認已失效。請使用您自己的 Telegram 帳號重新連結。"
+msgid "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
+msgstr ""
 
 #: app/conversation.tsx
 msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
@@ -4499,8 +4511,8 @@ msgid "Try again"
 msgstr "再試一次"
 
 #: src/components/telegram-family-link.tsx
-msgid "Try opening Telegram again"
-msgstr "再次嘗試開啟 Telegram"
+msgid "Try opening {messenger} again"
+msgstr ""
 
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
@@ -4614,8 +4626,8 @@ msgid "Use this suggestion"
 msgstr "使用這個建議"
 
 #: src/components/telegram-family-link.tsx
-msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
-msgstr "請使用您自己的 Telegram 帳號。長輩會透過您傳送的邀請加入。"
+msgid "Use your own messaging account. Your parent joins from the invitation you send them."
+msgstr "請使用您自己的通訊軟體帳號。長輩會透過您傳送的邀請加入。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Use your private connection code."
@@ -4976,6 +4988,10 @@ msgstr "{name}平常用什麼聊天？"
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} live?"
 msgstr "{name}住在哪裡？"
+
+#: src/components/telegram-family-link.tsx
+msgid "Where is your family’s Vela chat?"
+msgstr "您家人的 Vela 聊天室在哪裡？"
 
 #: src/data/photos.ts
 msgid "Which one do you like more?"

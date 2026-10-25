@@ -42,13 +42,12 @@ export const zhTW: Record<keyof typeof en, string> = {
     "要將家人連結至這個 Vela 帳號嗎？\n帳號：{account}\n連結編號：{reference}\n\n只有在您剛從自己已登入的 Vela 開啟此聊天，且帳號與編號相符時，才按下「連結我的家人」。開啟聊天本身不會完成連結。\n\n若使用另一部裝置，您的私人備用代碼是 {code}，請勿分享。",
   "account_link.approve": "連結我的家人",
   "account_link.refuse": "這不是我",
-  "account_link.approved":
-    "Telegram 已確認。請回到 iPhone 上的 Vela，確認家人並完成連結。不用複製代碼。",
-  "account_link.cancelled": "連結已取消。您的家人與 Telegram 帳號沒有變更。",
+  "account_link.approved": "已確認。請回到 iPhone 上的 Vela，確認家人並完成連結。不用複製代碼。",
+  "account_link.cancelled": "連結已取消。您的家人和這個聊天室都沒有變更。",
   "account_link.code":
-    "請在 Vela 輸入這個代碼，連結您的 Telegram 帳號：{code}\n請保密；代碼即將到期。",
+    "請在 Vela 輸入這個代碼，把這個聊天室連結到 app：{code}\n請保密；代碼即將到期。",
   "account_link.unavailable":
-    "無法開啟這個帳號連結。請先在 Telegram 完成家人的設定，再從 Vela 建立新的連結。",
+    "無法開啟這個帳號連結。請先在這個聊天室完成家人的設定，再從 Vela 建立新的連結。",
   "pilot.activation_wait":
     "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
   "pilot.invitation_only":

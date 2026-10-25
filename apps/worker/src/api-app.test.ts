@@ -365,6 +365,7 @@ function fixture(
           replayed: false,
         }),
       telegramBotUsername: "VelaTestBot",
+      lineBasicId: null as string | null,
     },
     verifyActiveSession: vi
       .fn<NonNullable<ApiRuntime["writes"]>["verifyActiveSession"]>()
@@ -624,6 +625,20 @@ describe("pilot capabilities and secure Telegram linking", () => {
       IDENTITY,
       "request-1",
     );
+  });
+
+  it("offers the same proof through Vela's LINE account where LINE is on (ADR-52)", async () => {
+    const f = fixture(true);
+    f.writes.links.lineBasicId = "@vela";
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link", "{}", { authorization: "Bearer good" }),
+    );
+    await expectResponse(response, 201, {
+      challenge_id: USER_ID,
+      expires_at: "2026-09-22T00:15:00.000Z",
+      telegram_url: `https://t.me/VelaTestBot?start=link_${USER_ID}`,
+      line_url: `https://line.me/R/oaMessage/%40vela/?%2Fstart%20link_${USER_ID}`,
+    });
   });
 
   it("completes through the proof service with the approved roster and honours replay", async () => {

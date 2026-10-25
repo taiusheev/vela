@@ -28,13 +28,40 @@ import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { sendOutsideGateway } from "./group.ts";
 import { sha256Hex } from "./hash.ts";
-import { type PilotAdmission, pilotAllowsTelegram, pilotSpeaks } from "./pilot-admission.ts";
+import {
+  type PilotAdmission,
+  pilotAllowsTelegram,
+  pilotApprovesFamily,
+  pilotSpeaks,
+} from "./pilot-admission.ts";
 import { memberByChannelUser, type Queryable } from "./repo.ts";
 
 const lifetime = 15 * 60 * 1_000;
 const uuid = z.uuid();
 type Challenge = typeof accountLinkChallenges.$inferSelect;
 type Member = typeof members.$inferSelect;
+type Link = Pick<typeof channelLinks.$inferSelect, "channel" | "externalId">;
+
+/** The messengers an app account can be linked through: the person's private chat with Vela. */
+const LINKABLE: readonly string[] = ["telegram", "line"];
+
+/**
+ * Whether a closed test admits the person behind this link: in its languages, and on the
+ * Telegram roster (ADR-42, ADR-45) or in a family the founder approved (ADR-52).
+ */
+function admitsLink(
+  admission: PilotAdmission | null | undefined,
+  member: Pick<Member, "language" | "familyId">,
+  familyLanguage: string,
+  link: Link,
+): boolean {
+  if (admission == null) return true;
+  return (
+    pilotSpeaks(admission, member.language, familyLanguage) &&
+    (pilotApprovesFamily(admission, member.familyId) ||
+      (link.channel === "telegram" && pilotAllowsTelegram(admission, link.externalId)))
+  );
+}
 
 function denied(): never {
   throw new VelaError("not_found", "Account link not found");
@@ -134,7 +161,7 @@ async function lockTarget(tx: VelaTransaction, memberId: string, channelLinkId: 
   if (
     link === undefined ||
     link.memberId !== member.id ||
-    link.channel !== "telegram" ||
+    !LINKABLE.includes(link.channel) ||
     link.blockedAt !== null
   ) {
     denied();
@@ -251,7 +278,7 @@ export async function issueAccountLinkCode(
   const parsed = InboundEvent.safeParse(event);
   if (
     !parsed.success ||
-    parsed.data.channel !== "telegram" ||
+    !LINKABLE.includes(parsed.data.channel) ||
     parsed.data.kind !== "start" ||
     parsed.data.conversation.kind !== "private" ||
     parsed.data.sender.externalUserId !== parsed.data.conversation.externalId
@@ -276,7 +303,9 @@ export async function issueAccountLinkCode(
     const [candidateLink] = await tx
       .select({ id: channelLinks.id, memberId: channelLinks.memberId })
       .from(channelLinks)
-      .where(and(eq(channelLinks.channel, "telegram"), eq(channelLinks.externalId, externalId)));
+      .where(
+        and(eq(channelLinks.channel, parsed.data.channel), eq(channelLinks.externalId, externalId)),
+      );
     if (candidateLink === undefined) denied();
     const { member, link } = await lockTarget(tx, candidateLink.memberId, candidateLink.id);
     if (link.externalId !== externalId) denied();
@@ -342,6 +371,7 @@ export async function completeAccountLink(
   if (scope.familyId === null || scope.memberId === null) conflict();
   let proof: Challenge | undefined;
   let member: Member | undefined;
+  let channel = "telegram";
   return runApiMutation(
     deps,
     identity,
@@ -370,18 +400,17 @@ export async function completeAccountLink(
         }
         const target = await lockTarget(tx, proof.memberId, proof.channelLinkId);
         member = target.member;
-        if (
-          deps.pilotAdmission != null &&
-          (member.language !== "en" ||
-            !pilotAllowsTelegram(deps.pilotAdmission, target.link.externalId))
-        )
-          denied();
+        channel = target.link.channel;
         if (deps.pilotAdmission != null) {
           const [family] = await tx
             .select({ language: families.language })
             .from(families)
             .where(eq(families.id, member.familyId));
-          if (family?.language !== "en") denied();
+          if (
+            family === undefined ||
+            !admitsLink(deps.pilotAdmission, member, family.language, target.link)
+          )
+            denied();
         }
         if (
           member.familyId !== proof.familyId ||
@@ -446,7 +475,7 @@ export async function completeAccountLink(
             name: "account_linked",
             familyId: member.familyId,
             memberId: member.id,
-            props: { user_id: proof.userId, challenge_id: proof.id, channel: "telegram" },
+            props: { user_id: proof.userId, challenge_id: proof.id, channel },
           },
           completedAt,
         );
@@ -463,19 +492,22 @@ export function isAccountLinkStart(param: string | undefined): boolean {
 /** The private code is delivered through the durable gateway; retries reuse the same queued code. */
 export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): Promise<void> {
   if (
-    event.channel !== "telegram" ||
+    !LINKABLE.includes(event.channel) ||
     event.kind !== "start" ||
     event.conversation.kind !== "private" ||
     event.sender.externalUserId !== event.conversation.externalId
   )
     return;
-  const linked = await memberByChannelUser(deps.db, "telegram", event.sender.externalUserId);
+  const linked = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
   const own = linked?.member.language ?? "en";
   const lang = pilotSpeaks(deps.config.pilotAdmission, own) ? own : "en";
   const id = event.startParam?.slice(5) ?? "";
   if (
     linked === null ||
-    !pilotAllowsTelegram(deps.config.pilotAdmission, event.sender.externalUserId)
+    !admitsLink(deps.config.pilotAdmission, linked.member, linked.family.language, {
+      channel: event.channel,
+      externalId: event.sender.externalUserId,
+    })
   ) {
     await sendOutsideGateway(deps, {
       kind: "system",
@@ -484,7 +516,7 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
         suffix: `account_link_refused:${event.eventId}`,
       }),
       lang,
-      to: { channel: "telegram", conversationId: event.conversation.externalId },
+      to: { channel: event.channel, conversationId: event.conversation.externalId },
       text: t(lang, "account_link.unavailable"),
     });
     return;
@@ -523,7 +555,7 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
         kind: "system",
         idempotencyKey: key,
         memberId: linked.member.id,
-        channel: "telegram",
+        channel: event.channel,
         conversationId: event.conversation.externalId,
         lang,
         text: modern
@@ -548,7 +580,7 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
         kind: "system",
         idempotencyKey: key,
         memberId: linked.member.id,
-        channel: "telegram",
+        channel: event.channel,
         conversationId: event.conversation.externalId,
         lang,
         text: t(lang, "account_link.unavailable"),
@@ -585,13 +617,7 @@ export async function loadAccountLinkStatus(
     )
       denied();
     const [family] = await tx.select().from(families).where(eq(families.id, member.familyId));
-    if (
-      family === undefined ||
-      (deps.pilotAdmission != null &&
-        (member.language !== "en" ||
-          family.language !== "en" ||
-          !pilotAllowsTelegram(deps.pilotAdmission, link.externalId)))
-    )
+    if (family === undefined || !admitsLink(deps.pilotAdmission, member, family.language, link))
       denied();
     if (proof.completedAt !== null && member.userId !== owner.id) denied();
     return ApiLinkStatus.parse({
@@ -647,7 +673,7 @@ export async function cancelAccountLink(
 export async function handleAccountLinkButton(deps: Deps, event: InboundEvent): Promise<void> {
   if (
     !InboundEvent.safeParse(event).success ||
-    event.channel !== "telegram" ||
+    !LINKABLE.includes(event.channel) ||
     event.kind !== "button" ||
     event.conversation.kind !== "private" ||
     event.sender.externalUserId !== event.conversation.externalId
@@ -679,13 +705,24 @@ export async function handleAccountLinkButton(deps: Deps, event: InboundEvent): 
     if (!equalDigest(await sha256Hex(JSON.stringify([id, code])), proof.codeHash)) return;
     const { member, link } = await lockTarget(tx, proof.memberId, proof.channelLinkId);
     if (
+      link.channel !== event.channel ||
       link.externalId !== event.sender.externalUserId ||
       member.familyId !== proof.familyId ||
       (await sha256Hex(link.externalId)) !== proof.channelIdentityHash ||
       (member.userId !== null && member.userId !== owner.id)
     )
       return;
-    if (choice === "a" && !pilotAllowsTelegram(deps.config.pilotAdmission, link.externalId)) return;
+    if (choice === "a" && deps.config.pilotAdmission != null) {
+      const [family] = await tx
+        .select({ language: families.language })
+        .from(families)
+        .where(eq(families.id, member.familyId));
+      if (
+        family === undefined ||
+        !admitsLink(deps.config.pilotAdmission, member, family.language, link)
+      )
+        return;
+    }
     const at = now(deps);
     if (!pending(proof, at)) return;
     const lang = pilotSpeaks(deps.config.pilotAdmission, member.language) ? member.language : "en";
@@ -703,7 +740,7 @@ export async function handleAccountLinkButton(deps: Deps, event: InboundEvent): 
     await enqueueOutbound(deps, tx, {
       kind: "system",
       memberId: member.id,
-      channel: "telegram",
+      channel: event.channel,
       conversationId: event.conversation.externalId,
       lang,
       idempotencyKey: outboundKey("system", {

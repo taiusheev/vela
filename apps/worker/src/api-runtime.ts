@@ -458,6 +458,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
               cancel: cancelAccountLink,
               requesterLabel: createClerkLinkRequester({ secretKey }),
               telegramBotUsername: config.telegramBotUsername,
+              lineBasicId: config.lineBasicId,
             },
             verifyActiveSession: limitWrites(
               env.ACCOUNT_WRITE_LIMITER,

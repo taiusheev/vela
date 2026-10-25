@@ -74,6 +74,8 @@ export const ApiLinkChallenge = z.object({
   challenge_id: z.uuid(),
   expires_at: z.iso.datetime({ offset: true }),
   telegram_url: z.url().optional(),
+  /** The same link through Vela's LINE account, where LINE is on (ADR-52). */
+  line_url: z.url().optional(),
   confirmation: z.literal("telegram").optional(),
   requester_label: z.string().max(200).optional(),
 });

@@ -158,6 +158,7 @@ import {
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
+  lineInviteLink,
   type loadAccountLinkStatus,
   type loadApiBook,
   type loadApiExchange,
@@ -390,6 +391,8 @@ export interface ApiRuntime {
       cancel?: typeof cancelAccountLink;
       requesterLabel?: (identity: SessionIdentity) => Promise<string>;
       telegramBotUsername: string;
+      /** Vela's LINE account, where LINE is on: the link is offered there too (ADR-52). */
+      lineBasicId?: string | null;
     };
     verifyActiveSession: SessionActivityChecker;
     clock: Clock;
@@ -1855,7 +1858,15 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           telegramUrl.searchParams.set("start", `link_${challenge.challenge_id}`);
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(
-            ApiLinkChallenge.parse({ ...challenge, telegram_url: telegramUrl.toString() }),
+            ApiLinkChallenge.parse({
+              ...challenge,
+              telegram_url: telegramUrl.toString(),
+              ...(links.lineBasicId == null
+                ? {}
+                : {
+                    line_url: lineInviteLink(links.lineBasicId, `link_${challenge.challenge_id}`),
+                  }),
+            }),
             201,
           );
         },

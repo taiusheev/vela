@@ -94,12 +94,12 @@ export const en = {
   "account_link.approve": "Connect my family",
   "account_link.refuse": "This wasn’t me",
   "account_link.approved":
-    "Telegram confirmed. Return to Vela on your iPhone to check your family and finish. No code to copy.",
-  "account_link.cancelled": "Connection cancelled. Your family and Telegram account are unchanged.",
+    "Confirmed. Return to Vela on your iPhone to check your family and finish. No code to copy.",
+  "account_link.cancelled": "Connection cancelled. Your family and this chat are unchanged.",
   "account_link.code":
-    "Enter this code in Vela to connect your Telegram account: {code}\nKeep it private; it expires soon.",
+    "Enter this code in Vela to connect this chat to the app: {code}\nKeep it private; it expires soon.",
   "account_link.unavailable":
-    "This account link could not be opened. Finish setting up your family in Telegram, then start a new link in Vela.",
+    "This account link could not be opened. Finish setting up your family in this chat, then start a new link in Vela.",
   "pilot.activation_wait":
     "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
   "pilot.invitation_only":

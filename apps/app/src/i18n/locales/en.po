@@ -187,6 +187,14 @@ msgstr "{label}: still to come"
 msgid "{later} answered later"
 msgstr "{later} answered later"
 
+#: src/components/telegram-family-link.tsx
+msgid "{messenger} confirmed"
+msgstr "{messenger} confirmed"
+
+#: src/components/telegram-family-link.tsx
+msgid "{messenger} didn’t open."
+msgstr "{messenger} didn’t open."
+
 #: app/vela-light.tsx
 msgid "{monthly} a month"
 msgstr "{monthly} a month"
@@ -1119,6 +1127,10 @@ msgstr "Choose from the list"
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr "Choose someone in your family, or return to Today. Your words are kept."
 
+#: src/components/telegram-family-link.tsx
+msgid "Choose the app where you chat with Vela. Your family and messages stay together."
+msgstr "Choose the app where you chat with Vela. Your family and messages stay together."
+
 #: app/conversation.tsx
 msgid "Choose the morning; Vela delivers it then."
 msgstr "Choose the morning; Vela delivers it then."
@@ -1186,17 +1198,13 @@ msgstr "Confirm removal"
 msgid "Connect my family"
 msgstr "Connect my family"
 
-#: src/components/telegram-family-link.tsx
-msgid "Connect my Telegram"
-msgstr "Connect my Telegram"
-
 #: app/settings.tsx
 msgid "Connect your Telegram family"
 msgstr "Connect your Telegram family"
 
 #: src/components/telegram-family-link.tsx
-msgid "Connected Telegram account: {linkedMemberName}"
-msgstr "Connected Telegram account: {linkedMemberName}"
+msgid "Connected {messenger} account: {linkedMemberName}"
+msgstr "Connected {messenger} account: {linkedMemberName}"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connecting…"
@@ -1505,6 +1513,10 @@ msgstr "Films, TV & books"
 msgid "Find a memory to keep"
 msgstr "Find a memory to keep"
 
+#: src/components/telegram-family-link.tsx
+msgid "Find my family"
+msgstr "Find my family"
+
 #: src/data/precision.ts
 msgid "Fine, the family knew"
 msgstr "Fine, the family knew"
@@ -1522,8 +1534,8 @@ msgid "For a particular morning message, check Today or your parent's chat."
 msgstr "For a particular morning message, check Today or your parent's chat."
 
 #: src/components/telegram-family-link.tsx
-msgid "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
-msgstr "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
+msgid "For another device: paste the full code or the whole private {messenger} message. It expires after 15 minutes."
+msgstr "For another device: paste the full code or the whole private {messenger} message. It expires after 15 minutes."
 
 #: src/components/chat/chat-bubble.tsx
 msgid "For her morning"
@@ -1869,10 +1881,6 @@ msgstr "If nobody in the family writes {name} a question for the morning, Vela c
 msgid "If she doesn’t answer, you know the same day."
 msgstr "If she doesn’t answer, you know the same day."
 
-#: src/components/telegram-family-link.tsx
-msgid "If Telegram cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
-msgstr "If Telegram cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
-
 #: src/components/onboarding/finish.tsx
 msgid "If the link doesn’t open for {name}, ask {name} to add you as a contact, then tap it again."
 msgstr "If the link doesn’t open for {name}, ask {name} to add you as a contact, then tap it again."
@@ -1880,6 +1888,10 @@ msgstr "If the link doesn’t open for {name}, ask {name} to add you as a contac
 #: src/components/nearby-editor.tsx
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
 msgstr "If the link doesn’t open, add me to your contacts, then tap it again."
+
+#: src/components/telegram-family-link.tsx
+msgid "If Vela cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
+msgstr "If Vela cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
 
 #: app/my-memories.tsx
 msgid "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
@@ -2755,9 +2767,17 @@ msgstr "Only confirm a request you just started from your own Vela app."
 msgid "Only on this device. Removed when you sign out."
 msgstr "Only on this device. Removed when you sign out."
 
+#: src/components/telegram-family-link.tsx
+msgid "Open {messenger} again"
+msgstr "Open {messenger} again"
+
 #: src/components/keepsake.tsx
 msgid "Open in the chat"
 msgstr "Open in the chat"
+
+#: src/components/telegram-family-link.tsx
+msgid "Open LINE"
+msgstr "Open LINE"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open my family"
@@ -2774,8 +2794,8 @@ msgid "Open settings"
 msgstr "Open settings"
 
 #: src/components/telegram-family-link.tsx
-msgid "Open Telegram again"
-msgstr "Open Telegram again"
+msgid "Open Telegram"
+msgstr "Open Telegram"
 
 #: src/components/private-report-entry.tsx
 msgid "Open the weekly support report"
@@ -2801,10 +2821,6 @@ msgstr "Opening photos…"
 msgid "Opening sharing…"
 msgstr "Opening sharing…"
 
-#: src/components/telegram-family-link.tsx
-msgid "Opening Telegram…"
-msgstr "Opening Telegram…"
-
 #: src/components/family-book.tsx
 msgid "Opening the book…"
 msgstr "Opening the book…"
@@ -2820,6 +2836,10 @@ msgstr "Opening the story…"
 #: app/(tabs)/sunday.tsx
 msgid "Opening the week"
 msgstr "Opening the week"
+
+#: src/components/telegram-family-link.tsx
+msgid "Opening…"
+msgstr "Opening…"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -3489,8 +3509,8 @@ msgid "Set this up for my family"
 msgstr "Set this up for my family"
 
 #: src/components/telegram-family-link.tsx
-msgid "Set up a new family in Telegram"
-msgstr "Set up a new family in Telegram"
+msgid "Set up a new family"
+msgstr "Set up a new family"
 
 #: src/components/set-up-phone.tsx
 msgid "Set up this phone for {name}"
@@ -3702,8 +3722,8 @@ msgid "Start with your own words, the way you normally message {name}. You can u
 msgstr "Start with your own words, the way you normally message {name}. You can use an idea if you get stuck."
 
 #: src/components/telegram-family-link.tsx
-msgid "Start your family in Telegram."
-msgstr "Start your family in Telegram."
+msgid "Start your family in {messenger}."
+msgstr "Start your family in {messenger}."
 
 #: app/vela-light.tsx
 msgid "Starting…"
@@ -3808,14 +3828,6 @@ msgstr "Tap the heart on a memory, and it is kept here, long after the chat has 
 msgid "tapped an answer"
 msgstr "tapped an answer"
 
-#: src/components/telegram-family-link.tsx
-msgid "Telegram confirmed"
-msgstr "Telegram confirmed"
-
-#: src/components/telegram-family-link.tsx
-msgid "Telegram didn’t open."
-msgstr "Telegram didn’t open."
-
 #: src/auth/phone.ts
 msgid "Thailand"
 msgstr "Thailand"
@@ -3853,8 +3865,8 @@ msgid "That code was right, but this account needs more than that to finish."
 msgstr "That code was right, but this account needs more than that to finish."
 
 #: src/components/telegram-family-link.tsx
-msgid "That confirmation is no longer valid. Try a fresh connection using your own Telegram account."
-msgstr "That confirmation is no longer valid. Try a fresh connection using your own Telegram account."
+msgid "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
+msgstr "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
 
 #: app/conversation.tsx
 msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
@@ -4498,8 +4510,8 @@ msgid "Try again"
 msgstr "Try again"
 
 #: src/components/telegram-family-link.tsx
-msgid "Try opening Telegram again"
-msgstr "Try opening Telegram again"
+msgid "Try opening {messenger} again"
+msgstr "Try opening {messenger} again"
 
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
@@ -4613,8 +4625,8 @@ msgid "Use this suggestion"
 msgstr "Use this suggestion"
 
 #: src/components/telegram-family-link.tsx
-msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
-msgstr "Use your own Telegram account. Your parent joins from the invitation you send them."
+msgid "Use your own messaging account. Your parent joins from the invitation you send them."
+msgstr "Use your own messaging account. Your parent joins from the invitation you send them."
 
 #: src/components/telegram-family-link.tsx
 msgid "Use your private connection code."
@@ -4975,6 +4987,10 @@ msgstr "Where does {name} chat already?"
 #: src/components/onboarding/questions.tsx
 msgid "Where does {name} live?"
 msgstr "Where does {name} live?"
+
+#: src/components/telegram-family-link.tsx
+msgid "Where is your family’s Vela chat?"
+msgstr "Where is your family’s Vela chat?"
 
 #: src/data/photos.ts
 msgid "Which one do you like more?"
