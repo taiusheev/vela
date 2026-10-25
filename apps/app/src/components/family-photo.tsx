@@ -1,6 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
-import { AppState, Image, Text, View } from "react-native";
+import { AppState, Image, View } from "react-native";
 import { fetchPhoto } from "../api/upload.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import {
@@ -18,6 +18,7 @@ import { useToday } from "../data/useToday.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 import { Words } from "./ui.tsx";
 
 /** A thumbnail's side in points, or the whole width a screen gives the photos. */

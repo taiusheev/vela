@@ -1,10 +1,11 @@
 import { useLingui } from "@lingui/react/macro";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../../accessibility/use-reduced-motion.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { radius, sheetShadow, space, type } from "../../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "../brand/icon.tsx";
+import { Text } from "../scaled-text.tsx";
 
 export interface SheetAction {
   icon: BrandIconName;

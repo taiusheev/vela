@@ -581,10 +581,6 @@ msgstr ""
 msgid "A live connection has not been set up."
 msgstr ""
 
-#: src/components/keepsake.tsx
-msgid "A moment"
-msgstr ""
-
 #: app/help.tsx
 msgid "A morning message is missing"
 msgstr ""
@@ -952,7 +948,6 @@ msgstr ""
 msgid "away · {day}"
 msgstr ""
 
-#: app/help.tsx
 #: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
@@ -1170,6 +1165,10 @@ msgstr ""
 
 #: src/components/reminders.tsx
 msgid "Coming up"
+msgstr ""
+
+#: app/help.tsx
+msgid "Common questions"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -3003,6 +3002,11 @@ msgstr ""
 msgid "Privacy notice"
 msgstr ""
 
+#: app/legal.tsx
+#: app/settings.tsx
+msgid "Privacy, terms and security"
+msgstr ""
+
 #: app/weekly-report.tsx
 msgid "Private test · reviewed family support"
 msgstr ""
@@ -3045,8 +3049,8 @@ msgstr ""
 msgid "Read the original conversation"
 msgstr ""
 
+#: app/legal.tsx
 #: app/my-memories.tsx
-#: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Read the privacy notice"
 msgstr ""
@@ -3348,7 +3352,7 @@ msgstr ""
 msgid "Search memories"
 msgstr ""
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: src/components/legal-links.tsx
 msgid "Security"
 msgstr ""
@@ -3464,7 +3468,7 @@ msgstr ""
 msgid "sent a voice message"
 msgstr ""
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: app/vela-light.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
@@ -3928,7 +3932,7 @@ msgstr ""
 msgid "That page could not be taken out. Try again."
 msgstr ""
 
-#: app/settings.tsx
+#: app/legal.tsx
 msgid "That page could not open. Write to Vela support instead."
 msgstr ""
 
@@ -5227,7 +5231,7 @@ msgstr ""
 msgid "Your country"
 msgstr ""
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: src/components/legal-links.tsx
 msgid "Your data and deletion"
 msgstr ""

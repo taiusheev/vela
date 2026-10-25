@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { VoicePlayback } from "../../audio/VoicePlayback.tsx";
 import type { ChatMessage, ChatReactionKind } from "../../data/chat.ts";
 import { usePalette } from "../../theme/theme.tsx";
@@ -8,6 +8,7 @@ import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
 import { BrandIcon } from "../brand/icon.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../family-photo.tsx";
 import { Light } from "../light.tsx";
+import { Text } from "../scaled-text.tsx";
 import { Words } from "../ui.tsx";
 
 const EMOJI: Record<ChatReactionKind, string> = { heart: "❤️", laugh: "😂", hug: "🤗" };

@@ -11,7 +11,7 @@ import {
 } from "@vela/contracts";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { RefreshControl, Text, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import {
   ApiError,
   apiConfigured,
@@ -21,6 +21,7 @@ import {
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { ScreenHeading } from "../src/components/brand/experience.tsx";
+import { Text } from "../src/components/scaled-text.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { WarmPage } from "../src/components/warm.tsx";

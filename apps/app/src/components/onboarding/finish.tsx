@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { appPrivacyAcceptance, type CreateFamily } from "@vela/contracts";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Share, Text, View } from "react-native";
+import { ActivityIndicator, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import {
@@ -34,6 +34,7 @@ import { useToday } from "../../data/useToday.ts";
 import { useAppLocale } from "../../i18n/provider.tsx";
 import { usePush } from "../../push/provider.tsx";
 import { space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { SetUpPhone } from "../set-up-phone.tsx";
 import { NightScene, night } from "./night-scene.tsx";
 import { NightButton, NightCopy } from "./story.tsx";

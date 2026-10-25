@@ -10,11 +10,15 @@ tags:
 - tapOn: "Settings"
 - assertNotVisible: "Set it up"
 - scrollUntilVisible:
-    element: "Read the privacy notice"
+    element: "Privacy, terms and security"
     direction: DOWN
 - assertVisible: "Get help or request your data"
+- tapOn: "Privacy, terms and security"
+- assertVisible: "Read the privacy notice"
 - assertVisible: "Service terms"
+- assertVisible: "Security"
 - assertVisible: "Your data and deletion"
+- tapOn: "Back"
 - scrollUntilVisible:
     element: "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
     direction: DOWN

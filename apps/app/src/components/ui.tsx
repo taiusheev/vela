@@ -1,8 +1,9 @@
 import { type ReactNode, type Ref, useState } from "react";
-import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
+import { Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 type Role = keyof typeof type;
 type Tone = "ink" | "ink2" | "ink3" | "action" | "error";
@@ -209,7 +210,8 @@ export function ActionRow({
       <Text style={[type.button, { color: careful ? palette.error : palette.ink, flex: 1 }]}>
         {label}
       </Text>
-      <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />
+      {/* A step that is hard to undo asks first rather than opening a page: no chevron. */}
+      {careful ? null : <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />}
     </Pressable>
   );
 }
@@ -335,6 +337,7 @@ export function Chip({
               }}
             >
               <Text
+                maxFontSizeMultiplier={1}
                 style={[type.bodyMedium, { fontFamily: type.title.fontFamily, color: palette.ink }]}
               >
                 {initial}

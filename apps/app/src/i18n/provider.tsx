@@ -11,11 +11,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform, Text } from "react-native";
+import { Platform } from "react-native";
 import { ApiError, apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { requiresEnglish } from "../api/trial.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { Text } from "../components/scaled-text.tsx";
 import { useCapabilities } from "../data/useCapabilities.ts";
 import { readSetting, readSettingNow, writeSetting } from "../storage/flags.ts";
 import { activate, i18n } from "./i18n.ts";

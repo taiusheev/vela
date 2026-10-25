@@ -1,6 +1,6 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
 import { shortDayName } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
@@ -8,6 +8,7 @@ import { weekWindows } from "../data/week-windows.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, space, type } from "../theme/tokens.ts";
 import { Light } from "./light.tsx";
+import { Text } from "./scaled-text.tsx";
 
 const WINDOW = 46;
 
@@ -149,6 +150,9 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
                       fontFamily: day.today ? type.button.fontFamily : type.caption.fontFamily,
                     },
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.5}
                 >
                   {shortDayName(day.date)}
                 </Text>

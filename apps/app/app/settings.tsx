@@ -4,10 +4,9 @@ import { useMutation } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
-import { noticeUrl, SUPPORT_EMAIL } from "../src/api/support.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
 import { BrandIcon } from "../src/components/brand/icon.tsx";
@@ -48,16 +47,6 @@ function FamilyYou({ day }: { day: TodayView }) {
   const insets = useSafeAreaInsets();
   const account = useAccount();
   const { capabilities, pilot, englishOnly } = useCapabilities();
-  const [linkFailed, setLinkFailed] = useState(false);
-  const openLink = async (url: string) => {
-    setLinkFailed(false);
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setLinkFailed(true);
-    }
-  };
-  const openPage = (path: string) => void openLink(noticeUrl(path));
   const { t } = useLingui();
   const language = useAppLocale();
   const { familyId, noAccount, pushSent, loading: todayLoading } = day;
@@ -424,24 +413,12 @@ function FamilyYou({ day }: { day: TodayView }) {
         <SettingsSection
           title={t`Privacy and help`}
           footer={
-            <>
-              <SettingsNote>
-                <Trans>
-                  Your parent can ask “what does the family see” in their own chat. Health-word
-                  sharing is their separate choice, and saying stop pauses their light.
-                </Trans>
-              </SettingsNote>
-              {linkFailed ? (
-                <>
-                  <SettingsNote tone="ink2">
-                    <Trans>That page could not open. Write to Vela support instead.</Trans>
-                  </SettingsNote>
-                  <Words variant="caption" tone="ink2" selectable>
-                    {SUPPORT_EMAIL}
-                  </Words>
-                </>
-              ) : null}
-            </>
+            <SettingsNote>
+              <Trans>
+                Your parent can ask “what does the family see” in their own chat. Health-word
+                sharing is their separate choice, and saying stop pauses their light.
+              </Trans>
+            </SettingsNote>
           }
         >
           <SettingsRow
@@ -451,15 +428,8 @@ function FamilyYou({ day }: { day: TodayView }) {
           />
           <SettingsRow
             icon="privacy"
-            title={t`Read the privacy notice`}
-            onPress={() => openPage("/privacy")}
-          />
-          <SettingsRow icon="book" title={t`Service terms`} onPress={() => openPage("/terms")} />
-          <SettingsRow icon="privacy" title={t`Security`} onPress={() => openPage("/security")} />
-          <SettingsRow
-            icon="trash"
-            title={t`Your data and deletion`}
-            onPress={() => openPage("/data-rights")}
+            title={t`Privacy, terms and security`}
+            onPress={() => router.push("/legal")}
           />
           <SettingsRow
             icon="play"

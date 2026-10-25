@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   useWindowDimensions,
   View,
@@ -18,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { BrandIcon } from "../src/components/brand/icon.tsx";
+import { Text } from "../src/components/scaled-text.tsx";
 import { KitchenTable } from "../src/device/KitchenTable.tsx";
 import { IDLE_MS, isKitchenTable } from "../src/device/kitchen.ts";
 import { useParent } from "../src/device/useParent.ts";

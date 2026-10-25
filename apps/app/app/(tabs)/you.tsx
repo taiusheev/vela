@@ -1,9 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { Portrait } from "../../src/components/portrait-lamp.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
 import { ServiceStatus } from "../../src/components/service-status.tsx";
 import { SoftCard, useRoom } from "../../src/components/today-hero.tsx";
 import { Hairline } from "../../src/components/ui.tsx";

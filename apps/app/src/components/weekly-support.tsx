@@ -1,9 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 import { SectionTitle } from "./today-hero.tsx";
 import { Words } from "./ui.tsx";
 

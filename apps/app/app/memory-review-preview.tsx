@@ -1,12 +1,13 @@
 import { msg } from "@lingui/core/macro";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
 import { MemoryReview } from "../src/components/memory-review.tsx";
+import { Text } from "../src/components/scaled-text.tsx";
 import { SecondaryButton } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { MemoryReviewController } from "../src/data/memory-review.ts";

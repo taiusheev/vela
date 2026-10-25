@@ -1,8 +1,9 @@
 import { type KeyboardEvent, useEffect, useSyncExternalStore } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import type { MemorySharingController } from "../data/memory-sharing.ts";
 import { lightPalette as ink, radius, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 /** Caller supplies reviewed locale copy; the current preview is English-only, not acceptance UI. */
 export interface MemorySharingCopy {

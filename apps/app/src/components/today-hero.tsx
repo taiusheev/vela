@@ -18,7 +18,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
   type ViewProps,
@@ -31,6 +30,7 @@ import { usePalette, useTheme } from "../theme/theme.tsx";
 import { hitSlop, motion, radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { Portrait } from "./portrait-lamp.tsx";
+import { Text } from "./scaled-text.tsx";
 import { Words } from "./ui.tsx";
 
 /**
@@ -301,13 +301,14 @@ export function TodayHeader({
 }) {
   const { t } = useLingui();
   const p = usePalette();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space.m }}>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[type.title, { fontSize: 24, lineHeight: 28, color: p.ink }]}>Vela</Text>
-        {/* On the smallest phones the line gives its room to her answer and the Talk button. */}
-        {width < 360 ? null : (
+        {/* On the smallest phones, or with very large text, the line gives its room to her answer
+            and the Talk button. */}
+        {width < 360 || fontScale > 1.3 ? null : (
           <Words variant="caption" tone="ink3" accessibilityRole="header">
             <Trans>A little light from home.</Trans>
           </Words>

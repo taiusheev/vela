@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, View } from "react-native";
 import { portraitInitials } from "../data/portrait-lamp.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { type } from "../theme/tokens.ts";
+import { Text } from "./scaled-text.tsx";
 
 export function Portrait({
   uri,
@@ -35,7 +36,9 @@ export function Portrait({
         justifyContent: "center",
       }}
     >
+      {/* The initial fills a fixed circle, so it keeps its size at any text size. */}
       <Text
+        maxFontSizeMultiplier={1}
         style={[
           type.display,
           { color: p.ink2 },

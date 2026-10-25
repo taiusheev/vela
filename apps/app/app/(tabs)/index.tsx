@@ -2,7 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Animated, Pressable, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
@@ -25,6 +25,7 @@ import {
   TodayHeader,
 } from "../../src/components/today-hero.tsx";
 import { Card, Eyebrow, SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { StatusBand, useStatusBand } from "../../src/components/warm.tsx";
 import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDayMonth } from "../../src/data/format.ts";
@@ -153,6 +154,7 @@ function FamilyToday({ day }: { day: TodayView }) {
   const [demoAsked, setDemoAsked] = useState<string[]>([]);
   const [demoUseful, setDemoUseful] = useState<boolean | null>(null);
   const insets = useSafeAreaInsets();
+  const band = useStatusBand();
   const { capabilities } = useCapabilities();
   const push = usePush();
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -290,8 +292,10 @@ function FamilyToday({ day }: { day: TodayView }) {
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <MorningLight />
-      <ScrollView
+      <Animated.ScrollView
         refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
+        onScroll={band.onScroll}
+        scrollEventThrottle={16}
         style={{ backgroundColor: "transparent" }}
         contentContainerStyle={{
           paddingTop: insets.top + space.xl,
@@ -511,7 +515,8 @@ function FamilyToday({ day }: { day: TodayView }) {
           />
         )}
         <InboxSheet items={inbox.items} visible={inboxOpen} onClose={() => setInboxOpen(false)} />
-      </ScrollView>
+      </Animated.ScrollView>
+      <StatusBand y={band.y} />
     </View>
   );
 }

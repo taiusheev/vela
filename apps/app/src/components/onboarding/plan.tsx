@@ -1,7 +1,7 @@
 import { ph, plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useReducedMotion } from "../../accessibility/use-reduced-motion.ts";
@@ -9,6 +9,7 @@ import { clockTime, listOf, shortDayName } from "../../data/format.ts";
 import { arrivalAfter, countries, interestTopics } from "../../data/onboarding.ts";
 import { type OnboardingDraft, updateDraft } from "../../data/onboarding-draft.ts";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { NightScene, night } from "./night-scene.tsx";
 import { NightButton, NightCopy } from "./story.tsx";
 

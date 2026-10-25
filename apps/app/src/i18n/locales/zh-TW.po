@@ -474,7 +474,7 @@ msgstr "{time} · 安靜的早晨"
 
 #: src/components/onboarding/story.tsx
 msgid "{time} · in her Telegram"
-msgstr "{time} · 在媽媽的 Telegram 裡"
+msgstr "{time} · 在媽媽的 LINE 裡"
 
 #: src/components/onboarding/story.tsx
 msgid "{time} · She answered"
@@ -587,10 +587,6 @@ msgstr "幫忙分擔一點日常瑣事"
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
-
-#: src/components/keepsake.tsx
-msgid "A moment"
-msgstr "一個片刻"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -797,7 +793,7 @@ msgstr "永遠免費"
 
 #: src/components/onboarding/story.tsx
 msgid "An example morning · {time} in Da Nang"
-msgstr "範例早晨 · 峴港 {time}"
+msgstr "範例早晨 · 台南 {time}"
 
 #: src/components/onboarding/story.tsx
 msgid "An example mother at her kitchen table with tea"
@@ -959,7 +955,6 @@ msgstr "不在家"
 msgid "away · {day}"
 msgstr "外出中 · 到{day}"
 
-#: app/help.tsx
 #: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
@@ -1178,6 +1173,10 @@ msgstr "簡訊驗證碼目前還無法傳到{where}，請改用電子郵件。"
 #: src/components/reminders.tsx
 msgid "Coming up"
 msgstr "近期安排"
+
+#: app/help.tsx
+msgid "Common questions"
+msgstr "常見問題"
 
 #: src/components/nearby-editor.tsx
 msgid "Confirm removal"
@@ -2905,7 +2904,7 @@ msgstr "菲律賓"
 
 #: src/components/onboarding/story.tsx
 msgid "Phở with Auntie Lan. Too much, as always."
-msgstr "跟蘭阿姨一起吃河粉。又煮太多了，每次都這樣。"
+msgstr "跟阿蘭阿姨去吃燒餅油條。又點太多了，每次都這樣。"
 
 #: app/sign-in.tsx
 msgid "Phone number"
@@ -3010,6 +3009,11 @@ msgstr "隱私詳情與條款"
 msgid "Privacy notice"
 msgstr "隱私權告知事項"
 
+#: app/legal.tsx
+#: app/settings.tsx
+msgid "Privacy, terms and security"
+msgstr "隱私、條款與安全"
+
 #: app/weekly-report.tsx
 msgid "Private test · reviewed family support"
 msgstr "私人測試・家人確認過的支持提議"
@@ -3052,8 +3056,8 @@ msgstr "看家庭故事書"
 msgid "Read the original conversation"
 msgstr "閱讀原本的對話"
 
+#: app/legal.tsx
 #: app/my-memories.tsx
-#: app/settings.tsx
 #: src/components/app-privacy.tsx
 msgid "Read the privacy notice"
 msgstr "閱讀隱私權告知事項"
@@ -3355,7 +3359,7 @@ msgstr "寫一句簡短的話"
 msgid "Search memories"
 msgstr "搜尋回憶"
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: src/components/legal-links.tsx
 msgid "Security"
 msgstr "安全性"
@@ -3471,7 +3475,7 @@ msgstr "傳了一張貼圖"
 msgid "sent a voice message"
 msgstr "傳了一則語音訊息"
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: app/vela-light.tsx
 #: src/components/legal-links.tsx
 msgid "Service terms"
@@ -3935,7 +3939,7 @@ msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
 msgid "That page could not be taken out. Try again."
 msgstr "無法拿出這一頁，請再試一次。"
 
-#: app/settings.tsx
+#: app/legal.tsx
 msgid "That page could not open. Write to Vela support instead."
 msgstr "這個頁面打不開。請改寫信給 Vela 支援。"
 
@@ -5234,7 +5238,7 @@ msgstr "驗證碼已寄至 {sentTo}。如果沒有收到，請查看垃圾郵件
 msgid "Your country"
 msgstr "您的國家"
 
-#: app/settings.tsx
+#: app/legal.tsx
 #: src/components/legal-links.tsx
 msgid "Your data and deletion"
 msgstr "資料權利與刪除"

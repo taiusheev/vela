@@ -1,8 +1,9 @@
 import { Children, isValidElement, type ReactNode } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 /**
  * Settings as phones draw them: a short name above each group, the group's rows on one card, and a
@@ -98,9 +99,10 @@ export function SettingsRow({
   const palette = usePalette();
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale > 1.3;
+  // A step that is hard to undo opens a question, not a page, so it carries no chevron.
   const end =
     trailing ??
-    (onPress === undefined ? null : (
+    (onPress === undefined || careful ? null : (
       <View style={{ transform: [{ rotate: expanded === true ? "90deg" : "0deg" }] }}>
         <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />
       </View>
