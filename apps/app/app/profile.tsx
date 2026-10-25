@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, updateAccount } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
-import { BackButton } from "../src/components/back-button.tsx";
+import { CancelButton, SHEET } from "../src/components/back-button.tsx";
 import { Portrait } from "../src/components/portrait-lamp.tsx";
 import { PrimaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { useFamily } from "../src/data/useFamily.ts";
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
   return (
     <>
       <Stack.Screen
-        options={{ headerShown: true, title: t`Your name`, headerLeft: () => <BackButton /> }}
+        options={{ ...SHEET, title: t`Your name`, headerLeft: () => <CancelButton /> }}
       />
       <ScrollView
         keyboardShouldPersistTaps="handled"

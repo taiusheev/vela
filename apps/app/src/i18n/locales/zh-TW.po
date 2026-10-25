@@ -18,6 +18,11 @@ msgstr ""
 msgid "“{text}”"
 msgstr "「{text}」"
 
+#. placeholder {0}: month.notices
+#: app/precision.tsx
+msgid "{0, plural, one {# notice} other {# notices}}"
+msgstr "{0, plural, other {# 次通知}}"
+
 #: app/exchange/[id].tsx
 msgid "{asker} asked"
 msgstr "{asker}提問"
@@ -847,6 +852,10 @@ msgstr "回覆了"
 msgid "answered {time}"
 msgstr "{time} 回覆了"
 
+#: src/data/precision.ts
+msgid "Answered later"
+msgstr "晚一點回覆了"
+
 #: src/data/useToday.ts
 msgid "Anyone"
 msgstr "大家"
@@ -942,6 +951,7 @@ msgid "away"
 msgstr "外出中"
 
 #: app/away.tsx
+#: src/data/precision.ts
 msgid "Away"
 msgstr "不在家"
 
@@ -1002,6 +1012,10 @@ msgstr "打給媽媽"
 #: src/data/onboarding.ts
 msgid "Canada"
 msgstr "加拿大"
+
+#: src/components/back-button.tsx
+msgid "Cancel"
+msgstr "取消"
 
 #: src/components/telegram-family-link.tsx
 msgid "Cancel connection"
@@ -1492,6 +1506,10 @@ msgstr "電影、電視與書"
 #: src/components/family-book.tsx
 msgid "Find a memory to keep"
 msgstr "找一則回憶來保存"
+
+#: src/data/precision.ts
+msgid "Fine, the family knew"
+msgstr "沒事，家人知道原因"
 
 #: src/components/onboarding/questions.tsx
 msgid "First morning · {time}"
@@ -2239,8 +2257,8 @@ msgid "Loading your family…"
 msgstr "正在載入您的家庭…"
 
 #: app/(tabs)/index.tsx
-msgid "Loading your family’s morning…"
-msgstr "正在載入家人的早晨…"
+msgid "Loading your family’s morning"
+msgstr "正在載入家人的早晨"
 
 #: app/vela-light.tsx
 msgid "Loading your family’s plan…"
@@ -2460,6 +2478,10 @@ msgstr "鄰居"
 #: src/auth/phone.ts
 msgid "Netherlands"
 msgstr "荷蘭"
+
+#: src/data/precision.ts
+msgid "Never known"
+msgstr "始終不知道"
 
 #: src/auth/phone.ts
 msgid "New Zealand"
@@ -2722,7 +2744,6 @@ msgstr "您的一則訊息"
 msgid "One moment a day"
 msgstr "一天一次"
 
-#: app/(tabs)/sunday.tsx
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -2791,12 +2812,16 @@ msgid "Opening the book…"
 msgstr "正在打開故事書…"
 
 #: app/(tabs)/exchanges.tsx
-msgid "Opening the memories…"
-msgstr "正在打開回憶…"
+msgid "Opening the memories"
+msgstr "正在打開回憶"
 
 #: app/story/[id].tsx
 msgid "Opening the story…"
 msgstr "正在打開故事…"
+
+#: app/(tabs)/sunday.tsx
+msgid "Opening the week"
+msgstr "正在打開本週"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -3646,6 +3671,10 @@ msgid "Something for her morning"
 msgstr "放進早安訊息"
 
 #: src/data/precision.ts
+msgid "Something was wrong"
+msgstr "確實出了狀況"
+
+#: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "{notices}則中有{wrong}則真的有狀況。"
 
@@ -3680,6 +3709,10 @@ msgstr "正在開啟…"
 #: app/settings.tsx
 msgid "Stay"
 msgstr "留下"
+
+#: src/data/precision.ts
+msgid "Still open"
+msgstr "尚未結束"
 
 #: app/parent.tsx
 #: src/device/VoiceAnswer.tsx
@@ -5351,5 +5384,5 @@ msgid "Your words appear here."
 msgstr "你寫的內容會顯示在這裡。"
 
 #: app/conversation.tsx
-msgid "Your words reach {name}'s chat now, signed with your name. Their morning stays as it is."
-msgstr "你的話會馬上送到{name}的聊天室，並署上你的名字。早安訊息照常送出。"
+msgid "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."
+msgstr "你的話現在會以你的名字送到{name}的聊天中。明天早上的問題仍照原訂送出。"

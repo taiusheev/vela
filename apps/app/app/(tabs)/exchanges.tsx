@@ -10,6 +10,7 @@ import {
   MemoryCard,
   StoryCard,
 } from "../../src/components/keepsake.tsx";
+import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { initialOf } from "../../src/components/parent-chooser.tsx";
 import { SectionTitle } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
@@ -184,9 +185,7 @@ export default function MemoriesScreen() {
       <SecondaryButton label={t`Try again`} onPress={refreshPage} />
     </View>
   ) : loading || book.loading ? (
-    <Words variant="body" tone="ink2">
-      <Trans>Opening the memories…</Trans>
-    </Words>
+    <LoadingShapes label={t`Opening the memories`} shape="list" />
   ) : null;
 
   return (

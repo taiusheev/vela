@@ -46,6 +46,9 @@ import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 import { SERIF_TC } from "../src/theme/tokens.ts";
 
 void SplashScreen.preventAutoHideAsync();
+
+/** Screens that are a short task rather than a place: they open as sheets with Cancel. */
+const SHEET_ROUTES = ["ask", "away", "morning-settings", "profile", "vela-light"] as const;
 // Once for the whole app, never per session: a sign-in must not lose "back in front" (app-focus.ts).
 followAppFocus(AppState);
 
@@ -224,7 +227,13 @@ function Navigation() {
           screenLayout={({ route, children }) =>
             route.name === "(tabs)" ? children : <ReadingColumn>{children}</ReadingColumn>
           }
-        />
+        >
+          {/* Short tasks slide up as sheets: known here, before they open, so the phone animates
+              them as sheets and a swipe down closes them. */}
+          {SHEET_ROUTES.map((name) => (
+            <Stack.Screen key={name} name={name} options={{ presentation: "modal" }} />
+          ))}
+        </Stack>
       </AppPrivacyGate>
     </>
   );

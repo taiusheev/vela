@@ -8,6 +8,7 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
+import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
 import { InboxSheet, useInbox } from "../../src/components/today-feed.tsx";
@@ -317,11 +318,7 @@ function FamilyToday({ day }: { day: TodayView }) {
           onQuiet={mayOpen ? (light) => openQuiet(light) : undefined}
         />
         <FamilyChooser day={day} />
-        {day.loading ? (
-          <Words variant="body" tone="ink2">
-            <Trans>Loading your family’s morning…</Trans>
-          </Words>
-        ) : null}
+        {day.loading ? <LoadingShapes label={t`Loading your family’s morning`} /> : null}
         {focused === undefined ? null : (
           <TodayAnswer
             key={focused.memberId}

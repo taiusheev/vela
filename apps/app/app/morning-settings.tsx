@@ -12,7 +12,7 @@ import {
 } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
-import { BackButton } from "../src/components/back-button.tsx";
+import { CancelButton, SHEET } from "../src/components/back-button.tsx";
 import { TimeStepper } from "../src/components/time-stepper.tsx";
 import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
@@ -62,9 +62,9 @@ export default function MorningSettingsScreen() {
     <>
       <Stack.Screen
         options={{
-          headerShown: true,
+          ...SHEET,
           title: t`Morning settings`,
-          headerLeft: () => <BackButton />,
+          headerLeft: () => <CancelButton />,
         }}
       />
       <ScrollView
