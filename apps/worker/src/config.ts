@@ -691,6 +691,21 @@ export function readClerkWebhookSigningSecret(
   }
 }
 
+/**
+ * The RevenueCat webhook's shared Authorization header: a long random value the founder sets in both
+ * RevenueCat and the Worker, so only RevenueCat can report a purchase.
+ */
+export function readRevenueCatWebhookAuth(env: Pick<PilotEnv, "REVENUECAT_WEBHOOK_AUTH">): string {
+  const value = env.REVENUECAT_WEBHOOK_AUTH?.trim() ?? "";
+  if (!/^(Bearer )?[A-Za-z0-9_\-.~+/=]{32,256}$/.test(value)) {
+    throw new ConfigError(
+      "REVENUECAT_WEBHOOK_AUTH",
+      "The RevenueCat webhook requires its own long random Authorization value",
+    );
+  }
+  return value;
+}
+
 export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
   const pilotAdmission = readPilotAdmission(env);
   const environment = readEnvironment(env);

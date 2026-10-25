@@ -152,6 +152,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
   });
 
   app.post("/webhooks/clerk", (c) => runtime.clerk(c.req.raw, c.env));
+  app.post("/webhooks/revenuecat", (c) => runtime.revenuecat(c.req.raw, c.env));
 
   /**
    * Her phone on the parent surface (ADR-35): her tap or her words, as the inbound event a Telegram

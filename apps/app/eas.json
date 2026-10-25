@@ -8,8 +8,7 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://vela.vela-light-staging.workers.dev",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_aWRlYWwtdnVsdHVyZS05MjYyLmNsZXJrLmFjY291bnRzLmRldiQ",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_vEaLzCEodpsVbkdNXLSWzqyMDCQ"
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_aWRlYWwtdnVsdHVyZS05MjYyLmNsZXJrLmFjY291bnRzLmRldiQ"
       },
       "android": {
         "buildType": "apk"
@@ -44,10 +43,7 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "channel": "preview",
-      "env": {
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_vEaLzCEodpsVbkdNXLSWzqyMDCQ"
-      }
+      "channel": "preview"
     },
     "trial": {
       "environment": "production",
@@ -72,8 +68,7 @@
       "env": {
         "EXPO_NO_DOTENV": "1",
         "EXPO_PUBLIC_DEMO_MODE": "true",
-        "EXPO_PUBLIC_TRIAL_ENGLISH": "false",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "test_vEaLzCEodpsVbkdNXLSWzqyMDCQ"
+        "EXPO_PUBLIC_TRIAL_ENGLISH": "false"
       }
     }
   },

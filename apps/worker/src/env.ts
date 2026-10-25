@@ -67,6 +67,11 @@ export interface PilotEnv extends SharedEnv {
   readonly POSTHOG_REGION?: string;
   /** Endpoint-specific Svix signing key for verified Clerk account deletion events. */
   readonly CLERK_WEBHOOK_SIGNING_SECRET?: string;
+  /**
+   * The Authorization header RevenueCat sends with each purchase event. Absent is off: the webhook
+   * answers 503 and no purchase changes a plan (production until the notice names RevenueCat).
+   */
+  readonly REVENUECAT_WEBHOOK_AUTH?: string;
   /** Opt-in closed trial; absent is off. Participant IDs belong in a private Worker secret. */
   readonly PILOT_ADMISSION?: string;
   readonly PILOT_TELEGRAM_ALLOWLIST?: string;

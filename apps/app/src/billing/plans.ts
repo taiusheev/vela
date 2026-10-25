@@ -54,8 +54,11 @@ export function billingAvailable(input: {
   key: string | undefined;
   serverSells: boolean;
   demo: boolean;
+  /** A development build; RevenueCat closes a finished app that carries a practice-store key. */
+  development: boolean;
 }): boolean {
   if (input.platform !== "ios") return false;
   if (input.key === undefined || input.key.length === 0) return false;
+  if (input.key.startsWith("test_") && !input.development) return false;
   return input.serverSells || input.demo;
 }

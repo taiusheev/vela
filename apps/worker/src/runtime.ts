@@ -45,6 +45,10 @@ import type { PilotEnv } from "./env.ts";
 import { PRIVACY_NOTICES } from "./notices.generated.ts";
 import type { PrivacyNotices } from "./notices.ts";
 import { probeHealthz } from "./peer-health.ts";
+import {
+  createRevenueCatWebhookHandler,
+  type RevenueCatWebhookHandler,
+} from "./revenuecat-webhook.ts";
 
 /** Every services entry point the pilot Worker calls, and nothing else (code design §9). */
 export interface PilotServices {
@@ -95,6 +99,7 @@ export interface PilotRuntime {
   /** The API under /v1 (ADR-29): its own config check, limits and app; never `createDeps`. */
   readonly api: ApiHandler;
   readonly clerk: ClerkWebhookHandler;
+  readonly revenuecat: RevenueCatWebhookHandler;
   /** Reads another environment's `/healthz` (plan 2.3); never throws. */
   probeHealthz(url: string): Promise<PeerAnswer>;
 }
@@ -131,5 +136,6 @@ export const pilotRuntime: PilotRuntime = {
   notices: PRIVACY_NOTICES,
   api: createApiHandler(),
   clerk: createClerkWebhookHandler(),
+  revenuecat: createRevenueCatWebhookHandler(),
   probeHealthz: (url) => probeHealthz(url),
 };

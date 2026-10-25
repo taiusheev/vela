@@ -32,7 +32,13 @@ describe("lightPaid", () => {
 });
 
 describe("billingAvailable", () => {
-  const base = { platform: "ios", key: "appl_x", serverSells: true, demo: false };
+  const base = {
+    platform: "ios",
+    key: "appl_x",
+    serverSells: true,
+    demo: false,
+    development: false,
+  };
 
   it("runs on an iPhone with a key where the server sells Vela Light", () => {
     expect(billingAvailable(base)).toBe(true);
@@ -46,5 +52,10 @@ describe("billingAvailable", () => {
 
   it("runs in the example build against the practice store", () => {
     expect(billingAvailable({ ...base, serverSells: false, demo: true })).toBe(true);
+  });
+
+  it("keeps the practice-store key out of finished apps, which RevenueCat would close", () => {
+    expect(billingAvailable({ ...base, key: "test_x" })).toBe(false);
+    expect(billingAvailable({ ...base, key: "test_x", development: true })).toBe(true);
   });
 });

@@ -13,7 +13,11 @@ import {
   storePlans,
 } from "./plans.ts";
 
-/** The public RevenueCat key for iPhone, built in per build profile (eas.json); never a secret. */
+/**
+ * The public RevenueCat key for iPhone; never a secret. The App Store key (`appl_…`) goes in the
+ * build profiles once the founder has connected the App Store; the practice key (`test_…`) works
+ * only in a development build (`expo run:ios`), as RevenueCat closes a finished app that has one.
+ */
 const STORE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
 
 let configuredFor: string | null | undefined;
@@ -59,6 +63,7 @@ export function useBilling(memberId: string | undefined): Billing {
     key: STORE_KEY,
     serverSells: caps.capabilities?.billing === true,
     demo: demoDataAllowed(apiConfigured(), accountsConfigured()),
+    development: __DEV__,
   });
   if (available) configure(account.userId);
 
