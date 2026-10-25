@@ -263,6 +263,13 @@ export {
   loadMemoryCandidates,
   proposeMemoryCandidate,
 } from "./rich-memories.ts";
+export {
+  applyStoreEvent,
+  newerThanStored,
+  type StoreEvent,
+  type StoreEventOutcome,
+  storeChange,
+} from "./store-events.ts";
 export { type ApiMemoryStory, type ApiMoment, loadMemories, weaveStories } from "./stories.ts";
 export {
   BANK_PROMPT_VERSION,

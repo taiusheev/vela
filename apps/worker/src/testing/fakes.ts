@@ -562,6 +562,7 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       return api === undefined ? new Response(null, { status: 204 }) : api(request, env, context);
     },
     clerk: async () => Response.json({ ok: true }),
+    revenuecat: async () => Response.json({ ok: true }),
     probeHealthz: async (url) => {
       note("probeHealthz", url);
       return options.probeHealthz === undefined
