@@ -129,12 +129,17 @@ export default function VelaLightScreen() {
 
       {on ? (
         <>
-          <Words variant="body" tone="ink2">
-            {date === undefined
-              ? t`Vela Light is on for ${name}.`
-              : t`Vela Light is on for ${name} until ${date}. Nothing is charged, and no card was asked for.`}
-          </Words>
-          <StoreChoice memberId={her?.memberId} name={name} />
+          <StoreChoice
+            memberId={her?.memberId}
+            name={name}
+            unpaid={
+              <Words variant="body" tone="ink2">
+                {date === undefined
+                  ? t`Vela Light is on for ${name}.`
+                  : t`Vela Light is on for ${name} until ${date}. Nothing is charged, and no card was asked for.`}
+              </Words>
+            }
+          />
           <PrimaryButton label={t`Go to Today`} onPress={close} />
           <LegalFooter />
         </>

@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Pressable, View } from "react-native";
 import type { StorePlan } from "../billing/plans.ts";
 import { useBilling } from "../billing/useBilling.ts";
@@ -12,20 +12,37 @@ import { PrimaryButton, Words } from "./ui.tsx";
  * Keeping a parent's light on through the App Store: the two plans at Apple's own prices, the
  * yearly one chosen first, one button, the renewal said in words before anything is bought, and
  * Restore for a reader who paid on another phone (App Store Review 3.1.1 and 3.1.2). Renders
- * nothing where nothing can be bought, so the pilot and the web never see it.
+ * nothing where nothing can be bought, so the pilot and the web never see it. `unpaid` (the free
+ * trial's "nothing is charged") shows until the plan is paid, never beside "paid for".
  */
-export function StoreChoice({ memberId, name }: { memberId: string | undefined; name: string }) {
-  const { t } = useLingui();
+export function StoreChoice({
+  memberId,
+  name,
+  unpaid,
+}: {
+  memberId: string | undefined;
+  name: string;
+  unpaid?: ReactNode;
+}) {
   const billing = useBilling(memberId);
-  const [chosen, setChosen] = useState<string | undefined>();
-  if (!billing.available) return null;
-  if (billing.paid) {
+  if (billing.available && billing.paid) {
     return (
       <Words variant="body" tone="ink2">
         <Trans>Vela Light is paid for. {name}'s light stays on.</Trans>
       </Words>
     );
   }
+  return (
+    <>
+      {unpaid}
+      {billing.available ? <StorePlans billing={billing} name={name} /> : null}
+    </>
+  );
+}
+
+function StorePlans({ billing, name }: { billing: ReturnType<typeof useBilling>; name: string }) {
+  const { t } = useLingui();
+  const [chosen, setChosen] = useState<string | undefined>();
   if (billing.loading) {
     return (
       <Words variant="caption" tone="ink2">
