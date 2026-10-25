@@ -504,6 +504,17 @@ The three routes planned here before (`POST /media/upload-url` for a signed PUT 
 
 Rule: verify, parse into `InboundEvent[]`, acknowledge within 1 s, do all work from the queue. The answer path (light, cancel repeat, resolve quiet) runs before the queue for kept-light members because it is a single indexed write.
 
+### Store purchases (25 October 2026)
+
+`POST /webhooks/revenuecat` (`apps/worker/src/revenuecat-webhook.ts`, `packages/services/src/store-events.ts`). RevenueCat reports a Vela Light purchase made in the app (ADR-20). Off until the Worker secret `REVENUECAT_WEBHOOK_AUTH` is set: unset or malformed is 503 `unavailable`, and production keeps it unset until the privacy notice names RevenueCat.
+
+- **Verification.** The `Authorization` header must equal `REVENUECAT_WEBHOOK_AUTH` (an optional `Bearer ` and 32–256 URL-safe characters), compared in constant time, before the body is read. Otherwise 401 `unauthorized`. Bodies over 64 KB are 413; a body that is not `{ event: { id, type, app_user_id, … } }` is 400 `invalid`.
+- **What is read.** Only `id`, `type`, `app_user_id` (the payer's auth subject), `subscriber_attributes.vela_member_id.value` (the parent's member id, set by the app before Apple's sheet), `expiration_at_ms`, `grace_period_expiration_at_ms`, `period_type`, `product_id`, `price_in_purchased_currency`, `currency` and `original_transaction_id`. Nothing else in the body is kept or logged.
+- **Effect.** `INITIAL_PURCHASE`, `RENEWAL`, `UNCANCELLATION`, `PRODUCT_CHANGE` and `SUBSCRIPTION_EXTENDED` make her `subscriptions` row `active` with `provider: "revenuecat"`, the period end, interval, price and currency; `CANCELLATION` makes it `cancelled` (on to the period end); `BILLING_ISSUE` `grace`; `EXPIRATION` `lapsed`. The 30-day trial's row becomes the paid one. Other types change nothing. Her member row is locked first; a store event whose period ends before the stored one is dropped as older news. Events `plan_started` and `plan_lapsed` are recorded.
+- **Refusals answered 200.** An unknown payer, a missing or unknown parent, a parent who left, or a payer who is not an active organiser of her family change nothing and are answered 200, so RevenueCat stops retrying; the log line names the outcome only.
+- **Retry.** Only a failure to reach the database is 500, which RevenueCat retries.
+- **Proof.** `apps/worker/src/revenuecat-webhook.test.ts` (503, 401 before the body, 400, 200, 500); `packages/services/src/store-events.test.ts` (each event type, interval, older news); `packages/services/postgres-tests/store-event-race.test.ts` (two events at once end on the later period, one row, one `plan_started`).
+
 ## 10. Internal and admin
 
 | Method | Path | Purpose |
