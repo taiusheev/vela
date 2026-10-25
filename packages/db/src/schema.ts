@@ -1932,6 +1932,19 @@ export const pilotRoster = pgTable(
   ],
 );
 
+/**
+ * The closed test's approved families (ADR-52), approved and removed by the founder on the admin
+ * page, each change in `admin_access_log`. With `PILOT_ADMISSION` on and family approval on, a
+ * family takes part, on any messenger, when listed here; everyone who joins it by its invite takes
+ * part with it. Deleting the family removes its row.
+ */
+export const pilotFamilies = pgTable("pilot_families", {
+  familyId: uuid("family_id")
+    .primaryKey()
+    .references(() => families.id, { onDelete: "cascade" }),
+  approvedAt: timestamptz("approved_at").notNull().defaultNow(),
+});
+
 /** The job types a queue carries, as the pilot Worker's queue handler reads them. */
 export const DEAD_LETTER_JOB_TYPES = [
   "deliver",

@@ -91,6 +91,7 @@ import {
   onboardingSessions,
   outbound,
   PLAN_INTERVALS,
+  pilotFamilies,
   pilotRoster,
   pushDevices,
   pushTickets,
@@ -537,6 +538,7 @@ async function seedEveryTable(): Promise<void> {
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
   await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
   await db.insert(pilotRoster).values({ telegramUserId: "2001" });
+  await db.insert(pilotFamilies).values({ familyId });
   const memoryConsent = only(
     await db
       .insert(consents)

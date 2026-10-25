@@ -28,7 +28,7 @@ import { recordEvent } from "./events.ts";
 import { enqueueOutbound } from "./gateway.ts";
 import { sendOutsideGateway } from "./group.ts";
 import { sha256Hex } from "./hash.ts";
-import { type PilotAdmission, pilotAllowsTelegram } from "./pilot-admission.ts";
+import { type PilotAdmission, pilotAllowsTelegram, pilotSpeaks } from "./pilot-admission.ts";
 import { memberByChannelUser, type Queryable } from "./repo.ts";
 
 const lifetime = 15 * 60 * 1_000;
@@ -470,7 +470,8 @@ export async function handleAccountLinkStart(deps: Deps, event: InboundEvent): P
   )
     return;
   const linked = await memberByChannelUser(deps.db, "telegram", event.sender.externalUserId);
-  const lang = deps.config.pilotAdmission == null ? (linked?.member.language ?? "en") : "en";
+  const own = linked?.member.language ?? "en";
+  const lang = pilotSpeaks(deps.config.pilotAdmission, own) ? own : "en";
   const id = event.startParam?.slice(5) ?? "";
   if (
     linked === null ||
@@ -687,7 +688,7 @@ export async function handleAccountLinkButton(deps: Deps, event: InboundEvent): 
     if (choice === "a" && !pilotAllowsTelegram(deps.config.pilotAdmission, link.externalId)) return;
     const at = now(deps);
     if (!pending(proof, at)) return;
-    const lang = deps.config.pilotAdmission == null ? member.language : "en";
+    const lang = pilotSpeaks(deps.config.pilotAdmission, member.language) ? member.language : "en";
     if (choice === "r")
       await tx
         .update(accountLinkChallenges)

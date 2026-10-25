@@ -313,9 +313,25 @@ function createAdminApp(runtime: AdminRuntime): Hono<AdminAppEnv> {
 
   // ADR-45: the founder approves and removes trial participants' Telegram ids here.
   admin.get("/roster", async (c) => {
-    const entries = await withDeps(c, (deps) => runtime.services.loadRoster(deps));
-    return renderRoster(entries, c.req.query("result") ?? null);
+    const [entries, families] = await withDeps(c, (deps) =>
+      Promise.all([runtime.services.loadRoster(deps), runtime.services.loadPilotFamilies(deps)]),
+    );
+    return renderRoster(entries, c.req.query("result") ?? null, families);
   });
+
+  // ADR-52: the founder approves a whole family for the closed test, on any messenger.
+  for (const [action, change] of [
+    ["approve", "approveFamily"],
+    ["unapprove", "unapproveFamily"],
+  ] as const) {
+    admin.post(`/roster/families/:familyId/${action}`, async (c) => {
+      const ctx: AdminContext = { admin: c.get("admin") };
+      const familyId = c.req.param("familyId");
+      return rosterChange(c.redirect.bind(c), () =>
+        withDeps(c, (deps) => runtime.services[change](deps, ctx, familyId)),
+      );
+    });
+  }
 
   admin.post("/roster", async (c) => {
     const form = await c.req.formData();
@@ -397,7 +413,7 @@ async function rosterChange(
     return renderMessage(
       statusForDomainError(code),
       "Not saved",
-      "That is not a Telegram user id. Nothing was changed.",
+      "That is not a Telegram user id or a family that exists. Nothing was changed.",
     );
   }
 }

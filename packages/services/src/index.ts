@@ -233,21 +233,27 @@ export {
 } from "./ops.ts";
 export {
   type PilotAdmission,
-  pilotAllowsInbound,
+  pilotAdmitsInbound,
   pilotAllowsTelegram,
   pilotApiAccountAllowed,
+  pilotApprovesFamily,
   pilotCanActivate,
   pilotFamilyAllowed,
   pilotMemberAllowed,
+  pilotSpeaks,
 } from "./pilot-admission.ts";
 export {
   addToRoster,
   admissionWithRoster,
+  approveFamily,
+  loadPilotFamilies,
   loadRoster,
+  type PilotFamilyEntry,
   type RosterEntry,
   removeFromRoster,
   rosterIds,
   TelegramUserId,
+  unapproveFamily,
 } from "./pilot-roster.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";

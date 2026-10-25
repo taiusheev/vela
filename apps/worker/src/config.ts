@@ -652,7 +652,10 @@ export function readPeerHealthz(
 }
 
 export function readPilotAdmission(
-  env: Pick<PilotEnv, "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST">,
+  env: Pick<
+    PilotEnv,
+    "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST" | "PILOT_FAMILY_APPROVAL" | "PILOT_LANGUAGES"
+  >,
 ): PilotAdmission | null {
   const mode = env.PILOT_ADMISSION?.trim() ?? "off";
   if (mode === "off") return null;
@@ -670,7 +673,30 @@ export function readPilotAdmission(
       "A closed pilot requires a private roster of valid Telegram user IDs",
     );
   }
-  return { telegramUserIds: [...new Set(ids)] };
+  // ADR-52: families the founder approves on the admin page take part on any messenger. Off, the
+  // Telegram roster alone admits; the approved families are read from the table per request.
+  const approval = env.PILOT_FAMILY_APPROVAL?.trim() ?? "off";
+  if (approval !== "on" && approval !== "off") {
+    throw new ConfigError("PILOT_FAMILY_APPROVAL", "PILOT_FAMILY_APPROVAL must be on or off");
+  }
+  // The languages the test runs in, as the privacy notice in force allows: English alone until a
+  // notice says otherwise.
+  const languages = (env.PILOT_LANGUAGES?.trim() || "en").split(",").map((code) => code.trim());
+  if (
+    languages.length === 0 ||
+    languages.some((code) => code !== "en" && code !== "zh-TW") ||
+    new Set(languages).size !== languages.length
+  ) {
+    throw new ConfigError(
+      "PILOT_LANGUAGES",
+      "PILOT_LANGUAGES must list en and/or zh-TW, once each",
+    );
+  }
+  return {
+    telegramUserIds: [...new Set(ids)],
+    languages,
+    ...(approval === "on" ? { familyIds: [] } : {}),
+  };
 }
 
 /** Only the account webhook reads this endpoint-specific secret; no payload supplies its key. */

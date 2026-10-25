@@ -677,6 +677,22 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
         ? "removed"
         : given.removeFromRoster(deps, ctx, id);
     },
+    async loadPilotFamilies(deps) {
+      note("loadPilotFamilies");
+      return given.loadPilotFamilies === undefined ? [] : given.loadPilotFamilies(deps);
+    },
+    async approveFamily(deps, ctx, familyId) {
+      note("approveFamily", ctx, familyId);
+      return given.approveFamily === undefined
+        ? "approved"
+        : given.approveFamily(deps, ctx, familyId);
+    },
+    async unapproveFamily(deps, ctx, familyId) {
+      note("unapproveFamily", ctx, familyId);
+      return given.unapproveFamily === undefined
+        ? "unapproved"
+        : given.unapproveFamily(deps, ctx, familyId);
+    },
     async loadWaitlist(deps) {
       note("loadWaitlist");
       return given.loadWaitlist === undefined

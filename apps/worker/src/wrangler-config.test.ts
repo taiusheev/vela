@@ -33,6 +33,14 @@ it("requires the private English trial roster in production", () => {
   expect(configOf("pilot", "production").vars.PILOT_ADMISSION).toBe("on");
 });
 
+// ADR-52: production stays the English Telegram trial until notice v10 (LINE, Chinese) is the live
+// notice and the founder says yes. The commit that turns either on changes this.
+it("keeps production in English, without family approval, until the Taiwan test's notice is live", () => {
+  const vars = configOf("pilot", "production").vars;
+  expect(vars.PILOT_FAMILY_APPROVAL).toBe("off");
+  expect(vars.PILOT_LANGUAGES).toBe("en");
+});
+
 /**
  * A deployed Worker's one address (H3): `https://<Worker name>.<subdomain>.workers.dev`, which is
  * what families, Telegram, and the founder's browser are sent to.

@@ -87,6 +87,7 @@ import {
   openApiWeeklyRead,
   pauseApiMember,
   pilotApiAccountAllowed,
+  pilotSpeaks,
   prepareMemoryPermission,
   provisionApiAccount,
   readApiMedia,
@@ -400,7 +401,8 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
     capabilities: {
       pilot: config.pilotAdmission != null,
       telegram_first: config.pilotAdmission != null,
-      english_only: config.pilotAdmission != null,
+      // English alone until the test's languages include Chinese (ADR-52, PILOT_LANGUAGES).
+      english_only: config.pilotAdmission != null && !pilotSpeaks(config.pilotAdmission, "zh-TW"),
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
       parent_app: config.pilotAdmission == null,
