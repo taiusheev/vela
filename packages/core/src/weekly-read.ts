@@ -169,7 +169,11 @@ export function weeklyHealthLines(
 }
 
 /** The organiser lines of the family patterns, in the order they were found. */
-function familyLines(lang: Lang, name: string, patterns: readonly FamilyPattern[]): string[] {
+export function familyLines(
+  lang: Lang,
+  name: string,
+  patterns: readonly FamilyPattern[],
+): string[] {
   return patterns.flatMap((pattern) => familyLine(lang, name, pattern));
 }
 
