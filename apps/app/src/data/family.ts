@@ -1,6 +1,7 @@
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { ApiFamily, ApiMe, NearbyConsent } from "@vela/contracts";
+import { exampleNames } from "./example-names.ts";
 import { dayMonth, listOf } from "./format.ts";
 import { languages } from "./onboarding.ts";
 
@@ -214,7 +215,7 @@ export function youFixture(): YouFamily {
     me: {
       memberId: "me",
       organiser: true,
-      name: "Anna",
+      name: exampleNames().anna,
       line: [roleOf(true), languageOf(i18n.locale), "Taipei"].join(" · "),
       lightOn: false,
       paused: false,
@@ -230,7 +231,10 @@ export function youFixture(): YouFamily {
         trialEnds: dayMonth(trialEndsAt),
       },
     ],
-    others: { names: listOf(["Mia", "Sam", "Igor"]), line: t`Ask and reply · free` },
+    others: {
+      names: listOf([exampleNames().mia, exampleNames().sam, exampleNames().igor]),
+      line: t`Ask and reply · free`,
+    },
     nearby: {
       names: nearbyNames(["Lena", "Petro"]),
       line: [consentLine("Lena", "yes"), consentLine("Petro", "waiting")].join(" · "),

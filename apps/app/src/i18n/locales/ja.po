@@ -824,6 +824,10 @@ msgstr ""
 msgid "And on a quiet morning?"
 msgstr ""
 
+#: src/data/example-names.ts
+msgid "Anna"
+msgstr ""
+
 #: src/components/story-day.tsx
 msgid "Another question"
 msgstr ""
@@ -1895,6 +1899,10 @@ msgstr ""
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr ""
 
+#: src/data/example-names.ts
+msgid "Igor"
+msgstr ""
+
 #: src/components/onboarding/story.tsx
 msgid "In her own messenger. No new app for her."
 msgstr ""
@@ -2352,6 +2360,10 @@ msgstr ""
 
 #: app/conversation.tsx
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
+msgstr ""
+
+#: src/data/example-names.ts
+msgid "Mia"
 msgstr ""
 
 #. who the light is for
@@ -3282,6 +3294,10 @@ msgstr ""
 #: src/data/family.ts
 #: src/data/useNearby.ts
 msgid "Said yes"
+msgstr ""
+
+#: src/data/example-names.ts
+msgid "Sam"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx

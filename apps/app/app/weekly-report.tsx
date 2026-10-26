@@ -25,6 +25,7 @@ import { Text } from "../src/components/scaled-text.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { WarmPage } from "../src/components/warm.tsx";
+import { exampleNames } from "../src/data/example-names.ts";
 import { localDayMonth } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { usePullRefresh } from "../src/data/usePullRefresh.ts";
@@ -452,7 +453,7 @@ function ExampleReport() {
     owner,
     can_review: !owner && !off,
     permission: off ? (owner ? "withdrawn" : "not_shared") : "yes",
-    readers: [{ id: EXAMPLE_CHILD, name: "Mia" }],
+    readers: [{ id: EXAMPLE_CHILD, name: exampleNames().mia }],
     week_start: "2026-10-19",
     week_end: "2026-10-25",
     suggestions:
@@ -463,7 +464,7 @@ function ExampleReport() {
               source,
               kind: "practical_help",
               reviewed_at: "2026-10-21T01:00:00.000Z",
-              reviewed_by: "Mia",
+              reviewed_by: exampleNames().mia,
               template_version: SUPPORT_TEMPLATE_VERSION,
               expires_at: "2026-10-27T01:00:00.000Z",
             },
