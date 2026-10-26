@@ -8,6 +8,7 @@ import {
   readClerkWebhookSigningSecret,
   readConfig,
   readLineConfig,
+  readNotificationControls,
   readPeerHealthz,
   readPilotAdmission,
   readPushConfig,
@@ -381,6 +382,7 @@ describe("the API's configuration", () => {
       lineBasicId: null,
       regions: ["apac"],
       pushSend: "off",
+      notificationControls: true,
       pilotAdmission: null,
       privacyNoticeUrls: {
         en: "https://vela.vela.example/privacy",
@@ -957,5 +959,14 @@ describe("the weekly insight switch", () => {
     expect(readConfig({ ...chosenStaging, WEEKLY_INSIGHT: "on" }, filled).weeklyInsight).toBe(true);
     const error = configErrorOf(() => readWeeklyInsight({ WEEKLY_INSIGHT: "yes" }));
     expect(errorLabel(error)).toBe("ConfigError:WEEKLY_INSIGHT");
+  });
+});
+
+describe("individual notification controls switch", () => {
+  it("defaults off and refuses unrecognised values", () => {
+    expect(readNotificationControls({})).toBe(false);
+    expect(readNotificationControls({ NOTIFICATION_CONTROLS: "off" })).toBe(false);
+    expect(readNotificationControls({ NOTIFICATION_CONTROLS: "on" })).toBe(true);
+    expect(() => readNotificationControls({ NOTIFICATION_CONTROLS: "yes" })).toThrow();
   });
 });

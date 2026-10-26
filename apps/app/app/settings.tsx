@@ -30,6 +30,7 @@ import { momentLine, nobodyTellsLine, phoneLine, toldOfQuiet } from "../src/data
 import { resetDraft } from "../src/data/onboarding-draft.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { useFamily } from "../src/data/useFamily.ts";
+import { useNotificationPreferences } from "../src/data/useNotificationPreferences.ts";
 import { useOneMoment } from "../src/data/useOneMoment.ts";
 import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { type TodayView, useToday } from "../src/data/useToday.ts";
@@ -54,6 +55,8 @@ function FamilyYou({ day }: { day: TodayView }) {
   const push = usePush();
   const signingOut = useMutation({ mutationFn: () => push.signOut() });
   const moment = useOneMoment();
+  const notificationChoices = useNotificationPreferences();
+  const notificationState = notificationChoices.available ? notificationChoices : moment;
   const {
     family,
     refresh,
@@ -323,16 +326,23 @@ function FamilyYou({ day }: { day: TodayView }) {
               {moment.status === "unavailable" ? (
                 <SecondaryButton label={t`Try again`} onPress={moment.retry} />
               ) : null}
-              {moment.status === "saving" || moment.status === "saved" ? (
+              {notificationState.status === "saving" || notificationState.status === "saved" ? (
                 <View accessibilityLiveRegion="polite">
                   <SettingsNote tone="ink2">
-                    {moment.status === "saving"
+                    {notificationState.status === "saving"
                       ? t`Saving your preference…`
                       : t`Notification preference saved.`}
                   </SettingsNote>
                 </View>
               ) : null}
-              {moment.refused ? (
+              {notificationChoices.available && toldOfQuiet(family.me) ? (
+                <SettingsNote>
+                  <Trans>
+                    Vela Light quiet-morning notices still reach you when these reminders are off.
+                  </Trans>
+                </SettingsNote>
+              ) : null}
+              {notificationState.refused ? (
                 <SettingsNote tone="ink2">
                   <Trans>That did not go through. Try again in a moment.</Trans>
                 </SettingsNote>
@@ -354,31 +364,72 @@ function FamilyYou({ day }: { day: TodayView }) {
               )
             }
           />
-          <SettingsRow
-            icon="sunday"
-            title={t`One moment a day`}
-            detail={
-              moment.status === "loading"
-                ? t`Loading your notification preference…`
-                : moment.status === "unavailable"
-                  ? t`Your notification preference could not be loaded.`
-                  : momentLine(moment.on, toldOfQuiet(family.me), her)
-            }
-            trailing={
-              <Switch
-                accessibilityLabel={t`One moment a day`}
-                accessibilityState={{
-                  busy: moment.status === "saving" || moment.status === "loading",
-                }}
-                value={moment.on}
-                disabled={moment.changing}
-                onValueChange={moment.set}
-                trackColor={{ false: palette.rule, true: palette.action }}
-                thumbColor={palette.surface}
-                {...webThumb(palette.surface)}
-              />
-            }
-          />
+          {notificationChoices.available ? (
+            [
+              <SettingsRow
+                key="reply-notifications"
+                icon="bell"
+                title={t`When a parent replies`}
+                detail={t`A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone.`}
+                trailing={
+                  <Switch
+                    accessibilityLabel={t`When a parent replies`}
+                    accessibilityState={{ busy: notificationChoices.changing }}
+                    value={notificationChoices.values.replies}
+                    disabled={notificationChoices.changing}
+                    onValueChange={(on) => notificationChoices.set("replies", on)}
+                    trackColor={{ false: palette.rule, true: palette.action }}
+                    thumbColor={palette.surface}
+                    {...webThumb(palette.surface)}
+                  />
+                }
+              />,
+              <SettingsRow
+                key="turn-reminders"
+                icon="sunday"
+                title={t`Before your turn`}
+                detail={t`A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone.`}
+                trailing={
+                  <Switch
+                    accessibilityLabel={t`Before your turn`}
+                    accessibilityState={{ busy: notificationChoices.changing }}
+                    value={notificationChoices.values.turns}
+                    disabled={notificationChoices.changing}
+                    onValueChange={(on) => notificationChoices.set("turns", on)}
+                    trackColor={{ false: palette.rule, true: palette.action }}
+                    thumbColor={palette.surface}
+                    {...webThumb(palette.surface)}
+                  />
+                }
+              />,
+            ]
+          ) : (
+            <SettingsRow
+              icon="sunday"
+              title={t`Replies and turn reminders`}
+              detail={
+                moment.status === "loading"
+                  ? t`Loading your notification preference…`
+                  : moment.status === "unavailable"
+                    ? t`Your notification preference could not be loaded.`
+                    : momentLine(moment.on, toldOfQuiet(family.me), her)
+              }
+              trailing={
+                <Switch
+                  accessibilityLabel={t`Replies and turn reminders`}
+                  accessibilityState={{
+                    busy: moment.status === "saving" || moment.status === "loading",
+                  }}
+                  value={moment.on}
+                  disabled={moment.changing}
+                  onValueChange={moment.set}
+                  trackColor={{ false: palette.rule, true: palette.action }}
+                  thumbColor={palette.surface}
+                  {...webThumb(palette.surface)}
+                />
+              }
+            />
+          )}
         </SettingsSection>
 
         <SettingsSection

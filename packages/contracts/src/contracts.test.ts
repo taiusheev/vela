@@ -1008,3 +1008,19 @@ describe("ChannelSendError", () => {
     expect(new ChannelSendError("unavailable", "5xx").sentMediaMessageIds).toEqual([]);
   });
 });
+
+describe("individual routine notification choices", () => {
+  it("accepts independent booleans and rejects ambiguous combined patches", () => {
+    expect(ApiAccountPatch.parse({ reply_notifications: true, turn_reminders: false })).toEqual({
+      reply_notifications: true,
+      turn_reminders: false,
+    });
+    for (const patch of [
+      { turn_reminders: "off" },
+      { reply_notifications: null },
+      { one_moment_a_day: true, turn_reminders: false },
+    ]) {
+      expect(ApiAccountPatch.safeParse(patch).success).toBe(false);
+    }
+  });
+});

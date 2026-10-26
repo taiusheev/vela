@@ -218,7 +218,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
         description: t`If her morning stays quiet past her usual time, and when it is settled.`,
       },
       daily: {
-        name: t`One moment a day`,
+        name: t`Replies and turn reminders`,
         description: t`When she answers what you asked, and the evening before your turn.`,
       },
     }),

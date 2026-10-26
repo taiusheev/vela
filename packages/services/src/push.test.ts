@@ -818,6 +818,93 @@ describe("the answer receipt", () => {
     ).toMatchObject({ outboundId: expect.any(String) });
   });
 
+  it("expires yesterday's queued answer instead of delivering it the next morning", async () => {
+    const { seed, exchangeId, miaUser } = await askedMorning();
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...seed.organiser, userId: miaUser }, userId: miaUser },
+        exchangeId,
+        herName: "Mom",
+      }),
+    );
+    h.clock.set(at(TOMORROW, "08:30"));
+    await h.run(handlers());
+    expect((await appRows()).map((row) => [row.status, row.error])).toEqual([
+      ["dropped", "push_expired"],
+    ]);
+    expect(h.push.sent).toEqual([]);
+  });
+
+  it("expires a same-day answer after 12 hours in the queue", async () => {
+    const { seed, exchangeId, miaUser } = await askedMorning();
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...seed.organiser, userId: miaUser }, userId: miaUser },
+        exchangeId,
+        herName: "Mom",
+      }),
+    );
+    h.clock.set(at(TODAY, "20:12"));
+    await h.run(handlers());
+    expect((await appRows()).map((row) => row.error)).toEqual(["push_expired"]);
+    expect(h.push.sent).toEqual([]);
+  });
+
+  it("stops offline delivery at 21:00 in the reader's time zone", async () => {
+    const { seed, exchangeId, miaUser } = await askedMorning();
+    h.clock.set(at(TODAY, "20:50"));
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...seed.organiser, userId: miaUser }, userId: miaUser },
+        exchangeId,
+        herName: "Mom",
+      }),
+    );
+    await h.run(handlers());
+    expect(h.push.sent).toHaveLength(1);
+    expect(h.push.sent[0]?.ttl).toBe(10 * 60);
+  });
+
+  it("does not give a delayed answer a fresh 12-hour provider window", async () => {
+    const { seed, exchangeId, miaUser } = await askedMorning();
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...seed.organiser, userId: miaUser }, userId: miaUser },
+        exchangeId,
+        herName: "Mom",
+      }),
+    );
+    h.clock.set(at(TODAY, "19:00"));
+    await h.run(handlers());
+    expect(h.push.sent).toHaveLength(1);
+    expect(h.push.sent[0]?.ttl).toBe(72 * 60);
+  });
+
+  it("honors a reply-only opt-out changed while the answer alert is queued", async () => {
+    const { seed, exchangeId, miaUser } = await askedMorning();
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...seed.organiser, userId: miaUser }, userId: miaUser },
+        exchangeId,
+        herName: "Mom",
+      }),
+    );
+    await h.db.update(users).set({ replyNotifications: false }).where(eq(users.id, miaUser));
+    await h.run(handlers());
+    expect(h.push.sent).toEqual([]);
+    expect((await appRows())[0]?.error).toBe("one_moment_off");
+  });
+
   it("is dropped once One moment a day is off by the time it goes", async () => {
     const { seed, exchangeId, miaUser } = await askedMorning();
     const reader = { member: { ...seed.organiser, userId: miaUser }, userId: miaUser };
@@ -869,6 +956,122 @@ describe("the answer receipt", () => {
 });
 
 describe("the evening turn without a group", () => {
+  it("uses one daily account reminder slot across parents without spending a reply slot", async () => {
+    const first = await seedFamily(h.db, { now: h.clock.now() });
+    const second = await seedFamily(h.db, {
+      now: h.clock.now(),
+      organiserExternalId: "5001",
+      memberExternalId: "5002",
+    });
+    const userId = await accountOf(first.organiser);
+    await h.db
+      .update(members)
+      .set({ userId, tz: "America/Los_Angeles" })
+      .where(eq(members.id, second.organiser.id));
+    await phone(userId, "two-parents");
+    await sendTurnPrompt(h.deps, first.member.id, TOMORROW);
+    await sendTurnPrompt(h.deps, second.member.id, TOMORROW);
+    await h.run(handlers());
+    expect(await appRows("turn_prompt")).toHaveLength(1);
+    const exchange = await seedExchange(h.db, second, { date: TODAY, state: "answered" });
+    await enqueueOutbound(
+      h.deps,
+      h.db,
+      answerReceiptPush({
+        reader: { member: { ...second.organiser, userId }, userId },
+        exchangeId: exchange.id,
+        herName: "Dad",
+      }),
+    );
+    await h.run(handlers());
+    expect(h.push.sent.map((message) => message.data?.kind)).toEqual([
+      "turn_prompt",
+      "answer_receipt",
+    ]);
+    expect(await h.db.select().from(turns)).toHaveLength(2);
+  });
+
+  it("does not enqueue a turn when only turn reminders are off", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const userId = await accountOf(seed.organiser);
+    await phone(userId, "turn-off");
+    await h.db.update(users).set({ turnReminders: false }).where(eq(users.id, userId));
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    expect(await appRows()).toEqual([]);
+  });
+
+  it("honors turning off reminders after queueing without turning off replies", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const userId = await accountOf(seed.organiser);
+    await phone(userId, "queued-turn");
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    await h.db.update(users).set({ turnReminders: false }).where(eq(users.id, userId));
+    await h.run(handlers());
+    expect(h.push.sent).toEqual([]);
+    expect((await appRows())[0]?.error).toBe("one_moment_off");
+  });
+
+  it("expires offline turn delivery at the parent's midnight across time zones", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db
+      .update(members)
+      .set({ tz: "America/Los_Angeles" })
+      .where(eq(members.id, seed.organiser.id));
+    await phone(await accountOf(seed.organiser), "overseas-window");
+    h.clock.set(at(TODAY, "23:50"));
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    await h.run(handlers());
+    expect(h.push.sent).toHaveLength(1);
+    expect(h.push.sent[0]?.ttl).toBe(10 * 60);
+  });
+
+  it.each(["composed", "withdrawn"] as const)(
+    "checks a question %s before the turn existed",
+    async (state) => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await phone(await accountOf(seed.organiser), "prepared");
+      await seedExchange(h.db, seed, { date: TOMORROW, state });
+      await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+      await h.run(handlers());
+      expect(h.push.sent).toHaveLength(state === "withdrawn" ? 1 : 0);
+      expect((await appRows())[0]?.status).toBe(state === "withdrawn" ? "sent" : "dropped");
+    },
+  );
+
+  it.each(["completed", "reassigned", "removed"] as const)(
+    "drops a %s turn before it reaches the phone",
+    async (change) => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await phone(await accountOf(seed.organiser), "turn");
+      await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+      if (change === "removed") await h.db.delete(turns);
+      else
+        await h.db
+          .update(turns)
+          .set(change === "completed" ? { actedAt: h.clock.now() } : { holderId: null });
+      await h.run(handlers());
+      expect((await appRows()).map((row) => [row.status, row.error])).toEqual([
+        ["dropped", "turn_no_longer_needed"],
+      ]);
+      expect(h.push.sent).toEqual([]);
+    },
+  );
+
+  it("uses the parent's day when a reader across time zones receives a delayed turn", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db
+      .update(members)
+      .set({ tz: "America/Los_Angeles" })
+      .where(eq(members.id, seed.organiser.id));
+    await phone(await accountOf(seed.organiser), "overseas");
+    // It is still Monday evening for the reader when Tuesday has begun for Mom.
+    h.clock.set(at(TOMORROW, "00:30"));
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+    await h.run(handlers());
+    expect((await appRows()).map((row) => row.error)).toEqual(["turn_no_longer_needed"]);
+    expect(h.push.sent).toEqual([]);
+  });
+
   it("tells the first organiser's phone that tomorrow is theirs, once, with tomorrow's suggestion, and keeps no message id", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const miaUser = await accountOf(seed.organiser);
@@ -893,7 +1096,7 @@ describe("the evening turn without a group", () => {
     const rows = await appRows("turn_prompt");
     expect(rows.map((row) => [row.idempotencyKey, row.memberId, row.status])).toEqual([
       [
-        outboundKey("turn_prompt", { memberId: seed.member.id, date: TOMORROW }),
+        `app:${outboundKey("turn_prompt", { memberId: miaUser, date: TODAY })}`,
         seed.organiser.id,
         "sent",
       ],

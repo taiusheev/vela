@@ -155,7 +155,17 @@ export type ApiAccountProfile = z.infer<typeof ApiAccountProfile>;
  */
 export const ApiAccountPatch = ApiAccountProfile.omit({ privacy_acceptance: true })
   .partial()
-  .extend({ one_moment_a_day: z.boolean().optional() })
+  .extend({
+    one_moment_a_day: z.boolean().optional(),
+    reply_notifications: z.boolean().optional(),
+    turn_reminders: z.boolean().optional(),
+  })
+  .refine(
+    (patch) =>
+      patch.one_moment_a_day === undefined ||
+      (patch.reply_notifications === undefined && patch.turn_reminders === undefined),
+    "use the combined switch or individual notification choices, not both",
+  )
   .refine(
     (patch) =>
       Object.keys(patch).length > 0 && Object.values(patch).every((value) => value !== undefined),
@@ -193,6 +203,13 @@ export const ApiMe = z.object({
    * the evening's turn prompt, are sent. The quiet notice and its close come whatever it says.
    */
   one_moment_a_day: z.boolean(),
+  /** Present only when reviewed individual controls are enabled by this server. */
+  notification_preferences: z
+    .object({
+      replies: z.boolean(),
+      turns: z.boolean(),
+    })
+    .optional(),
   /**
    * Whether this API sends pushes at all (ADR-34, the Worker's `PUSH_SEND`): false while the switch
    * is off, so the app says its notifications are not sent yet instead of showing them as on to an

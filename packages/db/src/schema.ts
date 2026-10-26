@@ -211,6 +211,9 @@ export const users = pgTable(
      * the turn prompt). It never stops the quiet notice or its close.
      */
     oneMomentADay: boolean("one_moment_a_day").notNull().default(true),
+    /** Account-owned routine alert choices, cleared on deletion; never affect Vela Light. */
+    replyNotifications: boolean("reply_notifications").notNull().default(true),
+    turnReminders: boolean("turn_reminders").notNull().default(true),
     /** Current app permission evidence, never a parent’s or health consent. Cleared with account deletion. */
     privacyAcceptance: jsonb("privacy_acceptance").$type<{
       version: string;

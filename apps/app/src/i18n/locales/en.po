@@ -636,6 +636,14 @@ msgstr "A quiet notice when a morning goes unanswered · people nearby who can l
 msgid "A recipe"
 msgstr "A recipe"
 
+#: app/settings.tsx
+msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
+msgstr "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
+
+#: app/settings.tsx
+msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
+msgstr "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
+
 #: src/components/onboarding/questions.tsx
 msgid "A small, specific question feels more like you than a perfect one."
 msgstr "A small, specific question feels more like you than a perfect one."
@@ -983,6 +991,10 @@ msgstr "Be the first to answer {recipient}."
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
 msgstr "Before you continue"
+
+#: app/settings.tsx
+msgid "Before your turn"
+msgstr "Before your turn"
 
 #: app/vela-light.tsx
 msgid "Best value · save {saving}%"
@@ -2779,11 +2791,6 @@ msgstr "One email, one code. No password to remember."
 msgid "One message from you"
 msgstr "One message from you"
 
-#: app/settings.tsx
-#: src/push/provider.tsx
-msgid "One moment a day"
-msgstr "One moment a day"
-
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -3238,6 +3245,11 @@ msgstr "Replace"
 #: src/data/chat.ts
 msgid "Replied"
 msgstr "Replied"
+
+#: app/settings.tsx
+#: src/push/provider.tsx
+msgid "Replies and turn reminders"
+msgstr "Replies and turn reminders"
 
 #: app/exchange/[id].tsx
 #: src/components/today-glance.tsx
@@ -4737,6 +4749,10 @@ msgstr "Vela Light is on for {name} until {date}. Nothing is charged, and no car
 msgid "Vela Light is on for {name}."
 msgstr "Vela Light is on for {name}."
 
+#: app/settings.tsx
+msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
+msgstr "Vela Light quiet-morning notices still reach you when these reminders are off."
+
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr "Vela Light shows you the read"
@@ -5015,6 +5031,10 @@ msgstr "When a morning goes quiet"
 #: app/precision.tsx
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+
+#: app/settings.tsx
+msgid "When a parent replies"
+msgstr "When a parent replies"
 
 #: src/components/onboarding/questions.tsx
 msgid "When does {name} usually wake up?"

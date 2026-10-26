@@ -9,7 +9,9 @@
  *   and each ticket is kept (`push_tickets`) until its receipt is read.
  * - Dropped, when nothing may or can go: push is off (`push_off`), "One moment a day" is off
  *   (`one_moment_off`) or it is outside the reader's waking hours (`quiet_hours`) for an ordinary
- *   push, or no phone can be told (`no_push_device`), including when Expo said every phone is gone.
+ *   push, its queue window has expired (`push_expired`), a turn is no longer needed
+ *   (`turn_no_longer_needed`), or no phone can be told (`no_push_device`), including when Expo said
+ *   every phone is gone.
  *   A dropped row holds no budget, and the app shows what it would have said.
  * - Failed, as a `ChannelSendError` the gateway retries or fails as it does any other: the whole
  *   request failed, or every phone that is not gone refused it.
@@ -29,10 +31,12 @@ import {
   type PushKind,
   type SendResult,
 } from "@vela/contracts";
+import { addDays, localDateOf, zonedInstant } from "@vela/core";
 import {
   exchanges,
   type Family,
   type Member,
+  members,
   type NewPushTicket,
   type Outbound,
   outbound,
@@ -41,10 +45,11 @@ import {
   pushTickets,
   quietEvents,
   suggestions,
+  turns,
   users,
   type VelaTransaction,
 } from "@vela/db";
-import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, ne } from "drizzle-orm";
 import { pushMisconfiguredAlert } from "./admin-alerts.ts";
 import {
   type Deps,
@@ -69,12 +74,19 @@ import {
   PUSH_CHANNEL,
   pushMessageFor,
   pushUnheardError,
+  WAKING_HOURS,
   withinWakingHours,
 } from "./push-messages.ts";
 import { type Queryable, quietEventById } from "./repo.ts";
 
 /** Why an app row was dropped unsent; the row's `error` and the `gateway_dropped` event say it. */
-export type PushDropReason = "push_off" | "no_push_device" | "one_moment_off" | "quiet_hours";
+export type PushDropReason =
+  | "push_off"
+  | "no_push_device"
+  | "one_moment_off"
+  | "quiet_hours"
+  | "push_expired"
+  | "turn_no_longer_needed";
 
 /**
  * A phone Expo said is gone at the ticket (DeviceNotRegistered), with the SHA-256 of the token the
@@ -140,19 +152,83 @@ export async function sendPush(
     member.userId === null
       ? []
       : await deps.db
-          .select({ id: users.id, oneMomentADay: users.oneMomentADay })
+          .select({
+            id: users.id,
+            oneMomentADay: users.oneMomentADay,
+            replies: users.replyNotifications,
+            turns: users.turnReminders,
+          })
           .from(users)
           .where(and(eq(users.id, member.userId), isNull(users.deletedAt)))
           .limit(1);
   if (account === undefined) {
     return dropped("no_push_device");
   }
+  let ordinaryTtl: number | undefined;
   if (isOrdinaryPush(kind)) {
-    if (!account.oneMomentADay) {
+    if (!account.oneMomentADay || (kind === "answer_receipt" ? !account.replies : !account.turns)) {
       return dropped("one_moment_off");
     }
-    if (!withinWakingHours(deps.clock.now(), member.tz)) {
+    const now = deps.clock.now();
+    if (!withinWakingHours(now, member.tz)) {
       return dropped("quiet_hours");
+    }
+    // A queue retry must not turn yesterday's update into today's interruption. Bound the
+    // provider's offline delivery window too, so a timely send cannot arrive after bedtime.
+    const today = localDateOf(now, member.tz);
+    const expiresAt = Math.min(
+      row.queuedAt.getTime() + 12 * 60 * 60_000,
+      zonedInstant(today, WAKING_HOURS.until, member.tz).getTime(),
+    );
+    ordinaryTtl = Math.floor((expiresAt - now.getTime()) / 1000);
+    if (row.localDay !== today || ordinaryTtl <= 0) return dropped("push_expired");
+    if (kind === "turn_prompt") {
+      const parsed = TurnPromptEffect.safeParse(effect);
+      if (!parsed.success || parsed.data.familyId !== loaded.family.id) {
+        return failed(new ChannelSendError("invalid_request", "turn prompt has no valid target"));
+      }
+      const target = parsed.data;
+      const [turn] = await deps.db
+        .select({ actedAt: turns.actedAt, holderId: turns.holderId, tz: members.tz })
+        .from(turns)
+        .innerJoin(members, eq(members.id, turns.recipientId))
+        .where(
+          and(
+            eq(turns.familyId, target.familyId),
+            eq(turns.recipientId, target.recipientId),
+            eq(turns.localDay, target.localDay),
+          ),
+        )
+        .limit(1);
+      if (
+        turn === undefined ||
+        turn.actedAt !== null ||
+        turn.holderId !== member.id ||
+        target.localDay !== addDays(localDateOf(now, turn.tz), 1)
+      ) {
+        return dropped("turn_no_longer_needed");
+      }
+      // The question can have been scheduled before the turn row existed, in which case
+      // composing it could not stamp actedAt. Check the scheduled morning itself as well.
+      const [prepared] = await deps.db
+        .select({ id: exchanges.id })
+        .from(exchanges)
+        .where(
+          and(
+            eq(exchanges.familyId, target.familyId),
+            eq(exchanges.recipientId, target.recipientId),
+            eq(exchanges.scheduledFor, target.localDay),
+            ne(exchanges.state, "withdrawn"),
+          ),
+        )
+        .limit(1);
+      if (prepared !== undefined) return dropped("turn_no_longer_needed");
+      ordinaryTtl = Math.min(
+        ordinaryTtl,
+        Math.floor(
+          (zonedInstant(target.localDay, "00:00", turn.tz).getTime() - now.getTime()) / 1000,
+        ),
+      );
     }
   }
   const phones = await phonesToTell(deps.db, account.id, kind);
@@ -169,7 +245,10 @@ export async function sendPush(
   let results: readonly PushResult[];
   try {
     results = await deps.push.send(
-      phones.map((phone) => pushMessageFor(kind, phone.device.token, message.text, data)),
+      phones.map((phone) => ({
+        ...pushMessageFor(kind, phone.device.token, message.text, data),
+        ...(ordinaryTtl === undefined ? {} : { ttl: ordinaryTtl }),
+      })),
     );
   } catch (error) {
     if (!(error instanceof ChannelSendError)) {

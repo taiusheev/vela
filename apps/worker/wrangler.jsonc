@@ -276,6 +276,7 @@
     "PILOT_PUBLIC_URL": "http://localhost:8787",
     // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
     "PUSH_SEND": "off",
+    "NOTIFICATION_CONTROLS": "on",
     // On: her dated plans are kept for reminders (spec §12).
     "MEMORY": "on",
     // On: her stories are kept in the family book (ADR-39).
@@ -407,6 +408,7 @@
         "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
         // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
         "PUSH_SEND": "off",
+        "NOTIFICATION_CONTROLS": "on",
         // On: staging holds test families only (spec §12).
         "MEMORY": "on",
         // On: staging holds test families only (ADR-39).
@@ -529,6 +531,7 @@
         // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
         // push before a privacy notice names Expo, Apple and Google (ADR-34).
         "PUSH_SEND": "off",
+        "NOTIFICATION_CONTROLS": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: no family's plans are kept before the
         // privacy notice names memory and counsel has answered on health words (data map row 29).
         "MEMORY": "off",

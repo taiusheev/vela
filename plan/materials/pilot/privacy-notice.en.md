@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v10` · last updated 26 October 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
+Version `privacy-notice.v11` · last updated 26 October 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
 
 ## In short
 
@@ -35,6 +35,8 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 - Whether you tapped "I've read it" under Vela's first message in the group.
 
 **App setup and local preview:** The new onboarding asks for the relationship, interests and preferred ways of replying, alongside the name, language, country, time zone and morning time. These help prepare the first week. Before saving, the preview answers stay in app memory; a chosen portrait can leave a temporary local file. The in-memory draft is cleared on sign-out or account changes, except for the one explicitly accepted preview being saved into its intended first signed-in session. Replaced or abandoned portrait previews are removed; interrupted portrait previews are swept on the next app start. If local file deletion fails, a cache file may remain until cleanup succeeds or the app cache is removed. Saving sends the setup answers and chosen questions to Vela; it does not record the invited person's consent. Relationship, interests and reply preferences are kept with their member profile for the same period as their name and morning settings. You can ask the founder to correct or remove them.
+
+**Notification choices:** You may choose whether Vela sends a notification when a parent answers your question and whether it reminds you before your turn. Vela saves those choices with your account to honour them across your phones. They are not shown to other family members or sent to an AI provider. You can change them in Settings. Vela clears the saved choices when your account is deleted. They do not switch off Vela Light quiet-morning notices, which are explained separately.
 
 **Optional parent portrait:** The organiser can choose a photo for a parent's window. The cropped portrait is stored on that device, scoped to the signed-in account and family, and is not uploaded to Vela or sent to an AI provider. Remove or replace it in the parent's settings. Signing out or changing accounts clears Vela's local portrait storage. This is different from a photo deliberately sent in an ask or reply, which is uploaded and follows the 30-day media rule. Choose a photo you have permission to use.
 

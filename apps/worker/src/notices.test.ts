@@ -18,6 +18,19 @@ describe("the committed notices module", () => {
   });
 });
 
+describe("approved notification-preference notice", () => {
+  it("serves the approved v11 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v11");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v11");
+    expect(PRIVACY_NOTICES.en.html).toContain("Notification choices:");
+    expect(PRIVACY_NOTICES.en.html).toContain(
+      "They are not shown to other family members or sent to an AI provider.",
+    );
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("通知偏好：");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("刪除帳號時，Vela 會清除這些通知偏好。");
+  });
+});
+
 describe("a notice's Markdown", () => {
   it("takes the page title from its # heading, as plain text", () => {
     const notice = renderNotice("> **Draft.**\n\n# Vela pilot: `privacy` **notice**\n\nText.\n");

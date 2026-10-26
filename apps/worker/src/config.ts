@@ -545,6 +545,15 @@ export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): bo
   return env.WEEKLY_INSIGHT === undefined ? false : readOnOff(env.WEEKLY_INSIGHT, "WEEKLY_INSIGHT");
 }
 
+/** Individual notification choices: off until notice and product review; unknown values fail closed. */
+export function readNotificationControls(env: {
+  readonly NOTIFICATION_CONTROLS?: string;
+}): boolean {
+  return env.NOTIFICATION_CONTROLS === undefined
+    ? false
+    : readOnOff(env.NOTIFICATION_CONTROLS, "NOTIFICATION_CONTROLS");
+}
+
 /**
  * The var `SEND_AS_ME` (first test, 16 Oct 2026): "on" lets an organiser have Vela's suggestion sent
  * in their name on a morning nobody in the family wrote for; absent or "off" does not; any other
@@ -589,7 +598,8 @@ function readOnOff(
     | "SEND_AS_ME"
     | "RICH_MEMORIES"
     | "MEMORY_DISCOVERY"
-    | "MEMORY_STORIES",
+    | "MEMORY_STORIES"
+    | "NOTIFICATION_CONTROLS",
 ): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
@@ -775,6 +785,7 @@ export interface ApiConfig {
    * switch because a device counts toward someone being told only while pushes are sent.
    */
   readonly pushSend: PushSend;
+  readonly notificationControls?: boolean;
   /**
    * The privacy notice links, as the pilot Worker reads them: the consent request a phone set up
    * for the parent surface is sent names hers (ADR-35).
@@ -925,6 +936,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
         : null,
     regions: readRegions(env),
     pushSend: readPushSend(env),
+    ...(readNotificationControls(env) ? { notificationControls: true } : {}),
     privacyNoticeUrls: privacyNoticeUrlsOf(env),
     pilotAdmission: readPilotAdmission(env),
   };

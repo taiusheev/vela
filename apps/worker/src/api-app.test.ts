@@ -291,7 +291,10 @@ function database(): VelaDatabase {
 function fixture(
   enableWrites = false,
   push?: boolean,
-  options: Pick<ApiRuntime, "admission" | "capabilities" | "parentConnection"> = {},
+  options: Pick<
+    ApiRuntime,
+    "admission" | "capabilities" | "parentConnection" | "notificationControls"
+  > = {},
 ) {
   const db = database();
   const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -839,7 +842,7 @@ describe("isolated API read routes", () => {
     await expectResponse(await f.app.request(request), 200, ME_BODY);
     expect(f.verifySession).toHaveBeenCalledExactlyOnceWith(request);
     expect(f.openDatabase).toHaveBeenCalledExactlyOnceWith();
-    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     expect(f.services.loadApiMe.mock.calls[0]?.[1]).toBe(IDENTITY);
     expect(f.services.authorizeFamilyAccess).not.toHaveBeenCalled();
     expect(f.services.loadApiFamilyPlan).not.toHaveBeenCalled();
@@ -901,7 +904,7 @@ describe("isolated API read routes", () => {
     expect(readJson).not.toHaveBeenCalled();
     expect(request.bodyUsed).toBe(false);
     if (path === "/v1/me") {
-      expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+      expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     } else {
       expect(f.services.authorizeFamilyAccess).toHaveBeenCalledExactlyOnceWith(
         f.db,
@@ -975,7 +978,7 @@ describe("isolated API read routes", () => {
     f.services.loadApiMe.mockResolvedValue(null);
 
     await expectResponse(await f.app.request("/v1/me"), 404, NOT_FOUND);
-    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     expect(f.services.authorizeFamilyAccess).not.toHaveBeenCalled();
     expect(f.services.loadApiFamilyPlan).not.toHaveBeenCalled();
     expect(f.close).toHaveBeenCalledOnce();
@@ -3683,5 +3686,35 @@ describe("planned question routes", () => {
     expect(
       (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input), good))).status,
     ).toBe(409);
+  });
+});
+
+describe("individual notification controls wiring", () => {
+  it("reads the two choices only through the enabled server capability", async () => {
+    const f = fixture(false, false, { notificationControls: true });
+    const preferences = { replies: true, turns: false };
+    f.services.loadApiMe.mockResolvedValue({ ...ME, notification_preferences: preferences });
+    await expectResponse(
+      await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } }),
+      200,
+      { ...ME_BODY, notification_preferences: preferences },
+    );
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, true);
+  });
+
+  it("passes the rollout gate to the idempotent account preference write", async () => {
+    const f = fixture(true, false, { notificationControls: true });
+    const response = await f.app.request(
+      writeRequest("PATCH", "/v1/me", JSON.stringify({ turn_reminders: false }), {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(f.writes.services.updateApiAccount).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, notificationControls: true },
+      IDENTITY,
+      "request-1",
+      { turn_reminders: false },
+    );
   });
 });
