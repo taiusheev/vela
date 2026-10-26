@@ -1720,6 +1720,10 @@ msgstr "這位家人"
 msgid "Her answer is kept in the family book, unless she says not to."
 msgstr "回答會收進家庭故事書，除非本人說不要保留。"
 
+#: src/data/useReminders.ts
+msgid "her check-up at the clinic"
+msgstr "去診所做健康檢查"
+
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
 msgstr "這則訊息沒有送達。每天的早安訊息不受影響。"
@@ -2400,6 +2404,7 @@ msgstr "小美"
 #: src/data/memories.ts
 #: src/data/onboarding.ts
 #: src/data/today.ts
+#: src/data/useReminders.ts
 #: src/data/weekly.ts
 #: src/device/useParent.ts
 msgid "Mom"
