@@ -29,13 +29,13 @@ Lock-screen text continues to contain only the permitted name/time information. 
 - Rename the routine notification control in English and Traditional Chinese.
 - Preserve existing Light behavior, permission flow, and answer budgets. Add an account-wide reminder attempt cap.
 - Add gated individual choices, migration/legacy compatibility, two-phone save serialization, and deletion cleanup.
-- Keep the controls off in deployed environments until the draft notice is reviewed and families informed.
+- Enable the approved controls in development/staging with notice v11. Keep production off until a separately approved release and affected-family communication.
 
 The turn check is a last-moment relevance check, not a lock spanning an external delivery request. A turn completed after that check can still race with provider acceptance. An alert already handed to a provider cannot be reliably recalled by this server check.
 
 ## Controls and follow-up product work
 
-1. Independent reply and turn controls are implemented behind `NOTIFICATION_CONTROLS`, pinned off until the draft notice is approved and families are told. Existing opt-outs migrate to both choices; older servers retain the combined switch.
+1. Independent reply and turn controls are implemented behind `NOTIFICATION_CONTROLS`. The founder approved notice v11 and test-version activation on 26 October 2026; development/staging are on and production remains off. Existing opt-outs migrate to both choices; older servers retain the combined switch.
 2. New turn reminders have an account-wide daily attempt cap. Evaluate whether reply notifications also need grouping or a cooldown across parents; preserve the reply budget independently.
 3. Offer user-selected quiet hours and timezone handling with clear travel behavior. The current fixed 08:00–21:00 window is retained.
 4. Consider suppressing answer alerts when that exact exchange is already open. This needs a deliberately limited presence/read signal; it is not collected by this change.

@@ -276,7 +276,7 @@
     "PILOT_PUBLIC_URL": "http://localhost:8787",
     // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
     "PUSH_SEND": "off",
-    "NOTIFICATION_CONTROLS": "off",
+    "NOTIFICATION_CONTROLS": "on",
     // On: her dated plans are kept for reminders (spec §12).
     "MEMORY": "on",
     // On: her stories are kept in the family book (ADR-39).
@@ -408,7 +408,7 @@
         "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
         // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
         "PUSH_SEND": "off",
-        "NOTIFICATION_CONTROLS": "off",
+        "NOTIFICATION_CONTROLS": "on",
         // On: staging holds test families only (spec §12).
         "MEMORY": "on",
         // On: staging holds test families only (ADR-39).

@@ -382,6 +382,7 @@ describe("the API's configuration", () => {
       lineBasicId: null,
       regions: ["apac"],
       pushSend: "off",
+      notificationControls: true,
       pilotAdmission: null,
       privacyNoticeUrls: {
         en: "https://vela.vela.example/privacy",

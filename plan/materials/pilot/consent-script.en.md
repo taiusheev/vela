@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v6` · 26 October 2026 · goes with `privacy-notice.v10` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
+Version `consent-script.v6` · 26 October 2026 · goes with `privacy-notice.v11` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes to both" or "Yes, health private" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -118,7 +118,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 Record under the family code, never in the chat, and in Google Drive only the family code, dates, text versions, yes or no answers, the country codes and citizenship answers of "Who can join", and scores (never a quote or anything about health):
 
 - Date, time, language, who was on the call.
-- Versions used: `consent-script.v6`, `privacy-notice.v10`, and the language of the call.
+- Versions used: `consent-script.v6`, `privacy-notice.v11`, and the language of the call.
 - The answer: yes, no or not now.
 - Whether anything was corrected (the correction itself goes into Vela, `infra/runbooks/data-requests.md` section I), and whether a question stayed unanswered.
 - Research questions: yes or no; scores if yes.

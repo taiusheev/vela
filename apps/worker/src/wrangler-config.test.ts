@@ -573,12 +573,12 @@ describe("the pilot Worker's bindings", () => {
   // ADR-34: no environment sends a push until the founder has set up Expo (with Enhanced Push
   // Security and its access token), Firebase and, for iPhones, Apple, and production none before a
   // privacy notice names Expo, Apple and Google. The commit that turns one on changes this pin.
-  it("keeps individual notification controls off until notice and product review", () => {
+  it("enables approved notification controls only for development and staging", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.NOTIFICATION_CONTROLS,
       ),
-    ).toEqual(["off", "off", "off"]);
+    ).toEqual(["on", "on", "off"]);
   });
 
   it("send no push in any environment, a switch the pilot Worker alone holds", () => {
