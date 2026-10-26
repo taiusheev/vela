@@ -8,6 +8,7 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { LoadingLight } from "../../src/components/loading-light.tsx";
 import { MorningCalendar } from "../../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { SoftCard } from "../../src/components/today-hero.tsx";
@@ -72,9 +73,7 @@ export default function QuestionsScreen() {
         onSelect={(recipient) => router.setParams({ recipient, saved: undefined, day: undefined })}
       />
       {day.loading ? (
-        <Words variant="body" tone="ink2">
-          <Trans>Loading your family…</Trans>
-        </Words>
+        <LoadingLight label={t`Loading your family…`} />
       ) : day.trouble ? (
         <SecondaryButton label={t`Try again`} onPress={refresh} />
       ) : parent === undefined ? (
@@ -98,9 +97,7 @@ export default function QuestionsScreen() {
               <SecondaryButton label={t`Reload schedule`} onPress={() => void schedule.refetch()} />
             </>
           ) : schedule.isFetching && schedule.data === undefined && day.live ? (
-            <Words variant="body" tone="ink2">
-              <Trans>Loading your schedule…</Trans>
-            </Words>
+            <LoadingLight label={t`Loading your schedule…`} />
           ) : (
             <MorningPlan
               key={parent.memberId}

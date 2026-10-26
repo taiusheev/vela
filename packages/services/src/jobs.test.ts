@@ -193,6 +193,7 @@ describe("draftWeeklyRead", () => {
           value: {
             lines: ["Synthetic sensitive knee output."],
             suggestion: "Ask about synthetic knee pain.",
+            suggestionDay: "2026-09-18",
           },
           record: fakeRecord("weekly_read"),
         };
@@ -445,6 +446,7 @@ describe("draftWeeklyRead", () => {
       answered_days: 3,
       hello_mornings: 1,
       family_asks: 3,
+      suggestion_day: "2026-09-17",
       usual_time: "09:30",
       topics: [],
       patterns: [

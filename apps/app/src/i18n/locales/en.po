@@ -830,6 +830,10 @@ msgstr "And her window lights up."
 msgid "And on a quiet morning?"
 msgstr "And on a quiet morning?"
 
+#: src/data/example-names.ts
+msgid "Anna"
+msgstr "Anna"
+
 #: src/components/story-day.tsx
 msgid "Another question"
 msgstr "Another question"
@@ -884,6 +888,10 @@ msgstr "Ask {name} how {what} went"
 #: src/components/today-glance.tsx
 msgid "Ask {name} something"
 msgstr "Ask {name} something"
+
+#: src/components/weekly-read-card.tsx
+msgid "Ask {name} this"
+msgstr "Ask {name} this"
 
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
@@ -1377,6 +1385,14 @@ msgstr "Earlier messages"
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
 msgstr "Earlier this month"
+
+#: app/weekly/[read].tsx
+msgid "Earlier week"
+msgstr "Earlier week"
+
+#: app/(tabs)/sunday.tsx
+msgid "Earlier weeks"
+msgstr "Earlier weeks"
 
 #. a time zone
 #. a time zone
@@ -1905,6 +1921,10 @@ msgstr "If you agree, Vela can suggest little things worth remembering from your
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 
+#: src/data/example-names.ts
+msgid "Igor"
+msgstr "Igor"
+
 #: src/components/onboarding/story.tsx
 msgid "In her own messenger. No new app for her."
 msgstr "In her own messenger. No new app for her."
@@ -2363,6 +2383,11 @@ msgstr "Message"
 #: app/conversation.tsx
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
+
+#: src/data/example-names.ts
+#: src/data/weekly.ts
+msgid "Mia"
+msgstr "Mia"
 
 #. who the light is for
 #. who the light is for
@@ -2839,12 +2864,17 @@ msgid "Opening the story…"
 msgstr "Opening the story…"
 
 #: app/(tabs)/sunday.tsx
+#: app/weekly/[read].tsx
 msgid "Opening the week"
 msgstr "Opening the week"
 
 #: src/components/telegram-family-link.tsx
 msgid "Opening…"
 msgstr "Opening…"
+
+#: src/components/weekly-read-card.tsx
+msgid "Opens a question to {name} with this text, ready to change or send"
+msgstr "Opens a question to {name} with this text, ready to change or send"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -2996,6 +3026,10 @@ msgstr "Plan a question for {day}"
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
 msgstr "Planned questions"
+
+#: src/data/weekly.ts
+msgid "Planted the last tomato seeds by the fence."
+msgstr "Planted the last tomato seeds by the fence."
 
 #: src/audio/VoicePlayback.tsx
 msgid "Play the voice"
@@ -3295,6 +3329,10 @@ msgstr "said she is fine"
 msgid "Said yes"
 msgstr "Said yes"
 
+#: src/data/example-names.ts
+msgid "Sam"
+msgstr "Sam"
+
 #: src/components/onboarding/plan.tsx
 msgid "Save {name}’s mornings"
 msgstr "Save {name}’s mornings"
@@ -3391,6 +3429,10 @@ msgstr "Security"
 #: src/components/onboarding/plan.tsx
 msgid "See {name}’s first week"
 msgstr "See {name}’s first week"
+
+#: src/components/weekly-read-card.tsx
+msgid "See that morning"
+msgstr "See that morning"
 
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
@@ -4172,11 +4214,11 @@ msgstr "The tomatoes finally turned. I picked three before breakfast and left th
 msgid "The voice is still being prepared. Try again shortly."
 msgstr "The voice is still being prepared. Try again shortly."
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read"
 msgstr "The weekly read"
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read · {range}"
 msgstr "The weekly read · {range}"
 
@@ -4365,6 +4407,10 @@ msgstr "This voice is no longer available."
 msgid "This week"
 msgstr "This week"
 
+#: app/weekly/[read].tsx
+msgid "This week's read could not be opened just now."
+msgstr "This week's read could not be opened just now."
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -4506,6 +4552,7 @@ msgstr "Trouble signing in?"
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
+#: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
 #: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
@@ -4521,6 +4568,10 @@ msgstr "Try opening {messenger} again"
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
 msgstr "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
+
+#: src/components/weekly-read-card.tsx
+msgid "Try this week"
+msgstr "Try this week"
 
 #: app/my-memories.tsx
 msgid "Turn off and clear"
@@ -4889,6 +4940,10 @@ msgstr "Welcome back."
 msgid "Welcome to Vela"
 msgstr "Welcome to Vela"
 
+#: src/components/weekly-read-card.tsx
+msgid "What {name} told the family"
+msgstr "What {name} told the family"
+
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
@@ -5025,6 +5080,14 @@ msgstr "Who is this for?"
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
 msgstr "Who lives close to {name}?"
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer on {day}."
+msgstr "Why: it grows from {name}'s answer on {day}."
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer to {asker} on {day}."
+msgstr "Why: it grows from {name}'s answer to {asker} on {day}."
 
 #: app/settings.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."

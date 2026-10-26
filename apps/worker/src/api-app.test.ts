@@ -320,6 +320,10 @@ function fixture(
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
+    listApiWeeklyReads: vi.fn<ApiReadServices["listApiWeeklyReads"]>().mockResolvedValue({
+      member_id: MEMBER_ID,
+      reads: [],
+    }),
     loadApiPrecision: vi.fn<ApiReadServices["loadApiPrecision"]>().mockResolvedValue(PRECISION),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>().mockResolvedValue([]),
@@ -1969,7 +1973,62 @@ describe("the weekly read", () => {
       FAMILY_ID,
       MEMBER_ID,
       new Date("2026-09-22T00:00:00.000Z"),
+      {},
     );
+  });
+
+  it("opens one of her earlier weeks by id", async () => {
+    const f = fixture();
+    const earlier = "0199a6b0-0000-7000-8000-000000000042";
+    await expectResponse(
+      await f.app.request(`${WEEKLY_READ_PATH}&read=${earlier}`, {
+        headers: { authorization: "Bearer good" },
+      }),
+      200,
+      WEEKLY_READ,
+    );
+    expect(f.services.loadApiWeeklyRead).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+      { readId: earlier },
+    );
+  });
+
+  it("lists her sent weeks to an organiser, and nothing to anyone else", async () => {
+    const f = fixture();
+    const list = {
+      member_id: MEMBER_ID,
+      reads: [
+        {
+          id: "0199a6b0-0000-7000-8000-000000000042",
+          week_start: "2026-09-14",
+          week_end: "2026-09-20",
+          sent_at: "2026-09-20T12:00:00.000Z",
+        },
+      ],
+    };
+    f.services.listApiWeeklyReads.mockResolvedValue(list);
+    const path = WEEKLY_READ_PATH.replace("/weekly-read?", "/weekly-reads?");
+    await expectResponse(
+      await f.app.request(path, { headers: { authorization: "Bearer good" } }),
+      200,
+      list,
+    );
+    f.services.listApiWeeklyReads.mockResolvedValue(null);
+    await expectResponse(
+      await f.app.request(path, { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind: "forbidden" });
+    const before = f.services.listApiWeeklyReads.mock.calls.length;
+    expect((await f.app.request(path, { headers: { authorization: "Bearer good" } })).status).toBe(
+      403,
+    );
+    expect(f.services.listApiWeeklyReads.mock.calls.length).toBe(before);
   });
 
   it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {

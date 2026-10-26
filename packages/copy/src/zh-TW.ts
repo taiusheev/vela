@@ -49,7 +49,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "account_link.unavailable":
     "無法開啟這個帳號連結。請先在這個聊天室完成家人的設定，再從 Vela 建立新的連結。",
   "pilot.activation_wait":
-    "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
+    "您的燈還沒亮起。發起人的設定還沒完成：家庭需要先通過核准，發起人也要能收到訊息。請發起人完成設定，再試一次。",
   "pilot.invitation_only":
     "Vela 的英語試用僅限受邀者。請聯絡創辦人申請使用。您的 Telegram ID：{telegram_id}。",
   "arrival.greeting": "{address}，早安。",
@@ -92,7 +92,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "readback.photo": "{name}傳了一張照片。",
   "readback.reactions": "{names}送上{emoji}",
   "consent.invalid_link": "這個連結已經失效了。請跟傳連結給您的人再要一個新的。",
-  "consent.already_linked": "這個 Telegram 帳號已經連結到 Vela 上的另一個家庭。",
+  "consent.already_linked": "這個帳號已經連結到 Vela 上的另一個家庭。",
   "consent.request":
     "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
   "consent.health_words":
@@ -246,8 +246,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.country_other": "其他",
   "onboarding.ask_zone": "在哪個時區？",
   "onboarding.ask_zone_other":
-    "這位家人住在哪個時區？請輸入時區名稱，例如 Asia/Seoul 或 Europe/Paris。",
-  "onboarding.invalid_zone": "請輸入像 Asia/Seoul 或 Europe/Paris 這樣的時區名稱。",
+    "這位家人住在哪個時區？請輸入時區名稱，例如 Asia/Taipei 或 America/Los_Angeles。",
+  "onboarding.invalid_zone": "請輸入像 Asia/Taipei 或 America/Los_Angeles 這樣的時區名稱。",
   "onboarding.ask_wake": "這位家人通常幾點起床？請按一個選項，或輸入像 07:30 這樣的時間。",
   "onboarding.ask_nearby":
     "有沒有住在附近、需要的時候可以過去看看的人？請傳送對方的名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。或按「略過」。請您先親自問過對方。這裡只填名字：對方同意之後，才會加上電話號碼。",

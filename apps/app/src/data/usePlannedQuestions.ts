@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiPlannedQuestions } from "@vela/contracts";
 import { apiConfigured, fetchPlannedQuestions } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
+import { exampleNames } from "./example-names.ts";
 import { demoDataAllowed } from "./live-state.ts";
 import { tomorrowIn } from "./story.ts";
 import { todayFixture } from "./today.ts";
@@ -17,7 +18,7 @@ export function usePlannedQuestions(familyId: string | undefined) {
       id: `00000000-0000-4000-8000-00000000000${index}`,
       recipient_id: parent.memberId,
       recipient_name: parent.displayName,
-      asker_name: "Mia",
+      asker_name: exampleNames().mia,
       editable: true,
       preparing: false,
       date: tomorrowIn(new Date(), parent.timeZone),

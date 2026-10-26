@@ -1,8 +1,8 @@
-import { members, quietEvents, subscriptions, users, weeklyReads } from "@vela/db";
+import { answers, members, quietEvents, subscriptions, users, weeklyReads } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
-import { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
+import { listApiWeeklyReads, loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
@@ -28,7 +28,7 @@ async function account(identity: SessionIdentity, memberId: string): Promise<voi
 
 /** A read of her week as the founder sent it, or only drafted when `sent` is false. */
 async function readOfHerWeek(
-  options: { sent?: boolean; suggestion?: string; weekStart?: string } = {},
+  options: { sent?: boolean; suggestion?: string; weekStart?: string; suggestionDay?: string } = {},
 ) {
   const sent = options.sent ?? true;
   const [read] = await h.db
@@ -48,6 +48,7 @@ async function readOfHerWeek(
         drift_min: null,
         topics: [],
         voice_len_drift: null,
+        ...(options.suggestionDay === undefined ? {} : { suggestion_day: options.suggestionDay }),
       },
       promptVersion: "weekly_read@test",
       sentLines: sent ? ["She told you about the garden twice."] : null,
@@ -146,6 +147,7 @@ describe("loadApiWeeklyRead", () => {
         counts: { counted_days: 5, answered_days: 2, hello_mornings: 1, family_asks: 2 },
         notes: ["She told you about the garden twice."],
         suggestion: "Ask her which seeds she kept.",
+        suggestion_source: null,
       },
     });
   });
@@ -244,5 +246,87 @@ describe("loadApiWeeklyRead", () => {
     expect(await load(mia, null)).toBeNull();
     expect(await load(mia, "not-a-uuid")).toBeNull();
     expect(await load(mia, seed.organiser.id)).toBeNull();
+  });
+});
+
+describe("why the suggestion, and her earlier weeks", () => {
+  it("shows the morning the suggestion grows from: its date, who asked, and her answer's summary", async () => {
+    await covered("active");
+    const days = await h.db.query.exchanges.findMany();
+    const morning = days.find((exchange) => exchange.scheduledFor === "2026-09-09");
+    if (morning === undefined) throw new Error("expected Wednesday's exchange");
+    await h.db.insert(answers).values({
+      exchangeId: morning.id,
+      memberId: seed.member.id,
+      kind: "text",
+      channel: "telegram",
+      payload: { text: "Planted the tomato seeds." },
+      summary: "Planted the tomato seeds by the fence.",
+      receivedAt: new Date("2026-09-09T00:30:00.000Z"),
+    });
+    await readOfHerWeek({ suggestionDay: "2026-09-09" });
+
+    expect((await load())?.read?.suggestion_source).toEqual({
+      date: "2026-09-09",
+      exchange_id: morning.id,
+      asker_name: seed.organiser.displayName,
+      summary: "Planted the tomato seeds by the fence.",
+    });
+  });
+
+  it("shows no source when the founder removed the suggestion, or when the read is locked", async () => {
+    await readOfHerWeek({ suggestion: "", suggestionDay: "2026-09-09" });
+    await covered("active");
+    expect((await load())?.read?.suggestion_source).toBeNull();
+    await h.db.delete(subscriptions);
+    await covered("lapsed");
+    expect((await load())?.read?.suggestion_source).toBeNull();
+  });
+
+  it("opens an earlier week by id, and nothing for a read that is not hers to open", async () => {
+    await covered("active");
+    const earlier = await readOfHerWeek({ weekStart: "2026-08-31" });
+    const latest = await readOfHerWeek();
+    const draft = await readOfHerWeek({ sent: false, weekStart: "2026-09-14" });
+    const open = (readId: string) =>
+      loadApiWeeklyRead(h.db, mia, seed.family.id, seed.member.id, h.clock.now(), { readId });
+
+    expect((await load())?.read?.id).toBe(latest.id);
+    expect((await open(earlier.id.toUpperCase()))?.read?.week_start).toBe("2026-08-31");
+    expect(await open(draft.id)).toBeNull();
+    expect(await open("not-a-read")).toBeNull();
+    expect(await open("0199a6b0-0000-7000-8000-000000000042")).toBeNull();
+    expect(
+      await loadApiWeeklyRead(h.db, sam, seed.family.id, seed.member.id, h.clock.now(), {
+        readId: earlier.id,
+      }),
+    ).toBeNull();
+  });
+
+  it("lists her sent weeks newest first to an organiser, and nothing to anyone else", async () => {
+    const earlier = await readOfHerWeek({ weekStart: "2026-08-31" });
+    const latest = await readOfHerWeek();
+    await readOfHerWeek({ sent: false, weekStart: "2026-09-14" });
+
+    expect(await listApiWeeklyReads(h.db, mia, seed.family.id, seed.member.id)).toEqual({
+      member_id: seed.member.id,
+      reads: [
+        {
+          id: latest.id,
+          week_start: "2026-09-07",
+          week_end: "2026-09-13",
+          sent_at: "2026-09-13T12:00:00.000Z",
+        },
+        {
+          id: earlier.id,
+          week_start: "2026-08-31",
+          week_end: "2026-09-06",
+          sent_at: "2026-09-13T12:00:00.000Z",
+        },
+      ],
+    });
+    expect(await listApiWeeklyReads(h.db, sam, seed.family.id, seed.member.id)).toBeNull();
+    expect(await listApiWeeklyReads(h.db, stranger, seed.family.id, seed.member.id)).toBeNull();
+    expect(await listApiWeeklyReads(h.db, mia, seed.family.id, seed.organiser.id)).toBeNull();
   });
 });

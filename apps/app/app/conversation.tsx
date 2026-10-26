@@ -24,6 +24,7 @@ import { ActionSheet, type SheetAction } from "../src/components/chat/action-she
 import { ChatBubble, DayChip } from "../src/components/chat/chat-bubble.tsx";
 import { ChatComposer } from "../src/components/chat/chat-composer.tsx";
 import { Light } from "../src/components/light.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { Text } from "../src/components/scaled-text.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { canAsk } from "../src/data/ask-target.ts";
@@ -41,6 +42,7 @@ import {
   startsGroup,
   toChat,
 } from "../src/data/chat.ts";
+import { exampleNames } from "../src/data/example-names.ts";
 import { clockTime } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
@@ -186,7 +188,7 @@ function Conversation() {
             key: `demo:${earlier.length}`,
             exchangeId: `demo:${earlier.length}`,
             side: "me",
-            from: "Mia",
+            from: exampleNames().mia,
             at: now.getTime(),
             day: localDateIn(now.getTime()),
             time: clockTime(now.getHours(), now.getMinutes()),
@@ -267,7 +269,7 @@ function Conversation() {
           ...message,
           reactions: [
             ...message.reactions,
-            ...given.map((kind) => ({ kind, from: "Mia", mine: true })),
+            ...given.map((kind) => ({ kind, from: exampleNames().mia, mine: true })),
           ],
         };
   });
@@ -537,9 +539,7 @@ function Conversation() {
           ) : null}
           {history.loading && !demo ? (
             <View style={{ paddingTop: space.xl, alignItems: "center" }}>
-              <Words variant="body" tone="ink2">
-                <Trans>Loading your conversation…</Trans>
-              </Words>
+              <LoadingLight label={t`Loading your conversation…`} size="large" />
             </View>
           ) : null}
           {history.trouble ? (
