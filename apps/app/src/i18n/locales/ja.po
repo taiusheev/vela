@@ -2768,11 +2768,6 @@ msgstr ""
 msgid "One message from you"
 msgstr ""
 
-#: app/settings.tsx
-#: src/push/provider.tsx
-msgid "One moment a day"
-msgstr ""
-
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -3226,6 +3221,11 @@ msgstr ""
 
 #: src/data/chat.ts
 msgid "Replied"
+msgstr ""
+
+#: app/settings.tsx
+#: src/push/provider.tsx
+msgid "Replies and turn reminders"
 msgstr ""
 
 #: app/exchange/[id].tsx

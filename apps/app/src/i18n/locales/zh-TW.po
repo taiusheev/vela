@@ -2775,11 +2775,6 @@ msgstr "用電子郵件接收驗證碼，不必記住密碼。"
 msgid "One message from you"
 msgstr "你的一則訊息"
 
-#: app/settings.tsx
-#: src/push/provider.tsx
-msgid "One moment a day"
-msgstr "一天一次"
-
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -3234,6 +3229,11 @@ msgstr "換一張"
 #: src/data/chat.ts
 msgid "Replied"
 msgstr "回覆了"
+
+#: app/settings.tsx
+#: src/push/provider.tsx
+msgid "Replies and turn reminders"
+msgstr "回覆與輪值提醒"
 
 #: app/exchange/[id].tsx
 #: src/components/today-glance.tsx

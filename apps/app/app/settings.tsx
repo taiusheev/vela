@@ -356,7 +356,7 @@ function FamilyYou({ day }: { day: TodayView }) {
           />
           <SettingsRow
             icon="sunday"
-            title={t`One moment a day`}
+            title={t`Replies and turn reminders`}
             detail={
               moment.status === "loading"
                 ? t`Loading your notification preference…`
@@ -366,7 +366,7 @@ function FamilyYou({ day }: { day: TodayView }) {
             }
             trailing={
               <Switch
-                accessibilityLabel={t`One moment a day`}
+                accessibilityLabel={t`Replies and turn reminders`}
                 accessibilityState={{
                   busy: moment.status === "saving" || moment.status === "loading",
                 }}

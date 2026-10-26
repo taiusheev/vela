@@ -2774,11 +2774,6 @@ msgstr "One email, one code. No password to remember."
 msgid "One message from you"
 msgstr "One message from you"
 
-#: app/settings.tsx
-#: src/push/provider.tsx
-msgid "One moment a day"
-msgstr "One moment a day"
-
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -3233,6 +3228,11 @@ msgstr "Replace"
 #: src/data/chat.ts
 msgid "Replied"
 msgstr "Replied"
+
+#: app/settings.tsx
+#: src/push/provider.tsx
+msgid "Replies and turn reminders"
+msgstr "Replies and turn reminders"
 
 #: app/exchange/[id].tsx
 #: src/components/today-glance.tsx
