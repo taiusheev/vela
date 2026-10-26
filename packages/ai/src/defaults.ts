@@ -53,6 +53,8 @@ export const SAFE_DEFAULTS: {
   weekly_read: (input) => ({
     lines: [],
     suggestion: genericWeeklySuggestion(input.lang, input.elderName),
+    // The generic ask grows from no particular day.
+    suggestionDay: null,
   }),
   // No reading and no feedback: the read goes out as it would without ADR-48.
   weekly_insight: () => ({ readings: [], feedback: [] }),

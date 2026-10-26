@@ -55,6 +55,7 @@ import {
   ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
+  ApiWeeklyReadList,
   ApiWeeklyReadOpened,
   ApiWithdrawn,
   AskToLookIn,
@@ -159,6 +160,7 @@ import {
   LookInRefusedError,
   type leaveApiFamily,
   lineInviteLink,
+  type listApiWeeklyReads,
   type loadAccountLinkStatus,
   type loadApiBook,
   type loadApiExchange,
@@ -274,6 +276,7 @@ export interface ApiReadServices {
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
+  listApiWeeklyReads: typeof listApiWeeklyReads;
   loadApiPrecision: typeof loadApiPrecision;
   memberOfDeviceToken: typeof memberOfDeviceToken;
   loadDeviceMessages: typeof loadDeviceMessages;
@@ -1181,14 +1184,38 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         "organiser",
       )(c, next),
     async (c) => {
+      // `read` opens one of her earlier weeks; without it, her latest.
+      const readId = c.req.query("read");
       const read = await runtime.services.loadApiWeeklyRead(
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
         c.req.query("member"),
         runtime.now(),
+        readId === undefined ? {} : { readId },
       );
       return read === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyRead.parse(read));
+    },
+  );
+  // Her earlier weeks: dates and ids of her sent reads, newest first. Organisers only, as above.
+  app.get(
+    "/v1/families/:familyId/weekly-reads",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>(
+        (identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        "organiser",
+      )(c, next),
+    async (c) => {
+      const list = await runtime.services.listApiWeeklyReads(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        c.req.query("member"),
+      );
+      return list === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyReadList.parse(list));
     },
   );
   // Organisers only: the family's own quiet notices are hers (spec §8). Vela's months are the

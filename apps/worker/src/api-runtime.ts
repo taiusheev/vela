@@ -59,6 +59,7 @@ import {
   keepMemoryCandidate,
   type Logger,
   leaveApiFamily,
+  listApiWeeklyReads,
   loadAccountLinkStatus,
   loadApiBook,
   loadApiExchange,
@@ -166,6 +167,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiExchanges,
   loadApiQuiet,
   loadApiWeeklyRead,
+  listApiWeeklyReads,
   loadApiPrecision,
   memberOfDeviceToken,
   loadDeviceMessages,
@@ -441,8 +443,9 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
         ? API_READ_SERVICES
         : {
             ...API_READ_SERVICES,
-            loadApiWeeklyRead: (db, identity, familyId, memberId, now) =>
+            loadApiWeeklyRead: (db, identity, familyId, memberId, now, options) =>
               loadApiWeeklyRead(db, identity, familyId, memberId, now, {
+                ...options,
                 pilotFree: config.pilotAdmission != null,
               }),
           },

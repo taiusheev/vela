@@ -190,11 +190,11 @@ msgstr "{later}次稍晚回覆"
 
 #: src/components/telegram-family-link.tsx
 msgid "{messenger} confirmed"
-msgstr ""
+msgstr "{messenger}已確認"
 
 #: src/components/telegram-family-link.tsx
 msgid "{messenger} didn’t open."
-msgstr ""
+msgstr "{messenger}未能開啟。"
 
 #: app/vela-light.tsx
 msgid "{monthly} a month"
@@ -886,6 +886,10 @@ msgstr "問問{name}，{what}還順利嗎"
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
 
+#: src/components/weekly-read-card.tsx
+msgid "Ask {name} this"
+msgstr "問{name}這個問題"
+
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
 msgstr "問{recipient}一件事"
@@ -1205,7 +1209,7 @@ msgstr "連結您在 Telegram 上的家庭"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connected {messenger} account: {linkedMemberName}"
-msgstr ""
+msgstr "已確認的{messenger}帳號：{linkedMemberName}"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connecting…"
@@ -1379,6 +1383,14 @@ msgstr "更早的訊息"
 msgid "Earlier this month"
 msgstr "這個月稍早"
 
+#: app/weekly/[read].tsx
+msgid "Earlier week"
+msgstr "之前的一週"
+
+#: app/(tabs)/sunday.tsx
+msgid "Earlier weeks"
+msgstr "之前的每週小記"
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -1536,7 +1548,7 @@ msgstr "若要確認某則早晨訊息，請查看「今天」或爸媽的聊天
 
 #: src/components/telegram-family-link.tsx
 msgid "For another device: paste the full code or the whole private {messenger} message. It expires after 15 minutes."
-msgstr ""
+msgstr "若使用另一部裝置，請貼上完整代碼或整則{messenger}私人訊息。代碼在 15 分鐘後到期。"
 
 #: src/components/chat/chat-bubble.tsx
 msgid "For her morning"
@@ -2361,6 +2373,10 @@ msgstr "傳訊息"
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr "連線暫停或無法聯絡時不能傳訊息。你的草稿會留在這裡。"
 
+#: src/data/weekly.ts
+msgid "Mia"
+msgstr "小美"
+
 #. who the light is for
 #. who the light is for
 #: app/(tabs)/index.tsx
@@ -2770,7 +2786,7 @@ msgstr "照片只留在這部裝置，登出時會移除。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open {messenger} again"
-msgstr ""
+msgstr "再次開啟{messenger}"
 
 #: src/components/keepsake.tsx
 msgid "Open in the chat"
@@ -2835,12 +2851,17 @@ msgid "Opening the story…"
 msgstr "正在打開故事…"
 
 #: app/(tabs)/sunday.tsx
+#: app/weekly/[read].tsx
 msgid "Opening the week"
 msgstr "正在打開本週"
 
 #: src/components/telegram-family-link.tsx
 msgid "Opening…"
 msgstr "正在開啟…"
+
+#: src/components/weekly-read-card.tsx
+msgid "Opens a question to {name} with this text, ready to change or send"
+msgstr "打開寫給{name}的問題，文字已經填好，可以修改或直接傳送"
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
@@ -2992,6 +3013,10 @@ msgstr "為{day}安排一個問題"
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
 msgstr "已安排的問題"
+
+#: src/data/weekly.ts
+msgid "Planted the last tomato seeds by the fence."
+msgstr "在圍籬旁種下最後一批番茄種子。"
 
 #: src/audio/VoicePlayback.tsx
 msgid "Play the voice"
@@ -3387,6 +3412,10 @@ msgstr "安全性"
 #: src/components/onboarding/plan.tsx
 msgid "See {name}’s first week"
 msgstr "看看{name}的第一週"
+
+#: src/components/weekly-read-card.tsx
+msgid "See that morning"
+msgstr "看那天早上的對話"
 
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
@@ -3867,7 +3896,7 @@ msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入
 
 #: src/components/telegram-family-link.tsx
 msgid "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
-msgstr ""
+msgstr "該確認已失效。請使用您自己的{messenger}帳號重新連結。"
 
 #: app/conversation.tsx
 msgid "That could not be confirmed. Your words are still here. Retry to confirm the same message."
@@ -4168,13 +4197,13 @@ msgstr "番茄終於紅了。早餐前我摘了三顆，放在窗台上。"
 msgid "The voice is still being prepared. Try again shortly."
 msgstr "語音還在準備中，請稍後再試。"
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read"
 msgstr "每週回顧"
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read · {range}"
-msgstr "每週回顧 · {range}"
+msgstr "每週小記・{range}"
 
 #: app/(tabs)/sunday.tsx
 msgid "The weekly read could not be reached just now."
@@ -4361,6 +4390,10 @@ msgstr "這段語音已經無法使用。"
 msgid "This week"
 msgstr "這週"
 
+#: app/weekly/[read].tsx
+msgid "This week's read could not be opened just now."
+msgstr "這一週的小記暫時無法開啟。"
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -4502,6 +4535,7 @@ msgstr "無法登入嗎？"
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
+#: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
 #: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
@@ -4512,11 +4546,15 @@ msgstr "再試一次"
 
 #: src/components/telegram-family-link.tsx
 msgid "Try opening {messenger} again"
-msgstr ""
+msgstr "再次嘗試開啟{messenger}"
 
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
 msgstr "可以聊聊今天的事、共同的回憶，或一直想問的小事。用你自己的說法就好。"
+
+#: src/components/weekly-read-card.tsx
+msgid "Try this week"
+msgstr "這週可以試試"
 
 #: app/my-memories.tsx
 msgid "Turn off and clear"
@@ -4885,6 +4923,10 @@ msgstr "歡迎回來。"
 msgid "Welcome to Vela"
 msgstr "歡迎使用 Vela"
 
+#: src/components/weekly-read-card.tsx
+msgid "What {name} told the family"
+msgstr "{name}跟家人說了什麼"
+
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "{name}這週跟您說了什麼、哪些事提了兩次，以及下次可以問{name}什麼。前 30 天免費。"
@@ -5021,6 +5063,14 @@ msgstr "這個提問要傳給誰？"
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
 msgstr "誰住在{name}附近？"
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer on {day}."
+msgstr "原因：來自{name}在{day}的回覆。"
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer to {asker} on {day}."
+msgstr "原因：來自{name}在{day}回覆{asker}的話。"
 
 #: app/settings.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
