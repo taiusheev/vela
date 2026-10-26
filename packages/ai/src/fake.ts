@@ -100,6 +100,9 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         .filter((summary) => summary.length > 0)
         .slice(0, 4),
       suggestion: genericWeeklySuggestion(input.lang, input.elderName),
+      // The last day with a summary, as a real draft would build on what she said most recently.
+      suggestionDay:
+        input.days.filter((day) => (day.summary?.trim() ?? "") !== "").at(-1)?.date ?? null,
     })),
     // Her first sentence, word for word, as a moment, so tests can see what flowed through.
     memoryPick: method("memory_pick", overrides.memoryPick, (input) => {

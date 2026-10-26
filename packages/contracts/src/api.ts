@@ -290,10 +290,45 @@ export const ApiWeeklyRead = z.object({
       notes: z.array(z.string()).nullable(),
       /** Null when locked, and when the founder removed it before sending. */
       suggestion: z.string().nullable(),
+      /**
+       * The day the suggestion grows from (weekly_read.v6): that morning's ask and her answer's
+       * one-line summary, so an organiser sees why. Absent from older reads, null when the
+       * suggestion grows from no particular day, is locked or was removed, or that day is gone.
+       */
+      suggestion_source: z
+        .object({
+          date: LocalDate,
+          exchange_id: z.uuid(),
+          /** Who asked that morning; null when it was Vela's own hello. */
+          asker_name: z.string().nullable(),
+          /** Her answer's one-line summary; null when there is none. */
+          summary: z.string().nullable(),
+        })
+        .nullable()
+        .optional(),
     })
     .nullable(),
 });
 export type ApiWeeklyRead = z.infer<typeof ApiWeeklyRead>;
+
+/**
+ * Her sent weekly reads, newest first, up to a year of them (`GET
+ * /v1/families/:familyId/weekly-reads?member=`): the weeks an organiser can open again.
+ */
+export const ApiWeeklyReadList = z.object({
+  member_id: z.uuid(),
+  reads: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        week_start: LocalDate,
+        week_end: LocalDate,
+        sent_at: z.iso.datetime({ offset: true }),
+      }),
+    )
+    .max(53),
+});
+export type ApiWeeklyReadList = z.infer<typeof ApiWeeklyReadList>;
 
 /** An organiser opened a sent, unlocked read on screen; its id is in the path. */
 export const OpenWeeklyRead = z.strictObject({});

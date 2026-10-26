@@ -1,7 +1,7 @@
 import { plural, t } from "@lingui/core/macro";
 import type { ApiWeeklyRead, WeekDayState } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
-import { shortDayName } from "./format.ts";
+import { localDayMonth, shortDayName } from "./format.ts";
 
 /**
  * The weekly read (spec §13, A9) in the screen's own idiom: seven small lights with their day names,
@@ -20,6 +20,20 @@ export interface WeekLight {
   late: boolean;
 }
 
+/**
+ * Why the week's suggestion: the morning it grows from, who asked, and what she answered (her
+ * answer's one-line summary), so an organiser knows what to ask, why, and from which message.
+ */
+export interface SuggestionSource {
+  date: string;
+  /** "Tue, 9 Sep" style label for the morning. */
+  dayLabel: string;
+  exchangeId: string;
+  /** Who asked that morning; null when it was Vela's own hello. */
+  asker: string | null;
+  summary: string | null;
+}
+
 export interface WeeklyRead {
   name: string;
   /** False while a Vela Light trial or plan covers her: everything shows. */
@@ -31,7 +45,24 @@ export interface WeeklyRead {
     counts: string[];
     notes: string[];
     suggestion: string | null;
+    /** The morning the suggestion grows from, when the read names one. */
+    source: SuggestionSource | null;
+    /** "7 – 13 Sep": the week the read is about. */
+    range: string;
   } | null;
+}
+
+function sourceOf(
+  source: NonNullable<ApiWeeklyRead["read"]>["suggestion_source"],
+): SuggestionSource | null {
+  if (source === null || source === undefined) return null;
+  return {
+    date: source.date,
+    dayLabel: `${shortDayName(source.date)}, ${localDayMonth(source.date)}`,
+    exchangeId: source.exchange_id,
+    asker: source.asker_name,
+    summary: source.summary,
+  };
 }
 
 /** A day as one of the seven lights: lit when answered, resting otherwise, never quiet or red. */
@@ -92,6 +123,8 @@ export function toWeeklyRead(api: ApiWeeklyRead): WeeklyRead {
                   }),
             notes: read.notes ?? [],
             suggestion: read.suggestion,
+            source: sourceOf(read.suggestion_source),
+            range: `${localDayMonth(read.week_start)} – ${localDayMonth(read.week_end)}`,
           },
   };
 }
@@ -130,6 +163,14 @@ export function weeklyFixture(): WeeklyRead {
         t`On Saturday she answered later than usual, after the market.`,
       ],
       suggestion: t`Ask her which seeds she wants to keep for next spring.`,
+      source: {
+        date: "2026-09-24",
+        dayLabel: `${shortDayName("2026-09-24")}, ${localDayMonth("2026-09-24")}`,
+        exchangeId: "e1",
+        asker: t`Mia`,
+        summary: t`Planted the last tomato seeds by the fence.`,
+      },
+      range: `${localDayMonth(dates[0] ?? "")} – ${localDayMonth(dates[6] ?? "")}`,
     },
   };
 }

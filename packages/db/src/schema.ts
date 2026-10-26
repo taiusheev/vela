@@ -1378,7 +1378,8 @@ export const weeklyReads = pgTable(
     suggestion: sealedText("weekly_reads.suggestion"),
     /**
      * {answered_days, counted_days, hello_mornings, family_asks, usual_time, topics[], patterns[],
-     * family_patterns[]} (reads before ADR-46: drift_min and voice_len_drift instead of the patterns).
+     * family_patterns[], suggestion_day} (reads before ADR-46: drift_min and voice_len_drift instead
+     * of the patterns; suggestion_day, the answered day the suggestion grows from, since weekly_read.v6).
      * The first four are the counts `renderWeeklyRead` in @vela/core writes for organisers, followed
      * by the family patterns; the model never writes a count, and she never sees one or a family
      * pattern (spec §8, §13). No health word and no mood label is ever stored here.

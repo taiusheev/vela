@@ -879,6 +879,10 @@ msgstr ""
 msgid "Ask {name} something"
 msgstr ""
 
+#: src/components/weekly-read-card.tsx
+msgid "Ask {name} this"
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "Ask {recipient} something"
 msgstr ""
@@ -1370,6 +1374,14 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 msgid "Earlier this month"
+msgstr ""
+
+#: app/weekly/[read].tsx
+msgid "Earlier week"
+msgstr ""
+
+#: app/(tabs)/sunday.tsx
+msgid "Earlier weeks"
 msgstr ""
 
 #. a time zone
@@ -2354,6 +2366,10 @@ msgstr ""
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr ""
 
+#: src/data/weekly.ts
+msgid "Mia"
+msgstr ""
+
 #. who the light is for
 #. who the light is for
 #: app/(tabs)/index.tsx
@@ -2828,11 +2844,16 @@ msgid "Opening the story…"
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
+#: app/weekly/[read].tsx
 msgid "Opening the week"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Opening…"
+msgstr ""
+
+#: src/components/weekly-read-card.tsx
+msgid "Opens a question to {name} with this text, ready to change or send"
 msgstr ""
 
 #: src/components/vote-options.tsx
@@ -2984,6 +3005,10 @@ msgstr ""
 
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
+msgstr ""
+
+#: src/data/weekly.ts
+msgid "Planted the last tomato seeds by the fence."
 msgstr ""
 
 #: src/audio/VoicePlayback.tsx
@@ -3379,6 +3404,10 @@ msgstr ""
 
 #: src/components/onboarding/plan.tsx
 msgid "See {name}’s first week"
+msgstr ""
+
+#: src/components/weekly-read-card.tsx
+msgid "See that morning"
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
@@ -4161,11 +4190,11 @@ msgstr ""
 msgid "The voice is still being prepared. Try again shortly."
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read"
 msgstr ""
 
-#: app/(tabs)/sunday.tsx
+#: src/components/weekly-read-card.tsx
 msgid "The weekly read · {range}"
 msgstr ""
 
@@ -4354,6 +4383,10 @@ msgstr ""
 msgid "This week"
 msgstr ""
 
+#: app/weekly/[read].tsx
+msgid "This week's read could not be opened just now."
+msgstr ""
+
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -4495,6 +4528,7 @@ msgstr ""
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
+#: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
 #: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
@@ -4509,6 +4543,10 @@ msgstr ""
 
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
+msgstr ""
+
+#: src/components/weekly-read-card.tsx
+msgid "Try this week"
 msgstr ""
 
 #: app/my-memories.tsx
@@ -4878,6 +4916,10 @@ msgstr ""
 msgid "Welcome to Vela"
 msgstr ""
 
+#: src/components/weekly-read-card.tsx
+msgid "What {name} told the family"
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr ""
@@ -5013,6 +5055,14 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
+msgstr ""
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer on {day}."
+msgstr ""
+
+#: src/components/weekly-read-card.tsx
+msgid "Why: it grows from {name}'s answer to {asker} on {day}."
 msgstr ""
 
 #: app/settings.tsx

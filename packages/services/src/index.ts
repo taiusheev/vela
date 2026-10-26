@@ -145,7 +145,11 @@ export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
 export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
-export { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
+export {
+  listApiWeeklyReads,
+  loadApiWeeklyRead,
+  openApiWeeklyRead,
+} from "./api-weekly-read.ts";
 export { editApiAsk, WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
 export {
