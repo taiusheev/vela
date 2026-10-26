@@ -10,7 +10,7 @@ import * as suggest from "./suggest.v5.ts";
 import * as translate from "./translate.v2.ts";
 import * as understand from "./understand.v6.ts";
 import * as weeklyInsight from "./weekly_insight.v2.ts";
-import * as weeklyRead from "./weekly_read.v5.ts";
+import * as weeklyRead from "./weekly_read.v6.ts";
 
 export interface Prompt {
   readonly version: string;

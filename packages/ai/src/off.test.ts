@@ -124,7 +124,7 @@ const CALLS: readonly (readonly [string, (ai: Ai) => Promise<AiOutcome<unknown>>
   [
     "weekly_read",
     (ai) => ai.weeklyRead(weeklyReadInput),
-    { lines: [], suggestion: "Mom, what was the best part of your week?" },
+    { lines: [], suggestion: "Mom, what was the best part of your week?", suggestionDay: null },
   ],
 ];
 

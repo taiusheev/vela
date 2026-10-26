@@ -5,6 +5,7 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { backToFamily, CancelButton, SHEET } from "../src/components/back-button.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { MorningCalendar } from "../src/components/morning-calendar.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { Chip, PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
@@ -53,10 +54,9 @@ export default function AwayScreen() {
       <>
         <Stack.Screen options={{ ...SHEET, title: t`Away`, headerLeft: () => <CancelButton /> }} />
         <View style={{ padding: space.margin, gap: space.l }}>
+          {day.loading ? <LoadingLight label={t`Loading your family…`} /> : null}
           <Words variant="body">
-            {day.loading ? (
-              <Trans>Loading your family…</Trans>
-            ) : day.trouble ? (
+            {day.loading ? null : day.trouble ? (
               <Trans>Your family could not be reached just now.</Trans>
             ) : (
               <Trans>Choose a parent in Settings before changing away dates.</Trans>

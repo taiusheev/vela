@@ -18,6 +18,7 @@ import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-d
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { LegalLinks } from "./legal-links.tsx";
+import { LoadingLight } from "./loading-light.tsx";
 import { Card, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
 
 /** A versioned English notice for the current English testing cohort. */
@@ -182,10 +183,11 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
           <ScrollView
             contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
           >
+            {decision === "loading" ? (
+              <LoadingLight label={t`Loading your account…`} size="large" />
+            ) : null}
             <Words variant="body" tone="ink2">
-              {decision === "loading" ? (
-                <Trans>Loading your account…</Trans>
-              ) : decision === "unavailable" ? (
+              {decision === "loading" ? null : decision === "unavailable" ? (
                 <Trans>
                   Your account could not be reached. Your privacy choice has not changed.
                 </Trans>

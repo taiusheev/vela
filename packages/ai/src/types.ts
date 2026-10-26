@@ -446,6 +446,12 @@ export type WeeklyReadInput = z.infer<typeof WeeklyReadInput>;
 export const WeeklyRead = z.object({
   lines: z.array(z.string().min(1).max(300)).max(4),
   suggestion: z.string().min(1).max(200),
+  /**
+   * The day in `days` whose answer the suggestion grows from, or null (weekly_read.v6). Vela's code
+   * keeps it only when it is one of the input's days, and shows that day's ask and summary as the
+   * reason; the model writes no reason of its own.
+   */
+  suggestionDay: LocalDate.nullable(),
 });
 export type WeeklyRead = z.infer<typeof WeeklyRead>;
 
