@@ -345,6 +345,12 @@ function FamilyToday({ day }: { day: TodayView }) {
             stale={trouble}
           />
         )}
+        {/* What she said is coming up (a doctor's visit, a trip), right under her answer: it is this
+          week's, and it asks the reader to act, so it leads the page instead of closing it
+          (founder, 26 October 2026). Memories stays the keepsake shelf. */}
+        {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
+          <RemindersCard familyId={familyId} />
+        ) : null}
         {noAccount || noFamily ? (
           <Words variant="body" tone="ink2">
             <Trans>Setting up your family…</Trans>
@@ -472,9 +478,6 @@ function FamilyToday({ day }: { day: TodayView }) {
             }
           />
         )}
-        {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
-          <RemindersCard familyId={familyId} />
-        ) : null}
         {quietOpen && liveQuiet.trouble && notice === undefined ? (
           <Words variant="body" tone="ink2">
             <Trans>
