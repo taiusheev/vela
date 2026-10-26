@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v6` · last updated 19 October 2026 · This invitation-only research trial operates entirely in English. Everyone taking part must be comfortable using English.
+Version `privacy-notice.v10` · last updated 26 October 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
 
 ## In short
 
@@ -17,7 +17,7 @@ Version `privacy-notice.v6` · last updated 19 October 2026 · This invitation-o
 
 Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"), a private individual in Taipei, Taiwan. There is no company yet. Timur Aiusheev decides how your information is used and is responsible for it. If a company takes the service over, we will tell you before anything changes.
 
-**Contact:** [t.aiusheev@gmail.com](mailto:t.aiusheev@gmail.com)
+**Contact:** [support@vela-light.com](mailto:support@vela-light.com), which reaches the founder.
 
 ## Who this notice is for
 
@@ -30,8 +30,8 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 **From everyone in the family's Vela group**
 
-- The name and username your messaging app shows us, your language and your time zone.
-- What you send to Vela: questions (we call them asks), photos, voice notes, and replies and reactions to answers.
+- The name your messaging app shows us, your language and your time zone. On Telegram also your username. On LINE there is no username, and we learn your language only when LINE shares it.
+- What you send to Vela: questions (we call them asks), photos, voice notes, and replies and reactions to answers. LINE has no reactions, and in a LINE group asks and replies are text only: photos and voice notes for the family are sent from the app.
 - Whether you tapped "I've read it" under Vela's first message in the group.
 
 **App setup and local preview:** The new onboarding asks for the relationship, interests and preferred ways of replying, alongside the name, language, country, time zone and morning time. These help prepare the first week. Before saving, the preview answers stay in app memory; a chosen portrait can leave a temporary local file. The in-memory draft is cleared on sign-out or account changes, except for the one explicitly accepted preview being saved into its intended first signed-in session. Replaced or abandoned portrait previews are removed; interrupted portrait previews are swept on the next app start. If local file deletion fails, a cache file may remain until cleanup succeeds or the app cache is removed. Saving sends the setup answers and chosen questions to Vela; it does not record the invited person's consent. Relationship, interests and reply preferences are kept with their member profile for the same period as their name and morning settings. You can ask the founder to correct or remove them.
@@ -42,7 +42,7 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 - The name the family uses, how to greet them each morning (for example "Mrs Chen"), language, country, time zone and usual wake-up time. The organiser gives us these, and we confirm them with the person on the onboarding call.
 - Their answers: button taps, voice notes, text, photos and stickers, and when each answer came.
-- What our software works out from an answer: a written English transcript of a voice note, a one-line summary, mentions of people, places, plans or dates, mentions of health only with the separate yes described under "Health words", and whether the answer mentions something the organiser should hear, such as a fall or pain.
+- What our software works out from an answer: a written transcript of a voice note, in the language spoken, and a translation into English or Traditional Chinese when someone in the family reads the other language, a one-line summary, mentions of people, places, plans or dates, mentions of health only with the separate yes described under "Health words", and whether the answer mentions something the organiser should hear, such as a fall or pain.
 - When the morning messages went out, days away, and days without an answer.
 
 **From each week's messages between the person the light is for and the family:** what our software reads in the week as a whole, described under "The weekly read": for the founder only, up to three possible readings of what may lie beneath the words; and, for each organiser who asked or replied that week, a few words on their own messages.
@@ -57,7 +57,7 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 **Only with a separate yes, on the founder's calls:** answers to a few short questions, such as how connected someone feels (at weeks 0, 4 and 12), how the organiser would feel if Vela stopped (at days 14 and 30), and whether the organiser would pay for Vela Light, a paid plan Vela plans to offer later (at day 30). Skipping them changes nothing.
 
-**App permission:** The app shows an English notice naming OpenAI and Deepgram before sign-in or saving. Your own choice is recorded with the text version, a fingerprint of the exact notice and a server timestamp when your account is provisioned or you accept on an existing account. This app record stays with your active account and is cleared when the account is deleted. It is separate from your parent’s consent, the health-words choice and the longer-lived consent records below. Declining keeps the preview on your device and does not authorise any family data sharing. Existing test families continue under their recorded pilot consent; a software update does not create new consent for them.
+**App permission:** The app shows a notice, in English or Traditional Chinese, naming OpenAI and Deepgram before sign-in or saving. Your own choice is recorded with the text version, a fingerprint of the exact notice and a server timestamp when your account is provisioned or you accept on an existing account. This app record stays with your active account and is cleared when the account is deleted. It is separate from your parent’s consent, the health-words choice and the longer-lived consent records below. Declining keeps the preview on your device and does not authorise any family data sharing. Existing test families continue under their recorded pilot consent; a software update does not create new consent for them.
 
 **Records we create:** when and how each person agreed or said no, to which version of which text, and, for a button tap, a fingerprint of that text; delivery records; a log of each AI call (which call, when, whether it worked, its cost); a log of every time the founder opens or changes a family's records; usage events without any message content, such as "an answer arrived at 08:12, by button".
 
@@ -65,18 +65,22 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 No location. No access to a phone's contacts, camera or microphone beyond the voice notes people choose to send. Vela does not ask for medical records; words about health that someone chooses to say in an answer are handled as described under "Health words". Nothing from anyone's device other than what they send to Vela. No advertising identifiers. No payment information: the pilot is free.
 
-In the family's Vela group, Vela keeps only the messages meant for it: replies to its evening message, `/ask` and `/later` messages, replies to the posts of answers, reactions to those posts, and taps on "I've read it". It also notices when someone leaves the group, which Telegram tells every bot in a group. When Vela is an administrator of the group (which lets reactions count), Telegram delivers every message in the group to Vela; every message not meant for Vela is discarded as it arrives, without being stored or logged.
+In the family's Vela group, Vela keeps only the messages meant for it: replies to its evening message, `/ask` and `/later` messages, replies to the posts of answers, reactions to those posts, and taps on "I've read it". It also notices when someone leaves the group, which the messaging app tells Vela.
+
+- **On Telegram,** when Vela is an administrator of the group (which lets reactions count), Telegram delivers every message in the group to Vela; every message not meant for Vela is discarded as it arrives, without being stored or logged.
+- **On LINE,** LINE delivers every message in the group to Vela, and Vela cannot ask it to deliver less. Vela's software keeps only replies made with LINE's Reply to Vela's own messages, messages starting with `/ask` or `/later`, and taps on its buttons. Everything else (messages, photos, voice notes, stickers, edits) is discarded as it arrives, before anything else in Vela sees it, without being stored or logged. A message that quotes someone else's message is read only to see whether it quotes Vela, then discarded. So keep other family conversation in another group.
+- **Unsending on LINE.** If someone unsends a message Vela kept, Vela deletes its copy. Vela cannot remove what it already posted in the group, because LINE does not let Vela delete its own messages.
 
 ## Why we use it
 
 1. **To carry the exchange:** deliver each ask at the person's morning hour in their language, then bring the answer and the family's replies back.
 2. **To keep the light:** tell the family when the person has answered. When a day stays quiet, send the organiser the facts (when the morning message went out, when the person usually answers) and the names and numbers of the nearby contacts who have agreed, so the organiser can decide what to do.
-3. **To work across languages and voices:** turn voice into text, translate, and suggest short answers the person can tap.
+3. **To work across languages and voices:** turn voice into text, translate between English and Traditional Chinese when the family uses both, and suggest short answers the person can tap.
 4. **To pass on words that matter:** if an answer mentions something like a fall, pain, a stranger at the door or a request for money, the organisers hear about it that day: with the person's own words if the person the light is for has agreed to that (see "Health words"), and otherwise in a short note, with none of their words, saying that something they said may be worth a call. Vela does not diagnose, and it does not send these words to anyone else.
 5. **To send the organiser a short weekly read** on Sunday: what the person told the family that week and what changed in how they answered, compared only with their own earlier weeks, and, with the separate yes under "Health words", their own health words that came up on two or more days. That account is never a score, a diagnosis or advice. Each organiser's copy may also carry feedback on their own messages, with one suggestion for the week ahead. The founder alone also sees a reading of what may lie beneath the week's words, to understand the family's week while checking the read, and to judge whether readings like these are accurate and kind enough ever to share. Both are described under "The weekly read".
 6. **To run the service safely:** send every message once and on time, fix failures, prove that deleted information was deleted, and show what each person agreed to.
 7. **To learn whether the pilot works:** answer rates, answer times and how often days stay quiet, counted without names. Results are shared only as totals.
-8. **To decide who can join the pilot:** the planned cohort is the founder’s family in Vietnam for seven days, then 3–5 friends’ families in Taiwan for 30 days. This describes the proposed cohort, not legal clearance. The founder checks each participant’s residence and any relevant citizenship restrictions before approving participation. The Vietnam family waits until the review of its actual participants, consent and processing flows is complete. Existing restrictions remain in force until that review is recorded.
+8. **To decide who can join the pilot:** the founder's family in Vietnam took part first; up to 10 families in Taiwan, most of them on LINE and in Traditional Chinese, follow for about 30 days. Each family takes part only once the founder has approved it on Vela's admin page. This describes the proposed cohort, not legal clearance. The founder checks each participant’s residence and any relevant citizenship restrictions before approving participation. The Vietnam family waits until the review of its actual participants, consent and processing flows is complete. Existing restrictions remain in force until that review is recorded.
 9. **To suggest questions, and send one for an organiser who chose it:** draft a question the family could ask the person next, in the style of one organiser's own recent questions, for the family to use, change or ignore in the app; and, only for an organiser who chose "Send it as me", send it as that organiser's question on a morning when nobody in the family wrote one (see "Questions Vela writes for an organiser").
 
 We do not sell information, show advertising, or use anyone's words or voice to train AI models. We do not use a real answer or voice note to test or improve Vela's AI unless the person who said it agrees separately, for that one item.
@@ -123,7 +127,7 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 
 ## Who sees it
 
-- **The family in the Vela group** sees the asks, the answers with their English transcripts, and the replies.
+- **The family in the Vela group** sees the asks, the answers with their transcripts and, where needed, translations, and the replies.
 - **The person the light is for** hears or reads the family's replies the next morning, and can ask "what does the family see" at any time.
 - **Organisers** also receive notices on quiet days, the words or notes passed on under purpose 4, the weekly read, with feedback on their own messages in their own copy only, and the details of the nearby contacts who have agreed.
 - **A nearby contact** sees only a message an organiser chooses to send them on a quiet day. They never see answers.
@@ -138,18 +142,19 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 | OpenAI | AI: summaries, translations, suggested answers, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry (planned, not connected) | No current processing for Vela; error reporting would need its own setup and notice before activation | None at present | Germany (EU), planned |
-| Telegram | Carries this trial’s messages as an independent messaging platform | Everything sent in the chat | Its own data centres, under its own privacy policy |
+| Telegram | Carries the messages of families who use Telegram, as an independent messaging platform | Everything sent in the chat | Its own data centres, under its own privacy policy |
+| LINE (LY Corporation) | Carries the messages of families who use LINE, as an independent messaging platform, under its own terms | Everything sent in Vela's chats and in the family's Vela group, including what Vela then discards. LINE keeps its own copies of voice notes and photos for a period it does not publish; Vela copies them to Cloudflare at once and deletes its copy after 30 days | Its own data centres, under its own privacy policy |
 | Google Drive, in the founder's own Google account | The founder's pilot notes | Only a family code instead of a name, dates, the versions of the texts people agreed to, yes or no answers, the country (or US state) where each person lives and whether they are a Russian citizen, as codes, and questionnaire scores; never quotes or anything about health. In a private folder shared with no one | On Google's servers in the United States and other countries, under Google's own terms for personal accounts |
 
 Expo delivers app builds and checks for app updates; it receives technical installation/update identifiers and network details. Push notifications are separately controlled and are not enabled merely because the app shows a permission prompt. If enabled, Expo and Apple (APNs) or Google (FCM) also receive device push tokens and notification text/identifiers, never family answer text or health words.
 
-Telegram is the messaging app used in this trial under its own terms. LINE and multilingual translation are outside this trial. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
+Telegram and LINE are the messaging apps used in this trial, each under its own terms. Messages in those chats stay in the app until you delete them there; deleting your information in Vela does not remove them from your chat history.
 
 We will tell organisers at least 14 days before a new provider starts receiving family messages.
 
 ## Where it is stored
 
-Our database is in Singapore. We ask Cloudflare to store voice notes and photos in its Asia-Pacific region; Cloudflare treats this as a preference, not a guarantee. Vela's software runs on Cloudflare's worldwide network, so a message may be processed for a moment in the Cloudflare data centre nearest to the person who sent it. The AI and voice-to-text providers work in the United States. The founder's pilot notes are kept in Google Drive, on Google's servers in the United States and other countries. Your information is therefore used in Singapore, the United States and other countries where these providers operate, not only where you live.
+Our database is in Singapore. Messages on Telegram or LINE also pass through that app's own servers. We ask Cloudflare to store voice notes and photos in its Asia-Pacific region; Cloudflare treats this as a preference, not a guarantee. Vela's software runs on Cloudflare's worldwide network, so a message may be processed for a moment in the Cloudflare data centre nearest to the person who sent it. The AI and voice-to-text providers work in the United States. The founder's pilot notes are kept in Google Drive, on Google's servers in the United States and other countries. Your information is therefore used in Singapore, the United States and other countries where these providers operate, not only where you live.
 
 ## How long we keep it
 
@@ -189,7 +194,7 @@ At any time, free of charge, you can:
 
 The person the light is for can also ask **"what does the family see"** in the chat, and receives the one-line summaries of their last seven answered days and the lines about their week from the most recent weekly read sent to the organisers. It does not show the organisers' feedback or the founder's readings (see "The weekly read"). For those, or for anything else the family has seen, ask the founder.
 
-**How:** write to [t.aiusheev@gmail.com](mailto:t.aiusheev@gmail.com), or tell your organiser, who passes it on to the founder. We may ask one simple question to make sure the request comes from you. Stopping takes effect immediately. We aim to complete every other request within 7 days, and always within the time Taiwan's law allows: 15 days for access or a copy, 30 days for a correction, a stop or a deletion (each extendable once, with a written reason). These rights cannot be waived or limited by agreement.
+**How:** write to [support@vela-light.com](mailto:support@vela-light.com), or tell your organiser, who passes it on to the founder. We may ask one simple question to make sure the request comes from you. Stopping takes effect immediately. We aim to complete every other request within 7 days, and always within the time Taiwan's law allows: 15 days for access or a copy, 30 days for a correction, a stop or a deletion (each extendable once, with a written reason). These rights cannot be waived or limited by agreement.
 
 If you are unhappy with how we handled your information, please tell the founder. You can also complain to the data protection authority where you live.
 
@@ -202,6 +207,7 @@ Every part of Vela is a choice.
 - Without a messaging account and a morning time, Vela cannot deliver a morning message.
 - Voice is never required: every ask can be answered with one tap.
 - Tapping "I've read it" in the family group is optional; asks and replies work without it.
+- On LINE, Vela's questions for the person the light is for come with buttons directly beneath the message; the tap on a button is the answer, and Vela keeps which message it answered.
 - An organiser who would rather not get feedback on their own messages can tell the founder, who then sends their copy of the weekly read without it.
 - "Send it as me" is off unless an organiser chooses it. Without it, on a morning nobody in the family wrote a question, Vela sends its own question, signed "Vela".
 - Nearby contacts are optional. Without them, a notice on a quiet day names no one to call except the organiser.
