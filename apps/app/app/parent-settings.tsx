@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../src/components/back-button.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { ParentLinkSettings } from "../src/components/parent-link-settings.tsx";
 import { ParentPhotoSettings } from "../src/components/parent-photo-settings.tsx";
 import { Words } from "../src/components/ui.tsx";
@@ -61,11 +62,11 @@ export default function ParentSettingsScreen() {
             name={t`Your parent`}
             live
           />
+        ) : day.loading ? (
+          <LoadingLight label={t`Loading your family…`} />
         ) : (
           <Words variant="body" tone="ink2">
-            {day.loading
-              ? t`Loading your family…`
-              : t`This parent is no longer available. Go back to Settings and choose your family again.`}
+            {t`This parent is no longer available. Go back to Settings and choose your family again.`}
           </Words>
         )}
       </ScrollView>

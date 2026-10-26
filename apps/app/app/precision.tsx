@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../src/components/back-button.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { Card, Eyebrow, SecondaryButton, Words } from "../src/components/ui.tsx";
 import type { PrecisionMonth, PrecisionPart } from "../src/data/precision.ts";
 import { usePrecision } from "../src/data/usePrecision.ts";
@@ -136,9 +137,7 @@ export default function PrecisionScreen() {
       >
         {view.trouble ? <SecondaryButton label={t`Try again`} onPress={view.refresh} /> : null}
         {view.loading ? (
-          <Words variant="body" tone="ink2">
-            <Trans>Loading the quiet notices…</Trans>
-          </Words>
+          <LoadingLight label={t`Loading the quiet notices…`} />
         ) : !view.organiser ? (
           <Words variant="body" tone="ink2">
             <Trans>This page is for the family's organisers, who are told of quiet mornings.</Trans>

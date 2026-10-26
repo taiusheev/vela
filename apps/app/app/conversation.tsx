@@ -24,6 +24,7 @@ import { ActionSheet, type SheetAction } from "../src/components/chat/action-she
 import { ChatBubble, DayChip } from "../src/components/chat/chat-bubble.tsx";
 import { ChatComposer } from "../src/components/chat/chat-composer.tsx";
 import { Light } from "../src/components/light.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { Text } from "../src/components/scaled-text.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { canAsk } from "../src/data/ask-target.ts";
@@ -537,9 +538,7 @@ function Conversation() {
           ) : null}
           {history.loading && !demo ? (
             <View style={{ paddingTop: space.xl, alignItems: "center" }}>
-              <Words variant="body" tone="ink2">
-                <Trans>Loading your conversation…</Trans>
-              </Words>
+              <LoadingLight label={t`Loading your conversation…`} size="large" />
             </View>
           ) : null}
           {history.trouble ? (
