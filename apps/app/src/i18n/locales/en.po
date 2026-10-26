@@ -830,6 +830,10 @@ msgstr "And her window lights up."
 msgid "And on a quiet morning?"
 msgstr "And on a quiet morning?"
 
+#: src/data/example-names.ts
+msgid "Anna"
+msgstr "Anna"
+
 #: src/components/story-day.tsx
 msgid "Another question"
 msgstr "Another question"
@@ -1913,6 +1917,10 @@ msgstr "If you agree, Vela can suggest little things worth remembering from your
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 
+#: src/data/example-names.ts
+msgid "Igor"
+msgstr "Igor"
+
 #: src/components/onboarding/story.tsx
 msgid "In her own messenger. No new app for her."
 msgstr "In her own messenger. No new app for her."
@@ -2372,6 +2380,7 @@ msgstr "Message"
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 
+#: src/data/example-names.ts
 #: src/data/weekly.ts
 msgid "Mia"
 msgstr "Mia"
@@ -3314,6 +3323,10 @@ msgstr "said she is fine"
 #: src/data/useNearby.ts
 msgid "Said yes"
 msgstr "Said yes"
+
+#: src/data/example-names.ts
+msgid "Sam"
+msgstr "Sam"
 
 #: src/components/onboarding/plan.tsx
 msgid "Save {name}’s mornings"

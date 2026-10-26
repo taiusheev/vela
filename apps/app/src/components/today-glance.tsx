@@ -807,8 +807,7 @@ export function FamilyFeed({
               mark: <Initial name={from} />,
               line: (
                 <Text style={[type.body, { color: p.ink3 }]}>
-                  <Text style={[type.bodyMedium, { color: p.ink }]}>{from}</Text>
-                  {"  "}
+                  <Text style={[type.bodyMedium, { color: p.ink }]}>{from}</Text>{" "}
                   {t`Wrote to ${recipient}`}
                 </Text>
               ),
