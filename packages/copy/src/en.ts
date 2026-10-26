@@ -101,7 +101,7 @@ export const en = {
   "account_link.unavailable":
     "This account link could not be opened. Finish setting up your family in this chat, then start a new link in Vela.",
   "pilot.activation_wait":
-    "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
+    "Your light is not on yet. Your family organiser's setup is not finished: the family needs to be approved, and the organiser needs to be able to receive messages. Please ask your organiser to finish setup, then try again.",
   "pilot.invitation_only":
     "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
   "arrival.greeting": "Good morning, {address}.",
@@ -147,7 +147,7 @@ export const en = {
   "readback.reactions": "{names} sent {emoji}",
   "consent.invalid_link":
     "This link is no longer valid. Please ask the person who sent it for a new one.",
-  "consent.already_linked": "This Telegram account is already connected to another family on Vela.",
+  "consent.already_linked": "This account is already connected to another family on Vela.",
   "consent.request":
     "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
   "consent.health_words":
