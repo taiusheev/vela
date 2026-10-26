@@ -393,7 +393,8 @@ describe("account linking boundaries and atomicity", () => {
       for (const value of [
         null,
         {},
-        { ...valid, channel: "line" },
+        // LINE links like Telegram since ADR-52; a messenger Vela cannot link through is refused.
+        { ...valid, channel: "whatsapp" },
         { ...valid, kind: "text" },
         { ...valid, conversation: { ...valid.conversation, kind: "group" } },
         { ...valid, sender: { externalUserId: "someone-else" } },
@@ -862,5 +863,86 @@ describe("explicit Telegram approval", () => {
       completeAccountLink(h.deps, identity, "deleted", proof.challenge_id, undefined),
     ).rejects.toMatchObject(denied);
     expect(await attached()).toBeNull();
+  });
+});
+
+describe("linking the app over LINE (ADR-52)", () => {
+  const herLine = `U${"b".repeat(32)}`;
+  const approving = (familyIds: string[]) => ({
+    telegramUserIds: [],
+    familyIds,
+    languages: ["en", "zh-TW"],
+  });
+
+  async function onLine() {
+    await h.db.update(families).set({ language: "zh-TW" }).where(eq(families.id, seed.family.id));
+    await h.db
+      .update(members)
+      .set({ language: "zh-TW" })
+      .where(eq(members.familyId, seed.family.id));
+    await h.db
+      .update(channelLinks)
+      .set({ channel: "line", externalId: herLine })
+      .where(eq(channelLinks.id, seed.memberLink.id));
+  }
+
+  function lineStart(id: string): InboundEvent {
+    return {
+      channel: "line",
+      eventId: "verified-line-start",
+      at: h.clock.now().toISOString(),
+      kind: "start",
+      startParam: `link_${id}`,
+      sender: { externalUserId: herLine },
+      conversation: { externalId: herLine, kind: "private" },
+    };
+  }
+
+  it("sends the private code in LINE, in Chinese, and links the app to an approved family", async () => {
+    await onLine();
+    const approved = {
+      ...h.deps,
+      config: { ...h.config, pilotAdmission: approving([seed.family.id]) },
+    };
+    const pointer = await start();
+    await handleAccountLinkStart(approved, lineStart(pointer.challenge_id));
+    await h.run({ outbound: (job) => deliverOutbound(h.deps, job.outboundId) });
+    const [sent] = h.line.sentTo(herLine);
+    expect(sent?.message.text).toContain("請在 Vela 輸入這個代碼");
+    const code = sent?.message.text.match(/[A-Za-z0-9_-]{22}/)?.[0];
+    if (code === undefined) throw new Error("Missing delivered proof");
+    expect(
+      await completeAccountLink(
+        { ...h.deps, pilotAdmission: approving([seed.family.id]) },
+        identity,
+        "line-complete",
+        pointer.challenge_id,
+        code,
+      ),
+    ).toMatchObject({ response: { body: { linked: true } } });
+    const [linked] = await h.db.select().from(events).where(eq(events.name, "account_linked"));
+    expect(linked?.props).toMatchObject({ channel: "line" });
+  });
+
+  it("refuses the link while the family is not approved", async () => {
+    await onLine();
+    const waiting = { ...h.deps, config: { ...h.config, pilotAdmission: approving([]) } };
+    const pointer = await start();
+    await handleAccountLinkStart(waiting, lineStart(pointer.challenge_id));
+    await h.run({ outbound: (job) => deliverOutbound(h.deps, job.outboundId) });
+    expect(h.line.sentTo(herLine)[0]?.message.text).toContain("無法開啟這個帳號連結");
+    expect((await challenge(pointer.challenge_id)).codeHash).toBeNull();
+
+    const challengeId = pointer.challenge_id;
+    const code = (await issueAccountLinkCode(h.deps, challengeId, lineStart(challengeId))).code;
+    await expect(
+      completeAccountLink(
+        { ...h.deps, pilotAdmission: approving([]) },
+        identity,
+        "line-denied",
+        challengeId,
+        code,
+      ),
+    ).rejects.toMatchObject(denied);
   });
 });

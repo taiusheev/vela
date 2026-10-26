@@ -179,6 +179,8 @@ export function fetchCapabilities(): Promise<ApiCapabilities> {
 export interface LinkChallenge {
   challenge_id: string;
   telegram_url: string;
+  /** The same request through Vela's LINE account, where the server offers LINE (ADR-52). */
+  line_url?: string;
   expires_at: string;
   confirmation?: "telegram";
   requester_label?: string;
