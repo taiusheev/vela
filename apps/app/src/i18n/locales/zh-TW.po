@@ -3909,7 +3909,6 @@ msgstr "驗證碼正確，但這個帳號還需要其他步驟才能完成登入
 
 #: src/components/telegram-family-link.tsx
 msgid "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
-msgstr "該確認已失效。請使用你自己的{messenger}帳號重新連結。"
 msgstr "該確認已失效。請使用您自己的{messenger}帳號重新連結。"
 
 #: app/conversation.tsx
