@@ -152,7 +152,12 @@ export async function sendPush(
     member.userId === null
       ? []
       : await deps.db
-          .select({ id: users.id, oneMomentADay: users.oneMomentADay })
+          .select({
+            id: users.id,
+            oneMomentADay: users.oneMomentADay,
+            replies: users.replyNotifications,
+            turns: users.turnReminders,
+          })
           .from(users)
           .where(and(eq(users.id, member.userId), isNull(users.deletedAt)))
           .limit(1);
@@ -161,7 +166,7 @@ export async function sendPush(
   }
   let ordinaryTtl: number | undefined;
   if (isOrdinaryPush(kind)) {
-    if (!account.oneMomentADay) {
+    if (!account.oneMomentADay || (kind === "answer_receipt" ? !account.replies : !account.turns)) {
       return dropped("one_moment_off");
     }
     const now = deps.clock.now();

@@ -637,6 +637,14 @@ msgstr "早晨沒有回覆時的安靜通知 · 可以幫忙看看的附近親�
 msgid "A recipe"
 msgstr "一道菜的做法"
 
+#: app/settings.tsx
+msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
+msgstr "父母回答您的問題時，您會收到無聲通知。每個家庭每天最多一則，通知時間為您所在時區的 08:00 至 21:00。"
+
+#: app/settings.tsx
+msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
+msgstr "只有在明天的問題還沒準備好時，才會發送無聲提醒。不論有幾位父母，每天最多一則，提醒時間為您所在時區的 08:00 至 21:00。"
+
 #: src/components/onboarding/questions.tsx
 msgid "A small, specific question feels more like you than a perfect one."
 msgstr "簡單、具體的小問題，比完美的問句更像你。"
@@ -984,6 +992,10 @@ msgstr "第一個回覆{recipient}吧。"
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
 msgstr "繼續之前"
+
+#: app/settings.tsx
+msgid "Before your turn"
+msgstr "輪到您之前"
 
 #: app/vela-light.tsx
 msgid "Best value · save {saving}%"
@@ -4738,6 +4750,10 @@ msgstr "{name}的 Vela Light 已開啟，到 {date}為止。不收任何費用�
 msgid "Vela Light is on for {name}."
 msgstr "{name}的 Vela Light 已開啟。"
 
+#: app/settings.tsx
+msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
+msgstr "即使關閉這些提醒，您仍會收到 Vela Light 的早晨未回覆通知。"
+
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr "Vela Light 會讓你看到完整小記"
@@ -5016,6 +5032,10 @@ msgstr "早上比較安靜時"
 #: app/precision.tsx
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr "早上一直很安靜時，Vela 會通知你。這裡是那些通知最後的結果。大多數是稍晚才回覆，或那天正好外出。"
+
+#: app/settings.tsx
+msgid "When a parent replies"
+msgstr "父母回覆時"
 
 #: src/components/onboarding/questions.tsx
 msgid "When does {name} usually wake up?"

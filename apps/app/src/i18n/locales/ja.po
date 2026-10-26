@@ -630,6 +630,14 @@ msgstr ""
 msgid "A recipe"
 msgstr ""
 
+#: app/settings.tsx
+msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
+msgstr ""
+
+#: app/settings.tsx
+msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "A small, specific question feels more like you than a perfect one."
 msgstr ""
@@ -976,6 +984,10 @@ msgstr ""
 
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
+msgstr ""
+
+#: app/settings.tsx
+msgid "Before your turn"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -4731,6 +4743,10 @@ msgstr ""
 msgid "Vela Light is on for {name}."
 msgstr ""
 
+#: app/settings.tsx
+msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "Vela Light shows you the read"
 msgstr ""
@@ -5008,6 +5024,10 @@ msgstr ""
 
 #: app/precision.tsx
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
+msgstr ""
+
+#: app/settings.tsx
+msgid "When a parent replies"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx

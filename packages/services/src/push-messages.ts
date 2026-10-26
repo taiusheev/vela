@@ -21,7 +21,7 @@ import {
   type PushKind,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { localTimeOf, outboundKey } from "@vela/core";
+import { localDateOf, localTimeOf, outboundKey } from "@vela/core";
 import { type Member, pushDevices, type QuietEvent, users } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import type { PushMessage } from "./deps.ts";
@@ -197,6 +197,8 @@ export function pushMessageFor(
 export interface PushReader {
   member: Member;
   userId: string;
+  /** Account time zone keeps the daily reminder slot consistent across memberships. */
+  timeZone?: string;
 }
 
 /**
@@ -207,13 +209,14 @@ export interface PushReader {
 export async function ordinaryPushReader(
   db: Queryable,
   memberId: string,
+  kind: OrdinaryPushKind = "answer_receipt",
 ): Promise<PushReader | null> {
   const member = await memberById(db, memberId);
   if (member === null || member.status !== "active" || member.userId === null) {
     return null;
   }
   const [phone] = await db
-    .select({ id: pushDevices.id })
+    .select({ id: pushDevices.id, timeZone: users.tz })
     .from(users)
     .innerJoin(pushDevices, eq(pushDevices.userId, users.id))
     .where(
@@ -221,11 +224,12 @@ export async function ordinaryPushReader(
         eq(users.id, member.userId),
         isNull(users.deletedAt),
         eq(users.oneMomentADay, true),
+        eq(kind === "answer_receipt" ? users.replyNotifications : users.turnReminders, true),
         eq(pushDevices.permission, "granted"),
       ),
     )
     .limit(1);
-  return phone === undefined ? null : { member, userId: member.userId };
+  return phone === undefined ? null : { member, userId: member.userId, timeZone: phone.timeZone };
 }
 
 /**
@@ -289,10 +293,11 @@ export function answerReceiptPush(input: {
 
 /**
  * The evening's turn for a family with no group (S6): the holder's phones hear that tomorrow morning
- * is theirs, under the key the group's prompt would have used. Its local day is the holder's today,
- * the day it is sent, so it never takes the next day's place in the budget.
+ * is theirs. A shared account/day key limits reminder attempts across parents and families;
+ * answer receipts keep their own budget. The effect still names the parent's target morning.
  */
 export function turnPromptPush(input: {
+  now: Date;
   holder: PushReader;
   familyId: string;
   recipientId: string;
@@ -303,10 +308,12 @@ export function turnPromptPush(input: {
   const lang = holder.member.language;
   return {
     kind: "turn_prompt",
-    idempotencyKey: outboundKey("turn_prompt", {
-      memberId: input.recipientId,
-      date: input.forDate,
-    }),
+    idempotencyKey: `app:${outboundKey("turn_prompt", {
+      // Account-wide daily reminder slot. The database idempotency key arbitrates simultaneous
+      // turns across parents/families; answer receipts retain their independent budget.
+      memberId: holder.userId,
+      date: localDateOf(input.now, holder.timeZone ?? holder.member.tz),
+    })}`,
     memberId: holder.member.id,
     channel: PUSH_CHANNEL,
     conversationId: holder.userId,

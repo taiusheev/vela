@@ -446,6 +446,7 @@ export interface ApiRuntime {
    * counts toward how an organiser is told only when it is true. Left out, pushes are off.
    */
   push?: boolean;
+  notificationControls?: boolean;
 }
 
 interface RuntimeEnv {
@@ -956,7 +957,11 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
   });
 
   app.get("/v1/me", authenticate, withDatabase, async (c) => {
-    const me = await runtime.services.loadApiMe(c.get("db"), c.get("session"));
+    const me = await runtime.services.loadApiMe(
+      c.get("db"),
+      c.get("session"),
+      runtime.notificationControls === true,
+    );
     return me === null
       ? c.json(NOT_FOUND, 404)
       : c.json(
@@ -1802,8 +1807,13 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               },
               400,
             );
+          const accountDeps = {
+            db: c.get("db"),
+            clock: writes.clock,
+            ...(runtime.notificationControls === true ? { notificationControls: true } : {}),
+          };
           const result = await service(
-            { db: c.get("db"), clock: writes.clock },
+            accountDeps,
             c.get("session"),
             c.get("writeKey"),
             c.get("writeInput"),

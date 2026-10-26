@@ -103,13 +103,18 @@ export async function provisionApiAccount(
 }
 
 export async function updateApiAccount(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: Pick<Deps, "db" | "clock"> & { notificationControls?: boolean },
   identity: SessionIdentity,
   key: string,
   patch: unknown,
 ): Promise<{ response: ApiMutationResponse; replayed: boolean }> {
   const parsed = ApiAccountPatch.safeParse(patch);
   if (!parsed.success) throw new ApiIdempotencyError("invalid");
+  const individual =
+    parsed.data.reply_notifications !== undefined || parsed.data.turn_reminders !== undefined;
+  if (individual && deps.notificationControls !== true) {
+    throw new ApiIdempotencyError("unavailable");
+  }
   return runApiMutation(
     deps,
     identity,
@@ -119,6 +124,14 @@ export async function updateApiAccount(
         await lockAccount(tx, identity.authSubject);
       },
       mutate: async (tx) => {
+        // authorize holds this account's row lock, so concurrent independent choices compose.
+        const [current] = await tx
+          .select({ replies: users.replyNotifications, turns: users.turnReminders })
+          .from(users)
+          .where(and(eq(users.authSubject, identity.authSubject), isNull(users.deletedAt)));
+        if (current === undefined) throw new VelaError("not_found", "Account not found");
+        const replies = parsed.data.reply_notifications ?? current.replies;
+        const turns = parsed.data.turn_reminders ?? current.turns;
         const [account] = await tx
           .update(users)
           .set({
@@ -130,7 +143,18 @@ export async function updateApiAccount(
             // "One moment a day" (ADR-34): the account's ordinary pushes, never the quiet notice.
             ...(parsed.data.one_moment_a_day === undefined
               ? {}
-              : { oneMomentADay: parsed.data.one_moment_a_day }),
+              : {
+                  oneMomentADay: parsed.data.one_moment_a_day,
+                  replyNotifications: parsed.data.one_moment_a_day,
+                  turnReminders: parsed.data.one_moment_a_day,
+                }),
+            ...(individual
+              ? {
+                  oneMomentADay: replies || turns,
+                  replyNotifications: replies,
+                  turnReminders: turns,
+                }
+              : {}),
           })
           .where(and(eq(users.authSubject, identity.authSubject), isNull(users.deletedAt)))
           .returning(userProjection);
@@ -178,7 +202,13 @@ export async function disableApiAccount(
     if (account.deletedAt === null) {
       await tx
         .update(users)
-        .set({ deletedAt: now, privacyAcceptance: null })
+        .set({
+          deletedAt: now,
+          privacyAcceptance: null,
+          replyNotifications: false,
+          turnReminders: false,
+          oneMomentADay: false,
+        })
         .where(eq(users.id, account.id));
     }
     await tx.delete(apiRequestReceipts).where(eq(apiRequestReceipts.actorHash, actorHash));

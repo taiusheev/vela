@@ -1081,12 +1081,13 @@ export async function sendTurnPrompt(
       // Push (ADR-34, S6): the holder hears it on their phone instead, once, when this call took
       // the turn, and while push is on. It fires at her 19:00, as the group's prompt does.
       if (taken !== undefined && organiser !== undefined && deps.push !== null) {
-        const holder = await ordinaryPushReader(tx, organiser.id);
+        const holder = await ordinaryPushReader(tx, organiser.id, "turn_prompt");
         if (holder !== null) {
           await enqueueOutbound(
             deps,
             tx,
             turnPromptPush({
+              now,
               holder,
               familyId: family.id,
               recipientId,

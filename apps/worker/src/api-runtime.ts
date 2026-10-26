@@ -428,6 +428,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }),
     push: config.pushSend === "expo",
+    notificationControls: config.notificationControls === true,
     parentConnection: loadApiParentConnection,
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,

@@ -11,7 +11,7 @@ Vela's notifications should help a family respond or prepare a real exchange. Op
 | A morning stays quiet under Vela Light | Existing quiet notice; tap opens the quiet workflow | Existing audible, time-sensitive notice | Existing quiet-event and Light rules apply |
 | A quiet morning is settled | Existing resolution, replacing the quiet event's lock-screen slot | Existing quiet-channel behavior | Existing quiet-event closure rules apply |
 
-Routine notifications remain at most one **of each kind per member per day**, under the existing database budget. This is not a single account-wide daily limit. The setting is therefore called **Replies and turn reminders**, replacing the misleading **One moment a day**. Quiet-morning notices remain separate, as the existing settings explanation states.
+Answer notifications remain at most one **per reader membership per day** (one per family for that account), under the existing database budget. Newly queued turn reminders use one account/local-day key across all parents and families; at most one reminder attempt a day. Dropped attempts do not reopen that key. Existing queued reminders are not rewritten. This is not a single account-wide daily limit. The setting is therefore called **Replies and turn reminders**, replacing the misleading **One moment a day**. Quiet-morning notices remain separate, as the existing settings explanation states.
 
 The queue checks routine relevance immediately before handing a notification to the delivery provider. Provider expiry is also shortened to the remaining 12-hour freshness window, the reader's 21:00, and (for a turn) the parent's midnight, whichever comes first. An offline phone should not receive an old reminder with a newly reset delivery window. Provider expiry is a delivery request, not proof of exactly when a phone displays an alert.
 
@@ -27,14 +27,16 @@ Lock-screen text continues to contain only the permitted name/time information. 
 - Bound offline provider delivery by bedtime and remaining freshness.
 - Recheck a turn's holder, completion, existence, and the parent's local day before sending.
 - Rename the routine notification control in English and Traditional Chinese.
-- Preserve existing Light behavior, permission flow, notification budgets, and privacy boundaries.
+- Preserve existing Light behavior, permission flow, and answer budgets. Add an account-wide reminder attempt cap.
+- Add gated individual choices, migration/legacy compatibility, two-phone save serialization, and deletion cleanup.
+- Keep the controls off in deployed environments until the draft notice is reviewed and families informed.
 
 The turn check is a last-moment relevance check, not a lock spanning an external delivery request. A turn completed after that check can still race with provider acceptance. An alert already handed to a provider cannot be reliably recalled by this server check.
 
-## Follow-up product work
+## Controls and follow-up product work
 
-1. Separate reply and turn switches if family testing shows people want replies without reminders. That requires an account preference contract and storage change.
-2. Evaluate a true account-wide routine cap and a cooldown across parents. Prefer replies over reminders, but do not silently discard an important reply merely because an evening prompt used the budget.
+1. Independent reply and turn controls are implemented behind `NOTIFICATION_CONTROLS`, pinned off until the draft notice is approved and families are told. Existing opt-outs migrate to both choices; older servers retain the combined switch.
+2. New turn reminders have an account-wide daily attempt cap. Evaluate whether reply notifications also need grouping or a cooldown across parents; preserve the reply budget independently.
 3. Offer user-selected quiet hours and timezone handling with clear travel behavior. The current fixed 08:00–21:00 window is retained.
 4. Consider suppressing answer alerts when that exact exchange is already open. This needs a deliberately limited presence/read signal; it is not collected by this change.
 5. Validate whether a settled morning needs sound, and whether a person should receive both Telegram and app alerts. These change Vela Light expectations and need a separate review.
