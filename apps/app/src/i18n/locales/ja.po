@@ -1697,6 +1697,10 @@ msgstr ""
 msgid "Her answer is kept in the family book, unless she says not to."
 msgstr ""
 
+#: src/data/useReminders.ts
+msgid "her check-up at the clinic"
+msgstr ""
+
 #: src/components/chat/chat-bubble.tsx
 msgid "Her messenger did not take it. Her daily morning is unchanged."
 msgstr ""
@@ -2368,6 +2372,7 @@ msgstr ""
 #: src/data/memories.ts
 #: src/data/onboarding.ts
 #: src/data/today.ts
+#: src/data/useReminders.ts
 #: src/data/weekly.ts
 #: src/device/useParent.ts
 msgid "Mom"
