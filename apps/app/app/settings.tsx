@@ -14,6 +14,7 @@ import { CallingNumberEditor } from "../src/components/calling-number-editor.tsx
 import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../src/components/family-chooser.tsx";
 import { Light } from "../src/components/light.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { ServiceStatus } from "../src/components/service-status.tsx";
 import { SetUpPhone } from "../src/components/set-up-phone.tsx";
@@ -163,11 +164,7 @@ function FamilyYou({ day }: { day: TodayView }) {
               <SecondaryButton label={t`Try again`} onPress={retry} />
             </View>
           ) : null}
-          {familyLoading || todayLoading ? (
-            <Words variant="body" tone="ink2">
-              <Trans>Loading your family…</Trans>
-            </Words>
-          ) : null}
+          {familyLoading || todayLoading ? <LoadingLight label={t`Loading your family…`} /> : null}
           {pilot ? (
             <Words variant="body" tone="ink2">
               <Trans>

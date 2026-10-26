@@ -4,6 +4,7 @@ import { Platform, Pressable, Share, View } from "react-native";
 import type { NearbyView } from "../data/useNearby.ts";
 import { hitSlop, space } from "../theme/tokens.ts";
 import { ConfirmationDialog } from "./confirmation-dialog.tsx";
+import { LoadingLight } from "./loading-light.tsx";
 import { Card, Hairline, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
 /**
@@ -143,9 +144,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
         </ConfirmationDialog>
       )}
       {nearby.loading ? (
-        <Words variant="body" tone="ink2">
-          <Trans>Loading the people nearby…</Trans>
-        </Words>
+        <LoadingLight label={t`Loading the people nearby…`} />
       ) : nearby.readFailed ? (
         <SecondaryButton label={t`Try again`} onPress={nearby.refresh} />
       ) : nearby.canAdd || nearby.changing ? (
