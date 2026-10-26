@@ -773,8 +773,17 @@ export async function draftWeeklyRead(
               ...stats,
               topics: [],
               patterns: stats.patterns.filter((pattern) => pattern.kind !== "came_back_to"),
+              suggestion_day: null,
             }
-          : { ...stats, ...insightStats },
+          : {
+              ...stats,
+              ...insightStats,
+              // The day the suggestion grows from, kept only when it is a day she answered this
+              // week: the app shows that day's ask and summary beside the suggestion as its reason.
+              suggestion_day: weeklyInput.days.some((day) => day.date === value.suggestionDay)
+                ? value.suggestionDay
+                : null,
+            },
         promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })

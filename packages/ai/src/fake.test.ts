@@ -132,6 +132,7 @@ describe("createFakeAi", () => {
     expect(read.value).toEqual({
       lines: ["番茄紅了", "教了滷肉", "選了第二張照片", "去市場買菜"],
       suggestion: "阿嬤，這個星期最開心的是什麼事？",
+      suggestionDay: "2026-09-19",
     });
   });
 

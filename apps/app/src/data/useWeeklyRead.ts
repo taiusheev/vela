@@ -1,7 +1,7 @@
 import { useLingui } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { apiConfigured, fetchWeeklyRead } from "../api/client.ts";
+import { apiConfigured, fetchWeeklyRead, fetchWeeklyReadList } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "./live-state.ts";
 import { selectedLight } from "./selected-light.ts";
@@ -29,7 +29,7 @@ export interface WeeklyReadView {
 /**
  * The Sunday tab follows its chosen parent, including their paused or waiting-for-consent state.
  */
-export function useWeeklyRead(requested?: string): WeeklyReadView {
+export function useWeeklyRead(requested?: string, readId?: string): WeeklyReadView {
   useLingui();
   const account = useAccount();
   const day = useToday();
@@ -47,10 +47,11 @@ export function useWeeklyRead(requested?: string): WeeklyReadView {
     parent?.invited !== true;
 
   const query = useQuery({
-    queryKey: ["weekly-read", account.userId, day.familyId, her],
+    queryKey: ["weekly-read", account.userId, day.familyId, her, readId ?? null],
     enabled,
     refetchOnWindowFocus: "always",
-    queryFn: async () => fetchWeeklyRead(day.familyId ?? "", her ?? "", await account.token()),
+    queryFn: async () =>
+      fetchWeeklyRead(day.familyId ?? "", her ?? "", await account.token(), readId),
   });
 
   const refetch = query.refetch;
@@ -89,4 +90,36 @@ export function useWeeklyRead(requested?: string): WeeklyReadView {
     ...(her === undefined ? {} : { memberId: her }),
     ...(!live || query.data.read === null ? {} : { readId: query.data.read.id }),
   };
+}
+
+export interface EarlierWeek {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+}
+
+/**
+ * Her earlier sent weeks, newest first, for the Sunday tab's list: the latest is already open above
+ * it, so it is left out. Empty for the example family and anyone who is not an organiser.
+ */
+export function useEarlierWeeks(memberId: string | undefined, latestId: string | undefined) {
+  const account = useAccount();
+  const day = useToday();
+  const enabled =
+    apiConfigured() &&
+    account.signedIn &&
+    day.organiser &&
+    day.familyId !== undefined &&
+    memberId !== undefined;
+  const query = useQuery({
+    queryKey: ["weekly-reads", account.userId, day.familyId, memberId],
+    enabled,
+    queryFn: async () =>
+      fetchWeeklyReadList(day.familyId ?? "", memberId ?? "", await account.token()),
+  });
+  const weeks: EarlierWeek[] =
+    query.data?.reads
+      .filter((read) => read.id !== latestId)
+      .map((read) => ({ id: read.id, weekStart: read.week_start, weekEnd: read.week_end })) ?? [];
+  return { weeks, refetch: query.refetch };
 }

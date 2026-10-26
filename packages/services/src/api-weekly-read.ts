@@ -2,6 +2,7 @@ import {
   type ApiMutationResponse,
   type ApiWeekDay,
   ApiWeeklyRead,
+  ApiWeeklyReadList,
   OpenWeeklyRead,
   type WeekDayState,
 } from "@vela/contracts";
@@ -31,6 +32,9 @@ const COVERING = new Set(["trial", "active", "grace"]);
  * shows what Telegram's organisers were sent. The seven days are read again from her answers by the
  * draft's own rule (`loadWeekDays`); the counts are the numbers stored when it was drafted. Without
  * a Vela Light trial or plan covering her, the days show and the rest is locked (`locked`).
+ *
+ * With `readId`, that one of her sent reads instead of the latest (the Sunday tab's earlier weeks);
+ * a read that is not hers, not sent, or not a uuid answers null like any other stranger.
  */
 export async function loadApiWeeklyRead(
   db: Queryable,
@@ -38,21 +42,15 @@ export async function loadApiWeeklyRead(
   familyId: string,
   memberId: string | undefined,
   now: Date,
-  options: { pilotFree?: boolean } = {},
+  options: { pilotFree?: boolean; readId?: string | undefined } = {},
 ): Promise<ApiWeeklyRead | null> {
-  const access = await authorizeFamilyAccess(db, identity, familyId, "organiser");
-  if (access.kind !== "granted" || memberId === undefined) return null;
-  const parsedId = ApiWeeklyRead.shape.member_id.safeParse(memberId);
-  if (!parsedId.success) return null;
-  const her = await memberById(db, parsedId.data);
-  if (
-    her === null ||
-    her.familyId !== familyId ||
-    her.role !== "member" ||
-    her.leftAt !== null ||
-    (her.status !== "active" && her.status !== "paused")
-  ) {
-    return null;
+  const her = await organisersParent(db, identity, familyId, memberId);
+  if (her === null) return null;
+  let readId: string | undefined;
+  if (options.readId !== undefined) {
+    const parsed = ApiWeeklyReadList.shape.reads.element.shape.id.safeParse(options.readId);
+    if (!parsed.success) return null;
+    readId = parsed.data.toLowerCase();
   }
 
   const [subscription] = await db
@@ -76,13 +74,15 @@ export async function loadApiWeeklyRead(
         eq(weeklyReads.memberId, her.id),
         eq(weeklyReads.familyId, familyId),
         isNotNull(weeklyReads.sentAt),
+        readId === undefined ? undefined : eq(weeklyReads.id, readId),
       ),
     )
     .orderBy(desc(weeklyReads.weekStart))
     .limit(1);
   const base = { member_id: her.id, display_name: her.displayName, locked: !covered };
   if (read === undefined || read.sentAt === null) {
-    return ApiWeeklyRead.parse({ ...base, read: null });
+    // An earlier week asked for by id that is not hers is a stranger's, not an empty week.
+    return readId === undefined ? ApiWeeklyRead.parse({ ...base, read: null }) : null;
   }
 
   const weekEnd = addDays(read.weekStart, 6);
@@ -135,6 +135,26 @@ export async function loadApiWeeklyRead(
           her.displayName,
           await weeklyHealthMentions(db, her, read.weekStart, now),
         );
+  const suggestion =
+    covered && read.sentSuggestion !== null && read.sentSuggestion.trim().length > 0
+      ? read.sentSuggestion
+      : null;
+  // Why the suggestion: the morning it grows from, its ask and her answer's one-line summary, read
+  // from her days as they stand, so a day whose exchange is gone shows no source.
+  const sourceDay =
+    suggestion === null || typeof stats.suggestion_day !== "string"
+      ? undefined
+      : days.find((day) => day.date === stats.suggestion_day && day.exchange !== null);
+  const suggestionSource =
+    sourceDay === undefined || sourceDay.exchange === null
+      ? null
+      : {
+          date: sourceDay.date,
+          exchange_id: sourceDay.exchange.id,
+          asker_name: sourceDay.exchange.type === "hello" ? null : sourceDay.askerName,
+          summary:
+            sourceDay.answers.map((answer) => answer.summary?.trim() ?? "").find(Boolean) ?? null,
+        };
   return ApiWeeklyRead.parse({
     ...base,
     read: {
@@ -152,11 +172,79 @@ export async function loadApiWeeklyRead(
           }
         : null,
       notes: covered ? [...(read.sentLines ?? []), ...healthLines] : null,
-      suggestion:
-        covered && read.sentSuggestion !== null && read.sentSuggestion.trim().length > 0
-          ? read.sentSuggestion
-          : null,
+      suggestion,
+      suggestion_source: suggestionSource,
     },
+  });
+}
+
+/**
+ * Her kept-light membership in the caller's family, for an organiser of it; null for anyone else,
+ * a member who is not hers to read, or a missing or malformed id.
+ */
+async function organisersParent(
+  db: Queryable,
+  identity: SessionIdentity,
+  familyId: string,
+  memberId: string | undefined,
+) {
+  const access = await authorizeFamilyAccess(db, identity, familyId, "organiser");
+  if (access.kind !== "granted" || memberId === undefined) return null;
+  const parsedId = ApiWeeklyRead.shape.member_id.safeParse(memberId);
+  if (!parsedId.success) return null;
+  const her = await memberById(db, parsedId.data);
+  if (
+    her === null ||
+    her.familyId !== familyId ||
+    her.role !== "member" ||
+    her.leftAt !== null ||
+    (her.status !== "active" && her.status !== "paused")
+  ) {
+    return null;
+  }
+  return her;
+}
+
+/**
+ * Her sent weekly reads, newest first, a year at most (`GET
+ * /v1/families/:familyId/weekly-reads?member=`), for the Sunday tab's earlier weeks. Dates and ids
+ * only: each read is opened through `loadApiWeeklyRead`, which applies Vela Light's lock. Organisers
+ * only, as for the read itself.
+ */
+export async function listApiWeeklyReads(
+  db: Queryable,
+  identity: SessionIdentity,
+  familyId: string,
+  memberId: string | undefined,
+): Promise<ApiWeeklyReadList | null> {
+  const her = await organisersParent(db, identity, familyId, memberId);
+  if (her === null) return null;
+  const rows = await db
+    .select({ id: weeklyReads.id, weekStart: weeklyReads.weekStart, sentAt: weeklyReads.sentAt })
+    .from(weeklyReads)
+    .where(
+      and(
+        eq(weeklyReads.memberId, her.id),
+        eq(weeklyReads.familyId, familyId),
+        isNotNull(weeklyReads.sentAt),
+      ),
+    )
+    .orderBy(desc(weeklyReads.weekStart))
+    .limit(53);
+  return ApiWeeklyReadList.parse({
+    member_id: her.id,
+    reads: rows.flatMap((row) =>
+      row.sentAt === null
+        ? []
+        : [
+            {
+              id: row.id,
+              week_start: row.weekStart,
+              week_end: addDays(row.weekStart, 6),
+              sent_at: row.sentAt.toISOString(),
+            },
+          ],
+    ),
   });
 }
 
