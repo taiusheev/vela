@@ -372,12 +372,14 @@ export type OrdinaryPushKind = (typeof ORDINARY_PUSH_KINDS)[number];
 
 /**
  * The pushes that are never budgeted and never stopped by "One moment a day": that her morning has
- * gone quiet, and that it is settled. A flag is not pushed yet (her words must not travel through
- * Apple or Google, and the app has no screen for it), so it is not here.
+ * gone quiet, that it is settled, and that she tapped "Not okay" on her check-in (a `flag`, ADR-57).
+ * Only that flag is pushed, and in words that say nothing about her health: a flag raised from her
+ * words is not, since her words must not travel through Apple or Google.
  */
 export const PUSH_EXCEPTION_KINDS = [
   "quiet_notice",
   "quiet_resolved",
+  "flag",
 ] as const satisfies readonly OutboundKind[];
 export type PushExceptionKind = (typeof PUSH_EXCEPTION_KINDS)[number];
 

@@ -259,6 +259,7 @@ export const en = {
   "not_okay.notice":
     '⚠️ {name} tapped "Not okay" at {time}, on Vela\'s check-in. Please call {name} as soon as you can.',
   "flag.notice_no_words": "{name} said something today that may be worth a call.",
+  "push.not_okay": "{name} asked for the family on Vela. Please call {name} now.",
   "push.quiet_notice":
     "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
   "push.answer_receipt": "{name} answered you.",

@@ -28,7 +28,7 @@ describe("reading a notification's data", () => {
       undefined,
       "quiet_notice",
       {},
-      { kind: "flag", family_id: FAMILY, member_id: HER },
+      { kind: "weekly_read", family_id: FAMILY, member_id: HER },
       { kind: "quiet_notice", family_id: "not-a-uuid", member_id: HER },
       { kind: "answer_receipt", member_id: HER },
       { ...data({ kind: "quiet_notice" }), quiet_event_id: "../../settings" },
@@ -49,6 +49,14 @@ describe("where a tap goes (A4)", () => {
       expect(hrefOf(target)).toEqual({ pathname: "/", params: { quiet: EVENT } });
     }
     expect(tapTargetOf(data({ kind: "quiet_notice" }), FAMILY)).toEqual({ screen: "today" });
+  });
+
+  it("opens the chat with her for her Not okay, in her family, and Today otherwise (ADR-57)", () => {
+    expect(tapTargetOf(data({ kind: "flag", exchange_id: EXCHANGE }), FAMILY)).toEqual({
+      screen: "chat",
+      recipientId: HER,
+    });
+    expect(tapTargetOf(data({ kind: "flag" }), "another-family")).toEqual({ screen: "today" });
   });
 
   it("opens Today alone for a quiet morning that is settled", () => {
@@ -86,8 +94,8 @@ describe("where a tap goes (A4)", () => {
 });
 
 describe("a notification arriving while the app is open", () => {
-  it("shows a quiet notice and its close as a banner with their sound", () => {
-    for (const kind of ["quiet_notice", "quiet_resolved"] as const) {
+  it("shows a quiet notice, its close and a Not okay as a banner with their sound", () => {
+    for (const kind of ["quiet_notice", "quiet_resolved", "flag"] as const) {
       expect(foregroundBehaviour(data({ kind }))).toEqual({
         shouldShowBanner: true,
         shouldShowList: true,

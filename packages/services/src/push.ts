@@ -459,6 +459,7 @@ async function pushDataOf(
       };
       break;
     }
+    case "flag":
     case "answer_receipt": {
       const [exchange] =
         row.exchangeId === null

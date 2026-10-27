@@ -142,6 +142,7 @@ export function pushMessageFor(
       ? {}
       : { collapseId: `quiet:${data.quiet_event_id}`, tag: `quiet:${data.quiet_event_id}` };
   switch (kind) {
+    case "flag":
     case "quiet_notice":
       return {
         to: token,
@@ -230,6 +231,36 @@ export async function ordinaryPushReader(
     )
     .limit(1);
   return phone === undefined ? null : { member, userId: member.userId, timeZone: phone.timeZone };
+}
+
+/**
+ * Her "Not okay" for one organiser's phones (ADR-57): that she wants her family and a call, never
+ * that she is unwell, since a lock screen is read by anyone and the words pass through Apple and
+ * Google. Keyed as her flag for that reader with `:app`, so a redelivered tap pushes once. It breaks
+ * through Focus and sounds on the loud channel, as the quiet notice does.
+ */
+export function notOkayPush(input: {
+  exchangeId: string;
+  answerId: string;
+  reader: PushReader;
+  herName: string;
+}): OutboundRequest {
+  const { reader } = input;
+  const lang = reader.member.language;
+  return {
+    kind: "flag",
+    idempotencyKey: outboundKey("flag", {
+      exchangeId: input.exchangeId,
+      conversationId: reader.userId,
+      suffix: `${input.answerId}:${PUSH_CHANNEL}`,
+    }),
+    memberId: reader.member.id,
+    channel: PUSH_CHANNEL,
+    conversationId: reader.userId,
+    exchangeId: input.exchangeId,
+    lang,
+    text: t(lang, "push.not_okay", { name: input.herName }),
+  };
 }
 
 /**

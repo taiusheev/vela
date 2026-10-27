@@ -958,3 +958,9 @@ Decision:
 - **Production.** `privacy-notice.v12` and `consent-script.v7` describe the check-in, the button-free morning, the timings, "Not okay", and list questions in an organiser's name, and drop "suggests short answers you can tap". `CHECK_IN` is on in every environment, pinned by `wrangler-config.test.ts`; it reaches production families only with the next production release, which the founder approves.
 
 Consequences: the morning a parent always answers late on market day no longer raises a quiet that day, and a parent whose mornings move later is followed within a day. Families who had "Send it as me" on will see their name under list questions too; the app's "written by Vela" mark stays.
+
+## ADR-57 · "Not okay" also reaches organisers' phones
+
+27 October 2026. Accepted (founder: "we should be ready for real families soon"; the gap named in ADR-54).
+
+Decision: when she taps "Not okay", each organiser whose live account has a phone that can be told also gets a push, as well as their messenger message. `flag` joins `PUSH_EXCEPTION_KINDS` (never budgeted, never stopped by notification choices or waking hours) and goes on the loud channel, time-sensitive, as the quiet notice does. Its words say that she asked for the family and to call her now (`push.not_okay`), never that she is unwell, since a lock screen is read by anyone and push text passes through Apple and Google. Only this flag is pushed; a flag raised from her words is not. A tap opens the chat with her in her family, else Today. An organiser reached only by push counts as told, so her thanks names them. Older app builds show the notification but cannot open its target.

@@ -67,9 +67,9 @@ export const zhTW: Record<keyof typeof en, string> = {
   "arrival.vote": "請按一個選項。",
   "arrival.hello": "您早上過得好嗎？",
   "arrival.hello_signature": "—— 家人的小幫手 Vela",
-  "arrival.hello_question": "用語音跟我說說吧，我會轉給家人。",
-  "arrival.hint": "傳一段語音回覆最好。在忙的話，按 ❤️ 就可以。",
-  "arrival.hint_words": "傳一段語音，或寫幾個字回覆就好。",
+  "arrival.hello_question": "傳段語音跟我說說吧，我會轉告家人。",
+  "arrival.hint": "用語音回覆最好；在忙的話，按 ❤️ 就好。",
+  "arrival.hint_words": "傳段語音或打幾個字回覆就好。",
   "checkin.text": "{address}，想關心一下您，今天還好嗎？",
   "button.okay": "🙂 我還好",
   "button.not_okay": "不太好，告訴家人",
@@ -82,13 +82,13 @@ export const zhTW: Record<keyof typeof en, string> = {
   "ack.thanks_4": "謝謝您，{address}。這就轉給家人。",
   "ack.story": "謝謝您，{address}。您說的故事已經收進家庭故事書了。",
   "ack.not_okay":
-    "謝謝您告訴我，{address}。我已經馬上通知{names}了。如果情況緊急，請直接打電話求救。",
+    "謝謝您告訴我，{address}。我已經馬上通知{names}了。如果情況緊急，請直接撥打 119。",
   "ack.not_okay_family":
-    "謝謝您告訴我，{address}。我現在就通知您的家人。如果情況緊急，請直接打電話求救。",
+    "謝謝您告訴我，{address}。我現在就通知您的家人。如果情況緊急，請直接撥打 119。",
   "ack.tap_asker": "謝謝您，{address} ❤️ {asker}很想多聽您說一點。有空的時候，傳一段語音好嗎？",
   "ack.tap_question":
-    "謝謝您，{address} ❤️ 有空的時候，用一段語音跟家人說說您的答案吧，家人很想聽。",
-  "ack.tap_hello": "謝謝您，{address} ❤️ 今天在忙什麼呢？想的話，傳一段語音給家人吧。",
+    "謝謝您，{address} ❤️ 有空的時候，傳段語音跟家人說說您的想法吧，大家都很想聽。",
+  "ack.tap_hello": "謝謝您，{address} ❤️ 今天在忙些什麼呢？有空的話，傳段語音給家人聽聽吧。",
   "book.dont_keep": "這則不要保留",
   "book.dropped": "沒問題，這則故事已經從家庭故事書拿掉了。",
   "recipe.offer": "{address}，這是您說的{title}做法：\n\n{card}\n\n要收進家庭故事書嗎？",
@@ -180,8 +180,10 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.resolved_away": "{organiser}說{name}不在家。",
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
-  "not_okay.notice": "⚠️ {name}在 {time} 的 Vela 關心訊息裡按了「不太好」。請盡快打電話給{name}。",
+  "not_okay.notice":
+    "⚠️ {name}在 {time} 回覆 Vela 的關心訊息時，按了「不太好」。請盡快打電話給{name}。",
   "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
+  "push.not_okay": "{name}在 Vela 上想找家人，請現在打電話給{name}。",
   "push.quiet_notice":
     "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
   "push.answer_receipt": "{name}回覆了您。",

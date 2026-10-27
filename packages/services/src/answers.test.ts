@@ -13,6 +13,7 @@ import {
   messageRefs,
   type Outbound,
   outbound,
+  pushDevices,
   quietEvents,
   users,
 } from "@vela/db";
@@ -957,6 +958,34 @@ describe("handleAnswerButton", () => {
     ]);
     const flagged = (await eventRows()).filter((event) => event.name === "flag_raised");
     expect(flagged.map((event) => event.props)).toEqual([{ source: "not_okay", told: 1 }]);
+  });
+
+  it("also pushes Not okay to an organiser's phone, in words that name no illness (ADR-57)", async () => {
+    const scene = await morning();
+    const { seed, exchangeId } = scene;
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: "test|mia", displayName: "Mia" })
+      .returning();
+    if (account === undefined) throw new Error("expected an account");
+    await h.db.update(members).set({ userId: account.id }).where(eq(members.id, seed.organiser.id));
+    await h.db.insert(pushDevices).values({
+      userId: account.id,
+      installationId: "00000000-0000-4000-8000-000000000001",
+      token: "ExponentPushToken[mia]",
+      platform: "ios",
+      permission: "granted",
+    });
+
+    await tapped(scene, { type: "answer", exchangeId, answer: "not_okay" });
+
+    const pushes = (await outboundRows()).filter((row) => row.channel === "app");
+    expect(pushes.map((row) => [row.kind, row.conversationId, textOf(row)])).toEqual(
+      expect.arrayContaining([
+        ["flag", account.id, "Mom asked for the family on Vela. Please call Mom now."],
+      ]),
+    );
+    expect(pushes.filter((row) => row.kind === "flag")).toHaveLength(1);
   });
 
   it("answers a heart", async () => {
