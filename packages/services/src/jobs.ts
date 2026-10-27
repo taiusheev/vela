@@ -516,10 +516,14 @@ function weeklyDayOf(day: WeekDay, answeredAt: Date, timeZone: string): WeeklyDa
 /** Sunday, as `weekdayOf` numbers the days. */
 const SUNDAY = 0;
 
+/** How far back her weekday rhythm looks: about eight weeks of answered days. */
+const WEEKDAY_HISTORY_DAYS = 56;
+
 /**
  * T_quiet from her own rhythm (spec §8): the later of the median answer latency of her last 14
  * answered days plus two hours and her late-day (90th percentile) latency plus one hour, floored at
- * 4 h and capped at 10 h, recomputed once a week with her read, so
+ * 4 h and capped at 10 h, recomputed every night when her next morning is prepared and with her
+ * weekly read (ADR-56), so
  * silence is measured against the person rather than against the six-hour default she starts on.
  * Below 14 answered days `quietAfterMinutes` keeps that default. A day's latency runs from its
  * delivery to the answer the day counts (`recentAnsweredDays`), which is negative for a message
@@ -529,9 +533,17 @@ const SUNDAY = 0;
  * schedule holds one threshold for every day, so the Sunday median is stored rather than applied:
  * spec §8's Sunday and holiday branch needs `ScheduleInput` to carry both, which is core's to give.
  */
-async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
-  const days = await recentAnsweredDays(deps.db, member, TUNING.minSamples);
+export async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
+  const history = await recentAnsweredDays(deps.db, member, WEEKDAY_HISTORY_DAYS);
+  const days = history.slice(0, TUNING.minSamples);
   const latencies = days.map((day) => minutesBetween(day.deliveredAt, day.answeredAt));
+  // Her rhythm on each weekday over about eight weeks (ADR-56), so the check-in ladder can follow a
+  // day that runs differently from the rest, such as a market morning or a Sunday at church.
+  const byWeekday: Record<string, number[]> = {};
+  for (const day of history) {
+    const key = String(weekdayOf(day.date));
+    byWeekday[key] = [...(byWeekday[key] ?? []), minutesBetween(day.deliveredAt, day.answeredAt)];
+  }
   const sundays = days.flatMap((day) =>
     weekdayOf(day.date) === SUNDAY ? [minutesBetween(day.deliveredAt, day.answeredAt)] : [],
   );
@@ -545,6 +557,16 @@ async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
         late_latency_min: lateLatencyMinutes(latencies),
         sunday_median_min: median(sundays),
         n_days: latencies.length,
+        by_weekday: Object.fromEntries(
+          Object.entries(byWeekday).map(([weekday, values]) => [
+            weekday,
+            {
+              median_latency_min: median(values),
+              late_latency_min: lateLatencyMinutes(values),
+              n_days: values.length,
+            },
+          ]),
+        ),
         updated_at: deps.clock.now().toISOString(),
       },
     })

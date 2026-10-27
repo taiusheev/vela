@@ -944,3 +944,17 @@ Decision, only while `CHECK_IN` is on (development and staging; production pinne
 Not done: a family's own "Sooner / Balanced / Fewer" setting; the founder phoning the organiser the next morning (a person's step, no code).
 
 Consequences: a silent morning reaches the family about 3 hours after it was sent instead of 4 to 10, and in her first weeks after 4 hours instead of 8. More notices will turn out to be late answers; precision accounting (spec §8) and the four measures in the research set the numbers again after 4 weeks.
+
+## ADR-56 · Her rhythm is learned every night and by weekday; Vela's list question may go in an organiser's name; the check-in reaches production with notice v12
+
+27 October 2026. Accepted (founder, on the research and ADR-53 to ADR-55: "approve all, no need this kind of settings – we should analyze the parent's behavior and then adjust our check up based on it"). Approved with it: the privacy-notice and consent wording, the promise "If Mom's morning goes quiet, you'll know before lunch", and a bank question sent in an organiser's name.
+
+Decision:
+
+- **No family setting.** There is no "Sooner / Balanced / Fewer" choice. The ladder follows her own answers only.
+- **Learned every night.** `tuneQuietAfter` runs after each nightly `prepare` as well as with the weekly read, so a change in her mornings shows in the next day's ladder. A failure keeps yesterday's numbers and logs `rhythm_tune_failed`.
+- **By weekday.** `answer_stats.by_weekday` holds, per weekday, the median and late-day latencies of her answered days over about eight weeks (up to 56). The day's ladder uses that weekday's numbers when it has three or more days and its median differs from her overall median by more than an hour (the Sunday rule of spec §8, now for every weekday); otherwise her last 14 answered days.
+- **Vela's list question in an organiser's name.** With "Send it as me" on and no AI draft in that organiser's voice for the day, `takeSignedSuggestion` sends the day's bank item in the family's wording (`child`, as a son or daughter writes), signed by that organiser and marked `drafted_by_vela`. This replaces ADR-49's "a bank item never goes in a person's name". A draft in another organiser's voice still never goes in this one's name.
+- **Production.** `privacy-notice.v12` and `consent-script.v7` describe the check-in, the button-free morning, the timings, "Not okay", and list questions in an organiser's name, and drop "suggests short answers you can tap". `CHECK_IN` is on in every environment, pinned by `wrangler-config.test.ts`; it reaches production families only with the next production release, which the founder approves.
+
+Consequences: the morning a parent always answers late on market day no longer raises a quiet that day, and a parent whose mornings move later is followed within a day. Families who had "Send it as me" on will see their name under list questions too; the app's "written by Vela" mark stays.

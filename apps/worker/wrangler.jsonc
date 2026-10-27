@@ -552,9 +552,9 @@
         // suggestion in their name (ADR-49, founder's approval of 17 Oct 2026). It does nothing for a
         // family until one of its organisers chooses "Send it as me" in the app.
         "SEND_AS_ME": "on",
-        // Off, and pinned off by src/wrangler-config.test.ts, until the privacy notice no longer says
-        // every ask can be answered with one tap and says what "Not okay" tells (ADR-54).
-        "CHECK_IN": "off",
+        // On since privacy-notice.v12 and consent-script.v7 describe the check-in and what "Not okay"
+        // tells (ADR-54, ADR-55, founder's approval of 27 Oct 2026).
+        "CHECK_IN": "on",
         // Off, and pinned off by src/wrangler-config.test.ts, until privacy-notice v7 (Memories) is
         // the live notice and the families are told.
         "RICH_MEMORIES": "off",

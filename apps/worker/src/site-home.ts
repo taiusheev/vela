@@ -85,11 +85,11 @@ const COPY = {
       },
       {
         title: "And if it stays quiet?",
-        body: "Vela Light repeats once. After the waiting period, the family gets a quiet notice. You decide how to follow up.",
+        body: "If Mom’s morning goes quiet, you’ll know before lunch. About an hour after she usually answers, Vela Light asks once how she is. If she taps “Not okay”, or stays quiet, the family hears. You decide how to follow up.",
         time: "Later",
         label: "WHEN THE MORNING STAYS QUIET",
         message: "No reply yet. It may be a good time to reach out.",
-        status: "With Vela Light · after one repeat and the waiting period",
+        status: "With Vela Light · after one gentle question, before lunch",
         outcome:
           "The family gets a quiet notice. You choose the next step. No assumption about what silence means.",
       },
@@ -242,11 +242,11 @@ const COPY = {
       },
       {
         title: "如果一直沒回覆呢？",
-        body: "Vela Light 會再問候一次。等候一段時間後，家人會收到提醒，再自行決定怎麼聯絡。",
+        body: "如果媽媽的早晨一直很安靜，午餐前你就會知道。Vela Light 會在她平常回覆的時間過後大約一小時，關心一次。如果她按下「不太好」，或一直沒有回覆，家人就會收到通知，再由你決定怎麼聯絡。",
         time: "稍後",
         label: "如果早晨一直沒有回覆",
         message: "目前還沒收到回覆。也許可以再聯絡看看。",
-        status: "Vela Light · 再次問候並等候一段時間後",
+        status: "Vela Light · 關心一次之後，午餐前",
         outcome: "家人會收到提醒，下一步由你決定。不因為沉默，就判定發生了什麼事。",
       },
     ],

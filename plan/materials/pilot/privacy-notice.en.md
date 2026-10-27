@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v11` · last updated 26 October 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
+Version `privacy-notice.v12` · last updated 27 October 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
 
 ## In short
 
@@ -8,7 +8,8 @@ Version `privacy-notice.v11` · last updated 26 October 2026 · This invitation-
 - We keep as little as we can. Voice notes, photos and the words of answers are deleted after 30 days. Book export is outside this trial. Stories are kept only when that feature is enabled and you choose to keep them.
 - When an answer mentions something like a fall or pain, Vela sends the organiser a separate note with the person's own words only if the person the light is for has agreed to that separately; otherwise the note carries none of their words. Their answers still reach the family group, organiser included, as they sent them.
 - On Sundays the organisers get a short weekly read. Each organiser's copy may also carry a few words, just for them, on how their own messages reached the person. The founder alone also sees a careful guess at what may lie beneath the week's words. See "The weekly read".
-- An organiser can choose to have Vela send a question it wrote in their style, with their name on it, on a morning when nobody in the family wrote one. The person the light is for sees it as a question from that organiser; the family's app marks it "written by Vela". See "Questions Vela writes for an organiser".
+- If the person the light is for has not answered their morning message a while after they usually do, Vela sends a short check-in with two buttons. A tap on "Not okay, tell my family" tells every organiser at once. See "The check-in".
+- An organiser can choose to have Vela send a question it wrote in their style, or one from Vela's own list worded as family members write, with their name on it, on a morning when nobody in the family wrote one. The person the light is for sees it as a question from that organiser; the family's app marks it "written by Vela". See "Questions Vela writes for an organiser".
 - Vela never contacts anyone on its own. Every message to a neighbour or friend is sent by a person in the family.
 - Vela is not a medical or emergency service.
 - Anyone can say stop at any time, and anyone can ask to see, correct or delete what we hold about them.
@@ -76,8 +77,8 @@ In the family's Vela group, Vela keeps only the messages meant for it: replies t
 ## Why we use it
 
 1. **To carry the exchange:** deliver each ask at the person's morning hour in their language, then bring the answer and the family's replies back.
-2. **To keep the light:** tell the family when the person has answered. When a day stays quiet, send the organiser the facts (when the morning message went out, when the person usually answers) and the names and numbers of the nearby contacts who have agreed, so the organiser can decide what to do.
-3. **To work across languages and voices:** turn voice into text, translate between English and Traditional Chinese when the family uses both, and suggest short answers the person can tap.
+2. **To keep the light:** tell the family when the person has answered. Learn from their answer times when they usually answer, on each day of the week. When a morning is still unanswered a while after that, send them a short check-in; when they tap "Not okay", tell every organiser and the founder at once (see "The check-in"). When a day stays quiet, send the organiser the facts (when the morning message went out, when the person usually answers) and the names and numbers of the nearby contacts who have agreed, so the organiser can decide what to do.
+3. **To work across languages and voices:** turn voice into text, translate between English and Traditional Chinese when the family uses both.
 4. **To pass on words that matter:** if an answer mentions something like a fall, pain, a stranger at the door or a request for money, the organisers hear about it that day: with the person's own words if the person the light is for has agreed to that (see "Health words"), and otherwise in a short note, with none of their words, saying that something they said may be worth a call. Vela does not diagnose, and it does not send these words to anyone else.
 5. **To send the organiser a short weekly read** on Sunday: what the person told the family that week and what changed in how they answered, compared only with their own earlier weeks, and, with the separate yes under "Health words", their own health words that came up on two or more days. That account is never a score, a diagnosis or advice. Each organiser's copy may also carry feedback on their own messages, with one suggestion for the week ahead. The founder alone also sees a reading of what may lie beneath the week's words, to understand the family's week while checking the read, and to judge whether readings like these are accurate and kind enough ever to share. Both are described under "The weekly read".
 6. **To run the service safely:** send every message once and on time, fix failures, prove that deleted information was deleted, and show what each person agreed to.
@@ -106,6 +107,15 @@ Words about health, such as a fall, pain, not eating, a visit to the doctor or w
 - **Who handles them.** OpenAI and Deepgram, in the United States, turn voice into text and notice these words for Vela, and the database is in Singapore (see "Who sees it").
 - **Changing your mind.** Saying "stop" withdraws a yes to health words as well as pausing the light, and saying "start" does not bring that yes back. To agree again, or to withdraw only this consent, tell the founder or your organiser.
 
+## The check-in
+
+The morning message has no buttons: the person answers it in their own words, by voice or in writing.
+
+- **When.** If the person has not answered about an hour after they usually do, Vela sends a short check-in asking how they are. It comes no sooner than an hour and no later than two and a half hours after the morning message; in the first weeks, before Vela knows when they usually answer, after two hours. Vela learns their usual time again every night from their answer times, separately for a day of the week that runs differently. The check-in is sent once.
+- **The two buttons.** "I'm okay" answers the morning, and the light is lit. "Not okay, tell my family" also lights the light, and at once tells every organiser by message, and the founder, that the person tapped it and when. The family group sees that they are not feeling okay. Vela does not ask why and never guesses. The tap is kept like any other answer.
+- **If there is still no answer.** The organisers get a quiet notice about 90 minutes after the check-in, and no later than five hours after the morning message (four hours in the first weeks), by message and in the app. If no organiser acts on it within two hours, by tapping a button or by the person answering, Vela sends it once more and tells the founder.
+- **Not an emergency service.** "Not okay" reaches people, not emergency services. In an emergency, call for help directly.
+
 ## The weekly read
 
 Every Sunday Vela drafts the weekly read, and the founder checks it before anything is sent. It has three parts. For the feedback and the readings, Vela's AI reads that week's messages only: the person's answers (what they wrote, the written version of what they said, and the buttons they tapped), each morning's ask and who sent it, and the family's replies and reactions to the person, each with the family member's first name.
@@ -120,7 +130,7 @@ Every Sunday Vela drafts the weekly read, and the founder checks it before anyth
 
 Every night Vela's AI drafts a question for each of the next few mornings of the person the light is for. It starts from Vela's own list of questions, and may draw on people, places and plans the person mentioned in recent answers and on the recent questions one organiser wrote to them, so that it sounds like that organiser. The family sees it in the app as a suggestion, and anyone in the family can use it, change it or ignore it.
 
-- **Sending it as the organiser.** In the app, on the person's morning settings, an organiser can choose "Send it as me". Then, on a morning when nobody in the family wrote a question by the evening before, Vela sends the question it drafted in that organiser's style as that organiser's question, with their name on it, instead of its own question signed "Vela". Only a question drafted in that organiser's style is sent this way, only in the person's language, and only while that organiser is still in the family. Vela's own list of questions is never sent with anyone's name on it. Only one organiser at a time can choose it for a person, and only that organiser can turn it on or off; turning it off applies to every morning not yet prepared.
+- **Sending it as the organiser.** In the app, on the person's morning settings, an organiser can choose "Send it as me". Then, on a morning when nobody in the family wrote a question by the evening before, Vela sends the question it drafted in that organiser's style as that organiser's question, with their name on it, instead of its own question signed "Vela". On a morning with no such draft, it sends that day's question from Vela's own list instead, worded the way a son or daughter would write it, with the organiser's name on it. Either is sent only in the person's language, and only while that organiser is still in the family. Only one organiser at a time can choose it for a person, and only that organiser can turn it on or off; turning it off applies to every morning not yet prepared.
 - **What the person sees.** The question arrives like any question from that organiser, with their name under it. The message itself does not say that Vela wrote it. In the app, the organisers and the family see it marked "written by Vela". If the person the light is for asks the organiser or the founder whether a question was written by Vela, they will be told.
 - **What it never does.** A question Vela writes never asks how the person is feeling or about their health, never makes up a name, and is never used as an example of how the organiser writes.
 - **Saying no.** The person the light is for can ask the organiser or the founder at any time for every question to come only from the family's own words, and it is turned off for their mornings.
@@ -141,7 +151,7 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 | Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| OpenAI | AI: summaries, translations, suggested answers, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
+| OpenAI | AI: summaries, translations, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry (planned, not connected) | No current processing for Vela; error reporting would need its own setup and notice before activation | None at present | Germany (EU), planned |
 | Telegram | Carries the messages of families who use Telegram, as an independent messaging platform | Everything sent in the chat | Its own data centres, under its own privacy policy |
@@ -207,9 +217,9 @@ Every part of Vela is a choice.
 - If the person the light is for says no to the light, Vela starts nothing. It confirms the no once, tells the organisers, and at once deletes what the organiser gave about the person at setup (their name, greeting, time zone, wake-up time, messaging account and nearby contacts), keeping only the record that they said no. Vela then no longer recognises them: if they write to Vela later, it answers as it would anyone new. The family stays in touch as before, and can invite them again later through the founder. If the person never answers the invitation, the same information is deleted 30 days after the invitation link expired.
 - If the person the light is for says no to health words, Vela works the same way, as described under "Health words".
 - Without a messaging account and a morning time, Vela cannot deliver a morning message.
-- Voice is never required: every ask can be answered with one tap.
+- Voice is never required. The morning message is answered in the person's own words, by voice or in writing; if it is still unanswered a while after they usually answer, the check-in can be answered with one tap.
 - Tapping "I've read it" in the family group is optional; asks and replies work without it.
-- On LINE, Vela's questions for the person the light is for come with buttons directly beneath the message; the tap on a button is the answer, and Vela keeps which message it answered.
+- On LINE, the check-in's buttons, and those of a photo choice or vote the family sent, sit directly beneath the message; the tap on a button is the answer, and Vela keeps which message it answered.
 - An organiser who would rather not get feedback on their own messages can tell the founder, who then sends their copy of the weekly read without it.
 - "Send it as me" is off unless an organiser chooses it. Without it, on a morning nobody in the family wrote a question, Vela sends its own question, signed "Vela".
 - Nearby contacts are optional. Without them, a notice on a quiet day names no one to call except the organiser.
@@ -219,7 +229,7 @@ Every part of Vela is a choice.
 
 ## Not a medical or emergency service
 
-Vela cannot tell whether anyone is in danger and cannot send help. Messages can be late or fail. If someone may need help now, call them, and call emergency services (119 in Taiwan, 911 in the United States, 112 in Europe). A quiet day in Vela is information, not an alarm, and words or notes passed on to the organiser, the weekly read and its readings are not a diagnosis.
+Vela cannot tell whether anyone is in danger and cannot send help. Messages can be late or fail. If someone may need help now, call them, and call emergency services (119 in Taiwan, 911 in the United States, 112 in Europe). A quiet day in Vela is information, not an alarm, and a "Not okay" tap reaches the family, not emergency services, and words or notes passed on to the organiser, the weekly read and its readings are not a diagnosis.
 
 ## Changes to this notice
 
