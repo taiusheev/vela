@@ -11,6 +11,8 @@ import { t } from "@vela/copy";
 import {
   addDays,
   addMinutes,
+  type CheckInLadder,
+  checkInLadder,
   type DayState,
   type DueAction,
   decideSchedule,
@@ -110,6 +112,25 @@ export const FAILURE_NOTE_AFTER_HOURS = RERUN_WITHIN_HOURS + 1;
 /** The note is still sent up to this age, so reconciliations missing for most of a day lose none. */
 const FAILURE_NOTE_WITHIN_HOURS = 2 * RERUN_WITHIN_HOURS;
 
+/** A stored minute count from `answer_stats`, or null when it is missing or not a number. */
+function statMinutes(stats: Record<string, unknown>, key: string): number | null {
+  const value = Object.hasOwn(stats, key) ? stats[key] : undefined;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Her check-in ladder from the rhythm `tuneQuietAfter` stores each week in `answer_stats`: her
+ * median and late-day latencies over her last 14 answered days. Missing numbers are her first weeks.
+ */
+function ladderOf(member: { answerStats: Record<string, unknown> }): CheckInLadder {
+  const stats = member.answerStats;
+  return checkInLadder({
+    medianLatencyMinutes: statMinutes(stats, "median_latency_min"),
+    lateLatencyMinutes: statMinutes(stats, "late_latency_min"),
+    days: statMinutes(stats, "n_days") ?? 0,
+  });
+}
+
 function dayStateOf(
   date: LocalDate,
   exchange: Exchange | null,
@@ -131,6 +152,7 @@ function dayStateOf(
             lastNotifiedAt: quiet.lastNotifiedAt,
             waitUntil: quiet.waitUntil,
             resolvedAt: quiet.resolvedAt,
+            notifyCount: quiet.notifyCount,
           },
   };
 }
@@ -255,6 +277,8 @@ export async function loadScheduleInput(
       learningUntil: member.learningUntil,
       resumedAt: resumed?.at ?? null,
       blockedAt: link?.blockedAt ?? null,
+      // The check-in ladder from her own rhythm, while the check-in is on (ADR-55).
+      ...(deps.config.checkIn === true ? { ladder: ladderOf(member) } : {}),
     },
     family: { turnsEnabled: family.turnsEnabled },
     days,
@@ -289,7 +313,7 @@ async function execute(deps: Deps, memberId: string, action: DueAction): Promise
       await openQuiet(deps, memberId, action.date, action.notify);
       return;
     case "notify_quiet":
-      await notifyQuiet(deps, memberId, action.date);
+      await notifyQuiet(deps, memberId, action.date, action.reminder === true);
       return;
     case "send_turn_prompt":
       await sendTurnPrompt(deps, memberId, action.forDate);

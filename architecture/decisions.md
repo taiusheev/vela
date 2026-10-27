@@ -925,3 +925,22 @@ Decision:
 Not done yet: a push to organisers' phones for "Not okay" (push carries only `quiet_notice` and its close today, and the app needs a tap target); a second check-in or escalation when nobody answers the organiser; an emergency number per country.
 
 Consequences: one tap no longer answers her morning, so mornings answered only by a tap will now wait for the check-in or her words. A parent who answers nothing still reaches the quiet notice at the same time as before.
+
+## ADR-55 · With the check-in, her ladder runs on her own rhythm and ends before lunch
+
+27 October 2026. Accepted (founder's yes to the timing research of the same day, `plan/quiet-timing-research.html`: "check-in at usual + 1 h, notice 90 min later, cap 5 h, 2 h / 4 h in the first 2 weeks, second notice after 2 h with founder alert … test copy only").
+
+Context: with the check-in (ADR-54) the repeat still went at a fixed 2.5 hours, the quiet notice at T_quiet (4 to 10 hours, 6 by default), and in her first 14 days only the app showed it until 8 hours. A notice nobody acted on was never sent again unless someone tapped "Wait 2 hours". The research found every lasting check-in service asks, asks again, then tells a person, and that a long lie (an hour or more on the floor) follows 15% of falls among people over 90.
+
+Decision, only while `CHECK_IN` is on (development and staging; production pinned off):
+
+- **Her ladder** (`checkInLadder`, core `CHECK_IN`), from the median and late-day (90th percentile) latencies `tuneQuietAfter` stores weekly in `answer_stats`:
+  - the check-in at her median + 60 minutes, kept between 60 and 150 minutes after delivery;
+  - the quiet notice at the later of check-in + 90 minutes and her late days + 60 minutes, at most 300 minutes after delivery, always after the check-in;
+  - before 14 answered days, the check-in at 120 minutes and the notice at 240, told at once by message and push (no app-only learning delay).
+- **One reminder.** A first notice nobody acted on (no answer, no "she's fine", no wait) is sent again 120 minutes later, once (`notify_quiet` with `reminder`), and the founder gets `admin.quiet_reminder`. A wait the organiser asked for still runs as before and takes the reminder's place. `notifyQuiet` checks the reminder again under the notice's row lock; `postgres-tests/quiet-notice-race.test.ts` sends it once when two ticks reach it together.
+- Unchanged: away mode, a blocked link, a pause, the notice's wording and buttons, and that no time counts before delivery.
+
+Not done: a family's own "Sooner / Balanced / Fewer" setting; the founder phoning the organiser the next morning (a person's step, no code).
+
+Consequences: a silent morning reaches the family about 3 hours after it was sent instead of 4 to 10, and in her first weeks after 4 hours instead of 8. More notices will turn out to be late answers; precision accounting (spec §8) and the four measures in the research set the numbers again after 4 weeks.

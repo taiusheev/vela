@@ -9,6 +9,7 @@ import {
   type ScheduleDecision,
 } from "./schedule.ts";
 import { addDays, addMinutes, zonedInstant } from "./time.ts";
+import { type CheckInLadder, checkInLadder } from "./tuning.ts";
 
 const ZONE = "Asia/Taipei";
 /** A Wednesday. */
@@ -40,6 +41,8 @@ interface Scenario {
   /** When the away over the dates in `away` ended; unset, it still lasts. */
   awayEndedAt?: Date;
   weeklyReadsDone?: LocalDate[];
+  /** The check-in ladder (ADR-55); unset, the check-in is off. */
+  ladder?: CheckInLadder;
 }
 
 function decide(scenario: Scenario): ScheduleDecision {
@@ -56,6 +59,7 @@ function decide(scenario: Scenario): ScheduleDecision {
       learningUntil: scenario.learningUntil ?? null,
       resumedAt: scenario.resumedAt ?? null,
       blockedAt: scenario.blockedAt ?? null,
+      ...(scenario.ladder === undefined ? {} : { ladder: scenario.ladder }),
     },
     family: { turnsEnabled: scenario.turnsEnabled ?? true },
     days: scenario.days ?? [],
@@ -403,6 +407,104 @@ describe("a blocked link", () => {
       { kind: "send_repeat", date: TODAY },
     ]);
     expect(decide({ ...stale, now: taipei("08:00") }).nextWakeAt).toEqual(taipei("10:30"));
+  });
+});
+
+describe("the check-in ladder (ADR-55)", () => {
+  // Her usual answer 40 minutes after delivery, her late days at 2 hours.
+  const learned = checkInLadder({ medianLatencyMinutes: 40, lateLatencyMinutes: 120, days: 14 });
+  const firstWeeks = checkInLadder({
+    medianLatencyMinutes: null,
+    lateLatencyMinutes: null,
+    days: 3,
+  });
+  const delivered = () => day(TODAY, { deliveredAt: taipei("08:00") });
+
+  it("checks in an hour after her usual answer and tells her organisers 90 minutes later", () => {
+    expect(learned).toEqual({
+      checkInAfterMinutes: 100,
+      quietAfterMinutes: 190,
+      remindAfterMinutes: 120,
+    });
+    expect(
+      decide({ now: taipei("09:40"), ladder: learned, days: [delivered()] }).due,
+    ).toContainEqual({
+      kind: "send_repeat",
+      date: TODAY,
+    });
+    expect(
+      decide({
+        now: taipei("11:10"),
+        ladder: learned,
+        days: [deliveredToday({ repeatSentAt: taipei("09:40") })],
+      }).due,
+    ).toContainEqual({ kind: "open_quiet", date: TODAY, notify: true });
+  });
+
+  it("checks in at 2 hours and tells at 4 hours in her first weeks, with a push at once", () => {
+    expect(firstWeeks).toEqual({
+      checkInAfterMinutes: 120,
+      quietAfterMinutes: 240,
+      remindAfterMinutes: 120,
+    });
+    const decision = decide({
+      now: taipei("12:00"),
+      ladder: firstWeeks,
+      learningUntil: TOMORROW,
+      days: [deliveredToday({ repeatSentAt: taipei("10:00") })],
+    });
+    expect(decision.due).toContainEqual({ kind: "open_quiet", date: TODAY, notify: true });
+  });
+
+  it("keeps the check-in between 1 and 2.5 hours and the notice within 5 hours", () => {
+    expect(
+      checkInLadder({ medianLatencyMinutes: -5, lateLatencyMinutes: 10, days: 14 }),
+    ).toMatchObject({
+      checkInAfterMinutes: 60,
+      quietAfterMinutes: 150,
+    });
+    expect(
+      checkInLadder({ medianLatencyMinutes: 200, lateLatencyMinutes: 400, days: 20 }),
+    ).toMatchObject({
+      checkInAfterMinutes: 150,
+      quietAfterMinutes: 300,
+    });
+    // Her late days push the notice past check-in + 90 minutes, to an hour after them.
+    expect(
+      checkInLadder({ medianLatencyMinutes: 30, lateLatencyMinutes: 200, days: 14 }),
+    ).toMatchObject({
+      checkInAfterMinutes: 90,
+      quietAfterMinutes: 260,
+    });
+  });
+
+  it("tells them again two hours after a first notice nobody acted on, once", () => {
+    const told = (fields: Partial<NonNullable<DayState["quiet"]>>) =>
+      deliveredToday({
+        quiet: quiet({ openedAt: taipei("11:10"), lastNotifiedAt: taipei("11:10"), ...fields }),
+      });
+    expect(
+      decide({ now: taipei("13:09"), ladder: learned, days: [told({ notifyCount: 1 })] }).due,
+    ).not.toContainEqual(expect.objectContaining({ kind: "notify_quiet" }));
+    expect(
+      decide({ now: taipei("13:10"), ladder: learned, days: [told({ notifyCount: 1 })] }).due,
+    ).toContainEqual({
+      kind: "notify_quiet",
+      date: TODAY,
+      reminder: true,
+    });
+    // Sent once already, or an organiser asked to wait: no reminder of Vela's own.
+    for (const fields of [{ notifyCount: 2 }, { notifyCount: 1, waitUntil: taipei("13:10") }]) {
+      expect(
+        decide({ now: taipei("13:20"), ladder: learned, days: [told(fields)] }).due.filter(
+          (action) => action.kind === "notify_quiet" && action.reminder === true,
+        ),
+      ).toEqual([]);
+    }
+    // Without the check-in, a notice nobody acted on is never sent again by itself.
+    expect(
+      decide({ now: taipei("13:20"), days: [told({ notifyCount: 1 })] }).due,
+    ).not.toContainEqual(expect.objectContaining({ kind: "notify_quiet" }));
   });
 });
 

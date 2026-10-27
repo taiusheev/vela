@@ -390,6 +390,37 @@ describe("notifyQuiet", () => {
     expect(h.telegram.sent).toHaveLength(2);
   });
 
+  it("sends the check-in ladder's reminder once, two hours after a notice nobody acted on, and tells the founder", async () => {
+    const { seed } = await quietMorning();
+    await openQuiet(h.deps, seed.member.id, TODAY, true);
+    await h.run(handlers());
+    const first = (await noticeRows()).length;
+
+    // Without the reminder flag (the check-in off), a notice nobody acted on is not sent again.
+    h.clock.advanceMinutes(119);
+    await notifyQuiet(h.deps, seed.member.id, TODAY, true);
+    h.clock.advanceMinutes(1);
+    await notifyQuiet(h.deps, seed.member.id, TODAY);
+    expect(await noticeRows()).toHaveLength(first);
+
+    await notifyQuiet(h.deps, seed.member.id, TODAY, true);
+    await notifyQuiet(h.deps, seed.member.id, TODAY, true);
+    expect(await noticeRows()).toHaveLength(first * 2);
+    const founder = (await h.db.select().from(outbound)).filter(
+      (row) => row.kind === "system" && row.idempotencyKey.includes("quiet_reminder"),
+    );
+    expect(founder).toHaveLength(1);
+    expect(founder[0]?.conversationId).toBe("9001");
+    await h.run(handlers());
+    const [quiet] = await quietRows();
+    expect(quiet?.notifyCount).toBe(2);
+
+    // Once sent, never again by itself.
+    h.clock.advanceMinutes(240);
+    await notifyQuiet(h.deps, seed.member.id, TODAY, true);
+    expect(await noticeRows()).toHaveLength(first * 2);
+  });
+
   it("re-notifies after a wait with a new key, and not before the wait has passed", async () => {
     const { seed, exchangeId } = await quietMorning();
     await openQuiet(h.deps, seed.member.id, TODAY, true);

@@ -273,6 +273,8 @@ export const zhTW: Record<keyof typeof en, string> = {
     "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
   "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
   "admin.flag": "{family}有一則標記。查看： {link}",
+  "admin.quiet_reminder":
+    "{family}的{name}安靜通知已經 2 小時沒有人處理，已再次通知發起人。查看： {link}",
   "admin.not_okay": "{family}有人按了「不太好」。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",

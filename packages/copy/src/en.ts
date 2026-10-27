@@ -356,6 +356,8 @@ export const en = {
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
   "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
   "admin.flag": "Flag in {family}. Open: {link}",
+  "admin.quiet_reminder":
+    "Nobody has acted on {name}'s quiet notice in {family} for 2 hours. It went to the organisers again. Open: {link}",
   "admin.not_okay": '"Not okay" tapped in {family}. Open: {link}',
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
