@@ -152,6 +152,14 @@ msgstr "{holder} already has that morning."
 msgid "{holder} already has that Sunday."
 msgstr "{holder} already has that Sunday."
 
+#: src/components/light-on.tsx
+msgid "{joined}’s light is on"
+msgstr "{joined}’s light is on"
+
+#: src/components/light-on.tsx
+msgid "{joined}’s lights are on"
+msgstr "{joined}’s lights are on"
+
 #: src/components/keepsake.tsx
 msgid "{kept, plural, one {# memory kept} other {# memories kept}}"
 msgstr "{kept, plural, one {# memory kept} other {# memories kept}}"
@@ -604,6 +612,14 @@ msgstr "A morning message is missing"
 msgid "A photo"
 msgstr "A photo"
 
+#: app/parent-photos.tsx
+msgid "A photo of {only}"
+msgstr "A photo of {only}"
+
+#: app/parent-photos.tsx
+msgid "A photo of each parent"
+msgstr "A photo of each parent"
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "A photo of the street where you grew up — do you remember the shop on the corner?"
@@ -741,6 +757,10 @@ msgstr "Add an option"
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
 msgstr "Add one more"
+
+#: src/components/parent-photo-settings.tsx
+msgid "Add photo"
+msgstr "Add photo"
 
 #: src/components/onboarding/questions.tsx
 msgid "Add someone (up to two)"
@@ -1246,6 +1266,7 @@ msgstr "Connection reference: {connectionReference}"
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 
+#: app/parent-photos.tsx
 #: app/sign-in.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
@@ -2297,6 +2318,7 @@ msgstr "Loading your conversation…"
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
+#: app/parent-photos.tsx
 #: app/parent-settings.tsx
 #: app/settings.tsx
 msgid "Loading your family…"
@@ -2632,9 +2654,11 @@ msgstr "Not kept yet"
 
 #: app/ask.tsx
 #: app/my-memories.tsx
+#: app/parent-photos.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
+#: src/components/parent-photo-settings.tsx
 #: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr "Not now"
@@ -3446,6 +3470,10 @@ msgstr "See {name}’s first week"
 msgid "See that morning"
 msgstr "See that morning"
 
+#: src/components/parent-photo-settings.tsx
+msgid "See their face in the window when their light comes on. Only on this phone."
+msgstr "See their face in the window when their light comes on. Only on this phone."
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "See Vela Light"
@@ -3665,6 +3693,10 @@ msgstr "Shows hearts, laughs and hugs to send"
 #: src/components/keepsake.tsx
 msgid "Shows less"
 msgstr "Shows less"
+
+#: src/components/light-on.tsx
+msgid "Shows Today"
+msgstr "Shows Today"
 
 #: app/parent.tsx
 msgid "Sign in as family"
@@ -4016,6 +4048,10 @@ msgstr "That page could not open. Write to Vela support instead."
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
 msgstr "That photo could not be opened. Try another, or use initials for now."
+
+#: src/components/parent-photo-settings.tsx
+msgid "That photo could not be opened. Try another."
+msgstr "That photo could not be opened. Try another."
 
 #: app/exchange/[id].tsx
 msgid "That photo could not be sent just now. It is kept to send again."
@@ -5020,9 +5056,17 @@ msgstr "What would you like to ask {name}?"
 msgid "What you call them"
 msgstr "What you call them"
 
+#: app/parent-photos.tsx
+msgid "When {only}’s light comes on, you see their face in the window."
+msgstr "When {only}’s light comes on, you see their face in the window."
+
 #: app/(tabs)/exchanges.tsx
 msgid "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
 msgstr "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
+
+#: app/parent-photos.tsx
+msgid "When a light comes on, you see their face in their window."
+msgstr "When a light comes on, you see their face in their window."
 
 #: src/push/provider.tsx
 msgid "When a morning goes quiet"

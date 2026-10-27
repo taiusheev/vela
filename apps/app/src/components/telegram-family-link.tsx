@@ -159,7 +159,8 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       if (!mounted.current || !outcome.linked) return;
       resetDraft();
       queries.clear();
-      router.replace("/");
+      // Setup's last step: a photo of her for her window, then Today.
+      router.replace("/parent-photos");
     },
   });
   const cancel = useMutation({

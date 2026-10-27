@@ -153,6 +153,14 @@ msgstr "那天早上已經有{holder}的提問了。"
 msgid "{holder} already has that Sunday."
 msgstr "那個週日已經由{holder}安排了。"
 
+#: src/components/light-on.tsx
+msgid "{joined}’s light is on"
+msgstr "{joined}的燈亮了"
+
+#: src/components/light-on.tsx
+msgid "{joined}’s lights are on"
+msgstr "{joined}的燈都亮了"
+
 #: src/components/keepsake.tsx
 msgid "{kept, plural, one {# memory kept} other {# memories kept}}"
 msgstr "{kept, plural, other {已保存 # 則回憶}}"
@@ -605,6 +613,14 @@ msgstr "早晨訊息沒有送達"
 msgid "A photo"
 msgstr "一張照片"
 
+#: app/parent-photos.tsx
+msgid "A photo of {only}"
+msgstr "{only}的照片"
+
+#: app/parent-photos.tsx
+msgid "A photo of each parent"
+msgstr "每位父母的照片"
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
@@ -742,6 +758,10 @@ msgstr "新增選項"
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
 msgstr "再加一位"
+
+#: src/components/parent-photo-settings.tsx
+msgid "Add photo"
+msgstr "新增照片"
 
 #: src/components/onboarding/questions.tsx
 msgid "Add someone (up to two)"
@@ -1247,6 +1267,7 @@ msgstr "連結編號：{connectionReference}"
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同意後，可以在「你」→「設定」中新增聯絡電話。"
 
+#: app/parent-photos.tsx
 #: app/sign-in.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
@@ -2298,6 +2319,7 @@ msgstr "正在載入對話…"
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
+#: app/parent-photos.tsx
 #: app/parent-settings.tsx
 #: app/settings.tsx
 msgid "Loading your family…"
@@ -2633,9 +2655,11 @@ msgstr "還沒保存"
 
 #: app/ask.tsx
 #: app/my-memories.tsx
+#: app/parent-photos.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
+#: src/components/parent-photo-settings.tsx
 #: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr "先不要"
@@ -3447,6 +3471,10 @@ msgstr "看看{name}的第一週"
 msgid "See that morning"
 msgstr "看那天早上的對話"
 
+#: src/components/parent-photo-settings.tsx
+msgid "See their face in the window when their light comes on. Only on this phone."
+msgstr "燈亮時，窗裡會出現那張熟悉的臉。照片只存在這支手機。"
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr "看看 Vela Light"
@@ -3666,6 +3694,10 @@ msgstr "顯示可以送出的愛心、笑臉和擁抱"
 #: src/components/keepsake.tsx
 msgid "Shows less"
 msgstr "顯示較少"
+
+#: src/components/light-on.tsx
+msgid "Shows Today"
+msgstr "顯示今天"
 
 #: app/parent.tsx
 msgid "Sign in as family"
@@ -4017,6 +4049,10 @@ msgstr "這個頁面打不開。請改寫信給 Vela 支援。"
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
 msgstr "這張照片打不開。換一張，或先使用名字縮寫。"
+
+#: src/components/parent-photo-settings.tsx
+msgid "That photo could not be opened. Try another."
+msgstr "這張照片無法開啟，請換一張。"
 
 #: app/exchange/[id].tsx
 msgid "That photo could not be sent just now. It is kept to send again."
@@ -5021,9 +5057,17 @@ msgstr "你想問{name}什麼呢？"
 msgid "What you call them"
 msgstr "你怎麼稱呼對方"
 
+#: app/parent-photos.tsx
+msgid "When {only}’s light comes on, you see their face in the window."
+msgstr "{only}的燈亮時，窗裡會出現{only}的臉。"
+
 #: app/(tabs)/exchanges.tsx
 msgid "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
 msgstr "當幾個早晨都聊到同一件事，Vela 會把那些話集成一個故事。每個字都和當時說的一樣，沒有增加任何內容。"
+
+#: app/parent-photos.tsx
+msgid "When a light comes on, you see their face in their window."
+msgstr "燈亮時，窗裡會出現那張熟悉的臉。"
 
 #: src/push/provider.tsx
 msgid "When a morning goes quiet"
