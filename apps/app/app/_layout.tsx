@@ -231,7 +231,11 @@ function Navigation() {
           {/* Short tasks slide up as sheets: known here, before they open, so the phone animates
               them as sheets and a swipe down closes them. */}
           {SHEET_ROUTES.map((name) => (
-            <Stack.Screen key={name} name={name} options={{ presentation: "modal" }} />
+            <Stack.Screen
+              key={name}
+              name={name}
+              options={{ presentation: "modal", headerShown: true }}
+            />
           ))}
         </Stack>
       </AppPrivacyGate>

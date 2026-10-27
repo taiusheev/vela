@@ -30,6 +30,7 @@ import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/component
 import { type AskType, composableType } from "../src/data/ask.ts";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { exampleNames } from "../src/data/example-names.ts";
+import { finishQuestionSave } from "../src/data/finish-question-save.ts";
 import { localDayMonth } from "../src/data/format.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
 import { questionsFor } from "../src/data/onboarding.ts";
@@ -360,10 +361,7 @@ function AskComposer({
       return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
     onSuccess: async () => {
-      await draft.clear();
-      await queries.invalidateQueries({ queryKey: ["today"] });
-      await queries.invalidateQueries({ queryKey: ["planned-questions"] });
-      await queries.invalidateQueries({ queryKey: ["book", familyId] });
+      await finishQuestionSave(queries, familyId, draft.clear);
       if (params.edit === undefined && (await offerAfterAsk())) setOffering(true);
       else
         router.replace({
@@ -467,16 +465,18 @@ function AskComposer({
   const tomorrow = dayName(tomorrowIn(new Date(), recipient?.timeZone));
   const plannedDay = `${dayName(date)}, ${localDayMonth(date)}`;
 
+  const screenTitle = params.edit ? t`Edit question` : t`Ask ${name} something`;
+  // Stack.Screen calls setOptions in a layout effect. Recreating its header callback on
+  // each navigation render can recurse until React aborts, especially when Ask reopens.
+  const screenOptions = useMemo(
+    () => ({ ...SHEET, title: screenTitle, headerLeft: () => <CancelButton /> }),
+    [screenTitle],
+  );
+
   if (offering) {
     return (
       <>
-        <Stack.Screen
-          options={{
-            ...SHEET,
-            title: params.edit ? t`Edit question` : t`Ask ${name} something`,
-            headerLeft: () => <CancelButton />,
-          }}
-        />
+        <Stack.Screen options={screenOptions} />
         <ScrollView
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
@@ -546,13 +546,7 @@ function AskComposer({
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          ...SHEET,
-          title: params.edit ? t`Edit question` : t`Ask ${name} something`,
-          headerLeft: () => <CancelButton />,
-        }}
-      />
+      <Stack.Screen options={screenOptions} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

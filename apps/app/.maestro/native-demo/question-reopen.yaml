@@ -1,0 +1,43 @@
+appId: ${APP_ID}
+name: The native question editor reopens after saving
+tags:
+  - native-demo
+---
+- launchApp
+- openLink: ${QUESTIONS_URL}
+- assertVisible: "Write a question for Mom"
+- tapOn: "Write a question for Mom"
+- assertVisible: "Your question for Mom"
+- assertVisible: "Cancel"
+- tapOn: ".*Say it the way you would say it.*"
+- inputText: "How was the garden today?"
+# Dragging the form dismisses the native keyboard.
+- swipe:
+    start: "50%,65%"
+    end: "50%,25%"
+    duration: 500
+- tapOn: "Save question"
+- assertVisible: "Question saved. You can adjust it below."
+- repeat:
+    times: 5
+    commands:
+      - tapOn: "Write a question for Mom"
+      - assertVisible: "Your question for Mom"
+      - tapOn: "Cancel"
+      - assertVisible: "Write a question for Mom"
+# Move the question actions above the native tab bar before tapping.
+- swipe:
+    start: "50%,65%"
+    end: "50%,25%"
+    duration: 500
+- tapOn: "Edit question or day"
+- assertVisible: "Edit question"
+- tapOn: ".*Say it the way you would say it.*"
+- eraseText
+- inputText: "What is growing in the garden?"
+- swipe:
+    start: "50%,65%"
+    end: "50%,25%"
+    duration: 500
+- tapOn: "Save changes"
+- assertVisible: "Question saved. You can adjust it below."
