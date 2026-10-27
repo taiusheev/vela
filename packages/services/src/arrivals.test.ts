@@ -456,7 +456,7 @@ describe("prepareDay", () => {
       });
     });
 
-    it("never sends a bank row, or a draft in another voice or another language, in Mia's name", async () => {
+    it("sends the bank question in the family's wording, as Mia, when there is no draft in her voice (ADR-56)", async () => {
       for (const draft of [{ forMia: false }, { lang: "zh-TW" as const }, { text: "" }]) {
         await h.reset();
         config().sendAsMe = true;
@@ -464,10 +464,12 @@ describe("prepareDay", () => {
 
         const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
 
+        // Never the draft in another voice or language: the bank item as a son or daughter writes.
         expect(await exchangeById(id), JSON.stringify(draft)).toMatchObject({
-          type: "hello",
-          askerId: null,
-          draftedByVela: false,
+          type: "question",
+          askerId: seed.organiser.id,
+          draftedByVela: true,
+          text: "Which season do you like best, and why? I can never decide mine.",
         });
       }
     });

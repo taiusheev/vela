@@ -19,6 +19,8 @@ import {
   localDateOf,
   outboundKey,
   type ScheduleInput,
+  TUNING,
+  weekdayOf,
   zonedInstant,
 } from "@vela/core";
 import {
@@ -65,7 +67,7 @@ import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { applyPendingEffects, enqueueOutbound, redriveStrandedOutbound } from "./gateway.ts";
-import { draftWeeklyRead } from "./jobs.ts";
+import { draftWeeklyRead, tuneQuietAfter } from "./jobs.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { pilotFamilyAllowed, pilotMemberAllowed } from "./pilot-admission.ts";
 import { MAX_PROCESSING_ATTEMPTS } from "./pipeline.ts";
@@ -119,15 +121,40 @@ function statMinutes(stats: Record<string, unknown>, key: string): number | null
 }
 
 /**
- * Her check-in ladder from the rhythm `tuneQuietAfter` stores each week in `answer_stats`: her
- * median and late-day latencies over her last 14 answered days. Missing numbers are her first weeks.
+ * Her check-in ladder for `date` from the rhythm `tuneQuietAfter` stores each night in
+ * `answer_stats`: her median and late-day latencies over her last 14 answered days, or that
+ * weekday's own over about eight weeks when it has three or more days and its median differs by
+ * more than an hour (ADR-56), so a day she always answers late does not raise a quiet. Missing
+ * numbers are her first weeks.
  */
-function ladderOf(member: { answerStats: Record<string, unknown> }): CheckInLadder {
+function ladderOf(
+  member: { answerStats: Record<string, unknown> },
+  date: LocalDate,
+): CheckInLadder {
   const stats = member.answerStats;
+  const days = statMinutes(stats, "n_days") ?? 0;
+  const usual = statMinutes(stats, "median_latency_min");
+  const weekdays = Object.hasOwn(stats, "by_weekday") ? stats.by_weekday : undefined;
+  const key = String(weekdayOf(date));
+  const raw =
+    typeof weekdays === "object" && weekdays !== null && Object.hasOwn(weekdays, key)
+      ? (weekdays as Record<string, unknown>)[key]
+      : undefined;
+  const weekday = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+  const weekdayUsual = weekday === null ? null : statMinutes(weekday, "median_latency_min");
+  const ownDay =
+    weekday !== null &&
+    weekdayUsual !== null &&
+    usual !== null &&
+    (statMinutes(weekday, "n_days") ?? 0) >= TUNING.minSundaySamples &&
+    Math.abs(weekdayUsual - usual) > TUNING.sundayDifferenceMinutes;
   return checkInLadder({
-    medianLatencyMinutes: statMinutes(stats, "median_latency_min"),
-    lateLatencyMinutes: statMinutes(stats, "late_latency_min"),
-    days: statMinutes(stats, "n_days") ?? 0,
+    medianLatencyMinutes: ownDay ? weekdayUsual : usual,
+    lateLatencyMinutes: statMinutes(
+      ownDay && weekday !== null ? weekday : stats,
+      "late_latency_min",
+    ),
+    days,
   });
 }
 
@@ -278,7 +305,7 @@ export async function loadScheduleInput(
       resumedAt: resumed?.at ?? null,
       blockedAt: link?.blockedAt ?? null,
       // The check-in ladder from her own rhythm, while the check-in is on (ADR-55).
-      ...(deps.config.checkIn === true ? { ladder: ladderOf(member) } : {}),
+      ...(deps.config.checkIn === true ? { ladder: ladderOf(member, today) } : {}),
     },
     family: { turnsEnabled: family.turnsEnabled },
     days,
@@ -301,6 +328,20 @@ export async function loadScheduleInput(
   };
 }
 
+/**
+ * Her rhythm learned again each night, after her next morning is prepared (ADR-56), so the check-in
+ * follows a change in her mornings within a day rather than a week. A failure only leaves
+ * yesterday's numbers in place, so it is logged and never stops the tick.
+ */
+async function retune(deps: Deps, memberId: string): Promise<void> {
+  try {
+    const member = await memberById(deps.db, memberId);
+    if (member !== null) await tuneQuietAfter(deps, member);
+  } catch (error) {
+    deps.logger.error("rhythm_tune_failed", { memberId, error: errorLabel(error) });
+  }
+}
+
 async function execute(deps: Deps, memberId: string, action: DueAction): Promise<void> {
   switch (action.kind) {
     case "deliver_arrival":
@@ -320,6 +361,7 @@ async function execute(deps: Deps, memberId: string, action: DueAction): Promise
       return;
     case "prepare":
       await prepareDay(deps, memberId, action.forDate);
+      await retune(deps, memberId);
       return;
     case "draft_weekly_read":
       await draftWeeklyRead(deps, memberId, action.weekEnd);

@@ -1928,8 +1928,8 @@ msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr "早安訊息過了平常的回覆時間仍然安靜時，以及之後有了結果時。"
 
 #: app/morning-settings.tsx
-msgid "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
-msgstr "如果家裡沒有人寫問題給{name}，Vela 可以把照你的語氣擬好的問題，用你的名字送出。你會看到它標示「Vela 代筆」。"
+msgid "If nobody in the family writes {name} a question for the morning, Vela can send one it drafted in your style, or one from its own list worded as you would write it, signed with your name. You will see it marked “written by Vela”."
+msgstr "如果家裡沒有人寫問題給{name}，Vela 可以把照你的語氣擬好的問題，或從它自己的清單挑一題、照你會寫的說法，用你的名字送出。你會看到它標示「Vela 代筆」。"
 
 #: src/components/onboarding/story.tsx
 msgid "If she doesn’t answer, you know the same day."
