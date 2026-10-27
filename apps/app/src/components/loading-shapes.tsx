@@ -1,6 +1,4 @@
-import { useEffect, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
-import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
+import { View } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { radius, space } from "../theme/tokens.ts";
 import { LoadingLight } from "./loading-light.tsx";
@@ -10,8 +8,8 @@ const LINE_KEYS = ["first", "second", "third"] as const;
 
 /**
  * Her window lighting up with what is opening, then pale shapes where the cards are about to
- * appear, breathing slowly: the page keeps its layout, so nothing jumps when the words arrive. With
- * reduced motion they stay still. VoiceOver hears the one label, said once.
+ * appear: the page keeps its layout, so nothing jumps when the words arrive. The shapes stay still
+ * so the window is the one moving focal point. VoiceOver hears the one label, said once.
  */
 export function LoadingShapes({
   label,
@@ -23,30 +21,6 @@ export function LoadingShapes({
   shape?: "cards" | "list";
 }) {
   const palette = usePalette();
-  const reduced = useReducedMotion();
-  const breath = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (reduced) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breath, {
-          toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(breath, {
-          toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [breath, reduced]);
-  const opacity = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
   const bar = (width: `${number}%`, height: number) => (
     <View style={{ width, height, borderRadius: height / 2, backgroundColor: palette.surface2 }} />
   );
@@ -69,15 +43,15 @@ export function LoadingShapes({
     </View>
   );
   return (
-    <Animated.View
+    <View
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={label}
-      style={{ gap: space.m, opacity: reduced ? 1 : opacity }}
+      style={{ gap: space.m }}
     >
       {/* The window lighting up says what is opening; the shapes keep the page's layout. */}
       <LoadingLight label={label} accessible={false} />
       {shape === "cards" ? card(0, 3) : [card(0, 2), card(1, 2), card(2, 2)]}
-    </Animated.View>
+    </View>
   );
 }
