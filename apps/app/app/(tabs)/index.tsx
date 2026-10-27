@@ -1,14 +1,16 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Pressable, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
+import { LightOnMoment } from "../../src/components/light-on.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
+import { ParentPhotoNudge } from "../../src/components/parent-photo-settings.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
 import { InboxSheet, useInbox } from "../../src/components/today-feed.tsx";
@@ -29,6 +31,7 @@ import { StatusBand, useStatusBand } from "../../src/components/warm.tsx";
 import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDayMonth } from "../../src/data/format.ts";
+import { lightOnKey, lightsToWelcome } from "../../src/data/light-on.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
@@ -166,9 +169,14 @@ function FamilyToday({ day }: { day: TodayView }) {
   const { trouble, noAccount, noFamily, live, organiser, familyId } = day;
   // `/?example=quiet` shows the example day gone quiet, only in the demo with no API: a real day,
   // or the fixtures standing in while it loads, is never replaced.
-  const { example, quiet: tappedEventId } = useLocalSearchParams<{
+  const {
+    example,
+    quiet: tappedEventId,
+    lighton,
+  } = useLocalSearchParams<{
     example?: string;
     quiet?: string;
+    lighton?: string;
   }>();
   const today =
     demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "quiet"
@@ -254,6 +262,46 @@ function FamilyToday({ day }: { day: TodayView }) {
       current = false;
     };
   }, [offerFor]);
+  // Her light coming on plays once for each of her days on this device, the first time Today shows
+  // it lit; not over the quiet notice, and never from data still on its way.
+  const portraitFamily = familyId === undefined ? "example" : familyId;
+  const [welcome, setWelcome] = useState<TodayLight[]>([]);
+  const mayWelcome =
+    (live || demoDataAllowed(apiConfigured(), accountsConfigured())) && !day.loading && !quietOpen;
+  const welcomeKeys = mayWelcome
+    ? lightsToWelcome(today.lights, portraitFamily, new Set())
+        .map((light) => lightOnKey(portraitFamily, light))
+        .join("|")
+    : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Keyed on what would be welcomed, not on Today's lights, which are new objects on every read.
+  useEffect(() => {
+    if (welcomeKeys === "") return;
+    let current = true;
+    const keys = welcomeKeys.split("|");
+    void Promise.all(keys.map(async (key) => ((await readFlag(key)) ? key : null))).then(
+      async (seenKeys) => {
+        if (!current) return;
+        const seen = new Set(seenKeys.filter((key): key is string => key !== null));
+        const fresh = lightsToWelcome(today.lights, portraitFamily, seen);
+        if (fresh.length === 0) return;
+        await Promise.all(fresh.map((light) => writeFlag(lightOnKey(portraitFamily, light))));
+        if (current) setWelcome(fresh);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [welcomeKeys]);
+  // `/?lighton=1` plays it again, as holding her lit window does.
+  const replayLight = (light: TodayLight) => setWelcome([light]);
+  const replayed = useRef(false);
+  useEffect(() => {
+    if (lighton !== "1" || replayed.current) return;
+    const lit = lightsToWelcome(today.lights, "", new Set());
+    if (lit.length === 0) return;
+    replayed.current = true;
+    setWelcome(lit);
+  }, [lighton, today.lights]);
   const inbox = useInbox({
     today,
     familyId: familyId ?? "",
@@ -288,7 +336,6 @@ function FamilyToday({ day }: { day: TodayView }) {
   const target = focused ?? askRecipient(today.lights);
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
-  const portraitFamily = familyId === undefined ? "example" : familyId;
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <MorningLight />
@@ -320,7 +367,17 @@ function FamilyToday({ day }: { day: TodayView }) {
           selected={focused}
           onSelect={setSelectedParent}
           onQuiet={mayOpen ? (light) => openQuiet(light) : undefined}
+          onReplay={replayLight}
         />
+        {focused === undefined ||
+        !(live || demoDataAllowed(apiConfigured(), accountsConfigured())) ? null : (
+          <ParentPhotoNudge
+            key={`photo-${focused.memberId}`}
+            familyId={portraitFamily}
+            memberId={focused.memberId}
+            name={focused.displayName}
+          />
+        )}
         <FamilyChooser day={day} />
         {day.loading ? <LoadingShapes label={t`Loading your family’s morning`} /> : null}
         {focused === undefined ? null : (
@@ -520,6 +577,9 @@ function FamilyToday({ day }: { day: TodayView }) {
         <InboxSheet items={inbox.items} visible={inboxOpen} onClose={() => setInboxOpen(false)} />
       </Animated.ScrollView>
       <StatusBand y={band.y} />
+      {welcome.length === 0 ? null : (
+        <LightOnMoment lights={welcome} familyId={portraitFamily} onDone={() => setWelcome([])} />
+      )}
     </View>
   );
 }

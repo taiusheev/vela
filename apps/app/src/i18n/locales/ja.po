@@ -146,6 +146,14 @@ msgstr ""
 msgid "{holder} already has that Sunday."
 msgstr ""
 
+#: src/components/light-on.tsx
+msgid "{joined}’s light is on"
+msgstr ""
+
+#: src/components/light-on.tsx
+msgid "{joined}’s lights are on"
+msgstr ""
+
 #: src/components/keepsake.tsx
 msgid "{kept, plural, one {# memory kept} other {# memories kept}}"
 msgstr ""
@@ -598,6 +606,14 @@ msgstr ""
 msgid "A photo"
 msgstr ""
 
+#: app/parent-photos.tsx
+msgid "A photo of {only}"
+msgstr ""
+
+#: app/parent-photos.tsx
+msgid "A photo of each parent"
+msgstr ""
+
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr ""
@@ -734,6 +750,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
+msgstr ""
+
+#: src/components/parent-photo-settings.tsx
+msgid "Add photo"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -1240,6 +1260,7 @@ msgstr ""
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 msgstr ""
 
+#: app/parent-photos.tsx
 #: app/sign-in.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
@@ -2291,6 +2312,7 @@ msgstr ""
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
+#: app/parent-photos.tsx
 #: app/parent-settings.tsx
 #: app/settings.tsx
 msgid "Loading your family…"
@@ -2626,9 +2648,11 @@ msgstr ""
 
 #: app/ask.tsx
 #: app/my-memories.tsx
+#: app/parent-photos.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
+#: src/components/parent-photo-settings.tsx
 #: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr ""
@@ -3440,6 +3464,10 @@ msgstr ""
 msgid "See that morning"
 msgstr ""
 
+#: src/components/parent-photo-settings.tsx
+msgid "See their face in the window when their light comes on. Only on this phone."
+msgstr ""
+
 #: app/(tabs)/sunday.tsx
 msgid "See Vela Light"
 msgstr ""
@@ -3658,6 +3686,10 @@ msgstr ""
 
 #: src/components/keepsake.tsx
 msgid "Shows less"
+msgstr ""
+
+#: src/components/light-on.tsx
+msgid "Shows Today"
 msgstr ""
 
 #: app/parent.tsx
@@ -4009,6 +4041,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
+msgstr ""
+
+#: src/components/parent-photo-settings.tsx
+msgid "That photo could not be opened. Try another."
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -5014,8 +5050,16 @@ msgstr ""
 msgid "What you call them"
 msgstr ""
 
+#: app/parent-photos.tsx
+msgid "When {only}’s light comes on, you see their face in the window."
+msgstr ""
+
 #: app/(tabs)/exchanges.tsx
 msgid "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
+msgstr ""
+
+#: app/parent-photos.tsx
+msgid "When a light comes on, you see their face in their window."
 msgstr ""
 
 #: src/push/provider.tsx
