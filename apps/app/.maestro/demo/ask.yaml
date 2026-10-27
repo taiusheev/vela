@@ -15,3 +15,12 @@ tags:
 - assertVisible: "Questions"
 - assertVisible: "Question saved. You can adjust it below."
 - assertVisible: 'Mom, did the basil survive the rain\?'
+
+# The second editor used to recurse in Stack.Screen after saving.
+- repeat:
+    times: 3
+    commands:
+      - tapOn: "Write a question for Mom"
+      - assertVisible: "Your question for Mom"
+      - tapOn: "Cancel"
+      - assertVisible: "Write a question for Mom"
