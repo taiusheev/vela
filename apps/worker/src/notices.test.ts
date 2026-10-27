@@ -19,9 +19,9 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the approved v11 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v11");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v11");
+  it("serves the approved v12 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v12");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v12");
     expect(PRIVACY_NOTICES.en.html).toContain("Notification choices:");
     expect(PRIVACY_NOTICES.en.html).toContain(
       "They are not shown to other family members or sent to an AI provider.",

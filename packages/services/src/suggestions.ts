@@ -346,11 +346,13 @@ export interface SignedSuggestion {
 
 /**
  * The ask Vela sends in an organiser's name on a morning nobody in the family wrote for (first test,
- * 16 Oct 2026): her unused suggestion for `date`, when it is an AI draft written in the voice of the
- * organiser her row names (`suggestions_signed_by`), in her language, and that organiser is still an
- * active organiser of her family. Taking it marks it used. Null otherwise, and the morning falls back
- * to Vela's own question, signed by Vela: a bank item is never sent in a person's name, and neither
- * is a draft written in another organiser's voice.
+ * 16 Oct 2026), while the organiser her row names (`suggestions_signed_by`) is still an active
+ * organiser of her family: her unused suggestion for `date` when it is an AI draft written in that
+ * organiser's voice, in her language; else, since ADR-56 (founder, 27 Oct 2026), the day's bank
+ * item in the family's wording (`child`), as a son or daughter writes, in her language. A draft
+ * written in another organiser's voice is never sent in this one's name; its bank item may be.
+ * Taking it marks it used. Null when the switch is off, the organiser cannot sign, or the day has no
+ * suggestion, and the morning falls back to Vela's own question, signed by Vela.
  *
  * Called with her member row held `for update`, the lock the organiser's own switch is changed
  * under (`setApiMorningPreferences`), so a switch turned off before this runs is seen off.
@@ -388,16 +390,33 @@ export async function takeSignedSuggestion(
     .for("update");
   const text = row?.text.trim() ?? "";
   if (
-    row === undefined ||
-    text === "" ||
-    row.lang !== readerLang(member.language) ||
-    !isAskBankType(row.type) ||
-    DRAFT_GUARDS.some((guard) => guard.test(text))
+    row !== undefined &&
+    text !== "" &&
+    row.lang === readerLang(member.language) &&
+    isAskBankType(row.type) &&
+    !DRAFT_GUARDS.some((guard) => guard.test(text))
   ) {
-    return null;
+    await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
+    return { text, type: row.type, askerId: signer.id };
   }
-  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
-  return { text, type: row.type, askerId: signer.id };
+  // No draft in their voice: the day's bank item, worded as a son or daughter writes (ADR-56).
+  const [banked] = await tx
+    .select({ id: suggestions.id, bankId: suggestions.bankId })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.aboutMemberId, member.id),
+        eq(suggestions.localDay, date),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  const item = banked === undefined ? undefined : askBankItem(banked.bankId);
+  const childText = item?.child[readerLang(member.language)].trim() ?? "";
+  if (banked === undefined || item === undefined || childText === "") return null;
+  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, banked.id));
+  return { text: childText, type: item.type, askerId: signer.id };
 }
 
 // the writer --------------------------------------------------------------------------------------

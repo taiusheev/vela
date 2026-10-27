@@ -1,6 +1,6 @@
 import { createFakeAi, createOffAi, fakeRecord, SAFE_DEFAULTS } from "@vela/ai";
 import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
-import { addMinutes, outboundKey, zonedInstant } from "@vela/core";
+import { addMinutes, localDateOf, outboundKey, weekdayOf, zonedInstant } from "@vela/core";
 import {
   aiCalls,
   answers,
@@ -254,6 +254,25 @@ describe("loadScheduleInput", () => {
         quietAfterMinutes: 190,
         remindAfterMinutes: 120,
       });
+
+      // A weekday she always answers much later has a ladder of its own (ADR-56).
+      const weekday = String(weekdayOf(localDateOf(h.clock.now(), seed.member.tz)));
+      await h.db
+        .update(members)
+        .set({
+          answerStats: {
+            median_latency_min: 40,
+            late_latency_min: 120,
+            n_days: 14,
+            by_weekday: {
+              [weekday]: { median_latency_min: 150, late_latency_min: 200, n_days: 3 },
+            },
+          },
+        })
+        .where(eq(members.id, seed.member.id));
+      expect(
+        (await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.ladder,
+      ).toEqual({ checkInAfterMinutes: 150, quietAfterMinutes: 260, remindAfterMinutes: 120 });
     } finally {
       config.checkIn = undefined;
     }
@@ -488,6 +507,12 @@ describe("tickMember", () => {
       type: "hello",
       state: "scheduled",
     });
+    // Preparing her morning also learns her rhythm again, every night (ADR-56).
+    const [tuned] = await h.db
+      .select({ stats: members.answerStats })
+      .from(members)
+      .where(eq(members.id, her));
+    expect(tuned?.stats).toMatchObject({ n_days: 0, by_weekday: {} });
     expect(await nextWake(her)).toEqual(at("2026-09-15", "08:00"));
 
     await advanceTo(her, at("2026-09-15", "08:00"));
