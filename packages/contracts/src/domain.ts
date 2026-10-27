@@ -135,6 +135,8 @@ export const ANSWER_KINDS = [
   "text",
   "photo",
   "fine",
+  /** "Not okay" on the check-in after a morning she has not answered (ADR-54): she answered, unwell. */
+  "not_okay",
   "sticker",
   /** Any other content (video, document, location, contact): still a sign of life. */
   "other",

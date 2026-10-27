@@ -1147,6 +1147,42 @@ describe("sendRepeat", () => {
     expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(2);
   });
 
+  it("sends the check-in in place of the repeat while CHECK_IN is on (ADR-54)", async () => {
+    const config = h.deps.config as { checkIn?: boolean };
+    config.checkIn = true;
+    try {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      const ask = await seedSoupQuestion(seed, TOMORROW);
+      h.clock.set(at(TOMORROW, "08:00"));
+      await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+      const [arrival] = await outboundRows("arrival");
+      const morning = arrival?.payload as { message: { buttons?: unknown[] } } | undefined;
+      expect(morning?.message).toBeDefined();
+      expect(morning?.message.buttons).toBeUndefined();
+      await h.run(handlers());
+      h.clock.advanceMinutes(150);
+
+      await sendRepeat(h.deps, seed.member.id, TOMORROW);
+
+      const [row] = await outboundRows("repeat");
+      const payload = row?.payload as {
+        message: { text: string; media?: unknown; buttons: { id: string; label: string }[][] };
+      };
+      expect(payload.message.text).toBe("Hi Mrs Chen, just checking in. How are you today?");
+      expect(payload.message.media).toBeUndefined();
+      expect(
+        payload.message.buttons.map((buttons) =>
+          buttons.map((button) => [decodeButton(button.id), button.label]),
+        ),
+      ).toEqual([
+        [[{ type: "answer", exchangeId: ask.id, answer: "fine" }, "🙂 I'm okay"]],
+        [[{ type: "answer", exchangeId: ask.id, answer: "not_okay" }, "Not okay, tell my family"]],
+      ]);
+    } finally {
+      config.checkIn = undefined;
+    }
+  });
+
   it("sends nothing for a day not delivered, already answered, or whose delivery failed", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await seedExchange(h.db, seed, { date: "2026-09-15", state: "scheduled" });

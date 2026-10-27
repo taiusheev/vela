@@ -6,7 +6,7 @@
  *
  * | Action       | Payload                                   |
  * |--------------|-------------------------------------------|
- * | answer       | `a:<id>:f` (fine) · `a:<id>:h` (heart)    |
+ * | answer       | `a:<id>:f` (fine) · `a:<id>:h` (heart) · `a:<id>:n` (not okay) |
  * | chip         | `c:<id>:<index>`                          |
  * | pick         | `p:<id>:<index>`                          |
  * | vote         | `v:<id>:<index>`                          |
@@ -23,7 +23,11 @@
  */
 
 export type ButtonAction =
-  | { type: "answer"; exchangeId: string; answer: "fine" | "heart" }
+  /**
+   * Her one-tap answer: a heart, "I'm fine", or, on the check-in after a morning she has not
+   * answered (ADR-54), "Not okay", which tells her organisers at once.
+   */
+  | { type: "answer"; exchangeId: string; answer: "fine" | "heart" | "not_okay" }
   | { type: "chip"; exchangeId: string; index: number }
   | { type: "pick"; exchangeId: string; index: number }
   | { type: "vote"; exchangeId: string; index: number }
@@ -57,6 +61,8 @@ export type ButtonAction =
   | { type: "recipe_keep"; recipeId: string; keep: boolean };
 
 export const BUTTON_DATA_MAX_BYTES = 64;
+
+const ANSWER_TAILS = { fine: "f", heart: "h", not_okay: "n" } as const;
 
 /**
  * Indexes are one digit. An arrival shows at most three chips, two photos, and as many vote options
@@ -106,7 +112,7 @@ function indexField(index: number): string {
 export function encodeButton(action: ButtonAction): string {
   switch (action.type) {
     case "answer":
-      return `a:${compactId(action.exchangeId, "exchangeId")}:${action.answer === "fine" ? "f" : "h"}`;
+      return `a:${compactId(action.exchangeId, "exchangeId")}:${ANSWER_TAILS[action.answer]}`;
     case "chip":
       return `c:${compactId(action.exchangeId, "exchangeId")}:${indexField(action.index)}`;
     case "pick":
@@ -180,6 +186,7 @@ export function decodeButton(data: string): ButtonAction | null {
     case "a":
       if (tail === "f") return { type: "answer", exchangeId: id, answer: "fine" };
       if (tail === "h") return { type: "answer", exchangeId: id, answer: "heart" };
+      if (tail === "n") return { type: "answer", exchangeId: id, answer: "not_okay" };
       return null;
     case "c":
     case "p":

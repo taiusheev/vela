@@ -906,3 +906,22 @@ Decision:
 - **Vela's own morning reads as a short text.** The bank question is followed on its line by "Tell me in a voice message, and I'll pass it on to the family.", signed "— Vela" (zh-TW "—— 家人的小幫手 Vela"), with no header. The first-mornings hint says a voice message is the nicest reply and the heart is for when she is busy.
 
 Consequences: fewer AI calls and less stored output (`chips`, `ai_calls`). Her one-tap answer still lights the light, so the quiet notice is unchanged. Not changed: a bank question is still never sent in an organiser's name (ADR-49); that needs the founder's own decision. The notice's "suggest short answers the person can tap" (privacy-notice v5, purpose 3) now describes less than it allows; the next notice version should drop it.
+
+## ADR-54 · Her morning has no buttons; an unanswered morning gets a check-in, and "Not okay" tells her organisers at once
+
+27 October 2026. Accepted (founder: "for normal morning message, don't add options, let parent answer by themselves; if parent doesn't answer, ask a follow-up to check up on them … give options to show if they are ok or not, and if they are not ok, notify the adult child asap").
+
+Context: ADR-53 left a heart and "I'm fine" under every morning, so a tap still answered it without a word. A tap on the morning says nothing about how she is; a tap on a check-in can.
+
+Decision:
+
+- **Her morning carries no buttons** but a family's own photo choice or vote. Its first-mornings hint asks for a voice message or a few words (`arrival.hint_words`).
+- **The repeat becomes the check-in.** At the repeat's time (2.5 hours, `SCHEDULE.repeatAfterMinutes`), a morning still unanswered gets "Hi {address}, just checking in. How are you today?" with "🙂 I'm okay" and "Not okay, tell my family", one per row (`renderCheckIn`). It is the same `repeat` row, key and budget, so it is sent at most once and her pause holds it back. The quiet notice is unchanged: no answer to either, and her organisers are told at T_quiet as before.
+- **"I'm okay"** is a `fine` answer: it lights the light, and her thanks asks for a short voice message (ADR-53).
+- **"Not okay"** is a new answer kind `not_okay` (migration 0030 widens `answers_kind_check`). It lights the light, since she answered, and before anything else after the light each active organiser with a messenger link gets `not_okay.notice` (a `flag` row keyed by exchange, reader and answer, so a redelivered tap tells no one twice), the founder gets `admin.not_okay`, and `flag_raised` is recorded with `{ source: "not_okay", told }`. She is told who was told, and that an emergency needs a call of her own. The family's group post reads "⚠️ {name} isn't feeling okay". Understanding raises no second flag for it.
+- **Words.** The tap is her own choice to tell her family, so it is not a health word and needs no health-words consent (ADR-47): nothing names a feeling, a cause or an illness, only "not okay".
+- **Switch.** `CHECK_IN`, on in development and staging; production stays off, pinned by `wrangler-config.test.ts`, until the privacy notice no longer says every ask can be answered with one tap and says what "Not okay" tells (draft in `plan/check-in-notice-draft.md`).
+
+Not done yet: a push to organisers' phones for "Not okay" (push carries only `quiet_notice` and its close today, and the app needs a tap target); a second check-in or escalation when nobody answers the organiser; an emergency number per country.
+
+Consequences: one tap no longer answers her morning, so mornings answered only by a tap will now wait for the check-in or her words. A parent who answers nothing still reaches the quiet notice at the same time as before.

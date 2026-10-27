@@ -288,6 +288,8 @@
     "WEEKLY_SUPPORT_FAMILIES": "",
     // On: an organiser may have Vela's suggestion sent in their name (first test, 16 Oct 2026).
     "SEND_AS_ME": "on",
+    // On: no buttons on her morning; an unanswered morning gets the check-in (ADR-54).
+    "CHECK_IN": "on",
     // On: each person's own memories in the app (privacy-notice v7 wording, 22 Oct 2026).
     "RICH_MEMORIES": "on",
     // On: screened, ordinary answers may become private memory suggestions (founder, 23 Oct 2026).
@@ -420,6 +422,8 @@
         "WEEKLY_SUPPORT_FAMILIES": "",
         // On: staging holds test families only (first test, 16 Oct 2026).
         "SEND_AS_ME": "on",
+        // On: staging holds test families only (ADR-54, founder, 27 Oct 2026).
+        "CHECK_IN": "on",
         // On: staging holds test families only; the founder asked to try Memories on iPhone there
         // (22 Oct 2026). Its notice wording (v7) is approved but not yet the live notice.
         "RICH_MEMORIES": "on",
@@ -548,6 +552,9 @@
         // suggestion in their name (ADR-49, founder's approval of 17 Oct 2026). It does nothing for a
         // family until one of its organisers chooses "Send it as me" in the app.
         "SEND_AS_ME": "on",
+        // Off, and pinned off by src/wrangler-config.test.ts, until the privacy notice no longer says
+        // every ask can be answered with one tap and says what "Not okay" tells (ADR-54).
+        "CHECK_IN": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, until privacy-notice v7 (Memories) is
         // the live notice and the families are told.
         "RICH_MEMORIES": "off",

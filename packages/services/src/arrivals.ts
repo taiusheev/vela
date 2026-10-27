@@ -15,6 +15,7 @@ import {
   nextTurnHolder,
   outboundKey,
   renderArrival,
+  renderCheckIn,
   selectAsk,
   summariseReplies,
   type TurnHolder,
@@ -691,6 +692,7 @@ export async function deliverArrival(
     repeat: false,
     date,
     hint: inFirstMornings(member, date),
+    checkIn: deps.config.checkIn === true,
   });
   const attached = [...readBack.media, ...askFiles];
   const request: OutboundRequest = {
@@ -703,7 +705,8 @@ export async function deliverArrival(
     exchangeId: exchange.id,
     lang: member.language,
     text: rendered.text,
-    buttons: rendered.buttons,
+    // A morning with the check-in on has no buttons, so it goes without a keyboard at all.
+    ...(rendered.buttons.length === 0 ? {} : { buttons: rendered.buttons }),
     media: attached.length === 0 ? undefined : attached,
     ref: { purpose: "arrival", exchangeId: exchange.id },
     effect: {
@@ -769,6 +772,30 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     return;
   }
   const { member, family, link } = await loadArrivalContext(deps, exchange.id);
+  if (deps.config.checkIn === true) {
+    // The check-in (ADR-54) takes the repeat's place: not her morning again, but whether she is
+    // okay, which a tap can answer and which tells her organisers at once when she is not.
+    const checkIn = renderCheckIn({
+      lang: member.language,
+      address: member.addressForm ?? member.displayName,
+      exchangeId: exchange.id,
+    });
+    await enqueueOutbound(deps, deps.db, {
+      kind: "repeat",
+      idempotencyKey: outboundKey("repeat", { memberId, date }),
+      memberId,
+      channel: link.channel,
+      conversationId: link.externalId,
+      localDay: date,
+      exchangeId: exchange.id,
+      lang: member.language,
+      text: checkIn.text,
+      buttons: checkIn.buttons,
+      ref: { purpose: "repeat", exchangeId: exchange.id },
+      effect: { exchangeId: exchange.id },
+    });
+    return;
+  }
   const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
     date,
     timeZone: member.tz,

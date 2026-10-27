@@ -84,7 +84,7 @@ function randomAction(random: () => number): ButtonAction {
       return {
         type: "answer",
         exchangeId: uuidv7(random),
-        answer: pick(random, ["fine", "heart"]),
+        answer: pick(random, ["fine", "heart", "not_okay"]),
       };
     case "chip":
       return { type: "chip", exchangeId: uuidv7(random), index };

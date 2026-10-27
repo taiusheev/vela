@@ -47,6 +47,7 @@ import {
   outbound,
 } from "@vela/db";
 import { and, asc, eq, exists, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
 import { answerSourceTime } from "./answer-message-time.ts";
 import { keepInBook, keepsInBook } from "./book.ts";
 import type { Deps } from "./deps.ts";
@@ -57,6 +58,7 @@ import { type EnqueueResult, enqueueOutbound, finishArrivalEffects, replyOf } fr
 import { answerReceiptPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
+  activeOrganisersWithLinks,
   deviceFileForGroup,
   exchangesByIds,
   familyById,
@@ -64,6 +66,7 @@ import {
   latestDeliveredExchangeWithin,
   linkedGroupOfFamily,
   lockDeliveredExchangeForLocalDate,
+  MESSENGER,
   markWakeDue,
   memberById,
   messageRefFor,
@@ -85,7 +88,7 @@ export type AnswerButtonAction = Extract<
  */
 export type AnswerContent =
   | { kind: "text" | "voice" | "photo" | "sticker" | "other"; text: string | null }
-  | { kind: "fine" | "heart" }
+  | { kind: "fine" | "heart" | "not_okay" }
   | { kind: "chip" | "vote"; index: number; choice: string }
   | { kind: "photo_pick"; index: number; mediaId: string };
 
@@ -117,6 +120,7 @@ function payloadOf(content: AnswerContent): Record<string, unknown> {
   switch (content.kind) {
     case "fine":
     case "heart":
+    case "not_okay":
       return {};
     case "chip":
     case "vote":
@@ -154,6 +158,7 @@ function contentLine(lang: Lang, name: string, answer: Answer): string | null {
     }
     case "fine":
     case "heart":
+    case "not_okay":
       return null;
     default: {
       const text = textIn(payload, "text");
@@ -343,11 +348,88 @@ async function tapThanks(deps: Deps, input: AnswerInput): Promise<string | null>
   );
 }
 
+/**
+ * "Not okay" on the check-in (ADR-54): each active organiser who can be told by message is told at
+ * once, on their own messenger, and so is the founder, with the family's name and a link. Keyed as a
+ * flag by the exchange, the reader's conversation and her answer, so a redelivered tap tells no one
+ * twice. Returns the names of the organisers told, for her thanks.
+ */
+async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Promise<string[]> {
+  const { member, family, exchange } = input;
+  const time = formatTime(answer.receivedAt, member.tz);
+  const organisers = await activeOrganisersWithLinks(deps.db, family.id, MESSENGER);
+  for (const organiser of organisers) {
+    await enqueueOutbound(deps, deps.db, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
+        exchangeId: exchange.id,
+        conversationId: organiser.link.externalId,
+        suffix: answer.id,
+      }),
+      memberId: organiser.member.id,
+      channel: organiser.link.channel,
+      conversationId: organiser.link.externalId,
+      exchangeId: exchange.id,
+      lang: organiser.member.language,
+      text: t(organiser.member.language, "not_okay.notice", { name: member.displayName, time }),
+    });
+  }
+  if (organisers.length === 0) {
+    deps.logger.error("not_okay_nobody_told", { familyId: family.id, memberId: member.id });
+  }
+  const admin = deps.config.adminConversationId;
+  if (admin !== null) {
+    await enqueueOutbound(deps, deps.db, {
+      kind: "flag",
+      idempotencyKey: outboundKey("flag", {
+        exchangeId: exchange.id,
+        conversationId: admin,
+        suffix: answer.id,
+      }),
+      memberId: member.id,
+      channel: ADMIN_CHANNEL,
+      conversationId: admin,
+      exchangeId: exchange.id,
+      lang: ADMIN_LANG,
+      text: t(ADMIN_LANG, "admin.not_okay", {
+        family: family.name,
+        link: adminLink(deps.config, family.id),
+      }),
+    });
+  }
+  await recordEvent(
+    deps.db,
+    {
+      name: "flag_raised",
+      familyId: family.id,
+      memberId: member.id,
+      exchangeId: exchange.id,
+      props: { source: "not_okay", told: organisers.length },
+    },
+    deps.clock.now(),
+  );
+  return organisers.map((organiser) => organiser.member.displayName);
+}
+
+/** Her thanks for "Not okay": who was told, and that an emergency needs a call of her own. */
+function notOkayThanks(member: Member, told: readonly string[]): string {
+  const address = member.addressForm ?? member.displayName;
+  return told.length === 0
+    ? t(member.language, "ack.not_okay_family", { address })
+    : t(member.language, "ack.not_okay", { address, names: told.join(", ") });
+}
+
 /** Her thanks, at most once per local day: the budget index refuses a second row. */
-async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<void> {
+async function sendAck(
+  deps: Deps,
+  input: AnswerInput,
+  kept: boolean,
+  told: readonly string[] | null = null,
+): Promise<void> {
   const { member, event, now } = input;
   const lang = member.language;
-  const tapped = kept ? null : await tapThanks(deps, input);
+  const tapped =
+    told !== null ? notOkayThanks(member, told) : kept ? null : await tapThanks(deps, input);
   await enqueueOutbound(deps, deps.db, {
     kind: "ack",
     idempotencyKey: outboundKey("ack", { memberId: member.id, date: localDateOf(now, member.tz) }),
@@ -416,11 +498,13 @@ async function postAnswer(deps: Deps, post: AnswerPost): Promise<EnqueueResult |
   const velaQuestion = exchange.type === "hello" ? (exchange.text?.trim() ?? "") : "";
   const tapOnly = answer.kind === "fine" || answer.kind === "heart";
   const light =
-    velaQuestion !== "" && !tapOnly
-      ? t(lang, "group.answer_question", { name, time, question: velaQuestion })
-      : exchange.type === "hello" || answer.kind === "fine" || asker === null
-        ? t(lang, "group.answer_hello", { name, time })
-        : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
+    answer.kind === "not_okay"
+      ? t(lang, "group.answer_not_okay", { name, time })
+      : velaQuestion !== "" && !tapOnly
+        ? t(lang, "group.answer_question", { name, time, question: velaQuestion })
+        : exchange.type === "hello" || answer.kind === "fine" || asker === null
+          ? t(lang, "group.answer_hello", { name, time })
+          : t(lang, "group.answer_light", { name, asker: asker.displayName, time });
   const line =
     velaQuestion !== "" && tapOnly
       ? t(lang, "group.answer_question_tap", { name, question: velaQuestion })
@@ -512,7 +596,14 @@ async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<voi
       kept = (await keepInBook(deps, input.exchange, answer)) !== null;
     });
   }
-  await settle(deps, "ack", answer.id, () => sendAck(deps, input, kept));
+  // "Not okay" reaches her organisers first: that is why she tapped it (ADR-54).
+  let told: string[] | null = null;
+  if (input.content.kind === "not_okay") {
+    await settle(deps, "not_okay", answer.id, async () => {
+      told = await alertNotOkay(deps, input, answer);
+    });
+  }
+  await settle(deps, "ack", answer.id, () => sendAck(deps, input, kept, told));
   await settle(deps, "post", answer.id, () => postAnswer(deps, { ...input, answer }));
   await settle(deps, "answer_receipt", answer.id, () => sendAnswerReceipt(deps, input, lit.told));
   const copiedMediaId = answer.mediaId;
@@ -829,9 +920,14 @@ async function resolveChoice(
 ): Promise<Choice | null> {
   switch (action.type) {
     case "answer":
-      return action.answer === "fine"
-        ? { content: { kind: "fine" }, label: t(lang, "button.fine") }
-        : { content: { kind: "heart" }, label: t(lang, "button.heart") };
+      switch (action.answer) {
+        case "fine":
+          return { content: { kind: "fine" }, label: t(lang, "button.fine") };
+        case "not_okay":
+          return { content: { kind: "not_okay" }, label: t(lang, "button.not_okay") };
+        default:
+          return { content: { kind: "heart" }, label: t(lang, "button.heart") };
+      }
     case "chip": {
       const [row] = await db.select().from(chips).where(eq(chips.exchangeId, exchange.id)).limit(1);
       const choice = row?.chips[action.index];

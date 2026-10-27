@@ -8,6 +8,7 @@ import {
   type RenderArrivalInput,
   type RenderedArrival,
   renderArrival,
+  renderCheckIn,
 } from "./render.ts";
 
 const EXCHANGE = "01920f3e-7a4b-7c5d-8e9f-0a1b2c3d4e5f";
@@ -256,6 +257,43 @@ describe("renderArrival in English", () => {
     expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
     expectSendable(arrival, "en");
   });
+});
+
+describe("renderArrival with the check-in on (ADR-54)", () => {
+  it("sends her morning with no buttons, and a hint that asks for her words", () => {
+    const arrival = render({ checkIn: true });
+    expect(paragraphs(arrival)).toEqual([
+      "Good morning, Mrs Chen.",
+      "What did you cook today?\n— Mia",
+      "Reply with a voice message, or write a few words.",
+    ]);
+    expect(arrival.buttons).toEqual([]);
+    expectSendable(arrival, "en");
+  });
+
+  it("keeps the photo choice the family wrote", () => {
+    const arrival = render({
+      checkIn: true,
+      ask: question({ type: "photo_choice", text: "Which one should I frame?", imageCount: 2 }),
+    });
+    expect(labels(arrival)).toEqual([["1", "2"]]);
+  });
+});
+
+describe("renderCheckIn", () => {
+  it.each(["en", "zh-TW"] as const)(
+    "asks how she is, with okay and not okay one per row (%s)",
+    (lang) => {
+      const checkIn = renderCheckIn({ lang, address: "Mrs Chen", exchangeId: EXCHANGE });
+      expect(checkIn.text).toBe(t(lang, "checkin.text", { address: "Mrs Chen" }));
+      expect(labels(checkIn)).toEqual([[t(lang, "button.okay")], [t(lang, "button.not_okay")]]);
+      expect(actions(checkIn)).toEqual([
+        [{ type: "answer", exchangeId: EXCHANGE, answer: "fine" }],
+        [{ type: "answer", exchangeId: EXCHANGE, answer: "not_okay" }],
+      ]);
+      expectSendable(checkIn, lang);
+    },
+  );
 });
 
 describe("renderArrival on a morning nobody asked, with Vela's question", () => {

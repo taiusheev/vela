@@ -73,6 +73,13 @@
  * hear more is theirs; `ack.tap_question` is for Vela's own question and `ack.tap_hello` for the plain
  * hello.
  *
+ * With the check-in on (ADR-54), her morning carries no buttons and ends, on her first mornings, with
+ * `arrival.hint_words`. A morning still unanswered when the repeat is due gets `checkin.text` instead,
+ * with `button.okay` and `button.not_okay`. "Not okay" tells her organisers at once
+ * (`not_okay.notice`), the family's group sees `group.answer_not_okay`, and she is told who was told
+ * (`ack.not_okay`, or `ack.not_okay_family` when no organiser could be told by message). None of them
+ * names a feeling or a cause: she said only that she is not okay.
+ *
  * A family member's ask reaches her as a note from them: their words exactly, signed below with
  * `arrival.signed`, as a message from her child reads, never under a "From" header or with a bot's
  * instructions every day (first test, 15 Oct 2026). `arrival.greeting` has three wordings used in
@@ -128,6 +135,10 @@ export const en = {
   "arrival.hello_signature": "— Vela",
   "arrival.hello_question": "Tell me in a voice message, and I'll pass it on to the family.",
   "arrival.hint": "A voice message is the nicest reply. Busy? Tap ❤️.",
+  "arrival.hint_words": "Reply with a voice message, or write a few words.",
+  "checkin.text": "Hi {address}, just checking in. How are you today?",
+  "button.okay": "🙂 I'm okay",
+  "button.not_okay": "Not okay, tell my family",
   "button.fine": "I'm fine",
   "button.heart": "❤️",
   "button.choice": "{n}",
@@ -136,6 +147,10 @@ export const en = {
   "ack.thanks_3": "Thank you, {address}. Your family will have it in a moment.",
   "ack.thanks_4": "Thank you, {address}. Passing it on to the family now.",
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
+  "ack.not_okay":
+    "Thank you for telling me, {address}. I've let {names} know right now. If it's an emergency, call for help directly.",
+  "ack.not_okay_family":
+    "Thank you for telling me, {address}. I'm letting your family know right now. If it's an emergency, call for help directly.",
   "ack.tap_asker":
     "Thank you, {address} ❤️ {asker} would love to hear a bit more. When you have a minute, send a short voice message?",
   "ack.tap_question":
@@ -216,6 +231,7 @@ export const en = {
   "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
   "group.answer_light": "☀️ {name} answered {asker} · {time}",
   "group.answer_hello": "☀️ {name} is fine · {time}",
+  "group.answer_not_okay": "⚠️ {name} isn't feeling okay · {time}",
   "group.answer_question": "☀️ {name} answered today's question from Vela · {time}\n“{question}”",
   "group.answer_question_tap":
     "Vela asked: “{question}” Reply here to ask it yourself: a reply is the first thing {name} gets tomorrow morning.",
@@ -240,6 +256,8 @@ export const en = {
   "quiet.resolved_away": "{organiser} says {name} is away.",
   "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
+  "not_okay.notice":
+    '⚠️ {name} tapped "Not okay" at {time}, on Vela\'s check-in. Please call {name} as soon as you can.',
   "flag.notice_no_words": "{name} said something today that may be worth a call.",
   "push.quiet_notice":
     "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
@@ -338,6 +356,7 @@ export const en = {
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
   "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
   "admin.flag": "Flag in {family}. Open: {link}",
+  "admin.not_okay": '"Not okay" tapped in {family}. Open: {link}',
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
   "admin.organisers_unreachable":

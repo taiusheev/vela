@@ -11,6 +11,10 @@
  * heart and "I'm fine", so every arrival can be answered with one tap. A question has no answers to
  * tap (founder, 27 Oct 2026: a tapped answer tells the family nothing, she should talk with them),
  * so the heart or "I'm fine" lights the light and her thanks asks for her own words.
+ *
+ * With the check-in on (ADR-54) the morning has no heart and "I'm fine" either: she answers in her
+ * own words, and a morning she has not answered by the repeat gets the check-in instead
+ * (`renderCheckIn`), whose two buttons say whether she is okay.
  */
 import type { Button, ExchangeType, Lang, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -56,6 +60,11 @@ export interface RenderArrivalInput {
    * line would only make a note from her family read like a form.
    */
   hint: boolean;
+  /**
+   * Whether the check-in is on (ADR-54, `CHECK_IN`): the morning then carries no heart or "I'm
+   * fine", and its hint asks for her words. Absent means off.
+   */
+  checkIn?: boolean;
 }
 
 export interface RenderedArrival {
@@ -208,7 +217,7 @@ function composeText(
 
   paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
   if (input.hint && !input.repeat) {
-    paragraphs.push([t(lang, "arrival.hint")]);
+    paragraphs.push([t(lang, input.checkIn === true ? "arrival.hint_words" : "arrival.hint")]);
   }
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
 }
@@ -244,14 +253,38 @@ export function renderArrival(input: RenderArrivalInput): RenderedArrival {
   const { lang, exchangeId, ask } = input;
   const readBack = input.readBack.filter((line) => line.trim().length > 0);
   const askText = ask.type === "hello" ? "" : (ask.text?.trim() ?? "");
+  const askButtons = askRows(lang, exchangeId, ask);
   return {
     text: fitText(input, readBack, askText),
+    buttons:
+      input.checkIn === true
+        ? askButtons
+        : [
+            ...askButtons,
+            [
+              button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
+              button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
+            ],
+          ],
+  };
+}
+
+/**
+ * The check-in (ADR-54): sent in place of the repeat when her morning is still unanswered, a short
+ * note asking how she is, with "I'm okay" and "Not okay, tell my family" one per row, so the tap
+ * that matters most is the easiest to read. Either tap answers her morning and lights the light.
+ */
+export function renderCheckIn(input: {
+  lang: Lang;
+  address: string;
+  exchangeId: string;
+}): RenderedArrival {
+  const { lang, exchangeId } = input;
+  return {
+    text: t(lang, "checkin.text", { address: input.address }),
     buttons: [
-      ...askRows(lang, exchangeId, ask),
-      [
-        button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
-        button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
-      ],
+      [button(t(lang, "button.okay"), { type: "answer", exchangeId, answer: "fine" })],
+      [button(t(lang, "button.not_okay"), { type: "answer", exchangeId, answer: "not_okay" })],
     ],
   };
 }

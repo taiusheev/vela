@@ -136,6 +136,11 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly SEND_AS_ME?: string;
   /**
+   * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
+   * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.
+   */
+  readonly CHECK_IN?: string;
+  /**
    * `RICH_MEMORIES`: "on" offers each signed-in person their own memories in the app (permission,
    * suggestions, keeping, removal, turn off and clear; privacy-notice v7 wording). Absent or "off"
    * leaves those routes absent. Pinned off in production until the notice is live.
