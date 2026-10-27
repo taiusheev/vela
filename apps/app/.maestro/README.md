@@ -94,3 +94,17 @@ break a flow: `pnpm --filter @vela/app e2e:demo` says which step.
 
 See `../docs/product-week-audit.md` for the screen inventory, measured-tap template and current setup limits.
 Run `pnpm --filter @vela/app audit:doctor`, then `pnpm --filter @vela/app audit:ios` for the explicit no-account Expo Go demo. The separate `audit-simulator` EAS profile prepares a custom native demo build on the `audit` update channel. Neither reuses staging credentials. These commands/profile are prepared; no native journey has passed yet. Web demo receipts do not close X1 or X8.
+
+## `native-demo/`: question editor crash regression
+
+Run only against a synthetic demo build with no API or sign-in. `question-reopen.yaml`
+saves a question, reopens/cancels the modal five times, then edits and saves it. This
+covers the native navigation loop that web-only journeys did not catch. For Expo Go:
+
+```bash
+maestro --device <simulator-id> test -e APP_ID=host.exp.Exponent -e QUESTIONS_URL=exp://127.0.0.1:8091/--/questions apps/app/.maestro/native-demo/question-reopen.yaml
+```
+
+Start the app with `EXPO_PUBLIC_DEMO_MODE=true`, empty API/Clerk variables, and port 8091.
+A native demo build can instead use its own bundle ID and questions deep link. This
+checks simulator navigation, not a signed TestFlight build or live family writes.
