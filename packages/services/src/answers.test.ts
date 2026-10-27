@@ -898,12 +898,65 @@ describe("handleAnswerButton", () => {
     });
     expect((await exchangeById(exchangeId))?.state).toBe("answered");
     const rows = await outboundRows();
+    // A tap tells the family nothing in words, so her thanks asks for a few, from whoever asked.
     expect(rows.map((row) => [row.kind, textOf(row)])).toEqual([
-      ["ack", expect.stringMatching(/^Thank you, Mrs Chen\. /)],
+      [
+        "ack",
+        "Thank you, Mrs Chen ❤️ Mia would love to hear a bit more. When you have a minute, send a short voice message?",
+      ],
       ["answer_post", "☀️ Mom is fine · 08:12"],
     ]);
     expect(h.queues.understand.pending).toHaveLength(1);
     expect(h.scheduler.wakes.get(seed.member.id)).toEqual(h.clock.now());
+  });
+
+  it.each([
+    [
+      "the plain hello",
+      null,
+      "Thank you, Mrs Chen ❤️ What are you up to today? Send the family a short voice message if you like.",
+    ],
+    [
+      "Vela's question",
+      "Which season do you like best, and why?",
+      "Thank you, Mrs Chen ❤️ When you have a minute, tell the family your answer in a short voice message. They'd love to hear it.",
+    ],
+  ])("thanks a heart on %s by asking for a short voice message", async (_, text, thanks) => {
+    const scene = await morning({ type: "hello", text });
+    await tapped(scene, { type: "answer", exchangeId: scene.exchangeId, answer: "heart" });
+
+    const [ack] = await outboundRows();
+    expect(ack === undefined ? null : [ack.kind, textOf(ack)]).toEqual(["ack", thanks]);
+  });
+
+  it("tells her organisers and the founder at once when she taps Not okay (ADR-54)", async () => {
+    const scene = await morning();
+    const { seed, exchangeId } = scene;
+
+    await tapped(scene, { type: "answer", exchangeId, answer: "not_okay" });
+    await tapped(scene, { type: "answer", exchangeId, answer: "not_okay" });
+
+    const [answer] = await answerRows();
+    expect(answer).toMatchObject({ kind: "not_okay", payload: {} });
+    expect((await exchangeById(exchangeId))?.state).toBe("answered");
+    expect(h.telegram.closed[0]?.replacementText).toBe("Not okay, tell my family");
+    const rows = await outboundRows();
+    expect(rows.map((row) => [row.kind, row.conversationId, textOf(row)])).toEqual([
+      [
+        "flag",
+        seed.organiserLink.externalId,
+        '⚠️ Mom tapped "Not okay" at 08:12, on Vela\'s check-in. Please call Mom as soon as you can.',
+      ],
+      ["flag", "9001", expect.stringMatching(/^"Not okay" tapped in /)],
+      [
+        "ack",
+        seed.memberLink.externalId,
+        "Thank you for telling me, Mrs Chen. I've let Mia know right now. If it's an emergency, call for help directly.",
+      ],
+      ["answer_post", GROUP, "⚠️ Mom isn't feeling okay · 08:12"],
+    ]);
+    const flagged = (await eventRows()).filter((event) => event.name === "flag_raised");
+    expect(flagged.map((event) => event.props)).toEqual([{ source: "not_okay", told: 1 }]);
   });
 
   it("answers a heart", async () => {

@@ -18,6 +18,7 @@ import {
   weekdayOf,
   zonedInstant,
 } from "./time.ts";
+import type { CheckInLadder } from "./tuning.ts";
 
 export const SCHEDULE = {
   repeatAfterMinutes: 150,
@@ -60,6 +61,13 @@ export interface ScheduleInput {
      * blocked: the light pauses without a quiet notice (architecture §14, flows §3.12).
      */
     blockedAt: Date | null;
+    /**
+     * Her check-in ladder (ADR-55), present while the check-in is on: the repeat goes at its
+     * check-in time, the quiet opens at its notice time and tells her organisers at once even in
+     * her first weeks, and a notice nobody acted on is sent once more after its reminder time.
+     * Absent keeps the repeat at 2.5 hours and `quietAfterMinutes` with the learning delay.
+     */
+    ladder?: CheckInLadder;
   };
   family: { turnsEnabled: boolean };
   /** The exchange days that can still need action: yesterday's and today's local dates. */
@@ -95,6 +103,8 @@ export interface DayState {
     lastNotifiedAt: Date | null;
     waitUntil: Date | null;
     resolvedAt: Date | null;
+    /** Rounds sent so far; the check-in ladder's one reminder follows the first. Absent is 0. */
+    notifyCount?: number;
   };
 }
 
@@ -109,7 +119,8 @@ export type DueAction =
   | { kind: "deliver_arrival"; date: LocalDate; late: boolean }
   | { kind: "send_repeat"; date: LocalDate }
   | { kind: "open_quiet"; date: LocalDate; notify: boolean }
-  | { kind: "notify_quiet"; date: LocalDate }
+  /** `reminder`: the check-in ladder's one reminder after a first notice nobody acted on. */
+  | { kind: "notify_quiet"; date: LocalDate; reminder?: true }
   | { kind: "send_turn_prompt"; forDate: LocalDate }
   | { kind: "prepare"; forDate: LocalDate }
   | { kind: "draft_weekly_read"; weekEnd: LocalDate };
@@ -347,7 +358,10 @@ function repeatRule(ctx: Context, day: DayState, deliveredAt: Date, out: Collect
   if (day.repeatSentAt !== null) {
     return;
   }
-  const repeatAt = addMinutes(deliveredAt, SCHEDULE.repeatAfterMinutes);
+  const repeatAt = addMinutes(
+    deliveredAt,
+    ctx.input.member.ladder?.checkInAfterMinutes ?? SCHEDULE.repeatAfterMinutes,
+  );
   if (awayAt(ctx, day, repeatAt)) {
     return;
   }
@@ -367,7 +381,11 @@ function openQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Coll
   if (day.quiet !== null) {
     return;
   }
-  const quietAt = addMinutes(deliveredAt, ctx.input.member.quietAfterMinutes);
+  const { ladder } = ctx.input.member;
+  const quietAt = addMinutes(
+    deliveredAt,
+    ladder?.quietAfterMinutes ?? ctx.input.member.quietAfterMinutes,
+  );
   // A quiet that opens past an away's end is pushed past it too: its notice goes now or at the
   // learning push time, never before `quietAt`.
   if (awayAt(ctx, day, quietAt)) {
@@ -377,8 +395,10 @@ function openQuietRule(ctx: Context, day: DayState, deliveredAt: Date, out: Coll
     out.wakes.push(quietAt);
     return;
   }
+  // The check-in ladder tells her organisers at its notice time, her first weeks included.
   const learningPushAt = addMinutes(deliveredAt, SCHEDULE.learningNotifyMinutes);
-  const notify = !(isLearning(ctx, day.date) && !reached(ctx.now, learningPushAt));
+  const notify =
+    ladder !== undefined || !(isLearning(ctx, day.date) && !reached(ctx.now, learningPushAt));
   out.due.push({ kind: "open_quiet", date: day.date, notify });
   if (!notify) {
     // The quiet opens in the app only; the push it will need later is this decision's to schedule.
@@ -404,20 +424,40 @@ function notifyQuietRule(
     return;
   }
   const { lastNotifiedAt, waitUntil } = quiet;
+  const { ladder } = ctx.input.member;
   let notifyAt: Date | null = null;
+  let reminder = false;
   if (
     waitUntil !== null &&
     (lastNotifiedAt === null || waitUntil.getTime() > lastNotifiedAt.getTime())
   ) {
     notifyAt = waitUntil;
   } else if (lastNotifiedAt === null && !blocked) {
-    notifyAt = addMinutes(deliveredAt, SCHEDULE.learningNotifyMinutes);
+    notifyAt = addMinutes(
+      deliveredAt,
+      ladder === undefined ? SCHEDULE.learningNotifyMinutes : ladder.quietAfterMinutes,
+    );
+  } else if (
+    ladder !== undefined &&
+    lastNotifiedAt !== null &&
+    waitUntil === null &&
+    quiet.notifyCount === 1 &&
+    !blocked
+  ) {
+    // Nobody acted on the first notice: no answer, no "she's fine", no wait. It goes once more,
+    // and the founder hears it (ADR-55).
+    notifyAt = addMinutes(lastNotifiedAt, ladder.remindAfterMinutes);
+    reminder = true;
   }
   if (notifyAt === null || awayAt(ctx, day, notifyAt)) {
     return;
   }
   if (reached(ctx.now, notifyAt)) {
-    out.due.push({ kind: "notify_quiet", date: day.date });
+    out.due.push(
+      reminder
+        ? { kind: "notify_quiet", date: day.date, reminder: true }
+        : { kind: "notify_quiet", date: day.date },
+    );
   } else {
     out.wakes.push(notifyAt);
   }

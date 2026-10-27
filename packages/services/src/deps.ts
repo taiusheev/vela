@@ -204,6 +204,11 @@ export interface Config {
    */
   sendAsMe?: boolean;
   /**
+   * Whether her morning carries no buttons and an unanswered morning gets the check-in, whose "Not
+   * okay" tells her organisers at once (ADR-54, `CHECK_IN`). Absent means not.
+   */
+  checkIn?: boolean;
+  /**
    * Suggestions are written where the app's API is served (ADR-29, ADR-44): nightly, and on the
    * spot for an evening prompt or a morning that has none yet. Absent means not.
    */

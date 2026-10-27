@@ -85,6 +85,8 @@ function wordlessAnswer(answer: ApiTodayAnswer): string {
       return t`sent a heart`;
     case "fine":
       return t`said she is fine`;
+    case "not_okay":
+      return t`said she is not okay`;
     case "photo":
       return t`sent a photo`;
     case "photo_pick": {

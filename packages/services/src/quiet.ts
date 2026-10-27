@@ -10,6 +10,7 @@ import { t } from "@vela/copy";
 import {
   addMinutes,
   type ButtonAction,
+  CHECK_IN,
   encodeButton,
   localDateOf,
   outboundKey,
@@ -25,7 +26,7 @@ import {
   type VelaTransaction,
 } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { quietNobodyToldAlert } from "./admin-alerts.ts";
+import { quietNobodyToldAlert, quietReminderAlert } from "./admin-alerts.ts";
 import { arrivalChannelOf } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
 import { errorLabel } from "./errors.ts";
@@ -303,8 +304,25 @@ export async function openQuiet(
  * due when nobody was told yet, or a wait has passed since the last notice. Two ticks deciding at
  * once, or a decision made on stale state, then cannot send a round twice.
  */
-function notificationDue(quiet: QuietEvent, now: Date): boolean {
-  return quiet.lastNotifiedAt === null || waitHasRunOut(quiet, now);
+function notificationDue(quiet: QuietEvent, now: Date, reminder: boolean): boolean {
+  return (
+    quiet.lastNotifiedAt === null ||
+    waitHasRunOut(quiet, now) ||
+    (reminder && reminderDue(quiet, now))
+  );
+}
+
+/**
+ * The check-in ladder's one reminder (ADR-55): the first notice went out, nobody tapped "wait" or
+ * "she's fine", she has not answered, and two hours have passed since.
+ */
+function reminderDue(quiet: QuietEvent, now: Date): boolean {
+  return (
+    quiet.lastNotifiedAt !== null &&
+    quiet.waitUntil === null &&
+    quiet.notifyCount === 1 &&
+    now.getTime() >= addMinutes(quiet.lastNotifiedAt, CHECK_IN.reminderAfterMinutes).getTime()
+  );
 }
 
 /** A "wait 2 hours" asked for since the last notice, if any, has run out. */
@@ -316,8 +334,16 @@ function waitHasRunOut(quiet: QuietEvent, now: Date): boolean {
   );
 }
 
-/** Tells the organisers about an open, unresolved quiet event whose notice is due. */
-export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate): Promise<void> {
+/**
+ * Tells the organisers about an open, unresolved quiet event whose notice is due. A `reminder` is
+ * the check-in ladder's second notice when nobody acted on the first, and the founder hears it too.
+ */
+export async function notifyQuiet(
+  deps: Deps,
+  memberId: string,
+  date: LocalDate,
+  reminder = false,
+): Promise<void> {
   const now = deps.clock.now();
   await deps.db.transaction(async (tx) => {
     const ctx = await loadQuietContext(deps, tx, memberId, date);
@@ -329,7 +355,11 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
       .from(quietEvents)
       .where(eq(quietEvents.exchangeId, ctx.exchange.id))
       .for("update");
-    if (quiet === undefined || quiet.resolvedAt !== null || !notificationDue(quiet, now)) {
+    if (
+      quiet === undefined ||
+      quiet.resolvedAt !== null ||
+      !notificationDue(quiet, now, reminder)
+    ) {
       return;
     }
     // Her block holds back a first notice, not the one a wait asked for: the organisers already
@@ -340,6 +370,16 @@ export async function notifyQuiet(deps: Deps, memberId: string, date: LocalDate)
     }
     await tx.update(quietEvents).set({ lastNotifiedAt: now }).where(eq(quietEvents.id, quiet.id));
     await sendQuietNotices(deps, tx, { ...ctx, quiet });
+    if (reminder && !waitHasRunOut(quiet, now)) {
+      const alert = quietReminderAlert(deps, {
+        quietId: quiet.id,
+        her: ctx.member,
+        family: ctx.family,
+      });
+      if (alert !== null) {
+        await enqueueOutbound(deps, tx, alert);
+      }
+    }
   });
 }
 

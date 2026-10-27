@@ -64,7 +64,7 @@ export interface ChatMessage {
 
 const REACTIONS: readonly string[] = ["heart", "laugh", "hug"];
 /** Taps she sends with no words of their own. */
-const TAPS: readonly string[] = ["heart", "fine", "sticker"];
+const TAPS: readonly string[] = ["heart", "fine", "not_okay", "sticker"];
 
 function parsed(instant: string | null | undefined): number | null {
   if (instant === null || instant === undefined) return null;
@@ -95,6 +95,8 @@ function wordless(answer: ApiTodayAnswer): string {
       return "❤️";
     case "fine":
       return t`I'm fine`;
+    case "not_okay":
+      return t`Not okay`;
     case "photo":
       return t`A photo`;
     case "photo_pick": {

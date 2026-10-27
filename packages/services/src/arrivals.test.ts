@@ -1,10 +1,8 @@
-import { createFakeAi, createOffAi, fakeRecord, genericChips } from "@vela/ai";
+import { createOffAi } from "@vela/ai";
 import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
-import { CHIP_QUESTIONS } from "@vela/copy";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
   aiCalls,
-  answers,
   chips,
   type Exchange,
   events,
@@ -45,23 +43,12 @@ const DAY_AFTER: LocalDate = "2026-09-16";
 const GROUP = "-100500";
 
 let h: Harness;
-let chipsFail = false;
 
 beforeAll(async () => {
-  h = await createHarness({
-    ai: {
-      chips: async (input) => {
-        const value = { chips: genericChips(input.lang) };
-        return chipsFail
-          ? { ok: false, value, record: fakeRecord("chips", "http_529"), error: "http_529" }
-          : { ok: true, value, record: fakeRecord("chips") };
-      },
-    },
-  });
+  h = await createHarness();
 }, 60_000);
 
 beforeEach(async () => {
-  chipsFail = false;
   await h.reset();
 });
 
@@ -194,7 +181,7 @@ async function seedYesterdayWithReplies(
 }
 
 describe("prepareDay", () => {
-  it("settles the ask composed for the date and drafts its chips once", async () => {
+  it("settles the ask composed for the date once, asking no model for answers to tap", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
 
@@ -207,17 +194,8 @@ describe("prepareDay", () => {
       state: "scheduled",
       scheduledFor: TOMORROW,
     });
-    const [drafted] = await h.db.select().from(chips).where(eq(chips.exchangeId, ask.id));
-    expect(drafted?.chips).toEqual(["Good", "Not yet", "Tell you later"]);
-    expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
-    expect(h.ai.calls[0]?.input).toMatchObject({
-      lang: "en",
-      askerName: "Mia",
-      question: "What are you cooking tonight?",
-      pastAnswers: [],
-    });
-    const [logged] = await h.db.select().from(aiCalls);
-    expect(logged).toMatchObject({ call: "chips", ok: true, inputRef: { exchange_id: ask.id } });
+    expect(h.ai.calls).toHaveLength(0);
+    expect(await h.db.select().from(chips)).toHaveLength(0);
     const prepared = (await eventRows()).filter((event) => event.name === "exchange_prepared");
     expect(prepared).toHaveLength(1);
     expect(prepared[0]?.props).toEqual({ date: TOMORROW, type: "question", source: "scheduled" });
@@ -287,11 +265,8 @@ describe("prepareDay", () => {
       text: "Did you sleep well?",
       createdAt: at(YESTERDAY, "20:00"),
     });
-    // Prepared last night for tomorrow, with its chips, and that window then passes with nothing sent.
+    // Prepared last night for tomorrow, and that window then passes with nothing sent.
     const soup = await seedSoupQuestion(seed, TOMORROW);
-    await h.db
-      .insert(chips)
-      .values({ exchangeId: soup.id, chips: ["Tomato", "Miso", "None"], promptVersion: "chips@1" });
     h.clock.set(at(TOMORROW, "22:00"));
 
     expect(await prepareDay(h.deps, seed.member.id, DAY_AFTER)).toBe(paused.id);
@@ -311,10 +286,6 @@ describe("prepareDay", () => {
       state: "composed",
       scheduledFor: null,
     });
-    // The soup keeps the chips drafted for the morning that passed; only the new ask is drafted.
-    expect(h.ai.calls.map((call) => call.input)).toEqual([
-      expect.objectContaining({ question: "Did you sleep well?" }),
-    ]);
     const prepared = (await eventRows()).filter((event) => event.name === "exchange_prepared");
     expect(prepared.map((event) => event.props)).toEqual([
       { date: DAY_AFTER, type: "question", source: "carried" },
@@ -414,16 +385,8 @@ describe("prepareDay", () => {
     });
     const [used] = await h.db.select().from(suggestions);
     expect(used?.usedAt).toEqual(h.clock.now());
-    // A bank question whose answer is a choice takes chips as a family question does.
-    expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
-    expect(h.ai.calls[0]?.input).toMatchObject({
-      lang: "en",
-      question: "Which season do you like best, and why?",
-    });
-    const [drafted] = await h.db.select().from(chips).where(eq(chips.exchangeId, id));
-    expect(drafted?.chips).toEqual(["Good", "Not yet", "Tell you later"]);
-    await prepareDay(h.deps, seed.member.id, TOMORROW);
-    expect(h.ai.calls).toHaveLength(1);
+    // Even a question whose answer is a choice offers nothing to tap: she answers in her words.
+    expect(h.ai.calls).toHaveLength(0);
   });
 
   describe("sent as the organiser who chose it (first test, 16 Oct 2026)", () => {
@@ -470,8 +433,7 @@ describe("prepareDay", () => {
       });
       const [used] = await h.db.select().from(suggestions);
       expect(used?.usedAt).toEqual(h.clock.now());
-      // Her family's question takes chips, as any family question does.
-      expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
+      expect(h.ai.calls).toHaveLength(0);
 
       h.clock.set(at(TOMORROW, "08:00"));
       await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
@@ -537,7 +499,7 @@ describe("prepareDay", () => {
     });
   });
 
-  it("drafts no chips for Vela's question whose answer is a name, as the model would invent one", async () => {
+  it("asks Vela's question in Vela's own wording, never the family's", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await h.db.insert(suggestions).values({
       familyId: seed.family.id,
@@ -556,7 +518,7 @@ describe("prepareDay", () => {
     expect(h.ai.calls).toHaveLength(0);
   });
 
-  it("drafts no chips for Vela's story, which is hers to tell", async () => {
+  it("asks Vela's story as the hello's question", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     await h.db.insert(suggestions).values({
       familyId: seed.family.id,
@@ -595,10 +557,8 @@ describe("prepareDay", () => {
     expect(hello?.text).toMatch(/\S/);
     const [used] = await h.db.select().from(suggestions);
     expect(used?.usedAt).toEqual(h.clock.now());
-    // Only the bank questions CHIP_QUESTIONS names take chips; the weekday decides the item.
-    expect(h.ai.calls.map((call) => call.call)).toEqual(
-      CHIP_QUESTIONS.has(used?.bankId ?? "") ? ["chips"] : [],
-    );
+    // Her morning offers no answers to tap, so no model is asked for any.
+    expect(h.ai.calls).toHaveLength(0);
   });
 
   it("keeps the plain hello when the day has no unused suggestion", async () => {
@@ -617,122 +577,6 @@ describe("prepareDay", () => {
     const id = await prepareDay(h.deps, seed.member.id, TOMORROW);
 
     expect((await exchangeById(id))?.text).toBeNull();
-  });
-
-  it("gives the chips her twenty latest answers in her words: what she said, else wrote, else the summary", async () => {
-    const seed = await seedFamily(h.db, { now: h.clock.now() });
-    const answeredToday = await seedExchange(h.db, seed, {
-      date: TODAY,
-      state: "answered",
-      deliveredAt: at(TODAY, "08:00"),
-      answeredAt: at(TODAY, "08:10"),
-    });
-    const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
-    const answer = (
-      minute: number,
-      values: { kind: "text" | "voice" | "chip" | "photo"; payload?: Record<string, string> } & {
-        transcript?: string;
-        summary?: string;
-      },
-    ) => ({
-      exchangeId: answeredToday.id,
-      memberId: seed.member.id,
-      channel: "telegram" as const,
-      externalId: `2001:${minute}`,
-      payload: values.payload ?? {},
-      kind: values.kind,
-      transcript: values.transcript ?? null,
-      summary: values.summary ?? null,
-      receivedAt: new Date(at(TODAY, "08:00").getTime() + minute * 60_000),
-    });
-    const older = Array.from({ length: 20 }, (_, index) =>
-      answer(index, { kind: "text", payload: { text: `Older ${index}` } }),
-    );
-    await h.db.insert(answers).values([
-      ...older,
-      answer(30, { kind: "photo" }),
-      answer(31, {
-        kind: "chip",
-        payload: { choice: "Noodles" },
-        summary: "Mom chose: Noodles.",
-      }),
-      answer(32, { kind: "text", payload: { text: "Went to the market" }, summary: "Market." }),
-      answer(33, { kind: "voice", transcript: "Soup again", summary: "Soup." }),
-    ]);
-    const other = await seedFamily(h.db, {
-      now: h.clock.now(),
-      organiserExternalId: "1101",
-      memberExternalId: "2101",
-    });
-    const otherExchange = await seedExchange(h.db, other, { date: TODAY, state: "answered" });
-    await h.db.insert(answers).values({
-      ...answer(40, { kind: "text", payload: { text: "Not hers" } }),
-      exchangeId: otherExchange.id,
-      memberId: other.member.id,
-      externalId: "2101:40",
-    });
-
-    await prepareDay(h.deps, seed.member.id, TOMORROW);
-
-    expect(h.ai.calls[0]?.input).toMatchObject({
-      question: "What are you cooking tonight?",
-      // The photo without words takes one of the twenty places and gives nothing.
-      pastAnswers: [
-        "Soup again",
-        "Went to the market",
-        "Mom chose: Noodles.",
-        ...Array.from({ length: 16 }, (_, index) => `Older ${19 - index}`),
-      ],
-    });
-    expect((await exchangeById(ask.id)).state).toBe("scheduled");
-  });
-
-  it("logs a drafting step that throws by its error's name, never by the words in its message", async () => {
-    const seed = await seedFamily(h.db, { now: h.clock.now() });
-    const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
-    h.deps.ai = createFakeAi({
-      chips: async () => {
-        throw new Error("Failed query: insert into chips\nparams: What are you cooking tonight?");
-      },
-    });
-
-    await prepareDay(h.deps, seed.member.id, TOMORROW);
-
-    expect((await exchangeById(ask.id)).state).toBe("scheduled");
-    expect(
-      h.logger.entries
-        .filter((entry) => entry.event === "chips_failed")
-        .map((entry) => entry.fields),
-    ).toEqual([{ exchangeId: ask.id, error: "Error" }]);
-  });
-
-  // Decision X (2026-09-18): with AI off the question goes out as it does after a failed call, but
-  // nothing claims a call was made or that one failed.
-  it("lets the question go out without chips while AI is off, logging no call and no failure", async () => {
-    h.deps.ai = createOffAi();
-    const seed = await seedFamily(h.db, { now: h.clock.now() });
-    const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
-
-    await prepareDay(h.deps, seed.member.id, TOMORROW);
-
-    expect((await exchangeById(ask.id)).state).toBe("scheduled");
-    expect(await h.db.select().from(chips)).toHaveLength(0);
-    expect(await h.db.select().from(aiCalls)).toHaveLength(0);
-    expect(h.logger.entries.map((entry) => entry.event)).not.toContain("chips_failed");
-  });
-
-  it("lets the question go out without chips when drafting fails", async () => {
-    chipsFail = true;
-    const seed = await seedFamily(h.db, { now: h.clock.now() });
-    const ask = await seedExchange(h.db, seed, { date: TOMORROW, state: "composed" });
-
-    await prepareDay(h.deps, seed.member.id, TOMORROW);
-
-    expect((await exchangeById(ask.id)).state).toBe("scheduled");
-    expect(await h.db.select().from(chips)).toHaveLength(0);
-    const [logged] = await h.db.select().from(aiCalls);
-    expect(logged).toMatchObject({ call: "chips", ok: false });
-    expect(h.logger.entries.map((entry) => entry.event)).toContain("chips_failed");
   });
 });
 
@@ -791,8 +635,8 @@ describe("deliverArrival", () => {
         lang: "en",
         text: [
           "Hello Mrs Chen, good morning.",
-          "How are you this morning?\n— Vela, for your family",
-          "Reply with a voice message, or tap a button.",
+          "How are you this morning?\n— Vela",
+          "A voice message is the nicest reply. Busy? Tap ❤️.",
         ].join("\n\n"),
         buttons: [[expect.objectContaining({ label: "❤️" }), expect.objectContaining({})]],
       },
@@ -828,24 +672,27 @@ describe("deliverArrival", () => {
     const seed = await seedFamily(h.db, { now: at(YESTERDAY, "08:00") });
     const ask = await seedExchange(h.db, seed, { date: TODAY, state: "composed" });
     let tomorrowPrepared = false;
-    h.deps.ai = createFakeAi({
-      // Drafting the chips runs after this morning's preparation commits and before its queueing.
-      chips: async (input) => {
-        if (!tomorrowPrepared) {
-          tomorrowPrepared = true;
-          h.clock.set(at(TODAY, "22:00"));
-          await prepareDay(h.deps, seed.member.id, TOMORROW);
-        }
-        return {
-          ok: true,
-          value: { chips: genericChips(input.lang) },
-          record: fakeRecord("chips"),
-        };
-      },
-    });
+    let transactions = 0;
+    const db = h.deps.db;
+    const transaction = db.transaction.bind(db);
+    // The second transaction is the queueing, after this morning's preparation committed: tomorrow's
+    // preparation runs just before it.
+    db.transaction = (async (...args: Parameters<typeof transaction>) => {
+      transactions += 1;
+      if (transactions === 2 && !tomorrowPrepared) {
+        tomorrowPrepared = true;
+        h.clock.set(at(TODAY, "22:00"));
+        await prepareDay(h.deps, seed.member.id, TOMORROW);
+      }
+      return transaction(...args);
+    }) as typeof db.transaction;
     h.clock.set(at(TODAY, "21:59"));
 
-    await deliverArrival(h.deps, seed.member.id, TODAY, true);
+    try {
+      await deliverArrival(h.deps, seed.member.id, TODAY, true);
+    } finally {
+      db.transaction = transaction;
+    }
 
     expect(tomorrowPrepared).toBe(true);
     expect(await exchangeById(ask.id)).toMatchObject({
@@ -876,10 +723,11 @@ describe("deliverArrival", () => {
     expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
   });
 
-  it("renders the question with its chips and image, and reads yesterday's replies back with the voice first", async () => {
+  it("renders the question with its image and no answers to tap, and reads yesterday's replies back with the voice first", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const { previous, replyIds } = await seedYesterdayWithReplies(seed);
     const ask = await seedSoupQuestion(seed, TOMORROW);
+    // Answers drafted for a morning prepared before taps were taken off questions are not shown.
     await h.db.insert(chips).values({
       exchangeId: ask.id,
       chips: ["Fish", "Chicken", "Vegetable"],
@@ -896,7 +744,7 @@ describe("deliverArrival", () => {
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Sorry this is late.\nHello Mrs Chen, good morning.",
           "Which soup today?\n— Mia",
-          "Reply with a voice message, or tap a button.",
+          "A voice message is the nicest reply. Busy? Tap ❤️.",
         ].join("\n\n"),
         media: [
           { kind: "audio", providerFileId: "voice-mia" },
@@ -916,9 +764,6 @@ describe("deliverArrival", () => {
         buttonRow.map((button) => [decodeButton(button.id), button.label]),
       ),
     ).toEqual([
-      [[{ type: "chip", exchangeId: ask.id, index: 0 }, "Fish"]],
-      [[{ type: "chip", exchangeId: ask.id, index: 1 }, "Chicken"]],
-      [[{ type: "chip", exchangeId: ask.id, index: 2 }, "Vegetable"]],
       [
         [{ type: "answer", exchangeId: ask.id, answer: "heart" }, "❤️"],
         [{ type: "answer", exchangeId: ask.id, answer: "fine" }, "I'm fine"],
@@ -966,8 +811,8 @@ describe("deliverArrival", () => {
         text: [
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Hello Mrs Chen, good morning.",
-          "How are you this morning?\n— Vela, for your family",
-          "Reply with a voice message, or tap a button.",
+          "How are you this morning?\n— Vela",
+          "A voice message is the nicest reply. Busy? Tap ❤️.",
         ].join("\n\n"),
         media: [{ kind: "audio", providerFileId: "voice-mia" }],
       },
@@ -1256,7 +1101,7 @@ describe("deliverArrival", () => {
     for (const arrival of sent) {
       expect(arrival.message.text.split("\n\n").slice(1)).toEqual([
         "Mia wanted to show you a photo, but it is no longer available. How are you today?",
-        "Reply with a voice message, or tap a button.",
+        "A voice message is the nicest reply. Busy? Tap ❤️.",
       ]);
       expect(arrival.message.media).toBeUndefined();
       expect(arrival.message.buttons.map((buttonRow) => buttonRow.length)).toEqual([2]);
@@ -1300,6 +1145,42 @@ describe("sendRepeat", () => {
     expect((await exchangeById(ask.id)).repeatedAt).toEqual(h.clock.now());
     expect((await eventRows()).map((event) => event.name)).toContain("repeat_sent");
     expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(2);
+  });
+
+  it("sends the check-in in place of the repeat while CHECK_IN is on (ADR-54)", async () => {
+    const config = h.deps.config as { checkIn?: boolean };
+    config.checkIn = true;
+    try {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      const ask = await seedSoupQuestion(seed, TOMORROW);
+      h.clock.set(at(TOMORROW, "08:00"));
+      await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+      const [arrival] = await outboundRows("arrival");
+      const morning = arrival?.payload as { message: { buttons?: unknown[] } } | undefined;
+      expect(morning?.message).toBeDefined();
+      expect(morning?.message.buttons).toBeUndefined();
+      await h.run(handlers());
+      h.clock.advanceMinutes(150);
+
+      await sendRepeat(h.deps, seed.member.id, TOMORROW);
+
+      const [row] = await outboundRows("repeat");
+      const payload = row?.payload as {
+        message: { text: string; media?: unknown; buttons: { id: string; label: string }[][] };
+      };
+      expect(payload.message.text).toBe("Hi Mrs Chen, just checking in. How are you today?");
+      expect(payload.message.media).toBeUndefined();
+      expect(
+        payload.message.buttons.map((buttons) =>
+          buttons.map((button) => [decodeButton(button.id), button.label]),
+        ),
+      ).toEqual([
+        [[{ type: "answer", exchangeId: ask.id, answer: "fine" }, "🙂 I'm okay"]],
+        [[{ type: "answer", exchangeId: ask.id, answer: "not_okay" }, "Not okay, tell my family"]],
+      ]);
+    } finally {
+      config.checkIn = undefined;
+    }
   });
 
   it("sends nothing for a day not delivered, already answered, or whose delivery failed", async () => {

@@ -66,9 +66,13 @@ export const zhTW: Record<keyof typeof en, string> = {
   "arrival.photo_choice": "選哪一張呢？請按 1 或 2。",
   "arrival.vote": "請按一個選項。",
   "arrival.hello": "您早上過得好嗎？",
-  "arrival.hello_signature": "—— Vela，代表您的家人",
-  "arrival.hello_question": "今天想請您和家人分享：",
-  "arrival.hint": "您可以傳語音訊息回覆，或按下面的按鈕。",
+  "arrival.hello_signature": "—— 家人的小幫手 Vela",
+  "arrival.hello_question": "用語音跟我說說吧，我會轉給家人。",
+  "arrival.hint": "傳一段語音回覆最好。在忙的話，按 ❤️ 就可以。",
+  "arrival.hint_words": "傳一段語音，或寫幾個字回覆就好。",
+  "checkin.text": "{address}，想關心一下您，今天還好嗎？",
+  "button.okay": "🙂 我還好",
+  "button.not_okay": "不太好，告訴家人",
   "button.fine": "我很好",
   "button.heart": "❤️",
   "button.choice": "{n}",
@@ -77,6 +81,14 @@ export const zhTW: Record<keyof typeof en, string> = {
   "ack.thanks_3": "謝謝您，{address}。家人等一下就會收到。",
   "ack.thanks_4": "謝謝您，{address}。這就轉給家人。",
   "ack.story": "謝謝您，{address}。您說的故事已經收進家庭故事書了。",
+  "ack.not_okay":
+    "謝謝您告訴我，{address}。我已經馬上通知{names}了。如果情況緊急，請直接打電話求救。",
+  "ack.not_okay_family":
+    "謝謝您告訴我，{address}。我現在就通知您的家人。如果情況緊急，請直接打電話求救。",
+  "ack.tap_asker": "謝謝您，{address} ❤️ {asker}很想多聽您說一點。有空的時候，傳一段語音好嗎？",
+  "ack.tap_question":
+    "謝謝您，{address} ❤️ 有空的時候，用一段語音跟家人說說您的答案吧，家人很想聽。",
+  "ack.tap_hello": "謝謝您，{address} ❤️ 今天在忙什麼呢？想的話，傳一段語音給家人吧。",
   "book.dont_keep": "這則不要保留",
   "book.dropped": "沒問題，這則故事已經從家庭故事書拿掉了。",
   "recipe.offer": "{address}，這是您說的{title}做法：\n\n{card}\n\n要收進家庭故事書嗎？",
@@ -144,6 +156,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "group.ask_from_app": "{asker}已經為{name}準備好明天早上的提問。",
   "group.answer_light": "☀️ {name}回覆了{asker} · {time}",
   "group.answer_hello": "☀️ {name}一切都好 · {time}",
+  "group.answer_not_okay": "⚠️ {name}說今天不太好 · {time}",
   "group.answer_question": "☀️ {name}回答了 Vela 今天的問題 · {time}\n「{question}」",
   "group.answer_question_tap":
     "Vela 問了：「{question}」直接回覆這則訊息，親自問問看：回覆會是{name}明天早上第一個收到的。",
@@ -167,6 +180,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.resolved_away": "{organiser}說{name}不在家。",
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
+  "not_okay.notice": "⚠️ {name}在 {time} 的 Vela 關心訊息裡按了「不太好」。請盡快打電話給{name}。",
   "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
   "push.quiet_notice":
     "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
@@ -259,6 +273,9 @@ export const zhTW: Record<keyof typeof en, string> = {
     "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
   "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
   "admin.flag": "{family}有一則標記。查看： {link}",
+  "admin.quiet_reminder":
+    "{family}的{name}安靜通知已經 2 小時沒有人處理，已再次通知發起人。查看： {link}",
+  "admin.not_okay": "{family}有人按了「不太好」。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
   "admin.organisers_unreachable":

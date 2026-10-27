@@ -635,6 +635,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "on"]);
   });
 
+  // The check-in (ADR-54): on where only test families are, off in production until the notice says
+  // her morning may have no buttons and what "Not okay" tells. The commit that turns it on changes this.
+  it("sends the check-in in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.CHECK_IN,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // Memories (privacy-notice v7 wording, approved 22 Oct 2026): on where only test families are, off
   // in production until v7 is the live notice and families are told. The commit that turns it on
   // changes this.

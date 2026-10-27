@@ -2664,6 +2664,10 @@ msgstr "還沒保存"
 msgid "Not now"
 msgstr "先不要"
 
+#: src/data/chat.ts
+msgid "Not okay"
+msgstr "不太好"
+
 #: src/components/onboarding/finish.tsx
 msgid "Not saved yet"
 msgstr "還沒保存"
@@ -3360,6 +3364,10 @@ msgstr "已拒絕"
 #: src/data/useToday.ts
 msgid "said she is fine"
 msgstr "說自己很好"
+
+#: src/data/useToday.ts
+msgid "said she is not okay"
+msgstr "說自己不太好"
 
 #: src/data/family.ts
 #: src/data/useNearby.ts

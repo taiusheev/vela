@@ -227,6 +227,38 @@ async function answerRow(id: string) {
 }
 
 describe("loadScheduleInput", () => {
+  it("gives the check-in ladder from her stored rhythm only while CHECK_IN is on (ADR-55)", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const config = h.deps.config as { checkIn?: boolean };
+    expect(
+      (await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.ladder,
+    ).toBeUndefined();
+    config.checkIn = true;
+    try {
+      // Her first weeks: no rhythm yet.
+      expect(
+        (await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.ladder,
+      ).toEqual({
+        checkInAfterMinutes: 120,
+        quietAfterMinutes: 240,
+        remindAfterMinutes: 120,
+      });
+      await h.db
+        .update(members)
+        .set({ answerStats: { median_latency_min: 40, late_latency_min: 120, n_days: 14 } })
+        .where(eq(members.id, seed.member.id));
+      expect(
+        (await loadScheduleInput(h.deps, seed.member.id, h.clock.now()))?.member.ladder,
+      ).toEqual({
+        checkInAfterMinutes: 100,
+        quietAfterMinutes: 190,
+        remindAfterMinutes: 120,
+      });
+    } finally {
+      config.checkIn = undefined;
+    }
+  });
+
   it("maps her state to the schedule's input exactly", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const her = seed.member.id;

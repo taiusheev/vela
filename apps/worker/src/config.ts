@@ -563,6 +563,11 @@ export function readSendAsMe(env: { readonly SEND_AS_ME?: string }): boolean {
   return env.SEND_AS_ME === undefined ? false : readOnOff(env.SEND_AS_ME, "SEND_AS_ME");
 }
 
+/** The var `CHECK_IN` (ADR-54): "on" or "off"; absent is off; anything else is refused. */
+export function readCheckIn(env: { readonly CHECK_IN?: string }): boolean {
+  return env.CHECK_IN === undefined ? false : readOnOff(env.CHECK_IN, "CHECK_IN");
+}
+
 /**
  * The var `RICH_MEMORIES` (privacy-notice v7 wording, founder's approval of 22 Oct 2026): "on"
  * offers each person their own memories in the app; absent or "off" does not; anything else is refused.
@@ -596,6 +601,7 @@ function readOnOff(
     | "BOOK"
     | "WEEKLY_INSIGHT"
     | "SEND_AS_ME"
+    | "CHECK_IN"
     | "RICH_MEMORIES"
     | "MEMORY_DISCOVERY"
     | "MEMORY_STORIES"
@@ -750,6 +756,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
     sendAsMe: readSendAsMe(env),
+    checkIn: readCheckIn(env),
     richMemories: readRichMemories(env),
     memoryDiscovery: readMemoryDiscovery(env),
     memoryStories: readMemoryStories(env),

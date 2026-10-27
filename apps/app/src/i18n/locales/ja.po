@@ -2657,6 +2657,10 @@ msgstr ""
 msgid "Not now"
 msgstr ""
 
+#: src/data/chat.ts
+msgid "Not okay"
+msgstr ""
+
 #: src/components/onboarding/finish.tsx
 msgid "Not saved yet"
 msgstr ""
@@ -3352,6 +3356,10 @@ msgstr ""
 
 #: src/data/useToday.ts
 msgid "said she is fine"
+msgstr ""
+
+#: src/data/useToday.ts
+msgid "said she is not okay"
 msgstr ""
 
 #: src/data/family.ts

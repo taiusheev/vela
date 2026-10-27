@@ -409,6 +409,8 @@ function wordsOf(ctx: AnswerContext): string | null {
       return hasTranscript(answer) ? answer.transcript : null;
     case "fine":
       return t(lang, "button.fine");
+    case "not_okay":
+      return t(lang, "button.not_okay");
     case "heart":
       return t(lang, "button.heart");
     case "chip":
@@ -1192,7 +1194,8 @@ export async function understandAnswer(deps: Deps, answerId: string): Promise<vo
       }
       // First, with the flag itself: a flag that reached no one is the expensive failure.
       notices =
-        flag.ok && flag.value.flag
+        // Her "Not okay" told the organisers itself when she tapped it (ADR-54).
+        flag.ok && flag.value.flag && answer.kind !== "not_okay"
           ? await raiseFlag(deps, tx, ctx, flag.value, words, mayKeepHealth, now)
           : [];
     }

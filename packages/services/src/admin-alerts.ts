@@ -189,6 +189,37 @@ export function quietNobodyToldAlert(
   };
 }
 
+/**
+ * The founder hears that nobody acted on a quiet notice for two hours, as it goes out again (the
+ * check-in ladder's reminder, ADR-55): the family's name, her name and a link, nothing she said.
+ */
+export function quietReminderAlert(
+  deps: Pick<Deps, "config">,
+  input: { quietId: string; her: Member; family: Family },
+): OutboundRequest | null {
+  const admin = deps.config.adminConversationId;
+  if (admin === null) {
+    return null;
+  }
+  const { quietId, her, family } = input;
+  return {
+    kind: "system",
+    idempotencyKey: outboundKey("system", {
+      conversationId: admin,
+      suffix: `quiet_reminder:${quietId}`,
+    }),
+    memberId: her.id,
+    channel: ADMIN_CHANNEL,
+    conversationId: admin,
+    lang: ADMIN_LANG,
+    text: t(ADMIN_LANG, "admin.quiet_reminder", {
+      name: her.displayName,
+      family: family.name,
+      link: adminLink(deps.config, family.id),
+    }),
+  };
+}
+
 // Push (ADR-34) -----------------------------------------------------------------------------------
 
 /**

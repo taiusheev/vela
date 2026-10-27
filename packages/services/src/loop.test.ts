@@ -1,8 +1,8 @@
 /**
  * The pilot loop of spec Appendix A, end to end (flows §6, test 1): an organiser onboards, the
  * parent consents, the group is linked, the evening prompt names the holder, the holder asks, the
- * chips are drafted, the morning arrives with them, she taps one, the family sees it, a sibling
- * replies, and the next morning opens with that reply.
+ * morning arrives, she taps the heart and is asked for a few words by voice, the family sees it, a
+ * sibling replies, and the next morning opens with that reply.
  *
  * Everything reaches the services the way Telegram would: `handleInbound` with parsed events, the
  * harness clock, the member's tick where the Durable Object's alarm would be, and the queue
@@ -279,14 +279,13 @@ describe("the pilot loop", () => {
       scheduledFor: "2026-09-15",
     });
 
-    // ── 22:00: the morning is prepared and its chips drafted ──────────────────────────────────
+    // ── 22:00: the morning is prepared, with no answers to tap and no model asked ─────────────
     await runSchedulerUntil(her.id, at("2026-09-14", "22:30"));
     expect(newMessages()).toEqual([]);
-    const [drafted] = await h.db.select().from(chips);
-    expect(drafted?.chips).toEqual(["Good", "Not yet", "Tell you later"]);
-    expect(h.ai.calls.map((call) => call.call)).toEqual(["chips"]);
+    expect(await h.db.select().from(chips)).toEqual([]);
+    expect(h.ai.calls).toEqual([]);
 
-    // ── 08:00: her morning, with the chips as buttons ─────────────────────────────────────────
+    // ── 08:00: her morning, Mia's question with only the heart and I'm fine ───────────────────
     await runSchedulerUntil(her.id, at("2026-09-15", "08:00"));
     expect(newMessages()).toEqual([
       [
@@ -303,33 +302,23 @@ describe("the pilot loop", () => {
     ]);
     const arrival = h.telegram.sentTo(HER).at(-1)?.message;
     expect(arrival?.buttons?.map((row) => row.map((button) => button.label))).toEqual([
-      ["Good"],
-      ["Not yet"],
-      ["Tell you later"],
       [t("en", "button.heart"), t("en", "button.fine")],
     ]);
 
-    // ── She taps a chip; the family sees it ───────────────────────────────────────────────────
+    // ── She taps the heart; Mia's wish to hear more comes back; the family sees it ────────────
     h.clock.set(at("2026-09-15", "08:05"));
     await inbound(tapLast(HER, 0));
 
     expect(newMessages()).toEqual([
-      [HER, expect.stringMatching(/^Thank you, Mrs Chen\. /)],
-      [
-        GROUP,
-        `${t("en", "group.answer_light", { name: "Mom", asker: "Mia", time: "08:05" })}\n${t(
-          "en",
-          "group.answer_chip",
-          { name: "Mom", choice: "Good" },
-        )}`,
-      ],
+      [HER, t("en", "ack.tap_asker", { address: "Mrs Chen", asker: "Mia" })],
+      [GROUP, t("en", "group.answer_light", { name: "Mom", asker: "Mia", time: "08:05" })],
     ]);
     expect(h.telegram.closed.at(-1)).toMatchObject({
       conversationId: HER,
-      replacementText: "Good",
+      replacementText: t("en", "button.heart"),
     });
     const [answer] = await h.db.select().from(answers);
-    expect(answer).toMatchObject({ kind: "chip", payload: { index: 0, choice: "Good" } });
+    expect(answer).toMatchObject({ kind: "heart" });
     expect(answer?.understoodAt).not.toBeNull();
     const answerPostMessageId = lastMessageIdTo(GROUP);
 

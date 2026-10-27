@@ -7,9 +7,14 @@
  * message reads; for a voice note or photo without words, who sent it, or that the photo is gone), or
  * the fallback hello signed by Vela; and, on her first mornings only, the hint on how to answer
  * (first test, 15 Oct 2026: a morning should read as her child writing, not as a bot).
- * Buttons: the question's chips one per row (Vela's bank question's too), the photo choice's 1 and 2,
- * the vote's options one per row, and always a last row with a heart and "I'm fine", so every arrival can be answered with one
- * tap.
+ * Buttons: the photo choice's 1 and 2, the vote's options one per row, and always a last row with a
+ * heart and "I'm fine", so every arrival can be answered with one tap. A question has no answers to
+ * tap (founder, 27 Oct 2026: a tapped answer tells the family nothing, she should talk with them),
+ * so the heart or "I'm fine" lights the light and her thanks asks for her own words.
+ *
+ * With the check-in on (ADR-54) the morning has no heart and "I'm fine" either: she answers in her
+ * own words, and a morning she has not answered by the repeat gets the check-in instead
+ * (`renderCheckIn`), whose two buttons say whether she is okay.
  */
 import type { Button, ExchangeType, Lang, LocalDate } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -25,18 +30,12 @@ export type ArrivalAsk =
        * null or absent keeps the plain hello.
        */
       question?: string | null;
-      /**
-       * Answers to tap for Vela's question when it is a question (spec §5.3), drafted as a family
-       * question's are; empty for a story, recipe or word, and for the plain hello.
-       */
-      chips?: readonly string[];
     }
   | {
       type: Exclude<ExchangeType, "hello">;
       askerName: string;
       onBehalfOf: string | null;
       text: string | null;
-      chips: string[];
       voteOptions: string[];
       /**
        * Images the caller attaches before the text. The buttons do not depend on it: a photo choice
@@ -61,6 +60,11 @@ export interface RenderArrivalInput {
    * line would only make a note from her family read like a form.
    */
   hint: boolean;
+  /**
+   * Whether the check-in is on (ADR-54, `CHECK_IN`): the morning then carries no heart or "I'm
+   * fine", and its hint asks for her words. Absent means off.
+   */
+  checkIn?: boolean;
 }
 
 export interface RenderedArrival {
@@ -68,8 +72,6 @@ export interface RenderedArrival {
   buttons: Button[][];
 }
 
-/** Spec §5.3: up to three chips. */
-export const MAX_CHIPS = 3;
 /** `OutboundMessage` allows eight rows of buttons, and the last one is always heart and "I'm fine". */
 export const MAX_VOTE_OPTIONS = 7;
 /** `Button.label` allows at most 64 characters. */
@@ -156,26 +158,23 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
   return lines;
 }
 
-/** The fallback: Vela's question when there is one, else the plain hello; always signed by Vela. */
+/**
+ * The fallback: Vela's question when there is one, with an invitation to answer it by voice, else the
+ * plain hello; always signed by Vela, as a short text reads, never under a header.
+ */
 function helloLines(lang: Lang, ask: Extract<ArrivalAsk, { type: "hello" }>): string[] {
   const question = ask.question?.trim() ?? "";
   return question.length === 0
     ? [t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]
-    : [t(lang, "arrival.hello_question"), question, t(lang, "arrival.hello_signature")];
+    : [`${question} ${t(lang, "arrival.hello_question")}`, t(lang, "arrival.hello_signature")];
 }
 
-/** The ask's own buttons, above the heart and "I'm fine". */
+/**
+ * The ask's own buttons, above the heart and "I'm fine": only a choice the family made for her. A
+ * question, story, recipe or memory is answered in her own words.
+ */
 function askRows(lang: Lang, exchangeId: string, ask: ArrivalAsk): Button[][] {
   switch (ask.type) {
-    // Spec §5.3: chips belong to questions; story, recipe, and memory asks are answered by voice.
-    case "question":
-      return optionRows(ask.chips, MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index }));
-    // Vela's own question, on a morning nobody asked, is answered the same way; the plain hello,
-    // with no question, has nothing to choose from.
-    case "hello":
-      return (ask.question?.trim() ?? "") === ""
-        ? []
-        : optionRows(ask.chips ?? [], MAX_CHIPS, (index) => ({ type: "chip", exchangeId, index }));
     case "photo_choice":
       return [
         [0, 1].map((index) =>
@@ -218,7 +217,7 @@ function composeText(
 
   paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
   if (input.hint && !input.repeat) {
-    paragraphs.push([t(lang, "arrival.hint")]);
+    paragraphs.push([t(lang, input.checkIn === true ? "arrival.hint_words" : "arrival.hint")]);
   }
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
 }
@@ -254,14 +253,38 @@ export function renderArrival(input: RenderArrivalInput): RenderedArrival {
   const { lang, exchangeId, ask } = input;
   const readBack = input.readBack.filter((line) => line.trim().length > 0);
   const askText = ask.type === "hello" ? "" : (ask.text?.trim() ?? "");
+  const askButtons = askRows(lang, exchangeId, ask);
   return {
     text: fitText(input, readBack, askText),
+    buttons:
+      input.checkIn === true
+        ? askButtons
+        : [
+            ...askButtons,
+            [
+              button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
+              button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
+            ],
+          ],
+  };
+}
+
+/**
+ * The check-in (ADR-54): sent in place of the repeat when her morning is still unanswered, a short
+ * note asking how she is, with "I'm okay" and "Not okay, tell my family" one per row, so the tap
+ * that matters most is the easiest to read. Either tap answers her morning and lights the light.
+ */
+export function renderCheckIn(input: {
+  lang: Lang;
+  address: string;
+  exchangeId: string;
+}): RenderedArrival {
+  const { lang, exchangeId } = input;
+  return {
+    text: t(lang, "checkin.text", { address: input.address }),
     buttons: [
-      ...askRows(lang, exchangeId, ask),
-      [
-        button(t(lang, "button.heart"), { type: "answer", exchangeId, answer: "heart" }),
-        button(t(lang, "button.fine"), { type: "answer", exchangeId, answer: "fine" }),
-      ],
+      [button(t(lang, "button.okay"), { type: "answer", exchangeId, answer: "fine" })],
+      [button(t(lang, "button.not_okay"), { type: "answer", exchangeId, answer: "not_okay" })],
     ],
   };
 }

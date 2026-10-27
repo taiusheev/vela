@@ -151,7 +151,7 @@ Anything from the member on any surface between delivery and the next delivery: 
 
 ### 5.3 Answer chips
 
-For questions, Vela drafts up to three short chips **from her own previous answers and the question's topic** ("Soup", "Pancakes", "Nothing yet"). They are the primary answer row: tapping is the reliable gesture at 70+ (research/10), voice is the warm one. Only she sees them. A tapped chip is posted as her answer in her words, never expanded by AI. If she has fewer than five past answers, the chips are generic to the question type. Chips are never shown for story, recipe, or memory types; those are voice.
+Retired on 27 October 2026 (ADR-53): a tapped answer told the family nothing. Questions carry no answers to tap; she answers in her own words, by voice or text, or taps the heart or "I'm fine", and her thanks then asks for a short voice message (§5.4). A photo choice and a vote keep the choices the family wrote.
 
 ### 5.4 Vela's acknowledgement
 

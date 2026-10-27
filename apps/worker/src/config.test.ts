@@ -5,6 +5,7 @@ import {
   checkAdminConfig,
   readAiProvider,
   readApiConfig,
+  readCheckIn,
   readClerkWebhookSigningSecret,
   readConfig,
   readLineConfig,
@@ -939,6 +940,16 @@ describe("the memories switch", () => {
     expect(readConfig({ ...chosenStaging, RICH_MEMORIES: "on" }, filled).richMemories).toBe(true);
     const error = configErrorOf(() => readRichMemories({ RICH_MEMORIES: "yes" }));
     expect(errorLabel(error)).toBe("ConfigError:RICH_MEMORIES");
+  });
+});
+
+describe("the check-in switch", () => {
+  it("is off unless CHECK_IN says on, and refuses anything else by name", () => {
+    expect(readCheckIn({})).toBe(false);
+    expect(readCheckIn({ CHECK_IN: "off" })).toBe(false);
+    expect(readConfig({ ...chosenStaging, CHECK_IN: "on" }, filled).checkIn).toBe(true);
+    const error = configErrorOf(() => readCheckIn({ CHECK_IN: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:CHECK_IN");
   });
 });
 

@@ -892,3 +892,55 @@ Decision:
 - Production keeps `PILOT_FAMILY_APPROVAL=off` and `PILOT_LANGUAGES=en`, pinned by `wrangler-config.test.ts`, until privacy-notice v10 (LINE, Chinese) is the live notice and the founder says yes. The commit that turns them on changes the pin.
 
 Consequences: approving a family is one click per family, after its organiser has started it. A stranger who finds Vela's LINE account can start a family that waits, unapproved, with nothing sent to anyone in it beyond the onboarding replies; the founder removes or ignores it. The pilot's `telegram_first` app path is unchanged: linking the iPhone app to a LINE identity is separate work.
+
+## ADR-53 · A question has no answers to tap; a tap is thanked with a wish to hear her words
+
+27 October 2026. Accepted (founder: "we don't want her to just press and then we know nothing, we want her to interact with us"; the fallback "looks like a bot" and loses a parent's interest).
+
+Context: every question, the family's and Vela's own, came with up to three AI-drafted chips (spec §5.3). A tapped chip is one word the family learns little from, and the chip row made a note from her child read like a form. The heart and "I'm fine" already let her answer with one tap and light the light.
+
+Decision:
+
+- **No chips are drafted or shown.** `prepareDay` no longer calls the `chips` AI call, and `renderArrival` draws no chip row for a question or for Vela's bank question. A photo choice's 1 and 2 and a vote's options stay: the family wrote those choices. `CHIP_QUESTIONS` is gone. A chip tap on a morning sent before this still resolves, from the stored `chips` row, which retention deletes at 30 days as before.
+- **A tap is thanked with one wish to hear more.** Her day's acknowledgement (still at most one, §5.4) for a heart, "I'm fine" or an old chip asks for a short voice message: in the asker's name when a family member asked (`ack.tap_asker`, "Mia would love to hear a bit more"), else for Vela's question (`ack.tap_question`) or the plain hello (`ack.tap_hello`). Any answer in words keeps the plain thanks.
+- **Vela's own morning reads as a short text.** The bank question is followed on its line by "Tell me in a voice message, and I'll pass it on to the family.", signed "— Vela" (zh-TW "—— 家人的小幫手 Vela"), with no header. The first-mornings hint says a voice message is the nicest reply and the heart is for when she is busy.
+
+Consequences: fewer AI calls and less stored output (`chips`, `ai_calls`). Her one-tap answer still lights the light, so the quiet notice is unchanged. Not changed: a bank question is still never sent in an organiser's name (ADR-49); that needs the founder's own decision. The notice's "suggest short answers the person can tap" (privacy-notice v5, purpose 3) now describes less than it allows; the next notice version should drop it.
+
+## ADR-54 · Her morning has no buttons; an unanswered morning gets a check-in, and "Not okay" tells her organisers at once
+
+27 October 2026. Accepted (founder: "for normal morning message, don't add options, let parent answer by themselves; if parent doesn't answer, ask a follow-up to check up on them … give options to show if they are ok or not, and if they are not ok, notify the adult child asap").
+
+Context: ADR-53 left a heart and "I'm fine" under every morning, so a tap still answered it without a word. A tap on the morning says nothing about how she is; a tap on a check-in can.
+
+Decision:
+
+- **Her morning carries no buttons** but a family's own photo choice or vote. Its first-mornings hint asks for a voice message or a few words (`arrival.hint_words`).
+- **The repeat becomes the check-in.** At the repeat's time (2.5 hours, `SCHEDULE.repeatAfterMinutes`), a morning still unanswered gets "Hi {address}, just checking in. How are you today?" with "🙂 I'm okay" and "Not okay, tell my family", one per row (`renderCheckIn`). It is the same `repeat` row, key and budget, so it is sent at most once and her pause holds it back. The quiet notice is unchanged: no answer to either, and her organisers are told at T_quiet as before.
+- **"I'm okay"** is a `fine` answer: it lights the light, and her thanks asks for a short voice message (ADR-53).
+- **"Not okay"** is a new answer kind `not_okay` (migration 0030 widens `answers_kind_check`). It lights the light, since she answered, and before anything else after the light each active organiser with a messenger link gets `not_okay.notice` (a `flag` row keyed by exchange, reader and answer, so a redelivered tap tells no one twice), the founder gets `admin.not_okay`, and `flag_raised` is recorded with `{ source: "not_okay", told }`. She is told who was told, and that an emergency needs a call of her own. The family's group post reads "⚠️ {name} isn't feeling okay". Understanding raises no second flag for it.
+- **Words.** The tap is her own choice to tell her family, so it is not a health word and needs no health-words consent (ADR-47): nothing names a feeling, a cause or an illness, only "not okay".
+- **Switch.** `CHECK_IN`, on in development and staging; production stays off, pinned by `wrangler-config.test.ts`, until the privacy notice no longer says every ask can be answered with one tap and says what "Not okay" tells (draft in `plan/check-in-notice-draft.md`).
+
+Not done yet: a push to organisers' phones for "Not okay" (push carries only `quiet_notice` and its close today, and the app needs a tap target); a second check-in or escalation when nobody answers the organiser; an emergency number per country.
+
+Consequences: one tap no longer answers her morning, so mornings answered only by a tap will now wait for the check-in or her words. A parent who answers nothing still reaches the quiet notice at the same time as before.
+
+## ADR-55 · With the check-in, her ladder runs on her own rhythm and ends before lunch
+
+27 October 2026. Accepted (founder's yes to the timing research of the same day, `plan/quiet-timing-research.html`: "check-in at usual + 1 h, notice 90 min later, cap 5 h, 2 h / 4 h in the first 2 weeks, second notice after 2 h with founder alert … test copy only").
+
+Context: with the check-in (ADR-54) the repeat still went at a fixed 2.5 hours, the quiet notice at T_quiet (4 to 10 hours, 6 by default), and in her first 14 days only the app showed it until 8 hours. A notice nobody acted on was never sent again unless someone tapped "Wait 2 hours". The research found every lasting check-in service asks, asks again, then tells a person, and that a long lie (an hour or more on the floor) follows 15% of falls among people over 90.
+
+Decision, only while `CHECK_IN` is on (development and staging; production pinned off):
+
+- **Her ladder** (`checkInLadder`, core `CHECK_IN`), from the median and late-day (90th percentile) latencies `tuneQuietAfter` stores weekly in `answer_stats`:
+  - the check-in at her median + 60 minutes, kept between 60 and 150 minutes after delivery;
+  - the quiet notice at the later of check-in + 90 minutes and her late days + 60 minutes, at most 300 minutes after delivery, always after the check-in;
+  - before 14 answered days, the check-in at 120 minutes and the notice at 240, told at once by message and push (no app-only learning delay).
+- **One reminder.** A first notice nobody acted on (no answer, no "she's fine", no wait) is sent again 120 minutes later, once (`notify_quiet` with `reminder`), and the founder gets `admin.quiet_reminder`. A wait the organiser asked for still runs as before and takes the reminder's place. `notifyQuiet` checks the reminder again under the notice's row lock; `postgres-tests/quiet-notice-race.test.ts` sends it once when two ticks reach it together.
+- Unchanged: away mode, a blocked link, a pause, the notice's wording and buttons, and that no time counts before delivery.
+
+Not done: a family's own "Sooner / Balanced / Fewer" setting; the founder phoning the organiser the next morning (a person's step, no code).
+
+Consequences: a silent morning reaches the family about 3 hours after it was sent instead of 4 to 10, and in her first weeks after 4 hours instead of 8. More notices will turn out to be late answers; precision accounting (spec §8) and the four measures in the research set the numbers again after 4 weeks.
