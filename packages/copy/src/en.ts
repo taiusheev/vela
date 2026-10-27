@@ -63,9 +63,15 @@
  * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
  * script tell the family so, so a heading that called them the whole read would be untrue.
  *
- * `arrival.hello_question` heads Vela's question from the question bank on a morning nobody in the
- * family asked (spec §4.5): she shares the answer with the family, and the question, not a person,
- * asks. `group.answer_question` shows the family the question her answer goes with.
+ * `arrival.hello_question` follows Vela's question from the question bank on a morning nobody in the
+ * family asked (spec §4.5), on the same line, as a short text reads: she tells Vela by voice, and
+ * Vela passes it on. The question, not a person, asks. `group.answer_question` shows the family the
+ * question her answer goes with.
+ *
+ * `ack.tap_*` thank her for a heart or "I'm fine" and ask, once, for a few words by voice (founder,
+ * 27 Oct 2026: a tap alone tells the family nothing). `ack.tap_asker` names who asked, so the wish to
+ * hear more is theirs; `ack.tap_question` is for Vela's own question and `ack.tap_hello` for the plain
+ * hello.
  *
  * A family member's ask reaches her as a note from them: their words exactly, signed below with
  * `arrival.signed`, as a message from her child reads, never under a "From" header or with a bot's
@@ -119,9 +125,9 @@ export const en = {
   "arrival.photo_choice": "Which one? Tap 1 or 2.",
   "arrival.vote": "Tap one.",
   "arrival.hello": "How are you this morning?",
-  "arrival.hello_signature": "— Vela, for your family",
-  "arrival.hello_question": "Something to share with the family today:",
-  "arrival.hint": "Reply with a voice message, or tap a button.",
+  "arrival.hello_signature": "— Vela",
+  "arrival.hello_question": "Tell me in a voice message, and I'll pass it on to the family.",
+  "arrival.hint": "A voice message is the nicest reply. Busy? Tap ❤️.",
   "button.fine": "I'm fine",
   "button.heart": "❤️",
   "button.choice": "{n}",
@@ -130,6 +136,12 @@ export const en = {
   "ack.thanks_3": "Thank you, {address}. Your family will have it in a moment.",
   "ack.thanks_4": "Thank you, {address}. Passing it on to the family now.",
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
+  "ack.tap_asker":
+    "Thank you, {address} ❤️ {asker} would love to hear a bit more. When you have a minute, send a short voice message?",
+  "ack.tap_question":
+    "Thank you, {address} ❤️ When you have a minute, tell the family your answer in a short voice message. They'd love to hear it.",
+  "ack.tap_hello":
+    "Thank you, {address} ❤️ What are you up to today? Send the family a short voice message if you like.",
   "book.dont_keep": "Don't keep this one",
   "book.dropped": "That's fine. This story is no longer in the family book.",
   "recipe.offer":

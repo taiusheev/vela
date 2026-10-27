@@ -898,12 +898,35 @@ describe("handleAnswerButton", () => {
     });
     expect((await exchangeById(exchangeId))?.state).toBe("answered");
     const rows = await outboundRows();
+    // A tap tells the family nothing in words, so her thanks asks for a few, from whoever asked.
     expect(rows.map((row) => [row.kind, textOf(row)])).toEqual([
-      ["ack", expect.stringMatching(/^Thank you, Mrs Chen\. /)],
+      [
+        "ack",
+        "Thank you, Mrs Chen ❤️ Mia would love to hear a bit more. When you have a minute, send a short voice message?",
+      ],
       ["answer_post", "☀️ Mom is fine · 08:12"],
     ]);
     expect(h.queues.understand.pending).toHaveLength(1);
     expect(h.scheduler.wakes.get(seed.member.id)).toEqual(h.clock.now());
+  });
+
+  it.each([
+    [
+      "the plain hello",
+      null,
+      "Thank you, Mrs Chen ❤️ What are you up to today? Send the family a short voice message if you like.",
+    ],
+    [
+      "Vela's question",
+      "Which season do you like best, and why?",
+      "Thank you, Mrs Chen ❤️ When you have a minute, tell the family your answer in a short voice message. They'd love to hear it.",
+    ],
+  ])("thanks a heart on %s by asking for a short voice message", async (_, text, thanks) => {
+    const scene = await morning({ type: "hello", text });
+    await tapped(scene, { type: "answer", exchangeId: scene.exchangeId, answer: "heart" });
+
+    const [ack] = await outboundRows();
+    expect(ack === undefined ? null : [ack.kind, textOf(ack)]).toEqual(["ack", thanks]);
   });
 
   it("answers a heart", async () => {

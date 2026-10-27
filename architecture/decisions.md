@@ -892,3 +892,17 @@ Decision:
 - Production keeps `PILOT_FAMILY_APPROVAL=off` and `PILOT_LANGUAGES=en`, pinned by `wrangler-config.test.ts`, until privacy-notice v10 (LINE, Chinese) is the live notice and the founder says yes. The commit that turns them on changes the pin.
 
 Consequences: approving a family is one click per family, after its organiser has started it. A stranger who finds Vela's LINE account can start a family that waits, unapproved, with nothing sent to anyone in it beyond the onboarding replies; the founder removes or ignores it. The pilot's `telegram_first` app path is unchanged: linking the iPhone app to a LINE identity is separate work.
+
+## ADR-53 · A question has no answers to tap; a tap is thanked with a wish to hear her words
+
+27 October 2026. Accepted (founder: "we don't want her to just press and then we know nothing, we want her to interact with us"; the fallback "looks like a bot" and loses a parent's interest).
+
+Context: every question, the family's and Vela's own, came with up to three AI-drafted chips (spec §5.3). A tapped chip is one word the family learns little from, and the chip row made a note from her child read like a form. The heart and "I'm fine" already let her answer with one tap and light the light.
+
+Decision:
+
+- **No chips are drafted or shown.** `prepareDay` no longer calls the `chips` AI call, and `renderArrival` draws no chip row for a question or for Vela's bank question. A photo choice's 1 and 2 and a vote's options stay: the family wrote those choices. `CHIP_QUESTIONS` is gone. A chip tap on a morning sent before this still resolves, from the stored `chips` row, which retention deletes at 30 days as before.
+- **A tap is thanked with one wish to hear more.** Her day's acknowledgement (still at most one, §5.4) for a heart, "I'm fine" or an old chip asks for a short voice message: in the asker's name when a family member asked (`ack.tap_asker`, "Mia would love to hear a bit more"), else for Vela's question (`ack.tap_question`) or the plain hello (`ack.tap_hello`). Any answer in words keeps the plain thanks.
+- **Vela's own morning reads as a short text.** The bank question is followed on its line by "Tell me in a voice message, and I'll pass it on to the family.", signed "— Vela" (zh-TW "—— 家人的小幫手 Vela"), with no header. The first-mornings hint says a voice message is the nicest reply and the heart is for when she is busy.
+
+Consequences: fewer AI calls and less stored output (`chips`, `ai_calls`). Her one-tap answer still lights the light, so the quiet notice is unchanged. Not changed: a bank question is still never sent in an organiser's name (ADR-49); that needs the founder's own decision. The notice's "suggest short answers the person can tap" (privacy-notice v5, purpose 3) now describes less than it allows; the next notice version should drop it.

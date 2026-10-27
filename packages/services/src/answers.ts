@@ -317,10 +317,37 @@ export function thanksKeyFor(date: LocalDate): (typeof THANKS)[number] {
   return THANKS[((day % THANKS.length) + THANKS.length) % THANKS.length] ?? "ack.thanks";
 }
 
+/**
+ * Her thanks for a tap that says nothing in words (a heart, "I'm fine", or a tap answer on a morning
+ * sent before taps were taken off questions) asks, this once, for a few words by voice, from whoever
+ * asked when a family member did (founder, 27 Oct 2026: she should talk with the family, not press
+ * and leave them knowing nothing). Null for any other answer, which keeps the plain thanks.
+ */
+async function tapThanks(deps: Deps, input: AnswerInput): Promise<string | null> {
+  const { member, exchange, content } = input;
+  if (content.kind !== "heart" && content.kind !== "fine" && content.kind !== "chip") return null;
+  const address = member.addressForm ?? member.displayName;
+  const asker =
+    exchange.askerId === null || exchange.askerId === member.id
+      ? null
+      : await memberById(deps.db, exchange.askerId);
+  if (asker !== null && asker.familyId === member.familyId) {
+    return t(member.language, "ack.tap_asker", { address, asker: asker.displayName });
+  }
+  return t(
+    member.language,
+    exchange.type === "hello" && (exchange.text?.trim() ?? "") === ""
+      ? "ack.tap_hello"
+      : "ack.tap_question",
+    { address },
+  );
+}
+
 /** Her thanks, at most once per local day: the budget index refuses a second row. */
 async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<void> {
   const { member, event, now } = input;
   const lang = member.language;
+  const tapped = kept ? null : await tapThanks(deps, input);
   await enqueueOutbound(deps, deps.db, {
     kind: "ack",
     idempotencyKey: outboundKey("ack", { memberId: member.id, date: localDateOf(now, member.tz) }),
@@ -345,9 +372,11 @@ async function sendAck(deps: Deps, input: AnswerInput, kept: boolean): Promise<v
           ],
         }
       : {
-          text: t(lang, thanksKeyFor(localDateOf(now, member.tz)), {
-            address: member.addressForm ?? member.displayName,
-          }),
+          text:
+            tapped ??
+            t(lang, thanksKeyFor(localDateOf(now, member.tz)), {
+              address: member.addressForm ?? member.displayName,
+            }),
         }),
   });
 }

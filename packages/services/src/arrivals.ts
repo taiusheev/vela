@@ -4,7 +4,6 @@
  * prompt to the family group. Every function is safe to run twice: the exchange is unique per day,
  * the outbound rows are keyed by member and date, and the turn is keyed by the day.
  */
-import { isAiOff } from "@vela/ai";
 import type { Channel, LocalDate, OutboundMediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
@@ -22,9 +21,7 @@ import {
   zonedInstant,
 } from "@vela/core";
 import {
-  answers,
   type ChannelLink,
-  chips,
   type Exchange,
   exchanges,
   type Family,
@@ -41,7 +38,7 @@ import {
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import type { Deps } from "./deps.ts";
-import { errorLabel, VelaError } from "./errors.ts";
+import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import {
   enqueueOutbound,
@@ -50,7 +47,6 @@ import {
   insertOutbound,
   type OutboundRequest,
 } from "./gateway.ts";
-import { recordAiCall } from "./jobs.ts";
 import { storedCopyOf } from "./media-copy.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
@@ -88,26 +84,10 @@ export function arrivalChannelOf(member: Pick<Member, "primarySurface">): Channe
 /** `OutboundMessage.media` allows at most ten items. */
 const MAX_MEDIA = 10;
 
-/** `ChipsInput.pastAnswers` takes at most twenty of her recent answers. */
-const PAST_ANSWERS = 20;
-
 /** The part of `exchanges.options` the arrival reads: a vote's options, when the ask is a vote. */
 const ExchangeOptions = z.object({ vote_options: z.array(z.string()).optional() }).loose();
 
 // preparing ------------------------------------------------------------------------------------
-
-interface Prepared {
-  exchange: Exchange;
-  /** True when this call settled the exchange, so the chips are drafted once. */
-  fresh: boolean;
-  /** Her morning asks a question chips can answer: a family member's, or Vela's from the bank. */
-  takesChips: boolean;
-}
-
-interface Settled {
-  exchange: Exchange;
-  takesChips: boolean;
-}
 
 /**
  * Settles what the morning of `date` carries, in one transaction under her member row's lock so
@@ -124,14 +104,14 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
     }
   }
   const now = deps.clock.now();
-  const prepared = await deps.db.transaction(async (tx): Promise<Prepared> => {
+  const prepared = await deps.db.transaction(async (tx): Promise<Exchange> => {
     const [member] = await tx.select().from(members).where(eq(members.id, memberId)).for("update");
     if (member === undefined) {
       throw new VelaError("not_found", `member ${memberId} does not exist`);
     }
     const existing = await exchangeForLocalDate(tx, memberId, date);
     if (existing !== null && existing.state !== "composed") {
-      return { exchange: existing, fresh: false, takesChips: false };
+      return existing;
     }
     const candidates = (await askCandidates(tx, memberId, date)).filter(
       (candidate) =>
@@ -162,14 +142,7 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       "exchangeId" in selection
         ? candidates.find((candidate) => candidate.id === selection.exchangeId)
         : undefined;
-    const { exchange, takesChips } = await settle(
-      tx,
-      member,
-      date,
-      chosen,
-      now,
-      deps.config.sendAsMe === true,
-    );
+    const exchange = await settle(tx, member, date, chosen, now, deps.config.sendAsMe === true);
     await recordEvent(
       tx,
       {
@@ -181,12 +154,9 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       },
       now,
     );
-    return { exchange, fresh: true, takesChips };
+    return exchange;
   });
-  if (prepared.fresh && prepared.takesChips) {
-    await draftChips(deps, prepared.exchange);
-  }
-  return prepared.exchange.id;
+  return prepared.id;
 }
 
 /**
@@ -239,7 +209,7 @@ async function settle(
   chosen: Exchange | undefined,
   now: Date,
   sendAsMe: boolean,
-): Promise<Settled> {
+): Promise<Exchange> {
   if (chosen !== undefined) {
     const [row] = await tx
       .update(exchanges)
@@ -249,7 +219,7 @@ async function settle(
     if (row === undefined) {
       throw new VelaError("not_found", `exchange ${chosen.id} vanished while preparing`);
     }
-    return { exchange: row, takesChips: row.type === "question" };
+    return row;
   }
   // Nobody asked, and the organiser her row names chose to have Vela's suggestion sent in their
   // name: their own-voice draft goes as their ask, signed by them, and marked as Vela's draft for
@@ -275,11 +245,9 @@ async function settle(
     if (ask === undefined) {
       throw new VelaError("illegal_state", `no signed suggestion could be created for ${date}`);
     }
-    return { exchange: ask, takesChips: signed.takesChips };
+    return ask;
   }
   // Nobody asked: Vela asks her something new from the question bank rather than the same hello.
-  // A bank question whose answer is a choice takes chips as a family question does, so the easiest
-  // tap still says something (`CHIP_QUESTIONS`).
   const question = await takeFallbackQuestion(tx, member, date, now);
   const [hello] = await tx
     .insert(exchanges)
@@ -299,100 +267,7 @@ async function settle(
   if (hello === undefined) {
     throw new VelaError("illegal_state", `no hello could be created for ${date}`);
   }
-  return { exchange: hello, takesChips: question?.takesChips === true };
-}
-
-/**
- * Her recent answers in her own words, newest first, for the chips prompt: what she said, else what
- * she wrote, else the summary of what she tapped. Every name comes from the schema, so a renamed
- * column cannot quietly break this query, whose failure only leaves the chips undrafted.
- */
-async function recentAnswerTexts(db: Queryable, memberId: string): Promise<string[]> {
-  const rows = await db
-    .select({
-      payload: answers.payload,
-      transcript: answers.transcript,
-      summary: answers.summary,
-    })
-    .from(answers)
-    .where(eq(answers.memberId, memberId))
-    .orderBy(desc(answers.receivedAt), desc(answers.id))
-    .limit(PAST_ANSWERS);
-  return rows.flatMap((row) => {
-    const payloadText = row.payload.text;
-    const text =
-      (
-        row.transcript ??
-        (typeof payloadText === "string" ? payloadText : null) ??
-        row.summary
-      )?.trim() ?? "";
-    return text.length === 0 ? [] : [text];
-  });
-}
-
-/**
- * Three chips for a question, drafted once when the day is prepared. Nothing here may stop the
- * ask: a failed or refused call is logged and the arrival goes out without chips (flows §3.6). A
- * carried ask keeps the chips drafted for the morning that passed, so the model is asked once.
- */
-async function draftChips(deps: Deps, exchange: Exchange): Promise<void> {
-  const question = exchange.text?.trim() ?? "";
-  if (question.length === 0) {
-    return;
-  }
-  try {
-    const [drafted] = await deps.db
-      .select({ exchangeId: chips.exchangeId })
-      .from(chips)
-      .where(eq(chips.exchangeId, exchange.id))
-      .limit(1);
-    if (drafted !== undefined) {
-      return;
-    }
-    const member = await memberById(deps.db, exchange.recipientId);
-    const family = member === null ? null : await familyById(deps.db, member.familyId);
-    const asker = exchange.askerId === null ? null : await memberById(deps.db, exchange.askerId);
-    if (member === null || family === null) {
-      return;
-    }
-    const outcome = await deps.ai.chips({
-      lang: member.language,
-      askerName: asker?.displayName ?? family.name,
-      question,
-      pastAnswers: await recentAnswerTexts(deps.db, member.id),
-    });
-    if (isAiOff(outcome)) {
-      // No call was made, so none is logged, and the question goes out without chips, as it does
-      // after a failed call.
-      return;
-    }
-    await recordAiCall(deps.db, {
-      familyId: family.id,
-      memberId: member.id,
-      record: outcome.record,
-      inputRef: { exchange_id: exchange.id },
-      output: outcome.value,
-      at: deps.clock.now(),
-    });
-    if (!outcome.ok) {
-      deps.logger.warn("chips_failed", { exchangeId: exchange.id, error: outcome.error });
-      return;
-    }
-    await deps.db
-      .insert(chips)
-      .values({
-        exchangeId: exchange.id,
-        chips: outcome.value.chips,
-        promptVersion: outcome.record.promptVersion,
-        createdAt: deps.clock.now(),
-      })
-      .onConflictDoNothing();
-  } catch (error) {
-    deps.logger.error("chips_failed", {
-      exchangeId: exchange.id,
-      error: errorLabel(error),
-    });
-  }
+  return hello;
 }
 
 // delivering -------------------------------------------------------------------------------------
@@ -614,14 +489,8 @@ export async function loadAsk(
   morning: AskMorning,
 ): Promise<LoadedAsk> {
   if (exchange.type === "hello") {
-    // Chips exist only for Vela's bank question, drafted when the morning was prepared.
-    const [chipRow] = await deps.db
-      .select()
-      .from(chips)
-      .where(eq(chips.exchangeId, exchange.id))
-      .limit(1);
     return {
-      ask: { type: "hello", question: exchange.text, chips: chipRow?.chips ?? [] },
+      ask: { type: "hello", question: exchange.text },
       media: [],
     };
   }
@@ -646,10 +515,6 @@ export async function loadAsk(
   } else if (type === "photo_choice") {
     attached = images;
   }
-  const [chipRow] =
-    type === "question"
-      ? await deps.db.select().from(chips).where(eq(chips.exchangeId, exchange.id)).limit(1)
-      : [];
   const options = ExchangeOptions.safeParse(exchange.options);
   const hello =
     exchange.voiceHelloId === null
@@ -667,7 +532,6 @@ export async function loadAsk(
       askerName: asker?.displayName ?? family.name,
       onBehalfOf: exchange.onBehalfOf,
       text: exchange.text,
-      chips: chipRow?.chips ?? [],
       voteOptions: type === "vote" && options.success ? (options.data.vote_options ?? []) : [],
       imageCount: attached.filter((file) => file.kind === "image").length,
     },
