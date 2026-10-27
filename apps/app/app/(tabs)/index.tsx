@@ -263,11 +263,11 @@ function FamilyToday({ day }: { day: TodayView }) {
     };
   }, [offerFor]);
   // Her light coming on plays once for each of her days on this device, the first time Today shows
-  // it lit; not over the quiet notice, and never from data still on its way.
+  // it lit; not over the quiet notice, and never from data still on its way. The demo plays it only
+  // when asked (`?lighton=1`, or holding a lit window), so its example day opens straight on Today.
   const portraitFamily = familyId === undefined ? "example" : familyId;
   const [welcome, setWelcome] = useState<TodayLight[]>([]);
-  const mayWelcome =
-    (live || demoDataAllowed(apiConfigured(), accountsConfigured())) && !day.loading && !quietOpen;
+  const mayWelcome = live && !day.loading && !quietOpen;
   const welcomeKeys = mayWelcome
     ? lightsToWelcome(today.lights, portraitFamily, new Set())
         .map((light) => lightOnKey(portraitFamily, light))
