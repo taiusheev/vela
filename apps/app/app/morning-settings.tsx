@@ -231,9 +231,9 @@ function MorningForm({
           </Words>
           <Words tone="ink2">
             <Trans>
-              If nobody in the family writes {name} a question for the morning, Vela can send one it
-              drafted in your style, or one from its own list worded as you would write it, signed
-              with your name. You will see it marked “written by Vela”.
+              If nobody in the family writes {name} a question for the morning, Vela can send the
+              one it drafted in your style, signed with your name. You will see it marked “written
+              by Vela”.
             </Trans>
           </Words>
           {otherSigner !== null && !asMe ? (

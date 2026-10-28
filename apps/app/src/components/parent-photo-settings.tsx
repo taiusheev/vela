@@ -1,13 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { usePortrait } from "../data/usePortrait.ts";
-import { readFlag, writeFlag } from "../storage/flags.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { Portrait } from "./portrait-lamp.tsx";
-import { Card, Eyebrow, SecondaryButton, Words } from "./ui.tsx";
+import { Card, Eyebrow, Words } from "./ui.tsx";
 
 export function ParentPhotoSettings({
   familyId,
@@ -92,82 +91,6 @@ export function ParentPhotoSettings({
           </Words>
         ) : null}
       </View>
-    </Card>
-  );
-}
-
-/**
- * On Today, once for each parent on this device: a family set up before setup asked for photos is
- * offered one, so her face is in her window when her light comes on. "Not now" is remembered.
- */
-export function ParentPhotoNudge({
-  familyId,
-  memberId,
-  name,
-}: {
-  familyId: string;
-  memberId: string;
-  name: string;
-}) {
-  const { t } = useLingui();
-  const photo = usePortrait(familyId, memberId);
-  const flag = `photo-offered.${familyId}.${memberId}`;
-  const [offered, setOffered] = useState<boolean>();
-  const [busy, setBusy] = useState(false);
-  const [photoError, setPhotoError] = useState(false);
-  useEffect(() => {
-    let current = true;
-    void readFlag(flag).then((seen) => {
-      if (current) setOffered(seen);
-    });
-    return () => {
-      current = false;
-    };
-  }, [flag]);
-  if (offered !== false || photo.uri !== null) return null;
-  return (
-    <Card>
-      <View style={{ flexDirection: "row", gap: space.m, alignItems: "center" }}>
-        <Portrait uri={null} name={name} width={52} height={66} />
-        <View style={{ flex: 1, gap: space.xs }}>
-          <Words variant="bodyMedium">{t`Add a photo of ${name}`}</Words>
-          <Words variant="caption" tone="ink2">
-            {t`See their face in the window when their light comes on. Only on this phone.`}
-          </Words>
-        </View>
-      </View>
-      <View style={{ flexDirection: "row", gap: space.s }}>
-        <View style={{ flex: 1 }}>
-          <SecondaryButton
-            label={busy ? t`Opening photos…` : t`Add photo`}
-            icon="photo"
-            disabled={busy}
-            onPress={() => {
-              setBusy(true);
-              setPhotoError(false);
-              void photo
-                .choose()
-                .catch(() => setPhotoError(true))
-                .finally(() => setBusy(false));
-            }}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <SecondaryButton
-            label={t`Not now`}
-            disabled={busy}
-            onPress={() => {
-              setOffered(true);
-              void writeFlag(flag);
-            }}
-          />
-        </View>
-      </View>
-      {photoError ? (
-        <Words variant="caption" tone="ink2">
-          <Trans>That photo could not be opened. Try another.</Trans>
-        </Words>
-      ) : null}
     </Card>
   );
 }

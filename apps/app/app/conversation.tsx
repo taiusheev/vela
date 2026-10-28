@@ -43,7 +43,6 @@ import {
   startsGroup,
   toChat,
 } from "../src/data/chat.ts";
-import { exampleNames } from "../src/data/example-names.ts";
 import { clockTime } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
@@ -196,7 +195,7 @@ function Conversation() {
             key: `demo:${earlier.length}`,
             exchangeId: `demo:${earlier.length}`,
             side: "me",
-            from: exampleNames().mia,
+            from: "Mia",
             at: now.getTime(),
             day: localDateIn(now.getTime()),
             time: clockTime(now.getHours(), now.getMinutes()),
@@ -277,7 +276,7 @@ function Conversation() {
           ...message,
           reactions: [
             ...message.reactions,
-            ...given.map((kind) => ({ kind, from: exampleNames().mia, mine: true })),
+            ...given.map((kind) => ({ kind, from: "Mia", mine: true })),
           ],
         };
   });

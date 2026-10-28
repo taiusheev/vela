@@ -40,7 +40,6 @@ import type {
   ApiTrial,
   ApiUser,
   ApiWeeklyRead,
-  ApiWeeklyReadList,
   ApiWeeklyReadOpened,
   ApiWithdrawn,
   ComposeAsk,
@@ -180,8 +179,6 @@ export function fetchCapabilities(): Promise<ApiCapabilities> {
 export interface LinkChallenge {
   challenge_id: string;
   telegram_url: string;
-  /** The same request through Vela's LINE account, where the server offers LINE (ADR-52). */
-  line_url?: string;
   expires_at: string;
   confirmation?: "telegram";
   requester_label?: string;
@@ -549,28 +546,13 @@ export function createFamily(
   return call<ApiCreatedFamily>({ path: "/v1/families", token, key, body: family });
 }
 
-/** Her latest sent read, or with `readId` one of her earlier weeks. */
 export function fetchWeeklyRead(
   familyId: string,
   memberId: string,
   token: string | null,
-  readId?: string,
 ): Promise<ApiWeeklyRead> {
-  const earlier = readId === undefined ? "" : `&read=${encodeURIComponent(readId)}`;
   return read<ApiWeeklyRead>(
-    `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}${earlier}`,
-    token,
-  );
-}
-
-/** Her sent weeks, newest first: ids and dates for the Sunday tab's earlier weeks. */
-export function fetchWeeklyReadList(
-  familyId: string,
-  memberId: string,
-  token: string | null,
-): Promise<ApiWeeklyReadList> {
-  return read<ApiWeeklyReadList>(
-    `/v1/families/${familyId}/weekly-reads?member=${encodeURIComponent(memberId)}`,
+    `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}`,
     token,
   );
 }

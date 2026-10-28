@@ -1,6 +1,5 @@
 import { t } from "@lingui/core/macro";
 import type { ApiExchangeAudio, ExchangeType, ReplyKind } from "@vela/contracts";
-import { exampleNames } from "./example-names.ts";
 import { clockTime } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -81,7 +80,7 @@ export function exchangesFixture(): Exchange[] {
   return [
     {
       id: "x1",
-      asker: exampleNames().mia,
+      asker: "Mia",
       recipientId: "m1",
       recipient: mom,
       ask: t`What did the garden look like this morning?`,
@@ -93,10 +92,10 @@ export function exchangesFixture(): Exchange[] {
         at: clockTime(8, 12),
       },
       replies: [
-        { id: "r1", from: exampleNames().mia, kind: "heart" },
+        { id: "r1", from: "Mia", kind: "heart" },
         {
           id: "r2",
-          from: exampleNames().anna,
+          from: "Anna",
           kind: "text",
           text: t`Those are the ones from the seeds you saved`,
         },
@@ -106,7 +105,7 @@ export function exchangesFixture(): Exchange[] {
     },
     {
       id: "x2",
-      asker: exampleNames().anna,
+      asker: "Anna",
       recipientId: "m1",
       recipient: mom,
       ask: t`Which one of us did you teach to make the pies?`,
@@ -119,19 +118,14 @@ export function exchangesFixture(): Exchange[] {
         transcript: true,
       },
       replies: [
-        { id: "r3", from: exampleNames().mia, kind: "laugh" },
-        {
-          id: "r4",
-          from: exampleNames().anna,
-          kind: "text",
-          text: t`She is never letting that go`,
-        },
+        { id: "r3", from: "Mia", kind: "laugh" },
+        { id: "r4", from: "Anna", kind: "text", text: t`She is never letting that go` },
       ],
       receipt: seen(mom, clockTime(9, 5)),
     },
     {
       id: "x3",
-      asker: exampleNames().mia,
+      asker: "Mia",
       recipientId: "m1",
       recipient: mom,
       ask: t`A photo of the street where you grew up — do you remember the shop on the corner?`,
@@ -142,7 +136,7 @@ export function exchangesFixture(): Exchange[] {
         text: t`It was a bakery, then a bookshop. We queued there for bread in the winter.`,
         at: clockTime(8, 40),
       },
-      replies: [{ id: "r5", from: exampleNames().anna, kind: "hug" }],
+      replies: [{ id: "r5", from: "Anna", kind: "hug" }],
       receipt: seen(mom, clockTime(8, 41)),
       // Sent through the family group, so the example shows where such a photo is kept.
       photos: [{ id: "p3", width: null, height: null, stored: false }],

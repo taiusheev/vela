@@ -146,14 +146,6 @@ msgstr ""
 msgid "{holder} already has that Sunday."
 msgstr ""
 
-#: src/components/light-on.tsx
-msgid "{joined}’s light is on"
-msgstr ""
-
-#: src/components/light-on.tsx
-msgid "{joined}’s lights are on"
-msgstr ""
-
 #: src/components/keepsake.tsx
 msgid "{kept, plural, one {# memory kept} other {# memories kept}}"
 msgstr ""
@@ -187,14 +179,6 @@ msgstr ""
 
 #: src/data/precision.ts
 msgid "{later} answered later"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "{messenger} confirmed"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "{messenger} didn’t open."
 msgstr ""
 
 #: app/vela-light.tsx
@@ -610,14 +594,6 @@ msgstr ""
 msgid "A photo"
 msgstr ""
 
-#: app/parent-photos.tsx
-msgid "A photo of {only}"
-msgstr ""
-
-#: app/parent-photos.tsx
-msgid "A photo of each parent"
-msgstr ""
-
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr ""
@@ -648,14 +624,6 @@ msgstr ""
 
 #: src/data/ask.ts
 msgid "A recipe"
-msgstr ""
-
-#: app/settings.tsx
-msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
-msgstr ""
-
-#: app/settings.tsx
-msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -756,10 +724,6 @@ msgstr ""
 msgid "Add one more"
 msgstr ""
 
-#: src/components/parent-photo-settings.tsx
-msgid "Add photo"
-msgstr ""
-
 #: src/components/onboarding/questions.tsx
 msgid "Add someone (up to two)"
 msgstr ""
@@ -856,10 +820,6 @@ msgstr ""
 msgid "And on a quiet morning?"
 msgstr ""
 
-#: src/data/example-names.ts
-msgid "Anna"
-msgstr ""
-
 #: src/components/story-day.tsx
 msgid "Another question"
 msgstr ""
@@ -913,10 +873,6 @@ msgstr ""
 #: app/ask.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name} something"
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "Ask {name} this"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -1012,10 +968,6 @@ msgstr ""
 
 #: src/components/app-privacy.tsx
 msgid "Before you continue"
-msgstr ""
-
-#: app/settings.tsx
-msgid "Before your turn"
 msgstr ""
 
 #: app/vela-light.tsx
@@ -1177,10 +1129,6 @@ msgstr ""
 msgid "Choose someone in your family, or return to Today. Your words are kept."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Choose the app where you chat with Vela. Your family and messages stay together."
-msgstr ""
-
 #: app/conversation.tsx
 msgid "Choose the morning; Vela delivers it then."
 msgstr ""
@@ -1248,12 +1196,16 @@ msgstr ""
 msgid "Connect my family"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Connect my Telegram"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Connect your Telegram family"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Connected {messenger} account: {linkedMemberName}"
+msgid "Connected Telegram account: {linkedMemberName}"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -1276,7 +1228,6 @@ msgstr ""
 msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
 msgstr ""
 
-#: app/parent-photos.tsx
 #: app/sign-in.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Continue"
@@ -1429,14 +1380,6 @@ msgstr ""
 msgid "Earlier this month"
 msgstr ""
 
-#: app/weekly/[read].tsx
-msgid "Earlier week"
-msgstr ""
-
-#: app/(tabs)/sunday.tsx
-msgid "Earlier weeks"
-msgstr ""
-
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -1572,10 +1515,6 @@ msgstr ""
 msgid "Find a memory to keep"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Find my family"
-msgstr ""
-
 #: src/data/precision.ts
 msgid "Fine, the family knew"
 msgstr ""
@@ -1593,7 +1532,7 @@ msgid "For a particular morning message, check Today or your parent's chat."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "For another device: paste the full code or the whole private {messenger} message. It expires after 15 minutes."
+msgid "For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes."
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -1760,10 +1699,6 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Her answer is kept in the family book, unless she says not to."
-msgstr ""
-
-#: src/data/useReminders.ts
-msgid "her check-up at the clinic"
 msgstr ""
 
 #: src/components/chat/chat-bubble.tsx
@@ -1937,11 +1872,15 @@ msgid "If her morning stays quiet past her usual time, and when it is settled."
 msgstr ""
 
 #: app/morning-settings.tsx
-msgid "If nobody in the family writes {name} a question for the morning, Vela can send one it drafted in your style, or one from its own list worded as you would write it, signed with your name. You will see it marked “written by Vela”."
+msgid "If nobody in the family writes {name} a question for the morning, Vela can send the one it drafted in your style, signed with your name. You will see it marked “written by Vela”."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "If she doesn’t answer, you know the same day."
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "If Telegram cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -1950,10 +1889,6 @@ msgstr ""
 
 #: src/components/nearby-editor.tsx
 msgid "If the link doesn’t open, add me to your contacts, then tap it again."
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "If Vela cannot find your family, check you are using your own account. A family in the earlier test version needs help moving to this version; deleting accounts will not move it."
 msgstr ""
 
 #: app/my-memories.tsx
@@ -1966,10 +1901,6 @@ msgstr ""
 
 #: src/components/not-okay-follow-up.tsx
 msgid "If you cannot reach them, contact someone nearby. If help is needed immediately, call local emergency services. Vela cannot send emergency help."
-msgstr ""
-
-#: src/data/example-names.ts
-msgid "Igor"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -2332,7 +2263,6 @@ msgstr ""
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
-#: app/parent-photos.tsx
 #: app/parent-settings.tsx
 #: app/settings.tsx
 msgid "Loading your family…"
@@ -2436,11 +2366,6 @@ msgstr ""
 msgid "Messaging is unavailable while their connection is paused or cannot be reached. Your draft stays here."
 msgstr ""
 
-#: src/data/example-names.ts
-#: src/data/weekly.ts
-msgid "Mia"
-msgstr ""
-
 #. who the light is for
 #. who the light is for
 #: app/(tabs)/index.tsx
@@ -2455,7 +2380,6 @@ msgstr ""
 #: src/data/memories.ts
 #: src/data/onboarding.ts
 #: src/data/today.ts
-#: src/data/useReminders.ts
 #: src/data/weekly.ts
 #: src/device/useParent.ts
 msgid "Mom"
@@ -2672,11 +2596,9 @@ msgstr ""
 
 #: app/ask.tsx
 #: app/my-memories.tsx
-#: app/parent-photos.tsx
 #: app/vela-light.tsx
 #: src/components/app-privacy.tsx
 #: src/components/onboarding/finish.tsx
-#: src/components/parent-photo-settings.tsx
 #: src/components/set-up-phone.tsx
 msgid "Not now"
 msgstr ""
@@ -2837,6 +2759,11 @@ msgstr ""
 msgid "One message from you"
 msgstr ""
 
+#: app/settings.tsx
+#: src/push/provider.tsx
+msgid "One moment a day"
+msgstr ""
+
 #: app/parent.tsx
 #: app/weekly-report.tsx
 msgid "One moment…"
@@ -2850,16 +2777,8 @@ msgstr ""
 msgid "Only on this device. Removed when you sign out."
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Open {messenger} again"
-msgstr ""
-
 #: src/components/keepsake.tsx
 msgid "Open in the chat"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Open LINE"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -2877,7 +2796,7 @@ msgid "Open settings"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Open Telegram"
+msgid "Open Telegram again"
 msgstr ""
 
 #: src/components/private-report-entry.tsx
@@ -2904,6 +2823,10 @@ msgstr ""
 msgid "Opening sharing…"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Opening Telegram…"
+msgstr ""
+
 #: src/components/family-book.tsx
 msgid "Opening the book…"
 msgstr ""
@@ -2917,16 +2840,7 @@ msgid "Opening the story…"
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
-#: app/weekly/[read].tsx
 msgid "Opening the week"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
-msgid "Opening…"
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "Opens a question to {name} with this text, ready to change or send"
 msgstr ""
 
 #: src/components/vote-options.tsx
@@ -3078,10 +2992,6 @@ msgstr ""
 
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
-msgstr ""
-
-#: src/data/weekly.ts
-msgid "Planted the last tomato seeds by the fence."
 msgstr ""
 
 #: src/audio/VoicePlayback.tsx
@@ -3296,11 +3206,6 @@ msgstr ""
 msgid "Replied"
 msgstr ""
 
-#: app/settings.tsx
-#: src/push/provider.tsx
-msgid "Replies and turn reminders"
-msgstr ""
-
 #: app/exchange/[id].tsx
 #: src/components/today-glance.tsx
 msgid "Reply"
@@ -3395,10 +3300,6 @@ msgstr ""
 #: src/data/family.ts
 #: src/data/useNearby.ts
 msgid "Said yes"
-msgstr ""
-
-#: src/data/example-names.ts
-msgid "Sam"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
@@ -3496,14 +3397,6 @@ msgstr ""
 
 #: src/components/onboarding/plan.tsx
 msgid "See {name}’s first week"
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "See that morning"
-msgstr ""
-
-#: src/components/parent-photo-settings.tsx
-msgid "See their face in the window when their light comes on. Only on this phone."
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
@@ -3628,7 +3521,7 @@ msgid "Set this up for my family"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Set up a new family"
+msgid "Set up a new family in Telegram"
 msgstr ""
 
 #: src/components/set-up-phone.tsx
@@ -3724,10 +3617,6 @@ msgstr ""
 
 #: src/components/keepsake.tsx
 msgid "Shows less"
-msgstr ""
-
-#: src/components/light-on.tsx
-msgid "Shows Today"
 msgstr ""
 
 #: app/parent.tsx
@@ -3845,7 +3734,7 @@ msgid "Start with your own words, the way you normally message {name}. You can u
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Start your family in {messenger}."
+msgid "Start your family in Telegram."
 msgstr ""
 
 #: app/vela-light.tsx
@@ -3951,6 +3840,14 @@ msgstr ""
 msgid "tapped an answer"
 msgstr ""
 
+#: src/components/telegram-family-link.tsx
+msgid "Telegram confirmed"
+msgstr ""
+
+#: src/components/telegram-family-link.tsx
+msgid "Telegram didn’t open."
+msgstr ""
+
 #: src/auth/phone.ts
 msgid "Thailand"
 msgstr ""
@@ -3988,7 +3885,7 @@ msgid "That code was right, but this account needs more than that to finish."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "That confirmation is no longer valid. Try a fresh connection using your own {messenger} account."
+msgid "That confirmation is no longer valid. Try a fresh connection using your own Telegram account."
 msgstr ""
 
 #: app/conversation.tsx
@@ -4079,10 +3976,6 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
-msgstr ""
-
-#: src/components/parent-photo-settings.tsx
-msgid "That photo could not be opened. Try another."
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -4298,11 +4191,11 @@ msgstr ""
 msgid "The voice is still being prepared. Try again shortly."
 msgstr ""
 
-#: src/components/weekly-read-card.tsx
+#: app/(tabs)/sunday.tsx
 msgid "The weekly read"
 msgstr ""
 
-#: src/components/weekly-read-card.tsx
+#: app/(tabs)/sunday.tsx
 msgid "The weekly read · {range}"
 msgstr ""
 
@@ -4491,10 +4384,6 @@ msgstr ""
 msgid "This week"
 msgstr ""
 
-#: app/weekly/[read].tsx
-msgid "This week's read could not be opened just now."
-msgstr ""
-
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -4636,7 +4525,6 @@ msgstr ""
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
-#: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
 #: src/components/family-book.tsx
 #: src/components/nearby-editor.tsx
@@ -4646,15 +4534,11 @@ msgid "Try again"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Try opening {messenger} again"
+msgid "Try opening Telegram again"
 msgstr ""
 
 #: app/ask.tsx
 msgid "Try something from today, a shared memory, or a small thing you have always wondered. Make the words sound like you."
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "Try this week"
 msgstr ""
 
 #: app/my-memories.tsx
@@ -4765,7 +4649,7 @@ msgid "Use this suggestion"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Use your own messaging account. Your parent joins from the invitation you send them."
+msgid "Use your own Telegram account. Your parent joins from the invitation you send them."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -4819,10 +4703,6 @@ msgstr ""
 
 #: app/vela-light.tsx
 msgid "Vela Light is on for {name}."
-msgstr ""
-
-#: app/settings.tsx
-msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
 msgstr ""
 
 #: app/(tabs)/sunday.tsx
@@ -5028,10 +4908,6 @@ msgstr ""
 msgid "Welcome to Vela"
 msgstr ""
 
-#: src/components/weekly-read-card.tsx
-msgid "What {name} told the family"
-msgstr ""
-
 #: app/(tabs)/sunday.tsx
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr ""
@@ -5092,16 +4968,8 @@ msgstr ""
 msgid "What you call them"
 msgstr ""
 
-#: app/parent-photos.tsx
-msgid "When {only}’s light comes on, you see their face in the window."
-msgstr ""
-
 #: app/(tabs)/exchanges.tsx
 msgid "When a few mornings come back to the same thing, Vela gathers those words into a story. Every word is exactly as it was said; nothing is added."
-msgstr ""
-
-#: app/parent-photos.tsx
-msgid "When a light comes on, you see their face in their window."
 msgstr ""
 
 #: src/push/provider.tsx
@@ -5110,10 +4978,6 @@ msgstr ""
 
 #: app/precision.tsx
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
-msgstr ""
-
-#: app/settings.tsx
-msgid "When a parent replies"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5148,10 +5012,6 @@ msgstr ""
 msgid "Where does {name} live?"
 msgstr ""
 
-#: src/components/telegram-family-link.tsx
-msgid "Where is your family’s Vela chat?"
-msgstr ""
-
 #: src/data/photos.ts
 msgid "Which one do you like more?"
 msgstr ""
@@ -5179,14 +5039,6 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "Why: it grows from {name}'s answer on {day}."
-msgstr ""
-
-#: src/components/weekly-read-card.tsx
-msgid "Why: it grows from {name}'s answer to {asker} on {day}."
 msgstr ""
 
 #: app/settings.tsx

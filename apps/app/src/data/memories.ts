@@ -7,7 +7,6 @@ import type {
   ApiMoment,
   FamilyMemoryKind,
 } from "@vela/contracts";
-import { exampleNames } from "./example-names.ts";
 import type { Exchange } from "./exchanges.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -275,7 +274,7 @@ export function demoMemories(exchanges: Exchange[]): Pick<ApiBook, "moments" | "
   const bakery = of("x3");
   const moments: ApiMoment[] = [
     moment("x1", 0, {
-      asked_by: today?.asker ?? exampleNames().mia,
+      asked_by: today?.asker ?? "Mia",
       question: today?.ask ?? null,
       words: today?.answer?.text ?? null,
       quote: t`The tomatoes finally turned.`,
@@ -283,21 +282,21 @@ export function demoMemories(exchanges: Exchange[]): Pick<ApiBook, "moments" | "
       story_id: "s1",
     }),
     moment("x2", 1, {
-      asked_by: pies?.asker ?? exampleNames().mia,
+      asked_by: pies?.asker ?? "Mia",
       question: pies?.ask ?? null,
       words: pies?.answer?.text ?? null,
       quote: pies?.answer?.text ?? null,
       kind: "humour",
     }),
     moment("d4", 3, {
-      asked_by: exampleNames().anna,
+      asked_by: "Anna",
       question: t`What is the kitchen like in the morning?`,
       words: t`I like the radio on in the kitchen, even when nobody is listening. It keeps the kettle company.`,
       quote: t`I like the radio on in the kitchen, even when nobody is listening.`,
       kind: "preference",
     }),
     moment("d3", 6, {
-      asked_by: exampleNames().mia,
+      asked_by: "Mia",
       question: t`How are the seedlings doing?`,
       words: t`The little tomato plants are as tall as my hand now. I talk to them before the news.`,
       quote: t`The little tomato plants are as tall as my hand now.`,
@@ -305,21 +304,21 @@ export function demoMemories(exchanges: Exchange[]): Pick<ApiBook, "moments" | "
       story_id: "s1",
     }),
     moment("d2", 8, {
-      asked_by: exampleNames().mia,
+      asked_by: "Mia",
       question: t`Who came by this week?`,
       words: t`Mrs Lee next door brought dumplings and stayed to show me her grandson's school photos.`,
       quote: t`Mrs Lee next door brought dumplings and stayed to show me her grandson's school photos.`,
       kind: "person",
     }),
     moment("x3", 9, {
-      asked_by: bakery?.asker ?? exampleNames().mia,
+      asked_by: bakery?.asker ?? "Mia",
       question: bakery?.ask ?? null,
       words: bakery?.answer?.text ?? null,
       quote: bakery?.answer?.text ?? null,
       kind: "story",
     }),
     moment("d1", 12, {
-      asked_by: exampleNames().anna,
+      asked_by: "Anna",
       question: t`What are you planting this year?`,
       words: seeds,
       quote: seeds,

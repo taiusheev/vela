@@ -1,27 +1,27 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
+import { Light } from "../../src/components/light.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { PrivateReportEntry } from "../../src/components/private-report-entry.tsx";
-import { SectionTitle, SoftCard } from "../../src/components/today-hero.tsx";
-import { Card, SecondaryButton, Words } from "../../src/components/ui.tsx";
-import { WarmPage } from "../../src/components/warm.tsx";
-import { WeeklyReadCard } from "../../src/components/weekly-read-card.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
+import { RoomWindow, SectionTitle, SoftCard, useRoom } from "../../src/components/today-hero.tsx";
+import { SecondaryButton, Words } from "../../src/components/ui.tsx";
+import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import { WeeklySupport } from "../../src/components/weekly-support.tsx";
 import { localDayMonth } from "../../src/data/format.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
-import { useEarlierWeeks, useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
+import { useWeeklyRead } from "../../src/data/useWeeklyRead.ts";
 import { useWeeklyReadOpened } from "../../src/data/useWeeklyReadOpened.ts";
-import { usePalette } from "../../src/theme/theme.tsx";
-import { space } from "../../src/theme/tokens.ts";
+import { radius, space, type } from "../../src/theme/tokens.ts";
 
 /**
  * Sunday (spec §13, A9): this week's windows first, then her latest weekly read the founder sent:
@@ -37,6 +37,7 @@ export default function SundayScreen() {
 }
 
 function FamilySunday({ day }: { day: TodayView }) {
+  const room = useRoom();
   const { t } = useLingui();
   const [selected, select] = useState<string | undefined>();
   const view = useWeeklyRead(selected);
@@ -61,6 +62,12 @@ function FamilySunday({ day }: { day: TodayView }) {
   );
   const name = read.name;
   const windowsFor = selectedLight(day.today.lights, view.memberId ?? selected);
+  const first = read.week?.lights[0]?.date;
+  const lastDay = read.week?.lights.at(-1)?.date;
+  const range =
+    first === undefined || lastDay === undefined
+      ? ""
+      : `${localDayMonth(first)} – ${localDayMonth(lastDay)}`;
 
   return (
     <WarmPage
@@ -126,14 +133,52 @@ function FamilySunday({ day }: { day: TodayView }) {
             </SoftCard>
           ) : (
             <>
-              <WeeklyReadCard
-                id={`week-${view.readId ?? name}`}
-                name={name}
-                week={read.week}
-                memberId={view.memberId}
-                live={view.live}
-              />
-              <EarlierWeeks memberId={view.memberId} latestId={view.readId} />
+              {/* The read is the week's peak, so it is lit as Today lights her morning. */}
+              <RoomCard id={`week-${view.readId ?? name}`}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: space.s,
+                  }}
+                >
+                  <Text
+                    style={[type.label, { letterSpacing: 0, color: room.muted, flexShrink: 1 }]}
+                  >
+                    {range.length === 0 ? t`The weekly read` : t`The weekly read · ${range}`}
+                  </Text>
+                  <RoomWindow>
+                    <Light state="lit" height={26} />
+                  </RoomWindow>
+                </View>
+                <View style={{ gap: space.xs }}>
+                  {read.week.counts.map((line) => (
+                    <Text key={line} style={[type.body, { color: room.ink }]}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+                {read.week.notes.length === 0 ? null : (
+                  <View
+                    style={{
+                      gap: space.m,
+                      marginTop: space.s,
+                      padding: space.l,
+                      borderRadius: radius.panel,
+                      backgroundColor: room.glass,
+                      borderWidth: 1,
+                      borderColor: room.glassRule,
+                    }}
+                  >
+                    {read.week.notes.map((note) => (
+                      <Text key={note} style={[type.story, { color: room.ink }]}>
+                        {note}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+              </RoomCard>
             </>
           )}
         </>
@@ -146,51 +191,5 @@ function FamilySunday({ day }: { day: TodayView }) {
         <WeeklySupport name={windowsFor.displayName} memberId={windowsFor.memberId} />
       ) : null}
     </WarmPage>
-  );
-}
-
-/**
- * Her earlier weeks, newest first, each opening its read as it was sent (founder, 26 October 2026:
- * "where can I read previous reports"). Nothing shows before a second read exists.
- */
-function EarlierWeeks({ memberId, latestId }: { memberId?: string; latestId?: string }) {
-  const { t } = useLingui();
-  const palette = usePalette();
-  const { weeks } = useEarlierWeeks(memberId, latestId);
-  if (weeks.length === 0 || memberId === undefined) return null;
-  return (
-    <View style={{ gap: space.s }}>
-      <SectionTitle title={t`Earlier weeks`} />
-      <Card>
-        {weeks.map((week, index) => (
-          <Pressable
-            key={week.id}
-            accessibilityRole="button"
-            onPress={() =>
-              router.push({
-                pathname: "/weekly/[read]",
-                params: { read: week.id, member: memberId },
-              })
-            }
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingVertical: space.m,
-              borderTopWidth: index === 0 ? 0 : 1,
-              borderTopColor: palette.rule,
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <Words variant="body">
-              {`${localDayMonth(week.weekStart)} – ${localDayMonth(week.weekEnd)}`}
-            </Words>
-            <Words variant="body" tone="ink3">
-              ›
-            </Words>
-          </Pressable>
-        ))}
-      </Card>
-    </View>
   );
 }

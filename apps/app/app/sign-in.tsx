@@ -7,6 +7,7 @@ import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../src/accessibility/use-reduced-motion.ts";
 import { apiConfigured } from "../src/api/client.ts";
+import { englishTrialBuild } from "../src/api/trial.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import {
   clerkErrorCodes,
@@ -41,7 +42,6 @@ import {
 } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { readDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
-import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -203,8 +203,6 @@ function CodeSignIn() {
     draft.step === "save" && draft.callName.trim().length > 0 ? draft.callName.trim() : null;
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
-  // The closed test's server says when Chinese is allowed (ADR-52); until then, English only.
-  const { englishOnly } = useCapabilities();
   const { t } = useLingui();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
@@ -698,7 +696,7 @@ function CodeSignIn() {
           </ScrollView>
         </Modal>
         {/* The app's language, before there is an account to keep it (build plan 3.1). */}
-        {step === "identifier" && !englishOnly ? <LocaleChips /> : null}
+        {step === "identifier" && !englishTrialBuild ? <LocaleChips /> : null}
         {/*
           Clerk's bot check for a new account mounts itself into an element of this name, and says
           so loudly when it cannot find one. On the web this renders that element; on a phone it is

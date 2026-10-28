@@ -6,7 +6,6 @@ import { Animated, Image, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EXAMPLE_PORTRAIT from "../../../assets/onboarding/example-mom.jpg";
 import MORNING_TEA from "../../../assets/onboarding/morning-tea.jpg";
-import { exampleNames } from "../../data/example-names.ts";
 import { clockTime } from "../../data/format.ts";
 import {
   readDraft,
@@ -19,6 +18,7 @@ import { Text } from "../scaled-text.tsx";
 import { NightScene, night, useRise } from "./night-scene.tsx";
 
 /** The example organiser who signs the example question: a name, the same in every language. */
+const EXAMPLE_ORGANISER = "Mia";
 
 /** How dark the room is and how bright her window, scene by scene. */
 const LIGHTING: Record<StoryStep, { dim: number; glow: number }> = {
@@ -210,7 +210,7 @@ export function Story({ step, signedIn }: { step: StoryStep; signedIn: boolean }
                   {t`What did you have for breakfast?`}
                 </Text>
                 <Text style={[type.preview, { color: "#5A534B", fontStyle: "italic" }]}>
-                  {`— ${exampleNames().mia}`}
+                  {`— ${EXAMPLE_ORGANISER}`}
                 </Text>
                 <Text style={[type.caption, { color: "#6D655B", alignSelf: "flex-end" }]}>
                   {t`${time} · in her Telegram`}

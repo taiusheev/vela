@@ -19,7 +19,6 @@ import {
 } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
-import { exampleNames } from "./example-names.ts";
 import { type Exchange, exchangesFixture } from "./exchanges.ts";
 import { demoDataAllowed } from "./live-state.ts";
 import { demoBookEntry, demoMemories } from "./memories.ts";
@@ -74,7 +73,7 @@ function keptInDemo(book: ApiBook, exchangeId: string): ApiBook {
   if (moment === undefined || moment.kept) return book;
   const moments = (book.moments ?? []).map((item) =>
     item.exchange_id === exchangeId
-      ? { ...item, kept: true, kept_by: exampleNames().mia, fades_at: null }
+      ? { ...item, kept: true, kept_by: "Mia", fades_at: null }
       : item,
   );
   return {
@@ -86,7 +85,7 @@ function keptInDemo(book: ApiBook, exchangeId: string): ApiBook {
         (id) => moments.find((item) => item.exchange_id === id)?.kept === true,
       ),
     })),
-    entries: [demoBookEntry({ ...moment, kept: true }, exampleNames().mia), ...book.entries],
+    entries: [demoBookEntry({ ...moment, kept: true }, "Mia"), ...book.entries],
     suggestions: book.suggestions.filter((item) => item.exchange_id !== exchangeId),
   };
 }

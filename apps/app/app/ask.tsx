@@ -29,7 +29,6 @@ import { VoiceRecorder } from "../src/components/voice-recorder.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
 import { type AskType, composableType } from "../src/data/ask.ts";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
-import { exampleNames } from "../src/data/example-names.ts";
 import { finishQuestionSave } from "../src/data/finish-question-save.ts";
 import { localDayMonth } from "../src/data/format.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
@@ -401,7 +400,7 @@ function AskComposer({
                   id: `demo-${Date.now()}`,
                   recipient_id: recipient?.memberId ?? "",
                   recipient_name: recipient?.displayName ?? "",
-                  asker_name: exampleNames().mia,
+                  asker_name: "Mia",
                   editable: true,
                   preparing: false,
                   text: text.trim(),

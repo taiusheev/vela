@@ -1,7 +1,6 @@
 import { t } from "@lingui/core/macro";
 import type { ApiExchangeAudio, ExchangeType, InterestTopic } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
-import { exampleNames } from "./example-names.ts";
 import { clockTime } from "./format.ts";
 import { reactionLine, replyLine } from "./lines.ts";
 
@@ -170,7 +169,7 @@ export function todayFixture(): Today {
       {
         id: "x1",
         recipientId: "m1",
-        asker: exampleNames().mia,
+        asker: "Mia",
         recipient,
         ask: t`What did the garden look like this morning?`,
         answer: {
@@ -178,14 +177,10 @@ export function todayFixture(): Today {
           at: time,
         },
         replies: [
-          { from: exampleNames().mia, text: reactionLine(exampleNames().mia, "heart") },
+          { from: "Mia", text: reactionLine("Mia", "heart") },
           {
-            from: exampleNames().anna,
-            text: replyLine(
-              exampleNames().anna,
-              "text",
-              t`Those are the ones from the seeds you saved`,
-            ),
+            from: "Anna",
+            text: replyLine("Anna", "text", t`Those are the ones from the seeds you saved`),
           },
         ],
         receipt: t`${recipient} saw it · ${time}`,
@@ -195,7 +190,7 @@ export function todayFixture(): Today {
       {
         recipientId: "m1",
         recipient,
-        name: exampleNames().anna,
+        name: "Anna",
         mine: false,
         pending: false,
         suggestion: {

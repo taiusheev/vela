@@ -1,7 +1,6 @@
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { ApiExchangeAudio, ApiExchangeSummary, ApiTodayAnswer } from "@vela/contracts";
-import { exampleNames } from "./example-names.ts";
 import { clockTime, timeOfDay } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -329,7 +328,7 @@ export function chatFixture(name: string): ChatMessage[] {
       ...base(
         "x2:ask",
         "family",
-        exampleNames().anna,
+        "Anna",
         yesterday,
         8,
         0,
@@ -347,27 +346,11 @@ export function chatFixture(name: string): ChatMessage[] {
         5,
         t`Both of you, but only Mia listened about the butter.`,
       ),
-      reactions: [{ kind: "laugh", from: exampleNames().mia, mine: true }],
+      reactions: [{ kind: "laugh", from: "Mia", mine: true }],
     },
-    base(
-      "x2:reply:0",
-      "family",
-      exampleNames().anna,
-      yesterday,
-      9,
-      20,
-      t`She is never letting that go`,
-    ),
+    base("x2:reply:0", "family", "Anna", yesterday, 9, 20, t`She is never letting that go`),
     {
-      ...base(
-        "x1:ask",
-        "me",
-        exampleNames().mia,
-        today,
-        8,
-        0,
-        t`What did the garden look like this morning?`,
-      ),
+      ...base("x1:ask", "me", "Mia", today, 8, 0, t`What did the garden look like this morning?`),
       morning: true,
       status: "seen",
     },
@@ -381,21 +364,18 @@ export function chatFixture(name: string): ChatMessage[] {
         12,
         t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
       ),
-      reactions: [{ kind: "heart", from: exampleNames().mia, mine: true }],
+      reactions: [{ kind: "heart", from: "Mia", mine: true }],
     },
     base(
       "x1:reply:0",
       "family",
-      exampleNames().anna,
+      "Anna",
       today,
       8,
       30,
       t`Those are the ones from the seeds you saved`,
     ),
-    {
-      ...base("x4:ask", "me", exampleNames().mia, today, 9, 2, t`Save me two for Sunday?`),
-      status: "seen",
-    },
+    { ...base("x4:ask", "me", "Mia", today, 9, 2, t`Save me two for Sunday?`), status: "seen" },
     base("x4:answer:0", "her", name, today, 9, 14, t`Already in a bag by the door.`),
     base("x4:answer:1", "her", name, today, 9, 15, t`And a jar of the plum jam.`),
   ];

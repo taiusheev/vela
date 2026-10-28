@@ -25,34 +25,9 @@ import { BrandHeader } from "./brand/header.tsx";
 import { SetupHelp } from "./setup-help.tsx";
 import { Card, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
-type Messenger = "telegram" | "line";
-
-/** Telegram unless the organiser chose LINE; the apps' own names, never translated. */
-const FIRST_MESSENGER: Messenger = "telegram";
-const MESSENGER_NAME: Record<Messenger, string> = { telegram: "Telegram", line: "LINE" };
-
-/**
- * Where a connection request opens the organiser's own Vela chat: Telegram as before, or Vela's
- * LINE account when the server offers it (ADR-52). A new family opens the chat with /start alone.
- */
-function chatUrl(request: LinkChallenge, messenger: Messenger, newFamily: boolean): string {
-  if (messenger === "line" && request.line_url !== undefined) {
-    if (!newFamily) return request.line_url;
-    const url = new URL(request.line_url);
-    url.search = `?${encodeURIComponent("/start")}`;
-    return url.toString();
-  }
-  const url = new URL(request.telegram_url);
-  if (newFamily) url.search = "";
-  return url.toString();
-}
-
-/**
- * Opening the messenger is navigation; explicit approval in the organiser's own Vela chat (Telegram
- * or LINE) and app completion prove both identities.
- */
+/** Opening Telegram is navigation; explicit Telegram approval and app completion prove both identities. */
 export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
-  const { t, i18n } = useLingui();
+  const { t } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
   const active = useConnectionForeground();
@@ -65,8 +40,6 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
   const [manual, setManual] = useState(false);
   const [setup, setSetup] = useState(false);
   const [openFailed, setOpenFailed] = useState(false);
-  // Chosen once the server offers LINE beside Telegram; Telegram alone needs no choice.
-  const [via, setVia] = useState<Messenger | null>(null);
   const [clock, setClock] = useState(Date.now);
   const startKey = useIdempotencyKey("telegram-link");
   const provisionKey = useIdempotencyKey("provision");
@@ -85,7 +58,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
         const profile = {
           display_name: name.trim(),
           privacy_acceptance: appPrivacyAcceptance(),
-          language: i18n.locale === "zh-TW" ? ("zh-TW" as const) : ("en" as const),
+          language: "en" as const,
           tz: deviceZone("Asia/Taipei"),
         };
         await provisionAccount(profile, provisionKey(profile), token);
@@ -159,8 +132,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       if (!mounted.current || !outcome.linked) return;
       resetDraft();
       queries.clear();
-      // Setup's last step: a photo of her for her window, then Today.
-      router.replace("/parent-photos");
+      router.replace("/");
     },
   });
   const cancel = useMutation({
@@ -183,27 +155,20 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       setManual(false);
       setSetup(false);
       setOpenFailed(false);
-      setVia(null);
       start.reset();
       complete.reset();
     },
   });
-  const open = async (
-    request: LinkChallenge,
-    newFamily = false,
-    messenger = via ?? FIRST_MESSENGER,
-  ) => {
+  const open = async (request: LinkChallenge, newFamily = false) => {
     if (!mounted.current) return;
     setOpenFailed(false);
     try {
-      await Linking.openURL(chatUrl(request, messenger, newFamily));
+      const url = new URL(request.telegram_url);
+      if (newFamily) url.search = "";
+      await Linking.openURL(url.toString());
     } catch {
       if (mounted.current) setOpenFailed(true);
     }
-  };
-  const choose = (messenger: Messenger) => {
-    setVia(messenger);
-    if (challenge !== undefined) void open(challenge, setup, messenger);
   };
   const begin = async (newFamily = false, method: "approval" | "code" = "approval") => {
     if (opening.current) return;
@@ -212,8 +177,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
     setManual(method === "code");
     try {
       const request = await start.mutateAsync(method);
-      // With LINE offered, the organiser picks where their family's Vela chat is first.
-      if (request.line_url === undefined || via !== null) await open(request, newFamily);
+      await open(request, newFamily);
     } catch {
       /* The mutation keeps its safe retry state. */
     } finally {
@@ -241,46 +205,39 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       ? null
       : `${start.error ? "START" : complete.error ? "FINISH" : cancel.error ? "CANCEL" : "CHECK"}-${failure instanceof ApiError ? failure.status : "NETWORK"}`;
   const busy = start.isPending || complete.isPending || cancel.isPending;
-  const choosing = challenge?.line_url !== undefined && via === null && !stopped;
-  const messenger = MESSENGER_NAME[via ?? FIRST_MESSENGER];
-  const shownUrl = challenge === undefined ? "" : chatUrl(challenge, via ?? FIRST_MESSENGER, setup);
   return (
     <View style={{ gap: space.l }}>
       <BrandHeader />
       <Words variant="caption" tone="action">
-        {approved ? t`${messenger} confirmed` : t`Your family connection`}
+        {approved ? t`Telegram confirmed` : t`Your family connection`}
       </Words>
       <Words variant="title">
         {approved
           ? t`Welcome back.`
-          : choosing
-            ? t`Where is your family’s Vela chat?`
-            : setup
-              ? t`Start your family in ${messenger}.`
-              : challenge === undefined
-                ? t`Let’s find your family.`
-                : openFailed
-                  ? t`${messenger} didn’t open.`
-                  : stopped
-                    ? t`Let’s try a fresh connection.`
-                    : manual
-                      ? t`Use your private connection code.`
-                      : t`One confirmation, and you’re home.`}
+          : setup
+            ? t`Start your family in Telegram.`
+            : challenge === undefined
+              ? t`Let’s find your family.`
+              : openFailed
+                ? t`Telegram didn’t open.`
+                : stopped
+                  ? t`Let’s try a fresh connection.`
+                  : manual
+                    ? t`Use your private connection code.`
+                    : t`One confirmation, and you’re home.`}
       </Words>
       <Words variant="body" tone="ink2">
         {approved
           ? t`We found your family. Check it below, then finish connecting to this signed-in account.`
-          : choosing
-            ? t`Choose the app where you chat with Vela. Your family and messages stay together.`
-            : setup
-              ? t`Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family.`
-              : challenge === undefined
-                ? t`Open your own Vela chat and confirm it’s you. Your family and messages stay together.`
-                : stopped
-                  ? t`This connection expired or was cancelled. Your family is unchanged.`
-                  : manual
-                    ? t`Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate.`
-                    : t`In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy.`}
+          : setup
+            ? t`Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family.`
+            : challenge === undefined
+              ? t`Open your own Vela chat and confirm it’s you. Your family and messages stay together.`
+              : stopped
+                ? t`This connection expired or was cancelled. Your family is unchanged.`
+                : manual
+                  ? t`Copy the private connection code from your own Vela chat and paste it below. Your parent’s invitation is separate.`
+                  : t`In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy.`}
       </Words>
       {noAccount && challenge === undefined ? (
         <TextField
@@ -294,17 +251,17 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       {challenge === undefined ? (
         <>
           <PrimaryButton
-            label={start.isPending ? t`Opening…` : t`Find my family`}
+            label={start.isPending ? t`Opening Telegram…` : t`Connect my Telegram`}
             disabled={busy || (noAccount && name.trim().length === 0)}
             onPress={() => void begin()}
           />
           <Words variant="caption" tone="ink2">
             <Trans>
-              Use your own messaging account. Your parent joins from the invitation you send them.
+              Use your own Telegram account. Your parent joins from the invitation you send them.
             </Trans>
           </Words>
           <SecondaryButton
-            label={t`Set up a new family`}
+            label={t`Set up a new family in Telegram`}
             disabled={busy || (noAccount && name.trim().length === 0)}
             onPress={() => void begin(true)}
           />
@@ -312,7 +269,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       ) : approved ? (
         <Card>
           <Words variant="heading">{approved.family_name}</Words>
-          <Words variant="body">{t`Connected ${messenger} account: ${linkedMemberName}`}</Words>
+          <Words variant="body">{t`Connected Telegram account: ${linkedMemberName}`}</Words>
           <Words variant="caption" tone="ink2">
             <Trans>Your family’s settings and messages will stay as they are.</Trans>
           </Words>
@@ -327,20 +284,6 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
             onPress={() => cancel.mutate()}
           />
         </Card>
-      ) : choosing ? (
-        <>
-          <PrimaryButton label={t`Open LINE`} disabled={busy} onPress={() => choose("line")} />
-          <SecondaryButton
-            label={t`Open Telegram`}
-            disabled={busy}
-            onPress={() => choose("telegram")}
-          />
-          <SecondaryButton
-            label={t`Cancel connection`}
-            disabled={busy}
-            onPress={() => cancel.mutate()}
-          />
-        </>
       ) : (
         <>
           {!setup ? (
@@ -359,14 +302,16 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
           ) : null}
           {!stopped ? (
             <SecondaryButton
-              label={openFailed ? t`Try opening ${messenger} again` : t`Open ${messenger} again`}
+              label={openFailed ? t`Try opening Telegram again` : t`Open Telegram again`}
               disabled={busy}
               onPress={() => void open(challenge, setup)}
             />
           ) : null}
           {openFailed ? (
             <Words variant="caption" selectable>
-              {shownUrl}
+              {setup
+                ? new URL(challenge.telegram_url).origin + new URL(challenge.telegram_url).pathname
+                : challenge.telegram_url}
             </Words>
           ) : null}
           {setup ? (
@@ -394,7 +339,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
                 }}
                 autoCapitalize="none"
                 autoCorrect={false}
-                helper={t`For another device: paste the full code or the whole private ${messenger} message. It expires after 15 minutes.`}
+                helper={t`For another device: paste the full code or the whole private Telegram message. It expires after 15 minutes.`}
                 disabled={busy}
                 onSubmit={() => {
                   if (!busy && /^[A-Za-z0-9_-]{22}$/.test(code)) complete.mutate("code");
@@ -417,7 +362,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       {complete.data?.linked === false ? (
         <Words variant="body" tone="ink2">
           <Trans>
-            That confirmation is no longer valid. Try a fresh connection using your own {messenger}{" "}
+            That confirmation is no longer valid. Try a fresh connection using your own Telegram
             account.
           </Trans>
         </Words>
@@ -450,7 +395,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       ) : null}
       <Words variant="caption" tone="ink2">
         <Trans>
-          If Vela cannot find your family, check you are using your own account. A family in the
+          If Telegram cannot find your family, check you are using your own account. A family in the
           earlier test version needs help moving to this version; deleting accounts will not move
           it.
         </Trans>

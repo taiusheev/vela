@@ -119,14 +119,11 @@ export function FamilyWindows({
   selected,
   onSelect,
   onQuiet,
-  onReplay,
 }: {
   lights: TodayLight[];
   selected: TodayLight | undefined;
   onSelect(id: string): void;
   onQuiet?: (light: TodayLight) => void;
-  /** Holding a lit window plays its light coming on again. */
-  onReplay?: (light: TodayLight) => void;
 }) {
   const { t, i18n } = useLingui();
   const room = useRoom();
@@ -231,20 +228,11 @@ export function FamilyWindows({
             >
               {lights[0] === undefined ? null : (
                 <>
-                  <Pressable
-                    accessible={false}
-                    disabled={onReplay === undefined || !portraitLightOn(lights[0])}
-                    delayLongPress={450}
-                    onLongPress={() => {
-                      if (lights[0] !== undefined) onReplay?.(lights[0]);
-                    }}
-                  >
-                    <ParentWindow
-                      light={lights[0]}
-                      height={64}
-                      source={glowFrom === lights[0].memberId}
-                    />
-                  </Pressable>
+                  <ParentWindow
+                    light={lights[0]}
+                    height={64}
+                    source={glowFrom === lights[0].memberId}
+                  />
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <Text style={[type.title, { fontSize: 24, lineHeight: 30, color: room.ink }]}>
                       {lights[0].displayName}
@@ -267,10 +255,6 @@ export function FamilyWindows({
                     accessibilityHint={light.stateText}
                     accessibilityState={{ selected: chosen }}
                     onPress={() => onSelect(light.memberId)}
-                    delayLongPress={450}
-                    {...(onReplay !== undefined && portraitLightOn(light)
-                      ? { onLongPress: () => onReplay(light) }
-                      : {})}
                     style={({ pressed }) => ({
                       flex: stacked ? undefined : 1,
                       minWidth: 0,
@@ -826,7 +810,8 @@ export function FamilyFeed({
               mark: <Initial name={from} />,
               line: (
                 <Text style={[type.body, { color: p.ink3 }]}>
-                  <Text style={[type.bodyMedium, { color: p.ink }]}>{from}</Text>{" "}
+                  <Text style={[type.bodyMedium, { color: p.ink }]}>{from}</Text>
+                  {"  "}
                   {t`Wrote to ${recipient}`}
                 </Text>
               ),
