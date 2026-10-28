@@ -23,6 +23,7 @@ export function lightsToWelcome(
 ): TodayLight[] {
   return lights.filter(
     (light) =>
+      light.notOkayAt === undefined &&
       light.invited !== true &&
       light.state !== "paused" &&
       portraitLightOn(light) &&

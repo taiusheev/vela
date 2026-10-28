@@ -54,11 +54,11 @@ msgid "{by} said {name} is fine. Everyone who was told has heard."
 msgstr ""
 
 #: src/components/connection-windows.tsx
-msgid "{count, plural, one {# day with messages so far} other {# days with messages so far}}"
+msgid "{count, plural, one {# day answered so far} other {# days answered so far}}"
 msgstr ""
 
 #: src/components/connection-windows.tsx
-msgid "{count, plural, one {# day with messages this week} other {# days with messages this week}}"
+msgid "{count, plural, one {# day answered this week} other {# days answered this week}}"
 msgstr ""
 
 #: src/components/keepsake.tsx
@@ -172,12 +172,12 @@ msgstr ""
 
 #: src/components/connection-windows.tsx
 #: src/components/today-glance.tsx
-msgid "{label}: a family message"
+msgid "{label}: answered"
 msgstr ""
 
 #: src/components/connection-windows.tsx
 #: src/components/today-glance.tsx
-msgid "{label}: no message recorded"
+msgid "{label}: no answer recorded"
 msgstr ""
 
 #: src/components/connection-windows.tsx
@@ -215,6 +215,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "{name} answers there. No new app to learn."
+msgstr ""
+
+#: src/components/not-okay-follow-up.tsx
+msgid "{name} asked for the family"
 msgstr ""
 
 #: src/components/quiet-notice.tsx
@@ -961,6 +965,10 @@ msgstr ""
 msgid "Asking…"
 msgstr ""
 
+#: src/components/not-okay-follow-up.tsx
+msgid "At {time}, {name} tapped “Not okay, tell my family”. Call now to find out what they need."
+msgstr ""
+
 #: src/data/notifications.ts
 msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
 msgstr ""
@@ -1038,6 +1046,14 @@ msgstr ""
 #: app/conversation.tsx
 #: src/components/quiet-notice.tsx
 msgid "Call {name}"
+msgstr ""
+
+#: src/components/not-okay-follow-up.tsx
+msgid "Call {name} now"
+msgstr ""
+
+#: src/components/not-okay-follow-up.tsx
+msgid "Call {name} using their usual number or messaging app."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -1948,6 +1964,10 @@ msgstr ""
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr ""
 
+#: src/components/not-okay-follow-up.tsx
+msgid "If you cannot reach them, contact someone nearby. If help is needed immediately, call local emergency services. Vela cannot send emergency help."
+msgstr ""
+
 #: src/data/example-names.ts
 msgid "Igor"
 msgstr ""
@@ -2264,7 +2284,7 @@ msgid "Listen to your recording"
 msgstr ""
 
 #: src/components/today-glance.tsx
-msgid "Lit on each day you and {name} shared a message."
+msgid "Lit on each day {name} answered."
 msgstr ""
 
 #: app/(tabs)/you.tsx
@@ -2406,6 +2426,10 @@ msgstr ""
 
 #: src/components/onboarding/story.tsx
 msgid "Message"
+msgstr ""
+
+#: src/components/not-okay-follow-up.tsx
+msgid "Message {name}"
 msgstr ""
 
 #: app/conversation.tsx
@@ -3068,6 +3092,10 @@ msgstr ""
 msgid "Playback speed {rate} times"
 msgstr ""
 
+#: src/components/today-glance.tsx
+msgid "Please contact {attentionName} now"
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 msgid "Preparing for delivery. This question can no longer be changed."
 msgstr ""
@@ -3358,6 +3386,8 @@ msgstr ""
 msgid "said she is fine"
 msgstr ""
 
+#: app/conversation.tsx
+#: src/data/today.ts
 #: src/data/useToday.ts
 msgid "said she is not okay"
 msgstr ""
@@ -4110,6 +4140,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "The bot check did not finish. Try again in a moment."
+msgstr ""
+
+#: src/components/not-okay-follow-up.tsx
+msgid "The call could not open. Call from your phone or messaging app directly."
 msgstr ""
 
 #: src/data/family.ts

@@ -3,6 +3,7 @@ import { askBankChildText } from "@vela/copy";
 import { addDays, localDateOf } from "@vela/core";
 import {
   answers,
+  events,
   exchanges,
   media,
   members,
@@ -433,7 +434,7 @@ describe("loadApiToday", () => {
     expect(expired?.photos[0]?.expires_at).toBeNull();
   });
 
-  it("lights only real message days in the parent's zone, retaining earlier lights across a gap", async () => {
+  it("lights only parent answer days, never a delivered family ask or reply", async () => {
     const earlier = addDays(today(), -3);
     await seedExchange(h.db, seed, {
       date: earlier,
@@ -449,11 +450,132 @@ describe("loadApiToday", () => {
       text: "An unattended bank question",
     });
     await seedExchange(h.db, seed, { date: today(), state: "scheduled", text: "Not sent yet" });
+    const [ask] = await h.db.select().from(exchanges).where(eq(exchanges.scheduledFor, earlier));
+    if (ask === undefined) throw new Error("expected ask");
+    // A delivered family reply does not stand in for an answer from her either.
+    await h.db.insert(replies).values({
+      exchangeId: ask.id,
+      memberId: seed.organiser.id,
+      channel: "telegram",
+      kind: "text",
+      text: "Thinking of you",
+      readBackAt: h.clock.now(),
+    });
+    expect((await load())?.connection_days?.[0]?.days.some((day) => day.has_message)).toBe(false);
+    // An answer received today on an earlier ask lights today, not its scheduled date.
+    await h.db.insert(answers).values({
+      exchangeId: ask.id,
+      memberId: seed.member.id,
+      channel: "telegram",
+      kind: "fine",
+      receivedAt: h.clock.now(),
+    });
     const days = (await load())?.connection_days?.[0]?.days;
     expect(days).toHaveLength(7);
-    expect(days?.filter((day) => day.has_message).map((day) => day.date)).toEqual([earlier]);
-    expect(days?.find((day) => day.date === today())?.has_message).toBe(false);
+    expect(days?.filter((day) => day.has_message).map((day) => day.date)).toEqual([today()]);
+    expect(days?.find((day) => day.date === earlier)?.has_message).toBe(false);
   });
+  it("retains answer windows across quiet days, including unattached parent messages", async () => {
+    const earlier = addDays(today(), -3);
+    await h.db.insert(events).values({
+      name: "answer_recorded",
+      familyId: seed.family.id,
+      memberId: seed.member.id,
+      at: new Date(`${earlier}T10:00:00+08:00`),
+      props: { kind: "text", unattached: true },
+    });
+    const days = (await load())?.connection_days?.[0]?.days;
+    expect(days?.filter((day) => day.has_message).map((day) => day.date)).toEqual([earlier]);
+  });
+
+  it("keeps her explicit Not okay visible after more words and on an earlier ask", async () => {
+    const exchange = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+    });
+    const at = h.clock.now();
+    await h.db.insert(answers).values([
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        channel: "telegram",
+        kind: "not_okay",
+        receivedAt: at,
+      },
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        channel: "telegram",
+        kind: "text",
+        receivedAt: new Date(at.getTime() + 1_000),
+        payload: { text: "Please call" },
+      },
+    ]);
+    h.clock.advance(1_000);
+    expect((await load())?.not_okay).toEqual([{ member_id: seed.member.id, at: at.toISOString() }]);
+    // Family authorization applies to this sensitive explicit tap too.
+    expect(await load(stranger)).toBeNull();
+    expect((await load())?.connection_days?.[0]?.days.at(-1)?.has_message).toBe(true);
+  });
+
+  it("uses the parent's calendar, even when another zone has already started tomorrow", async () => {
+    const at = new Date(h.clock.now().getTime() - 9 * 3_600_000);
+    const exchange = await seedExchange(h.db, seed, {
+      date: addDays(today(), -1),
+      state: "answered",
+    });
+    await h.db.insert(answers).values({
+      exchangeId: exchange.id,
+      memberId: seed.member.id,
+      channel: "telegram",
+      kind: "not_okay",
+      receivedAt: at,
+    });
+    // Yesterday in Taipei, but still the current day in Honolulu.
+    expect((await load())?.not_okay).toBeUndefined();
+    await h.db
+      .update(members)
+      .set({ tz: "Pacific/Honolulu" })
+      .where(eq(members.id, seed.member.id));
+    expect((await load())?.not_okay).toEqual([{ member_id: seed.member.id, at: at.toISOString() }]);
+  });
+
+  it("takes the latest explicit tap for each parent's own day, never text or an inferred flag", async () => {
+    const exchange = await seedExchange(h.db, seed, { date: today(), state: "answered" });
+    const at = h.clock.now();
+    const latest = new Date(at.getTime() - 1_000);
+    await h.db.insert(answers).values([
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        channel: "telegram",
+        kind: "not_okay",
+        receivedAt: new Date(at.getTime() - 2_000),
+      },
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        channel: "telegram",
+        kind: "not_okay",
+        receivedAt: latest,
+      },
+      {
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        channel: "telegram",
+        kind: "text",
+        receivedAt: at,
+        flag: true,
+        payload: { text: "Not okay" },
+      },
+    ]);
+    expect(ApiToday.parse(await load()).not_okay).toEqual([
+      { member_id: seed.member.id, at: latest.toISOString() },
+    ]);
+    h.clock.advance(86_400_000);
+    expect((await load())?.not_okay).toBeUndefined();
+  });
+
   it("answers an empty day with the lights row and nothing else", async () => {
     const day = await load();
     expect(ApiToday.parse(day)).toEqual({

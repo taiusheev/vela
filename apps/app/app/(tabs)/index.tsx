@@ -10,6 +10,7 @@ import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { LightOnMoment } from "../../src/components/light-on.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
+import { NotOkayFollowUp } from "../../src/components/not-okay-follow-up.tsx";
 import { ParentPhotoNudge } from "../../src/components/parent-photo-settings.tsx";
 import { QuietNoticeSheet } from "../../src/components/quiet-notice.tsx";
 import { RemindersCard } from "../../src/components/reminders.tsx";
@@ -36,6 +37,7 @@ import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { quietFixtureFor } from "../../src/data/quiet.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import {
+  notOkayExampleFixture,
   quietExampleFixture,
   type TodayExchange,
   type TodayLight,
@@ -181,7 +183,10 @@ function FamilyToday({ day }: { day: TodayView }) {
   const today =
     demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "quiet"
       ? quietExampleFixture()
-      : day.today;
+      : demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "not-okay"
+        ? notOkayExampleFixture()
+        : day.today;
+  const needsContact = today.lights.some((light) => light.notOkayAt !== undefined);
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
   useEffect(() => {
     if (noAccount || noFamily) router.replace("/onboarding");
@@ -245,7 +250,7 @@ function FamilyToday({ day }: { day: TodayView }) {
   const lit = today.lights.find((light) => light.state === "lit");
   const plans = useFamily(familyId, live && organiser && lit !== undefined);
   const offerFor =
-    capabilities?.billing === true && live && organiser && plans.live
+    capabilities?.billing === true && live && organiser && plans.live && !needsContact
       ? plans.family.keptLight.find((row) => row.memberId === lit?.memberId && row.plan === "none")
           ?.memberId
       : undefined;
@@ -267,7 +272,7 @@ function FamilyToday({ day }: { day: TodayView }) {
   // when asked (`?lighton=1`, or holding a lit window), so its example day opens straight on Today.
   const portraitFamily = familyId === undefined ? "example" : familyId;
   const [welcome, setWelcome] = useState<TodayLight[]>([]);
-  const mayWelcome = live && !day.loading && !quietOpen;
+  const mayWelcome = live && !day.loading && !quietOpen && !needsContact;
   const welcomeKeys = mayWelcome
     ? lightsToWelcome(today.lights, portraitFamily, new Set())
         .map((light) => lightOnKey(portraitFamily, light))
@@ -293,7 +298,9 @@ function FamilyToday({ day }: { day: TodayView }) {
     };
   }, [welcomeKeys]);
   // `/?lighton=1` plays it again, as holding her lit window does.
-  const replayLight = (light: TodayLight) => setWelcome([light]);
+  const replayLight = (light: TodayLight) => {
+    if (light.notOkayAt === undefined) setWelcome([light]);
+  };
   const replayed = useRef(false);
   useEffect(() => {
     if (lighton !== "1" || replayed.current) return;
@@ -362,6 +369,16 @@ function FamilyToday({ day }: { day: TodayView }) {
             }}
           />
         </View>
+        {today.lights
+          .filter((light) => light.notOkayAt !== undefined)
+          .map((light) => (
+            <NotOkayFollowUp
+              key={light.memberId}
+              light={light}
+              familyId={familyId}
+              example={!live && example === "not-okay"}
+            />
+          ))}
         <FamilyWindows
           lights={today.lights}
           selected={focused}
@@ -369,7 +386,8 @@ function FamilyToday({ day }: { day: TodayView }) {
           onQuiet={mayOpen ? (light) => openQuiet(light) : undefined}
           onReplay={replayLight}
         />
-        {focused === undefined ||
+        {needsContact ||
+        focused === undefined ||
         !(live || demoDataAllowed(apiConfigured(), accountsConfigured())) ? null : (
           <ParentPhotoNudge
             key={`photo-${focused.memberId}`}
@@ -380,7 +398,7 @@ function FamilyToday({ day }: { day: TodayView }) {
         )}
         <FamilyChooser day={day} />
         {day.loading ? <LoadingShapes label={t`Loading your family’s morning`} /> : null}
-        {focused === undefined ? null : (
+        {focused === undefined || focused.notOkayAt !== undefined ? null : (
           <TodayAnswer
             key={focused.memberId}
             selected={focused}
@@ -577,7 +595,7 @@ function FamilyToday({ day }: { day: TodayView }) {
         <InboxSheet items={inbox.items} visible={inboxOpen} onClose={() => setInboxOpen(false)} />
       </Animated.ScrollView>
       <StatusBand y={band.y} />
-      {welcome.length === 0 ? null : (
+      {welcome.length === 0 || needsContact ? null : (
         <LightOnMoment lights={welcome} familyId={portraitFamily} onDone={() => setWelcome([])} />
       )}
     </View>
