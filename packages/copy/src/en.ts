@@ -77,7 +77,8 @@
  * `arrival.hint_words`. A morning still unanswered when the repeat is due gets `checkin.text` instead,
  * with `button.okay` and `button.not_okay`. "Not okay" tells her organisers at once
  * (`not_okay.notice`), the family's group sees `group.answer_not_okay`, and she is told who was told
- * (`ack.not_okay`, or `ack.not_okay_family` when no organiser could be told by message). None of them
+ * (`ack.not_okay`; when no organiser could be told, `ack.not_okay_founder` with the founder told by
+ * `admin.not_okay_nobody_told`, and `ack.not_okay_family`, which promises nothing, when nobody was). None of them
  * names a feeling or a cause: she said only that she is not okay.
  *
  * A family member's ask reaches her as a note from them: their words exactly, signed below with
@@ -149,8 +150,10 @@ export const en = {
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
   "ack.not_okay":
     "Thank you for telling me, {address}. I've let {names} know right now. If it's an emergency, call for help directly.",
+  "ack.not_okay_founder":
+    "Thank you for telling me, {address}. I couldn't reach your family through Vela just now, so I've asked Vela's team to contact them. If it's an emergency, call for help directly.",
   "ack.not_okay_family":
-    "Thank you for telling me, {address}. I'm letting your family know right now. If it's an emergency, call for help directly.",
+    "Thank you for telling me, {address}. Please call your family. If it's an emergency, call for help directly.",
   "ack.tap_asker":
     "Thank you, {address} ❤️ {asker} would love to hear a bit more. When you have a minute, send a short voice message?",
   "ack.tap_question":
@@ -360,6 +363,8 @@ export const en = {
   "admin.quiet_reminder":
     "Nobody has acted on {name}'s quiet notice in {family} for 2 hours. It went to the organisers again. Open: {link}",
   "admin.not_okay": '"Not okay" tapped in {family}. Open: {link}',
+  "admin.not_okay_nobody_told":
+    'URGENT: "Not okay" tapped in {family}, and no organiser could be told. Please contact the family now. Open: {link}',
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
   "admin.organisers_unreachable":

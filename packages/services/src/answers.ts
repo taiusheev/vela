@@ -352,9 +352,18 @@ async function tapThanks(deps: Deps, input: AnswerInput): Promise<string | null>
  * "Not okay" on the check-in (ADR-54): each active organiser is told at once on their own messenger
  * and, while push is on, on their phones (ADR-57), and so is the founder, with the family's name and
  * a link. Keyed as a flag by the exchange, the reader's conversation and her answer, so a redelivered
- * tap tells no one twice. Returns the names of the organisers told, for her thanks.
+ * tap tells no one twice. When no organiser can be told, the founder's alert says so and is urgent,
+ * so a person in Vela's team contacts the family (staging, 28 Oct 2026: an app-only organiser before
+ * ADR-57 heard nothing). Returns who was told, for her thanks.
  */
-async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Promise<string[]> {
+interface NotOkayTold {
+  /** The organisers told, by name. */
+  readonly names: string[];
+  /** The founder was told. */
+  readonly founder: boolean;
+}
+
+async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Promise<NotOkayTold> {
   const { member, family, exchange } = input;
   const time = formatTime(answer.receivedAt, member.tz);
   const reachable = await reachableOrganisers(deps.db, family.id, MESSENGER, deps.push !== null);
@@ -409,10 +418,14 @@ async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Pro
       conversationId: admin,
       exchangeId: exchange.id,
       lang: ADMIN_LANG,
-      text: t(ADMIN_LANG, "admin.not_okay", {
-        family: family.name,
-        link: adminLink(deps.config, family.id),
-      }),
+      text: t(
+        ADMIN_LANG,
+        organisers.length === 0 ? "admin.not_okay_nobody_told" : "admin.not_okay",
+        {
+          family: family.name,
+          link: adminLink(deps.config, family.id),
+        },
+      ),
     });
   }
   await recordEvent(
@@ -426,15 +439,21 @@ async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Pro
     },
     deps.clock.now(),
   );
-  return organisers;
+  return { names: organisers, founder: admin !== null };
 }
 
-/** Her thanks for "Not okay": who was told, and that an emergency needs a call of her own. */
-function notOkayThanks(member: Member, told: readonly string[]): string {
+/**
+ * Her thanks for "Not okay": who was told, and that an emergency needs a call of her own. It never
+ * says her family was told when nobody was: then Vela's team, if it was, and else only her own call.
+ */
+function notOkayThanks(member: Member, told: NotOkayTold): string {
   const address = member.addressForm ?? member.displayName;
-  return told.length === 0
-    ? t(member.language, "ack.not_okay_family", { address })
-    : t(member.language, "ack.not_okay", { address, names: told.join(", ") });
+  if (told.names.length > 0) {
+    return t(member.language, "ack.not_okay", { address, names: told.names.join(", ") });
+  }
+  return t(member.language, told.founder ? "ack.not_okay_founder" : "ack.not_okay_family", {
+    address,
+  });
 }
 
 /** Her thanks, at most once per local day: the budget index refuses a second row. */
@@ -442,7 +461,7 @@ async function sendAck(
   deps: Deps,
   input: AnswerInput,
   kept: boolean,
-  told: readonly string[] | null = null,
+  told: NotOkayTold | null = null,
 ): Promise<void> {
   const { member, event, now } = input;
   const lang = member.language;
@@ -615,7 +634,7 @@ async function afterLight(deps: Deps, input: AnswerInput, lit: Lit): Promise<voi
     });
   }
   // "Not okay" reaches her organisers first: that is why she tapped it (ADR-54).
-  let told: string[] | null = null;
+  let told: NotOkayTold | null = null;
   if (input.content.kind === "not_okay") {
     await settle(deps, "not_okay", answer.id, async () => {
       told = await alertNotOkay(deps, input, answer);
