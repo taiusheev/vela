@@ -186,7 +186,11 @@ function FamilyToday({ day }: { day: TodayView }) {
       : demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "not-okay"
         ? notOkayExampleFixture()
         : day.today;
-  const needsContact = today.lights.some((light) => light.notOkayAt !== undefined);
+  const contactKey = today.lights
+    .filter((light) => light.notOkayAt !== undefined)
+    .map((light) => `${light.memberId}:${light.notOkayAt}`)
+    .join("|");
+  const needsContact = contactKey !== "";
   // A first run, or an account that belongs to no family yet: onboarding is where that starts (A1).
   useEffect(() => {
     if (noAccount || noFamily) router.replace("/onboarding");
@@ -220,13 +224,13 @@ function FamilyToday({ day }: { day: TodayView }) {
     setQuietOpen(true);
   };
   useEffect(() => {
-    if (quietKey !== undefined && mayOpen) {
+    if (quietKey !== undefined && mayOpen && !needsContact) {
       if (quietEvent !== undefined) setOpenEventId(quietEvent);
       setQuietOpen(true);
     } else if (quietKey === undefined && !live) {
       setResolution(undefined);
     }
-  }, [quietKey, quietEvent, mayOpen, live]);
+  }, [quietKey, quietEvent, mayOpen, live, needsContact]);
   const name = quiet?.displayName ?? t`Mom`;
   const notice = !demoDataAllowed(apiConfigured(), accountsConfigured())
     ? liveQuiet.notice
@@ -261,7 +265,7 @@ function FamilyToday({ day }: { day: TodayView }) {
     void readFlag(flag).then(async (shown) => {
       if (!current || shown) return;
       await writeFlag(flag);
-      router.push({ pathname: "/vela-light", params: { member: offerFor } });
+      if (current) router.push({ pathname: "/vela-light", params: { member: offerFor } });
     });
     return () => {
       current = false;
@@ -272,6 +276,14 @@ function FamilyToday({ day }: { day: TodayView }) {
   // when asked (`?lighton=1`, or holding a lit window), so its example day opens straight on Today.
   const portraitFamily = familyId === undefined ? "example" : familyId;
   const [welcome, setWelcome] = useState<TodayLight[]>([]);
+  // Her explicit request takes over from an already-open quiet notice, inbox or celebration.
+  // This runs when the request arrives; an organiser may still open another parent's notice.
+  useEffect(() => {
+    if (contactKey === "") return;
+    setQuietOpen(false);
+    setInboxOpen(false);
+    setWelcome([]);
+  }, [contactKey]);
   const mayWelcome = live && !day.loading && !quietOpen && !needsContact;
   const welcomeKeys = mayWelcome
     ? lightsToWelcome(today.lights, portraitFamily, new Set())
