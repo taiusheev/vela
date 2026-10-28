@@ -13,6 +13,8 @@ import { reactionLine, replyLine } from "./lines.ts";
  */
 
 export interface TodayLight {
+  /** The time of an explicit Not okay today; a reply, never a diagnosis or a resolved notice. */
+  notOkayAt?: string;
   connectionDays?: { date: string; hasMessage: boolean }[];
   memberId: string;
   displayName: string;
@@ -231,5 +233,29 @@ export function quietExampleFixture(): Today {
         replies: [],
       },
     ],
+  };
+}
+
+/** Synthetic explicit check-in, available only in the disconnected demo. */
+export function notOkayExampleFixture(): Today {
+  const day = todayFixture();
+  const her = day.lights[0];
+  if (her === undefined) return day;
+  const time = clockTime(10, 12);
+  return {
+    ...day,
+    lights: [
+      { ...her, notOkayAt: time, stateText: t`said she is not okay` },
+      ...day.lights.slice(1),
+    ],
+    exchanges: day.exchanges.map((exchange) =>
+      exchange.recipientId !== her.memberId
+        ? exchange
+        : {
+            ...exchange,
+            answer: { text: t`said she is not okay`, at: time },
+            replies: [],
+          },
+    ),
   };
 }

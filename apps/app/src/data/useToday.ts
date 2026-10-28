@@ -225,6 +225,15 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
   return {
     lights: day.lights.map((light) => ({
       ...toTodayLight(light),
+      ...(() => {
+        const explicit = day.not_okay?.find((row) => row.member_id === light.member_id);
+        // Compatibility with an older server: its current morning can still carry the tap.
+        const answer = day.exchanges.find((row) => row.recipient_id === light.member_id)?.answer;
+        const at = explicit?.at ?? (answer?.kind === "not_okay" ? answer.at : undefined);
+        return at === undefined
+          ? {}
+          : { notOkayAt: timeOfDay(at, light.tz), stateText: t`said she is not okay` };
+      })(),
       ...(day.connection_days?.find((row) => row.member_id === light.member_id) === undefined
         ? {}
         : {

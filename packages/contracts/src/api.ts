@@ -579,6 +579,8 @@ export const ApiTomorrowTurn = z.object({
 export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;
 
 export const ApiToday = z.object({
+  /** Explicit Not okay taps received on each parent's current local day, latest per parent. */
+  not_okay: z.array(z.object({ member_id: z.uuid(), at: z.iso.datetime() })).optional(),
   connection_days: z
     .array(
       z.object({

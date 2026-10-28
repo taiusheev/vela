@@ -145,18 +145,21 @@ export function FamilyWindows({
     i18n.locale,
   );
   const onlyName = kept[0]?.displayName ?? "";
+  const attentionName = kept.find((light) => light.notOkayAt !== undefined)?.displayName;
   const title =
-    kept.length === 0
-      ? undefined
-      : quiet !== undefined
-        ? t`It has been quiet at ${quietName}'s today`
-        : allLit
-          ? kept.length === 1
-            ? t`${onlyName}'s light is on today`
-            : t`Everyone's light is on today`
-          : lit.length === 0
-            ? t`Waiting for today's first light`
-            : t`Waiting for ${waitingNames}`;
+    attentionName !== undefined
+      ? t`Please contact ${attentionName} now`
+      : kept.length === 0
+        ? undefined
+        : quiet !== undefined
+          ? t`It has been quiet at ${quietName}'s today`
+          : allLit
+            ? kept.length === 1
+              ? t`${onlyName}'s light is on today`
+              : t`Everyone's light is on today`
+            : lit.length === 0
+              ? t`Waiting for today's first light`
+              : t`Waiting for ${waitingNames}`;
   // The room's light starts at the chosen window when it is lit, else at the first lit one.
   const glowFrom =
     selected !== undefined && portraitLightOn(selected) ? selected.memberId : lit[0]?.memberId;
@@ -558,8 +561,8 @@ export function TodayAnswer({
 }
 
 /**
- * Her week at a glance: a window for each day from Monday, lit on each day she and the family
- * shared a message. A record, never a score or a streak; the Week tab holds the rest.
+ * Her week at a glance: a window for each day from Monday, lit on each day she
+ * answered. A record, never a score or a streak; the Week tab holds the rest.
  */
 export function WeekWindowsCard({ light }: { light: TodayLight }) {
   const { t } = useLingui();
@@ -595,8 +598,8 @@ export function WeekWindowsCard({ light }: { light: TodayLight }) {
                   day.ahead
                     ? t`${label}: still to come`
                     : day.hasMessage
-                      ? t`${label}: a family message`
-                      : t`${label}: no message recorded`
+                      ? t`${label}: answered`
+                      : t`${label}: no answer recorded`
                 }
                 style={{ flex: 1, alignItems: "center", gap: space.xs }}
               >
@@ -624,7 +627,7 @@ export function WeekWindowsCard({ light }: { light: TodayLight }) {
         </View>
         {firstWeek ? (
           <Words variant="caption" tone="ink2">
-            {t`Lit on each day you and ${name} shared a message.`}
+            {t`Lit on each day ${name} answered.`}
           </Words>
         ) : null}
       </SoftCard>
