@@ -1,0 +1,16 @@
+# An explicit check-in is an urgent request for family, separate from an ordinary answered light.
+url: ${APP_URL}
+name: Not okay asks the child to call and stays visible in the conversation
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/?example=not-okay
+- assertVisible: "Mom asked for the family"
+- assertVisible: "At 10:12, Mom tapped.*Call now.*"
+- assertVisible: "Call Mom using their usual number or messaging app."
+- assertNotVisible: "Give Mom a heart"
+- tapOn: "Message Mom"
+- assertVisible: "Mom asked for the family"
+- assertVisible: "Call Mom using their usual number or messaging app."
+- assertVisible: "If you cannot reach them.*"

@@ -552,3 +552,41 @@ describe("answer window while participation is paused or away", () => {
     });
   }
 });
+
+describe("explicit Not okay follow-up", () => {
+  it("carries a tap on an earlier ask independently of today's displayed answer", () => {
+    const day = ApiToday.parse({
+      lights: [light(), light({ member_id: DAD })],
+      exchanges: [],
+      tomorrow: [],
+      not_okay: [{ member_id: MOM, at: "2026-10-12T02:12:00Z" }],
+    });
+    const mapped = toToday(day);
+    expect(mapped.lights[0]?.notOkayAt).toBe("10:12");
+    expect(mapped.lights[1]?.notOkayAt).toBeUndefined();
+  });
+
+  it("recognises an older server's explicit tap but never guesses from text or a lit window", () => {
+    for (const kind of ["not_okay", "fine", "text"] as const) {
+      const row = exchange();
+      const day = ApiToday.parse({
+        lights: [light({ state: "lit" })],
+        tomorrow: [],
+        exchanges: [
+          {
+            ...row,
+            answer: {
+              kind,
+              at: "2026-10-12T02:12:00Z",
+              text: "Not okay",
+              picked_media_id: null,
+              picked_number: null,
+              translation: null,
+            },
+          },
+        ],
+      });
+      expect(toToday(day).lights[0]?.notOkayAt).toBe(kind === "not_okay" ? "10:12" : undefined);
+    }
+  });
+});

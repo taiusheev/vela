@@ -101,7 +101,9 @@ An exchange carries the asker’s name (null for Vela’s own hello, and for an 
 
 A stranger, a family that is not the caller’s and an unknown family all answer 404. The route is served by the pilot Worker under `/v1` wherever the API is on (§ "Where the API runs"), and on a developer’s own machine by `apps/worker/scripts/api-dev.ts` for the app to read (infra/README.md, section 9a).
 
-**15 October 2026: message-day windows.** Today optionally includes `connection_days: [{member_id, days: [{date, has_message}]}]`, seven ascending parent-local dates ending today. A real parent contribution, delivered family ask, or delivered read-back reply lights its date. Scheduling, app opens, unattended fallback questions and failed sends do not. Earlier lights remain after quiet days. Pending parents have no interaction history until real messages exist.
+**28 October 2026: answer-day windows.** Today optionally includes `connection_days: [{member_id, days: [{date, has_message}]}]`, seven ascending parent-local dates ending today. A real parent answer lights its received date (including check-in taps and unattached answers). Family asks and replies do not light the window before the parent answers. Scheduling, app opens, unattended fallback questions and failed sends do not. Earlier lights remain after quiet days. Pending parents have no interaction history until real messages exist.
+
+**28 October 2026: explicit check-in follow-up.** Today optionally includes `not_okay: [{member_id, at}]`, the latest explicit `not_okay` answer received on each parent’s current local date. This includes taps on an earlier ask and remains present after later answers. It uses the same family authorization and answer retention as Today; no new stored data or inferred health status. The app shows the fact and time, direct call and conversation actions on Today and in the conversation. This is a daily follow-up, not a persistent incident or a confirmation that anyone has contacted the parent.
 
 ### Composing an ask (23 September 2026)
 

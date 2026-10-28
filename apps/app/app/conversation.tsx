@@ -25,6 +25,7 @@ import { ChatBubble, DayChip } from "../src/components/chat/chat-bubble.tsx";
 import { ChatComposer } from "../src/components/chat/chat-composer.tsx";
 import { Light } from "../src/components/light.tsx";
 import { LoadingLight } from "../src/components/loading-light.tsx";
+import { NotOkayFollowUp } from "../src/components/not-okay-follow-up.tsx";
 import { Text } from "../src/components/scaled-text.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { canAsk } from "../src/data/ask-target.ts";
@@ -46,6 +47,7 @@ import { exampleNames } from "../src/data/example-names.ts";
 import { clockTime } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
+import { notOkayExampleFixture } from "../src/data/today.ts";
 import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
 import { usePullRefresh } from "../src/data/usePullRefresh.ts";
@@ -83,7 +85,13 @@ function Conversation() {
   const { recipient } = useLocalSearchParams<{ recipient?: string }>();
   const { suggestion } = useLocalSearchParams<{ suggestion?: string }>();
   const day = useToday();
-  const light = selectedLight(day.today.lights, recipient);
+  const { example } = useLocalSearchParams<{ example?: string }>();
+  const light = selectedLight(
+    demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "not-okay"
+      ? notOkayExampleFixture().lights
+      : day.today.lights,
+    recipient,
+  );
   const account = useAccount();
   const queries = useQueryClient();
   const [watching, setWatching] = useState(false);
@@ -455,13 +463,15 @@ function Conversation() {
               <View
                 accessible
                 accessibilityRole="header"
-                accessibilityLabel={`${name}, ${light.stateText}`}
+                accessibilityLabel={`${name}, ${light.notOkayAt === undefined ? light.stateText : t`said she is not okay`}`}
                 style={{ flexDirection: "row", alignItems: "center", gap: space.s }}
               >
                 <Light state={light.answerReceived === true ? "lit" : light.state} height={26} />
                 <View>
                   <Text style={[type.heading, { color: palette.ink }]}>{name}</Text>
-                  <Text style={[type.caption, { color: palette.ink3 }]}>{light.stateText}</Text>
+                  <Text style={[type.caption, { color: palette.ink3 }]}>
+                    {light.notOkayAt === undefined ? light.stateText : t`said she is not okay`}
+                  </Text>
                 </View>
               </View>
             ),
@@ -486,6 +496,20 @@ function Conversation() {
             ),
         }}
       />
+      {light?.notOkayAt === undefined ? null : (
+        <View
+          style={{
+            paddingHorizontal: space.l,
+            paddingVertical: space.s,
+            backgroundColor: palette.bg,
+            maxHeight: "45%",
+          }}
+        >
+          <ScrollView>
+            <NotOkayFollowUp light={light} familyId={day.familyId} inConversation />
+          </ScrollView>
+        </View>
+      )}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}

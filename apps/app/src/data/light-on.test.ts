@@ -52,6 +52,10 @@ describe("lightsToWelcome", () => {
     ).toHaveLength(1);
   });
 
+  it("never celebrates an explicit Not okay", () => {
+    expect(lightsToWelcome([light({ notOkayAt: "10:12" })], "f1", new Set(), now)).toEqual([]);
+  });
+
   it("skips invited and paused parents", () => {
     const lights = [
       light({ invited: true }),

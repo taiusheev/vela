@@ -44,7 +44,7 @@ function WindowGlow({ id }: { id: string }) {
 }
 
 /**
- * This week's windows at the top of Sunday: a record of real messages between her and the family,
+ * This week's windows at the top of Sunday: a record of her actual answers,
  * never an inferred wellbeing score, and never a streak that resets on a quiet day. The windows
  * speak for themselves, so the card carries no explanation; each day's label says it for a reader.
  */
@@ -76,12 +76,12 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
         <Text style={[type.body, { color: palette.ink2 }]}>
           {sofar === 7
             ? plural(count, {
-                one: "# day with messages this week",
-                other: "# days with messages this week",
+                one: "# day answered this week",
+                other: "# days answered this week",
               })
             : plural(count, {
-                one: "# day with messages so far",
-                other: "# days with messages so far",
+                one: "# day answered so far",
+                other: "# days answered so far",
               })}
         </Text>
       </View>
@@ -97,8 +97,8 @@ export function ConnectionWindows({ light }: { light: TodayLight }) {
                   day.ahead
                     ? t`${label}: still to come`
                     : day.hasMessage
-                      ? t`${label}: a family message`
-                      : t`${label}: no message recorded`
+                      ? t`${label}: answered`
+                      : t`${label}: no answer recorded`
                 }
                 style={{ alignItems: "center", flex: 1 }}
               >
