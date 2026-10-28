@@ -34,7 +34,7 @@ import {
   quietEvents,
 } from "@vela/db";
 import { and, asc, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { MediaJob, OutboundJob, UnderstandJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { handleInbound } from "./inbound/router.ts";
@@ -559,3 +559,62 @@ describe("the silence drill", () => {
 function failedUnderstanding(value: Understanding): AiOutcome<Understanding> {
   return { ok: false, value, record: fakeRecord("understand", "http_529"), error: "http_529" };
 }
+
+// With the check-in on (ADR-54, ADR-55), as production runs from notice v12: the same promise on the
+// new ladder. In her first weeks the check-in goes at 2 hours, the organiser hears at 4 hours, and
+// once more at 6 hours with the founder told; our own failure still produces none of them.
+describe("the silence drill with the check-in on", () => {
+  const config = () => h.deps.config as { checkIn?: boolean };
+  beforeEach(() => {
+    config().checkIn = true;
+  });
+  afterEach(() => {
+    config().checkIn = undefined;
+  });
+
+  it("checks in at 10:00, tells at 12:00 and again at 14:00, and lights again when she answers", async () => {
+    const seed = await consentedYesterday();
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "11:59"));
+    expect(newMessages().map(([to, text]) => [to, text.split("\n")[0]])).toEqual([
+      [HER, t("en", greetingKeyFor("2026-09-14"), { address: "Mrs Chen" })],
+      [HER, t("en", "checkin.text", { address: "Mrs Chen" })],
+    ]);
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "12:00"));
+    expect(newMessages().map(([to]) => to)).toEqual([ORGANISER]);
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "13:59"));
+    expect(newMessages()).toEqual([]);
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "14:00"));
+    expect(
+      newMessages()
+        .map(([to]) => to)
+        .sort(),
+    ).toEqual([ORGANISER, "9001"].sort());
+
+    h.clock.set(at("2026-09-14", "15:00"));
+    await handleInbound(h.deps, [fromHer({ kind: "text", text: "Sorry, I was at the market" })]);
+    await h.run(handlers());
+    const [quiet] = await h.db.select().from(quietEvents);
+    expect(quiet).toMatchObject({ outcome: "answered_late", notifyCount: 2 });
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "21:00"));
+    const notices = h.telegram
+      .sentTo(ORGANISER)
+      .filter((sent) => sent.message.text.startsWith("It's been quiet"));
+    expect(notices).toHaveLength(2);
+  });
+
+  it("sends no check-in and no quiet notice when her morning could not be delivered", async () => {
+    const seed = await consentedYesterday();
+    h.telegram.failSendsTo(HER, "unavailable");
+
+    await runSchedulerUntil(seed.member.id, at("2026-09-14", "23:00"));
+
+    expect(await h.db.select().from(outbound).where(eq(outbound.kind, "repeat"))).toHaveLength(0);
+    expect(await h.db.select().from(quietEvents)).toHaveLength(0);
+    expect(h.telegram.sentTo(ORGANISER).map((entry) => entry.message.text)).toEqual([
+      t("en", "delivery.failed", { name: "Mom", channel: "Telegram" }),
+    ]);
+  });
+});
