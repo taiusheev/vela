@@ -226,7 +226,7 @@ msgstr "{name}會在那裡回覆，不用學新的 App。"
 
 #: src/components/not-okay-follow-up.tsx
 msgid "{name} asked for the family"
-msgstr "{name}請家人聯絡"
+msgstr "{name}想找家人"
 
 #: src/components/quiet-notice.tsx
 msgid "{name} can't today."
@@ -974,7 +974,7 @@ msgstr "正在詢問…"
 
 #: src/components/not-okay-follow-up.tsx
 msgid "At {time}, {name} tapped “Not okay, tell my family”. Call now to find out what they need."
-msgstr "{name}在 {time} 點了「不太好，告訴家人」。請現在打電話，問問需要什麼幫忙。"
+msgstr "{name}在 {time} 按了「不太好，告訴家人」。請現在打電話給{name}，問問需要什麼幫忙。"
 
 #: src/data/notifications.ts
 msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
