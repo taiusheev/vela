@@ -493,6 +493,14 @@ describe("the check-in ladder (ADR-55)", () => {
       date: TODAY,
       reminder: true,
     });
+    // The tick that opens the quiet decides its next wake before the gateway counts the notice
+    // sent, so the reminder is planned from a count of 0 as well.
+    const opened = decide({
+      now: taipei("11:10"),
+      ladder: learned,
+      days: [told({ notifyCount: 0 })],
+    });
+    expect(opened.nextWakeAt?.toISOString()).toBe(taipei("13:10").toISOString());
     // Sent once already, or an organiser asked to wait: no reminder of Vela's own.
     for (const fields of [{ notifyCount: 2 }, { notifyCount: 1, waitUntil: taipei("13:10") }]) {
       expect(

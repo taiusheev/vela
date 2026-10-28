@@ -441,11 +441,13 @@ function notifyQuietRule(
     ladder !== undefined &&
     lastNotifiedAt !== null &&
     waitUntil === null &&
-    quiet.notifyCount === 1 &&
+    (quiet.notifyCount ?? 0) <= 1 &&
     !blocked
   ) {
     // Nobody acted on the first notice: no answer, no "she's fine", no wait. It goes once more,
-    // and the founder hears it (ADR-55).
+    // and the founder hears it (ADR-55). The first notice counts as sent only once the gateway has
+    // sent it, after the tick that opened it has already chosen its next wake, so that wake must
+    // not wait for the count: `notifyQuiet` checks it again when the reminder is due.
     notifyAt = addMinutes(lastNotifiedAt, ladder.remindAfterMinutes);
     reminder = true;
   }

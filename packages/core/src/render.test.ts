@@ -439,7 +439,7 @@ describe("renderArrival in Traditional Chinese", () => {
       "家人的回覆：\n小明：奶奶的湯很好喝",
       "不好意思，這則訊息晚到了。\n陳奶奶，早安。",
       "今天煮了什麼？\n—— 小美",
-      "傳一段語音回覆最好。在忙的話，按 ❤️ 就可以。",
+      "用語音回覆最好；在忙的話，按 ❤️ 就好。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
     expectSendable(arrival, lang);
@@ -479,7 +479,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expect(paragraphs(voice)).toEqual([
       "陳奶奶，早安。",
       "小美傳了一則語音訊息給您。",
-      "傳一段語音回覆最好。在忙的話，按 ❤️ 就可以。",
+      "用語音回覆最好；在忙的話，按 ❤️ 就好。",
     ]);
     expectSendable(voice, lang);
     const photo = render({
@@ -510,7 +510,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expect(paragraphs(arrival)).toEqual([
       "陳奶奶，早安。",
       "您早上過得好嗎？\n—— 家人的小幫手 Vela",
-      "傳一段語音回覆最好。在忙的話，按 ❤️ 就可以。",
+      "用語音回覆最好；在忙的話，按 ❤️ 就好。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
   });

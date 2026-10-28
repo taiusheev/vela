@@ -253,7 +253,7 @@ describe("an app row at the gateway's door", () => {
       herName: "Mom",
     });
     const refused: OutboundRequest[] = [
-      { ...push, kind: "flag" } as OutboundRequest,
+      { ...push, kind: "weekly_read" } as OutboundRequest,
       { ...push, kind: "system" } as OutboundRequest,
       { ...push, buttons: [[{ id: "b1", label: "Yes" }]] },
       { ...push, media: [{ kind: "image", storageKey: "asks/photo.jpg" }] },

@@ -50,6 +50,9 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
         : { screen: "today", quietEventId: data.quiet_event_id };
     case "quiet_resolved":
       return { screen: "today" };
+    // Her "Not okay" (ADR-57): where the family talks with her, so the next step is a call or a word.
+    case "flag":
+      return shown ? { screen: "chat", recipientId: data.member_id } : { screen: "today" };
     case "answer_receipt":
       // Her answer is read where the family talks with her: the chat, at its newest message.
       return shown ? { screen: "chat", recipientId: data.member_id } : { screen: "today" };
@@ -95,7 +98,11 @@ export interface ForegroundBehaviour {
   shouldSetBadge: false;
 }
 
-const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>(["quiet_notice", "quiet_resolved"]);
+const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>([
+  "quiet_notice",
+  "quiet_resolved",
+  "flag",
+]);
 
 /** The quiet notice and its close, which are settled on Today rather than read in a chat. */
 export function isQuietKind(kind: PushKind): boolean {

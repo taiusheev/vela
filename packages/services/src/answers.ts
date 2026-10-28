@@ -55,10 +55,9 @@ import { errorLabel, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { fitMessageText, formatTime, inboundExternalId } from "./format.ts";
 import { type EnqueueResult, enqueueOutbound, finishArrivalEffects, replyOf } from "./gateway.ts";
-import { answerReceiptPush, ordinaryPushReader } from "./push-messages.ts";
+import { answerReceiptPush, notOkayPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
-  activeOrganisersWithLinks,
   deviceFileForGroup,
   exchangesByIds,
   familyById,
@@ -71,6 +70,7 @@ import {
   memberById,
   messageRefFor,
   type Queryable,
+  reachableOrganisers,
   recordInboundMedia,
 } from "./repo.ts";
 
@@ -349,26 +349,44 @@ async function tapThanks(deps: Deps, input: AnswerInput): Promise<string | null>
 }
 
 /**
- * "Not okay" on the check-in (ADR-54): each active organiser who can be told by message is told at
- * once, on their own messenger, and so is the founder, with the family's name and a link. Keyed as a
- * flag by the exchange, the reader's conversation and her answer, so a redelivered tap tells no one
- * twice. Returns the names of the organisers told, for her thanks.
+ * "Not okay" on the check-in (ADR-54): each active organiser is told at once on their own messenger
+ * and, while push is on, on their phones (ADR-57), and so is the founder, with the family's name and
+ * a link. Keyed as a flag by the exchange, the reader's conversation and her answer, so a redelivered
+ * tap tells no one twice. Returns the names of the organisers told, for her thanks.
  */
 async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Promise<string[]> {
   const { member, family, exchange } = input;
   const time = formatTime(answer.receivedAt, member.tz);
-  const organisers = await activeOrganisersWithLinks(deps.db, family.id, MESSENGER);
-  for (const organiser of organisers) {
+  const reachable = await reachableOrganisers(deps.db, family.id, MESSENGER, deps.push !== null);
+  const organisers: string[] = [];
+  for (const organiser of reachable) {
+    const userId = organiser.member.userId;
+    const pushed = organiser.push && userId !== null;
+    if (pushed) {
+      await enqueueOutbound(
+        deps,
+        deps.db,
+        notOkayPush({
+          exchangeId: exchange.id,
+          answerId: answer.id,
+          reader: { member: organiser.member, userId },
+          herName: member.displayName,
+        }),
+      );
+    }
+    const [link] = organiser.links;
+    if (pushed || link !== undefined) organisers.push(organiser.member.displayName);
+    if (link === undefined) continue;
     await enqueueOutbound(deps, deps.db, {
       kind: "flag",
       idempotencyKey: outboundKey("flag", {
         exchangeId: exchange.id,
-        conversationId: organiser.link.externalId,
+        conversationId: link.externalId,
         suffix: answer.id,
       }),
       memberId: organiser.member.id,
-      channel: organiser.link.channel,
-      conversationId: organiser.link.externalId,
+      channel: link.channel,
+      conversationId: link.externalId,
       exchangeId: exchange.id,
       lang: organiser.member.language,
       text: t(organiser.member.language, "not_okay.notice", { name: member.displayName, time }),
@@ -408,7 +426,7 @@ async function alertNotOkay(deps: Deps, input: AnswerInput, answer: Answer): Pro
     },
     deps.clock.now(),
   );
-  return organisers.map((organiser) => organiser.member.displayName);
+  return organisers;
 }
 
 /** Her thanks for "Not okay": who was told, and that an emergency needs a call of her own. */

@@ -37,14 +37,13 @@ describe("push kinds", () => {
     }
   });
 
-  it("never budgets the quiet notice or its close, and pushes no flag", () => {
-    expect(PUSH_EXCEPTION_KINDS).toEqual(["quiet_notice", "quiet_resolved"]);
+  it("never budgets the quiet notice, its close, or a Not okay flag (ADR-57)", () => {
+    expect(PUSH_EXCEPTION_KINDS).toEqual(["quiet_notice", "quiet_resolved", "flag"]);
     const budgeted: readonly string[] = BUDGETED_OUTBOUND_KINDS;
     for (const kind of PUSH_EXCEPTION_KINDS) {
       expect(budgeted, kind).not.toContain(kind);
     }
     expect(PUSH_KINDS).toEqual([...ORDINARY_PUSH_KINDS, ...PUSH_EXCEPTION_KINDS]);
-    expect(PUSH_KINDS).not.toContain("flag");
     const outbound: readonly string[] = OUTBOUND_KINDS;
     for (const kind of PUSH_KINDS) {
       expect(outbound, kind).toContain(kind);
@@ -164,7 +163,7 @@ describe("PushData", () => {
     for (const invalid of [
       { ...base, text: "The tomatoes finally turned." },
       { ...base, name: "Mom" },
-      { ...base, kind: "flag" },
+      { ...base, kind: "weekly_read" },
       { ...base, kind: "arrival" },
       { ...base, exchange_id: "yesterday" },
       { kind: "answer_receipt", family_id: FAMILY },
