@@ -24,16 +24,17 @@ Pick first the families whose parent already reads and answers LINE, and whose o
 
 ## Before inviting anyone (founder)
 
-1. In LINE Official Account Manager, the plan is **中用量**, bought on or after 3 November. The free plan's 200 messages a month cannot carry one family.
-2. In LINE Developers, the production channel has **Allow bot to join group chats** on.
-3. Production is released with LINE, family approval and Chinese on (Claude prepares it; you approve the tag).
-4. Family 0 has had one good morning on production.
+1. **Any day now:** double-click `Vela/line-production-setup.command`. It signs you in to Cloudflare, creates LINE's queue and asks for the "Vela Light" channel secret and access token in hidden prompts (copy them from LINE Developers). It changes nothing families see.
+2. In LINE Official Account Manager, the plan is **中用量**, bought on or after 3 November. The free plan's 200 messages a month cannot carry one family.
+3. In LINE Developers, the production channel has **Allow bot to join group chats** on.
+4. Production is released with LINE, family approval and Chinese on (PR #217; Claude prepares it, you approve the tag).
+5. Family 0 has had one good morning on production.
 
 ## Each family (about 30 minutes, the day before her first morning)
 
 1. **Send the organiser message below** (in your own chat with them, LINE or other).
 2. **The organiser sets up** in the private chat with Vela Light: `/start`, then about two minutes of questions. They get her invite link at the end, and keep it.
-3. **You approve the family** on the admin page, **Trial roster** (`/admin/roster`): the newest family waiting, one click. Nothing is sent to her until you do. If the list shows a family you do not know, leave it unapproved.
+3. **You approve the family** on the admin page, **Trial roster** (`/admin/roster`): the newest family waiting, one click. **Always before the organiser sends her the link:** a yes she taps before your approval is ignored, and she sees nothing. If the list shows a family you do not know, leave it unapproved.
 4. **The organiser makes the family group** in LINE, without her, and invites Vela Light. Each adult taps **我看過了**.
 5. **The organiser calls her**, using the [Chinese consent script](../pilot/consent-script.zh-TW.md), then sends her the invite link. She taps it, presses **傳送**, then chooses **兩個都好** or **好，健康的話不分享**. Her first morning comes the next day.
    - If she sees "您的燈還沒亮起", the family is not approved yet, or the organiser has not added Vela Light as a friend.
