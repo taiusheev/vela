@@ -5,9 +5,22 @@
 Founder decisions, 29 October:
 - **Start small:** two or three families first; the rest once their first days look clean.
 - **Android organisers use LINE only.** The app is iPhone-only for now; on Android, everything an organiser needs arrives in LINE.
-- **Family 0 is the founder's own family**, on production, one morning before anyone else.
+- **Family 0 is the founder's own family**, on production, one morning before anyone else (confirmed by the founder). Real Taiwan families are already waiting to test.
 
 Production's LINE account is **Vela Light** (`@675nhrpg`, `https://line.me/R/ti/p/@675nhrpg`). The Chinese privacy notice is `https://vela.vela-light.workers.dev/privacy/zh-TW`.
+
+## Now, while families wait (founder, 5 minutes per family)
+
+Real families already want to test. Send each organiser the short message below now, so the first two or three can be picked by 2 November. Note the answers in your private "Vela pilot" notes under a family code (TW-01, TW-02 …), never in the repo.
+
+> 嗨！Vela 預計 11 月 4 日開始試用，想先問你幾件事，好安排順序：
+> 1. 你用 iPhone 還是 Android？
+> 2. 爸媽有在用 LINE 嗎？會看、會回 LINE 訊息嗎？
+> 3. 爸媽通常幾點起床？
+> 4. 家裡還有誰想一起加入家人群組？（大概幾個人）
+> 5. 11 月 3 日或 4 日晚上，你方便花 15 分鐘設定、再打一通電話跟爸媽說明嗎？
+
+Pick first the families whose parent already reads and answers LINE, and whose organiser can do the setup call on 3 or 4 November. Keep one iPhone organiser among them, so the app is tried by a real family too.
 
 ## Before inviting anyone (founder)
 
