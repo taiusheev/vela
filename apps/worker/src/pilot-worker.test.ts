@@ -437,20 +437,17 @@ describe("cron", () => {
     expect(fake.closed()).toBe(1);
   });
 
-  // Staging's LINE is on since 6 October 2026, so it reads the quota as lineOnEnv does.
-  it.each(["development", "production"] as const)(
-    "reads no quota in %s, where LINE is off",
-    async (environment) => {
-      const fake = createFakePilotRuntime();
-      const env = environment === "development" ? testEnv : deployedEnv(environment);
+  // Staging's LINE is on since 6 October 2026, and production's for the Taiwan test, so both read
+  // the quota as lineOnEnv does.
+  it("reads no quota in development, where LINE is off", async () => {
+    const fake = createFakePilotRuntime();
 
-      await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON, testEnv);
 
-      expect(env.LINE_CHANNEL).toBe("off");
-      expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
-      expect(fake.quotaReads()).toBe(0);
-    },
-  );
+    expect(testEnv.LINE_CHANNEL).toBe("off");
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
+    expect(fake.quotaReads()).toBe(0);
+  });
 
   it("reads no quota nightly, even where LINE is on", async () => {
     const fake = createFakePilotRuntime();

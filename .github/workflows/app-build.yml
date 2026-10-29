@@ -74,7 +74,7 @@ jobs:
           test "$GITHUB_REF_TYPE" = tag && [[ "$GITHUB_REF_NAME" == v* ]]
           test "$PLATFORM" = ios
           [[ "$EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY" == pk_live_* ]]
-          curl -fsS https://vela.vela-light.workers.dev/v1/capabilities | jq -e '.pilot == true and .english_only == true and .telegram_first == true and .billing == false and .parent_app == false and .memory == false and .book == false'
+          curl -fsS https://vela.vela-light.workers.dev/v1/capabilities | jq -e '.pilot == true and .english_only == false and .telegram_first == true and .billing == false and .parent_app == false and .memory == false and .book == false'
       - run: pnpm check
       # The build runs on EAS's machines; this job only hands it over and does not wait for it.
       # A TestFlight build is submitted once it is done.

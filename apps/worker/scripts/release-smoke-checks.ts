@@ -14,10 +14,11 @@ export interface SmokeResult {
   readonly checks: readonly SmokeCheck[];
 }
 
+// The closed trial in production (ADR-52): approved families, in English or Chinese.
 const TRIAL_CAPABILITIES: Readonly<Record<string, boolean>> = {
   pilot: true,
   telegram_first: true,
-  english_only: true,
+  english_only: false,
   memory: false,
   book: false,
   parent_app: false,
@@ -120,7 +121,7 @@ export async function releaseSmoke(
     },
     { name: "admin_access_login", url: `${admin}/admin`, verify: protectedAdmin },
     {
-      name: environment === "production" ? "english_trial_capabilities" : "capabilities_available",
+      name: environment === "production" ? "trial_capabilities" : "capabilities_available",
       url: `${pilot}/v1/capabilities`,
       verify: async (response) => {
         if (response.status !== 200) return false;

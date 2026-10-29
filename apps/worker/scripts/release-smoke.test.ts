@@ -4,7 +4,7 @@ import { releaseSmoke } from "./release-smoke-checks.ts";
 const caps = {
   pilot: true,
   telegram_first: true,
-  english_only: true,
+  english_only: false,
   memory: false,
   book: false,
   parent_app: false,
@@ -65,7 +65,7 @@ describe("public deployment smoke", () => {
         ),
       );
       expect(result.passed).toBe(false);
-      expect(check(result, "english_trial_capabilities")?.passed).toBe(false);
+      expect(check(result, "trial_capabilities")?.passed).toBe(false);
     },
   );
 
