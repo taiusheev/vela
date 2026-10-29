@@ -2,7 +2,23 @@
 
 Written 25 October 2026. Founder decisions that day: test with about 10 families before any public launch; the families are in Taiwan, the parents on LINE, in Traditional Chinese; payments come later (draft PR #196 waits); the founder accepts the legal risk of starting before counsel's review, as for the Vietnam week, with counsel reviewing in parallel.
 
-## Where things stand
+## Status, 29 October
+
+Decisions that day: start with two or three families, the rest once their first days look clean; Android organisers use LINE only; the founder's own family is family 0 on production before anyone else.
+
+| # | Step | State |
+|---|---|---|
+| 1 | ADR-52 family approval | Merged (#197) |
+| 2 | Notice and consent in Chinese, LINE | Live in production as `privacy-notice.v12` / `consent-script.v7` |
+| 3 | LINE dry run on staging | Script: [`materials/trial/taiwan-dry-run.md`](materials/trial/taiwan-dry-run.md). Needs the founder plus one helper on LINE, 30 Oct – 1 Nov |
+| 4 | App linking over LINE, Chinese when the server allows | Merged (#199); seen on a phone only in the dry run |
+| 5 | 中用量 plan, LINE secrets, group joins on | Founder, on or after 3 Nov |
+| 6 | Production switch-on release | Claude prepares; founder's tag, 3 Nov. Then family 0 |
+| 7 | Invite kit | [`materials/trial/taiwan-first-families.md`](materials/trial/taiwan-first-families.md) |
+
+Also before the first family: the "Not okay" hotfix (#213, merged 29 Oct, needs a production tag); Apple's approval of the TestFlight build for outside testers. First families: Wednesday 4 November at the earliest.
+
+## Where things stood on 25 October
 
 - **Production is a closed English pilot.** `PILOT_ADMISSION=on` admits only Telegram ids on the roster (ADR-42, ADR-45), and every admission check requires `language = 'en'` and a Telegram link (`packages/services/src/pilot-admission.ts`). Capabilities answer `pilot`, `telegram_first` and `english_only`; billing is off, the weekly read is free (`pilotFree`), and the app shows "The pilot is free" with no prices.
 - **LINE is built but off.** Steps 1 to 7 of `architecture/05-line-flows.md` §8 are done: the adapter, services by messenger, the Worker's webhook and inbound queue, and the quota in admin. One LINE parent got her morning on staging on 7 October; the group loop with human replies was never run (step 8). Production has `LINE_CHANNEL=off`, pinned by `wrangler-config.test.ts`.
