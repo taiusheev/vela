@@ -541,8 +541,8 @@ async function acceptConsent(
       memberId: member.id,
       channel: event.channel,
       conversationId: event.conversation.externalId,
-      lang: "en",
-      text: t("en", "pilot.activation_wait"),
+      lang: member.language,
+      text: t(member.language, "pilot.activation_wait"),
     });
     return null;
   }
