@@ -569,12 +569,16 @@ async function createFamily(
       })),
     );
   }
-  const { link } = await insertInvite(
+  const invited = await insertInvite(
     deps,
     tx,
     { familyId: family.id, invitedBy: organiser.id, forMemberId: her.id },
     now,
   );
+  // A family lives on one messenger (05-line-flows D9): an organiser who set up on LINE sends her
+  // the LINE link (§2.4), which opens Vela's LINE chat with her /start typed.
+  const link =
+    event.channel === "line" && invited.lineLink !== null ? invited.lineLink : invited.link;
   const lang = data.organiserLanguage;
   await enqueueOutbound(deps, tx, {
     kind: "onboarding",
