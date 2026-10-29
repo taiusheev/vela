@@ -4,6 +4,7 @@ import {
   answers,
   awayPeriods,
   type ChannelLink,
+  channelLinks,
   chips,
   events,
   exchanges,
@@ -958,6 +959,27 @@ describe("handleAnswerButton", () => {
     ]);
     const flagged = (await eventRows()).filter((event) => event.name === "flag_raised");
     expect(flagged.map((event) => event.props)).toEqual([{ source: "not_okay", told: 1 }]);
+  });
+
+  it("never tells her the family knows when no organiser can be told, and tells the founder it is urgent", async () => {
+    const scene = await morning();
+    const { seed, exchangeId } = scene;
+    await h.db.delete(channelLinks).where(eq(channelLinks.memberId, seed.organiser.id));
+
+    await tapped(scene, { type: "answer", exchangeId, answer: "not_okay" });
+
+    const rows = await outboundRows();
+    expect(
+      rows.filter((row) => row.kind === "flag").map((row) => [row.conversationId, textOf(row)]),
+    ).toEqual([
+      [
+        "9001",
+        expect.stringMatching(/^URGENT: "Not okay" tapped in .*, and no organiser could be told\./),
+      ],
+    ]);
+    expect(rows.filter((row) => row.kind === "ack").map(textOf)).toEqual([
+      "Thank you for telling me, Mrs Chen. I couldn't reach your family through Vela just now, so I've asked Vela's team to contact them. If it's an emergency, call for help directly.",
+    ]);
   });
 
   it("also pushes Not okay to an organiser's phone, in words that name no illness (ADR-57)", async () => {

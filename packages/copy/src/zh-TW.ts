@@ -83,8 +83,9 @@ export const zhTW: Record<keyof typeof en, string> = {
   "ack.story": "謝謝您，{address}。您說的故事已經收進家庭故事書了。",
   "ack.not_okay":
     "謝謝您告訴我，{address}。我已經馬上通知{names}了。如果情況緊急，請直接撥打 119。",
-  "ack.not_okay_family":
-    "謝謝您告訴我，{address}。我現在就通知您的家人。如果情況緊急，請直接撥打 119。",
+  "ack.not_okay_founder":
+    "謝謝您告訴我，{address}。我現在沒辦法透過 Vela 聯絡到您的家人，所以已經請 Vela 團隊幫忙聯絡。如果情況緊急，請直接撥打 119。",
+  "ack.not_okay_family": "謝謝您告訴我，{address}。請打電話給家人；如果情況緊急，請直接撥打 119。",
   "ack.tap_asker": "謝謝您，{address} ❤️ {asker}很想多聽您說一點。有空的時候，傳一段語音好嗎？",
   "ack.tap_question":
     "謝謝您，{address} ❤️ 有空的時候，傳段語音跟家人說說您的想法吧，大家都很想聽。",
@@ -278,6 +279,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "admin.quiet_reminder":
     "{family}的{name}安靜通知已經 2 小時沒有人處理，已再次通知發起人。查看： {link}",
   "admin.not_okay": "{family}有人按了「不太好」。查看： {link}",
+  "admin.not_okay_nobody_told":
+    "緊急：{family}有人按了「不太好」，但沒有任何發起人收到通知。請立刻聯絡這個家庭。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
   "admin.organisers_unreachable":
