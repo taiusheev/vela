@@ -366,6 +366,8 @@ export const en = {
   "admin.not_okay_nobody_told":
     'URGENT: "Not okay" tapped in {family}, and no organiser could be told. Please contact the family now. Open: {link}',
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
+  "admin.family_waiting":
+    "{name} in {family} tapped yes, but the light cannot start yet: approve the family on the trial roster, and check the organiser has had a message from Vela. Then ask {name} to tap yes again. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
   "admin.organisers_unreachable":
     "{name} can no longer be told anything in {family}, and no other organiser can: nobody will hear if a light there goes quiet. Open: {link}",

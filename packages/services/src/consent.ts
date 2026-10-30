@@ -38,6 +38,7 @@ import {
   type VelaTransaction,
 } from "@vela/db";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { familyWaitingAlert } from "./admin-alerts.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
@@ -544,6 +545,8 @@ async function acceptConsent(
       lang: member.language,
       text: t(member.language, "pilot.activation_wait"),
     });
+    const alert = familyWaitingAlert(deps, { her: member, family });
+    if (alert !== null) await enqueueOutbound(deps, tx, alert);
     return null;
   }
   const lang = member.language;

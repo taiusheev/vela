@@ -111,16 +111,23 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
   const command = event.text === undefined ? null : parseParentCommand(event.text);
   const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
   const declines =
-    (action?.type === "consent" ||
+    ((action?.type === "consent" ||
       action?.type === "health_words" ||
       action?.type === "nearby_consent") &&
-    !action.accept;
+      !action.accept) ||
+    (action?.type === "consent_both" && action.choice === "no");
+  // Her yes on the consent request is answered even before the founder approves the family: the
+  // consent flow records nothing then, tells her to wait and tells the founder (ADR-52).
+  const startsLight =
+    (action?.type === "consent" && action.accept) ||
+    (action?.type === "consent_both" && action.choice !== "no");
   const rights =
     event.conversation.kind === "private" &&
     (command === "stop" ||
       command === "what_family_sees" ||
       command === "memories_off" ||
       declines ||
+      startsLight ||
       (event.kind === "button" && /^lr:/.test(event.buttonData ?? "")) ||
       action?.type === "book_drop");
   if (
