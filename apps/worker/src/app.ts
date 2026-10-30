@@ -48,7 +48,7 @@ import { siteAnalyticsApp } from "./site-analytics.ts";
 import {
   canonicalOrigin,
   robotsTxt,
-  sameSiteOrigin,
+  sameSiteWrite,
   securityTxt,
   siteIndexable,
   sitemapXml,
@@ -445,10 +445,8 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    */
   app.post(WAITLIST_PATH, async (c) => {
     const wantsJson = (c.req.header("accept") ?? "").includes("application/json");
-    // A form from another site is refused: browsers name the page a form was sent from, and only
-    // this address and the website's own may post here.
-    const origin = c.req.header("origin");
-    if (origin !== undefined && !sameSiteOrigin(origin, new URL(c.req.url), c.env)) {
+    // A browser write must prove it came from this address or the website's own domain.
+    if (!sameSiteWrite(c.req.raw, c.env)) {
       return c.json({ error: "forbidden" }, 403, { "cache-control": "no-store" });
     }
     if (!(c.req.header("content-type") ?? "").startsWith("application/x-www-form-urlencoded")) {

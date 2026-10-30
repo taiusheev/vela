@@ -2,7 +2,7 @@
 
 import type { SiteLang } from "./site.ts";
 import type { PrivacySection } from "./site-privacy.ts";
-export const LEGAL_ORIGIN = "https://vela.vela-light.workers.dev";
+export const LEGAL_ORIGIN = "https://vela-light.com";
 export const LEGAL_PAGES = ["terms", "security", "data-rights"] as const;
 export type LegalPage = (typeof LEGAL_PAGES)[number];
 export const LEGAL_LABELS: Record<SiteLang, Record<LegalPage, string>> = {
@@ -19,7 +19,7 @@ const EMAIL = "t.aiusheev@gmail.com";
 export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
   en: {
     terms: {
-      lede: "Terms for the Vela website and its free, invitation-only family pilot. Updated 19 October 2026 · service-terms.v1.",
+      lede: "Terms for the Vela website and its free, invitation-only family pilot. Updated 30 October 2026 · service-terms.v2.",
       sections: [
         {
           heading: "Who provides Vela",
@@ -68,7 +68,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     security: {
-      lede: "How Vela protects family information and how to report a concern. Updated 19 October 2026.",
+      lede: "How Vela protects family information and how to report a concern. Updated 30 October 2026.",
       sections: [
         {
           heading: "Access and encryption",
@@ -104,7 +104,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     "data-rights": {
-      lede: "Request access, a copy, correction, restriction, withdrawal or deletion, even without signing in. Updated 19 October 2026.",
+      lede: "Request access, a copy, correction, restriction, withdrawal or deletion, even without signing in. Updated 30 October 2026.",
       sections: [
         {
           heading: "Delete your account in the app",
@@ -127,7 +127,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
         {
           heading: "What happens next",
           paragraphs: [
-            "We verify that the request concerns your information before disclosing or changing it, using only what is necessary. We respond within 15 days, or explain a lawful extension. Requests are free. If records must remain, we explain which ones, why and for how long; partial deletion is not silently treated as complete.",
+            "We verify that the request concerns your information before disclosing or changing it, using only what is necessary. We decide access or copy requests within 15 days, and correction, stopping or deletion requests within 30 days. If the law permits an extension, we explain it in writing. Requests are free. If records must remain, we explain which ones, why and for how long; partial deletion is not silently treated as complete.",
           ],
         },
         {
@@ -147,7 +147,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
   },
   "zh-TW": {
     terms: {
-      lede: "適用於 Vela 網站與免費、邀請制家庭試辦。更新：2026 年 10 月 19 日 · service-terms.v1。",
+      lede: "適用於 Vela 網站與免費、邀請制家庭試辦。更新：2026 年 10 月 30 日 · service-terms.v2。",
       sections: [
         {
           heading: "服務提供者",
@@ -196,7 +196,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     security: {
-      lede: "Vela 如何保護家庭資料與受理通報。更新：2026 年 10 月 19 日。",
+      lede: "Vela 如何保護家庭資料與受理通報。更新：2026 年 10 月 30 日。",
       sections: [
         {
           heading: "存取與加密",
@@ -232,7 +232,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     "data-rights": {
-      lede: "可請求查閱、複製、更正、停止使用、撤回或刪除，無須登入。更新：2026 年 10 月 19 日。",
+      lede: "可請求查閱、複製、更正、停止使用、撤回或刪除，無須登入。更新：2026 年 10 月 30 日。",
       sections: [
         {
           heading: "在 App 刪除帳號",
@@ -255,7 +255,7 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
         {
           heading: "後續處理",
           paragraphs: [
-            "披露或變更前以最少必要資料確認本人。15 日內回覆或說明依法延長。請求免費。若須保留，會說明內容、理由與期間，不把部分刪除當作全部完成。",
+            "披露或變更前以最少必要資料確認本人。查詢、閱覽或複製本請求於 15 日內決定；補充、更正、停止或刪除請求於 30 日內決定。依法延長時，我們會以書面說明理由。請求免費。若須保留，會說明內容、理由與期間，不把部分刪除當作全部完成。",
           ],
         },
         {

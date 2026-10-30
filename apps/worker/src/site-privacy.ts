@@ -30,7 +30,7 @@ const EMAIL = "t.aiusheev@gmail.com";
 export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
   en: {
     title: "Website privacy notice",
-    updated: "Last updated 23 October 2026 · website-usage.v2",
+    updated: "Last updated 30 October 2026 · website-usage.v3",
     lede: "This notice covers the Vela website and its waitlist. It explains what we collect when you visit or join, why, for how long, and what you can ask us to do.",
     sections: [
       {
@@ -42,7 +42,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
       {
         heading: "What we collect",
         items: [
-          "If you join the waitlist: your email address, the language of the page you used, and, if you chose one, who you would set Vela up for.",
+          "If you join the adult waitlist: your email address, the language of the page you used, and, if you chose one, who you would set Vela up for. The waitlist is for people aged 18 or older; do not submit a child’s email address.",
           "When you visit any page: your device sends the usual technical details (such as its internet address and browser type) to our hosting provider, Cloudflare, to deliver the page and protect it from abuse. We do not store them with your email, and we do not use them to identify you.",
           "Optional usage counts are off until you choose Allow counts, when the feature is available. PostHog then receives a random browser identifier, page language, fixed section names, active viewing time, action counts and a broad campaign category. We do not send form contents, email addresses, full URLs, your IP address or family messages to PostHog. There are no recordings or advertising tools. Cloudflare may set a strictly necessary security cookie to stop abuse.",
           "Your choice, its time, notice version and random identifier are saved in this browser's local storage. The notice version is also included with permitted counts. Use Usage privacy to decline or stop future collection. Turning it off clears the identifier here; it does not delete earlier events. Do Not Track and Global Privacy Control prevent optional usage counts. Counts cover only visitors who opt in, not everyone who visits.",
@@ -70,7 +70,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
       {
         heading: "Your rights",
         paragraphs: [
-          `You can ask to see what we hold about you, get a copy, correct it, stop us using it, or have it deleted. Write to ${EMAIL} from the address in question. We answer within 15 days. You can also complain to the data protection authority where you live.`,
+          `You can ask to see what we hold about you, get a copy, correct it, stop us using it, or have it deleted. Write to ${EMAIL} from the address in question. We decide access or copy requests within 15 days, and correction, stopping or deletion requests within 30 days. If the law permits an extension, we explain it in writing. You can also complain to the data protection authority where you live.`,
         ],
       },
       {
@@ -102,7 +102,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
   },
   "zh-TW": {
     title: "網站隱私權告知事項",
-    updated: "最後更新：2026 年 10 月 23 日 · website-usage.v2",
+    updated: "最後更新：2026 年 10 月 30 日 · website-usage.v3",
     lede: "本告知事項適用於 Vela 網站及其等候名單，說明您瀏覽或加入時我們蒐集哪些資料、為什麼、保存多久，以及您可以要求我們做什麼。",
     sections: [
       {
@@ -114,7 +114,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
       {
         heading: "我們蒐集什麼",
         items: [
-          "如果您加入等候名單：您的電子郵件地址、您使用的網頁語言，以及（如果您有選擇）您想為誰設定 Vela。",
+          "如果您加入成人等候名單：您的電子郵件地址、您使用的網頁語言，以及（如果您有選擇）您想為誰設定 Vela。等候名單僅供年滿 18 歲者加入，請勿提交兒童的電子郵件地址。",
           "瀏覽任何網頁時：您的裝置會將一般技術資訊（例如網際網路位址和瀏覽器類型）傳送給我們的主機服務 Cloudflare，用來傳送網頁並防止濫用。我們不會將這些資訊與您的電子郵件一起保存，也不會用來識別您。",
           "選用使用統計預設關閉；功能可用時，只有您選擇允許後才會開始。PostHog 會收到隨機瀏覽器識別碼、網頁語言、固定區塊名稱、主動瀏覽時間、操作次數和概略的活動來源分類。我們不會傳送表單內容、電子郵件、完整網址、您的 IP 位址或家庭訊息。沒有錄影或廣告工具。Cloudflare 可能設定防止濫用所必需的安全 Cookie。",
           "您的選擇、選擇時間、告知事項版本和隨機識別碼儲存在此瀏覽器的本機儲存空間。經您允許傳送的統計也會包含告知事項版本。您可透過「使用情況隱私」拒絕或停止之後的蒐集；關閉會清除此處的識別碼，但不會刪除先前的事件。瀏覽器的 Do Not Track 或 Global Privacy Control 會阻止選用的使用統計。統計只涵蓋選擇允許的訪客。",
@@ -142,7 +142,7 @@ export const WEBSITE_PRIVACY: Readonly<Record<SiteLang, WebsitePrivacy>> = {
       {
         heading: "您的權利",
         paragraphs: [
-          `依個人資料保護法第 3 條，您可以請求查詢或閱覽、製給複製本、補充或更正、停止蒐集、處理或利用，或刪除您的資料。請用該電子郵件地址寫信到 ${EMAIL}，我們會在 15 日內回覆。您也可以向您所在地的個人資料保護主管機關申訴。`,
+          `依個人資料保護法第 3 條，您可以請求查詢或閱覽、製給複製本、補充或更正、停止蒐集、處理或利用，或刪除您的資料。請用該電子郵件地址寫信到 ${EMAIL}。查詢、閱覽或複製本請求於 15 日內決定；補充、更正、停止或刪除請求於 30 日內決定。依法延長時，我們會以書面說明理由。您也可以向您所在地的個人資料保護主管機關申訴。`,
         ],
       },
       {

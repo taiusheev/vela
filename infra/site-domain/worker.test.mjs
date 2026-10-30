@@ -13,6 +13,15 @@ test("website bridge protects nonwebsite paths and preserves www destinations", 
   assert.equal((await worker.fetch(new Request("https://vela-light.com/waitlist", {method:"POST", headers:{origin:"https://other.example"}}))).status, 403);
 });
 
+test("website bridge forces the first visit onto HTTPS and protects its own responses", async () => {
+  const response = await worker.fetch(new Request("http://vela-light.com/zh-TW?ref=launch"));
+  assert.equal(response.status, 301);
+  assert.equal(response.headers.get("location"), "https://vela-light.com/zh-TW?ref=launch");
+  assert.match(response.headers.get("strict-transport-security"), /max-age=31536000/);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+});
+
 test("upstream receives only allowed headers and redirects return to the public domain", async () => {
   const originalFetch = globalThis.fetch;
   try {
@@ -58,7 +67,7 @@ test("production bridge forwards both languages' legal pages and optional analyt
     for (const path of ["/terms", "/security", "/data-rights", "/zh-TW/terms", "/zh-TW/security", "/zh-TW/data-rights", "/analytics/config"]) {
       const result = await worker.fetch(new Request(`https://vela-light.com${path}`));
       assert.equal(result.status, 200);
-      assert.equal(result.headers.get("x-vela-website"), "domain-bridge-v2-production");
+      assert.equal(result.headers.get("x-vela-website"), "domain-bridge-v3-production");
     }
     const result = await worker.fetch(new Request("https://vela-light.com/analytics/event", {
       method: "POST", headers: { origin: "https://vela-light.com", "content-type": "application/json" }, body: "{}",

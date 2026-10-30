@@ -43,7 +43,7 @@ describe("public legal access", () => {
     const worker = createWorker(fake.runtime);
     const env = { ...testEnv, SITE_HOST: "vela-light.com" };
     for (const [path, status, contains] of [
-      ["/.well-known/security.txt", 200, "Policy: https://vela.vela-light.workers.dev/security"],
+      ["/.well-known/security.txt", 200, "Policy: https://vela-light.com/security"],
       ["/sitemap.xml", 200, "https://vela-light.com/website-privacy"],
       ["/v1/me", 404, "not found"],
     ] as const) {
