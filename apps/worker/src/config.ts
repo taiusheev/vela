@@ -563,6 +563,14 @@ export function readSendAsMe(env: { readonly SEND_AS_ME?: string }): boolean {
   return env.SEND_AS_ME === undefined ? false : readOnOff(env.SEND_AS_ME, "SEND_AS_ME");
 }
 
+/**
+ * The var `PHOTO_BOX` (ADR-58): "on" keeps the family's photo box and turns its photos into her free
+ * mornings; absent or "off" does not; anything else is refused.
+ */
+export function readPhotoBox(env: { readonly PHOTO_BOX?: string }): boolean {
+  return env.PHOTO_BOX === undefined ? false : readOnOff(env.PHOTO_BOX, "PHOTO_BOX");
+}
+
 /** The var `CHECK_IN` (ADR-54): "on" or "off"; absent is off; anything else is refused. */
 export function readCheckIn(env: { readonly CHECK_IN?: string }): boolean {
   return env.CHECK_IN === undefined ? false : readOnOff(env.CHECK_IN, "CHECK_IN");
@@ -601,6 +609,7 @@ function readOnOff(
     | "BOOK"
     | "WEEKLY_INSIGHT"
     | "SEND_AS_ME"
+    | "PHOTO_BOX"
     | "CHECK_IN"
     | "RICH_MEMORIES"
     | "MEMORY_DISCOVERY"
@@ -756,6 +765,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
     sendAsMe: readSendAsMe(env),
+    photoBox: readPhotoBox(env),
     checkIn: readCheckIn(env),
     richMemories: readRichMemories(env),
     memoryDiscovery: readMemoryDiscovery(env),

@@ -204,6 +204,11 @@ export interface Config {
    */
   sendAsMe?: boolean;
   /**
+   * Whether Vela turns photos from the family's photo box into her free mornings (ADR-58,
+   * `PHOTO_BOX`). Absent means not; off in production until the privacy notice describes the box.
+   */
+  photoBox?: boolean;
+  /**
    * Whether her morning carries no buttons and an unanswered morning gets the check-in, whose "Not
    * okay" tells her organisers at once (ADR-54, `CHECK_IN`). Absent means not.
    */

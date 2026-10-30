@@ -615,6 +615,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-58: the family's photo box keeps photos beyond 30 days, which the live notice does not yet
+  // describe, so it is on only where test families are. The commit that turns it on changes this.
+  it("keep the family's photo box in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.PHOTO_BOX,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and
   // off in production until the founder has told the family it applies to. The commit that turns it
   // on changes this.

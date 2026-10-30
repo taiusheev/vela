@@ -769,6 +769,8 @@ describe("applyRetention", () => {
     "family_media_deleted",
     "family_translations_deleted",
     "family_ai_call_outputs_cleared",
+    "photo_box_released",
+    "photo_box_moved",
     "media_deleted",
     "media_orphans_deleted",
     "members_deleted",

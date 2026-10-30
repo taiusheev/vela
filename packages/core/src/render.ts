@@ -42,6 +42,12 @@ export type ArrivalAsk =
        * is always two photos (spec §4.4), and the copy says "Tap 1 or 2".
        */
       imageCount: number;
+      /**
+       * Vela's own picture morning from the family's photo box (ADR-58): asked by nobody, so it is
+       * signed by Vela as the fallback hello is, and invites a voice answer the same way. Absent
+       * means an ask from the family.
+       */
+      byVela?: boolean;
     };
 
 export interface RenderArrivalInput {
@@ -149,6 +155,12 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
     lines.push(t(lang, "arrival.photo_choice"));
   } else if (ask.type === "vote") {
     lines.push(t(lang, "arrival.vote"));
+  }
+  if (ask.byVela === true) {
+    if (ask.type !== "photo_choice")
+      lines[lines.length - 1] += ` ${t(lang, "arrival.hello_question")}`;
+    lines.push(t(lang, "arrival.hello_signature"));
+    return lines;
   }
   lines.push(
     ask.onBehalfOf === null

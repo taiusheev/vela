@@ -135,6 +135,13 @@ export const en = {
   "arrival.hello": "How are you this morning?",
   "arrival.hello_signature": "— Vela",
   "arrival.hello_question": "Tell me in a voice message, and I'll pass it on to the family.",
+  "photo_box.look": "A new photo from your family. What does it make you think of?",
+  "photo_box.look_caption":
+    "A new photo from your family: “{caption}”. What does it make you think of?",
+  "photo_box.story": "An old photo from your family. What do you remember about it?",
+  "photo_box.story_caption":
+    "An old photo from your family: “{caption}”. What do you remember about that time?",
+  "photo_box.choice": "Two new photos from your family. Which one do you like more?",
   "arrival.hint": "A voice message is the nicest reply. Busy? Tap ❤️.",
   "arrival.hint_words": "Reply with a voice message, or write a few words.",
   "checkin.text": "Hi {address}, just checking in. How are you today?",

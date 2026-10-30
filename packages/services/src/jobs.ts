@@ -89,6 +89,7 @@ import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
 import { sweepInboundMediaOrphans } from "./media-orphans.ts";
 import { deleteContact } from "./nearby-consent.ts";
+import { keepBoxPhotosStored, releaseBoxPhotosOfLeavers } from "./photo-box.ts";
 import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
@@ -1235,6 +1236,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   counts.family_media_deleted = familyMedia;
   counts.family_translations_deleted = familyTranslationsDeleted;
   counts.family_ai_call_outputs_cleared = familyAiOutputsCleared;
+
+  // The photo box (ADR-58): photos whose adder left go now, and the rest leave `asks/`.
+  counts.photo_box_released = await releaseBoxPhotosOfLeavers(deps, now);
+  counts.photo_box_moved = await keepBoxPhotosStored(deps);
 
   const expired = await db
     .select()

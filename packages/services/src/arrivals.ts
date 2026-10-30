@@ -51,6 +51,7 @@ import {
 import { storedCopyOf } from "./media-copy.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
+import { isVelaPictureMorning, takePictureMorning } from "./photo-box.ts";
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
   channelLinkOfMember,
@@ -143,7 +144,10 @@ export async function prepareDay(deps: Deps, memberId: string, date: LocalDate):
       "exchangeId" in selection
         ? candidates.find((candidate) => candidate.id === selection.exchangeId)
         : undefined;
-    const exchange = await settle(tx, member, date, chosen, now, deps.config.sendAsMe === true);
+    const exchange = await settle(tx, member, date, chosen, now, {
+      sendAsMe: deps.config.sendAsMe === true,
+      photoBox: deps.config.photoBox === true,
+    });
     await recordEvent(
       tx,
       {
@@ -209,7 +213,7 @@ async function settle(
   date: LocalDate,
   chosen: Exchange | undefined,
   now: Date,
-  sendAsMe: boolean,
+  switches: { sendAsMe: boolean; photoBox: boolean },
 ): Promise<Exchange> {
   if (chosen !== undefined) {
     const [row] = await tx
@@ -222,10 +226,14 @@ async function settle(
     }
     return row;
   }
+  // Nobody asked, and it is one of her picture mornings: Vela shows her a photo from the family's
+  // photo box, signed by Vela (ADR-58). The family's photos come before Vela's own drafts.
+  const picture = switches.photoBox ? await takePictureMorning(tx, member, date, now) : null;
+  if (picture !== null) return picture;
   // Nobody asked, and the organiser her row names chose to have Vela's suggestion sent in their
   // name: their own-voice draft goes as their ask, signed by them, and marked as Vela's draft for
   // the family's view (first test, 16 Oct 2026).
-  const signed = sendAsMe ? await takeSignedSuggestion(tx, member, date, now) : null;
+  const signed = switches.sendAsMe ? await takeSignedSuggestion(tx, member, date, now) : null;
   if (signed !== null) {
     const [ask] = await tx
       .insert(exchanges)
@@ -535,6 +543,7 @@ export async function loadAsk(
       text: exchange.text,
       voteOptions: type === "vote" && options.success ? (options.data.vote_options ?? []) : [],
       imageCount: attached.filter((file) => file.kind === "image").length,
+      byVela: isVelaPictureMorning(exchange),
     },
     media: attached,
   };

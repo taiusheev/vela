@@ -623,6 +623,8 @@ describe("the runtime staging's API app runs on", () => {
       english_only: true,
       memory: false,
       book: true,
+      // Staging keeps the photo box on (ADR-58); production's pin is in wrangler-config.test.ts.
+      photo_box: true,
       parent_app: false,
       billing: false,
     });

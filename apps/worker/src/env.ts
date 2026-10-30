@@ -136,6 +136,12 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly SEND_AS_ME?: string;
   /**
+   * `PHOTO_BOX` (ADR-58): "on" keeps the family's photo box and turns its photos into her free
+   * mornings. Absent or "off" does not. On in development and staging, off in production until the
+   * privacy notice describes the box; pinned in src/wrangler-config.test.ts.
+   */
+  readonly PHOTO_BOX?: string;
+  /**
    * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
    * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.
    */

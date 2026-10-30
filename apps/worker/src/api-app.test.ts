@@ -25,6 +25,7 @@ import {
   MemberChangeRefusedError,
   NearbyInviteRefusedError,
   NearbyRefusedError,
+  PhotoBoxRefusedError,
   QuietUsefulRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
@@ -318,6 +319,9 @@ function fixture(
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
+    loadApiPhotoBox: vi
+      .fn<ApiReadServices["loadApiPhotoBox"]>()
+      .mockResolvedValue({ photos: [], limit: 40 }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiPlannedQuestions: vi.fn().mockResolvedValue({ questions: [] }),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
@@ -471,6 +475,10 @@ function fixture(
         .mockRejectedValue(new Error("no voice upload in these tests")),
       createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      addToApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      changeApiPhotoBoxPhoto: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      removeFromApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      keepBoxPhotoStored: vi.fn().mockResolvedValue(true),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
@@ -561,6 +569,7 @@ describe("pilot capabilities and secure Telegram linking", () => {
     english_only: true,
     memory: false,
     book: false,
+    photo_box: false,
     parent_app: false,
     billing: false,
   };
@@ -3716,5 +3725,145 @@ describe("individual notification controls wiring", () => {
       "request-1",
       { turn_reminders: false },
     );
+  });
+});
+
+describe("the photo box (ADR-58)", () => {
+  const BOX_PATH = `/v1/families/${FAMILY_ID}/photo-box`;
+  const BOX_ID = "44444444-4444-7444-8444-444444444444";
+  const MEDIA_ID = "55555555-5555-7555-8555-555555555555";
+  const PHOTO = {
+    id: BOX_ID,
+    media_id: MEDIA_ID,
+    era: "old",
+    caption: "Our first flat",
+    width: 640,
+    height: 480,
+    added_by_name: "Mia",
+    can_change: true,
+    last_used_on: null,
+  } as const;
+  const boxOn = {
+    capabilities: {
+      pilot: false,
+      telegram_first: false,
+      english_only: false,
+      memory: false,
+      book: false,
+      photo_box: true,
+      parent_app: true,
+      billing: true,
+    },
+  };
+  const ADD = JSON.stringify({ media_id: MEDIA_ID, era: "old", caption: "Our first flat" });
+  const auth = { authorization: "Bearer good" };
+
+  it("is absent where the box is off, before any database or service", async () => {
+    const f = fixture(true);
+    expect((await f.app.request(BOX_PATH, { headers: auth })).status).toBe(404);
+    expect((await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth))).status).toBe(404);
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
+        .status,
+    ).toBe(404);
+    expect(f.services.loadApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.writes.services.addToApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("answers the box to a member of the family", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.services.loadApiPhotoBox.mockResolvedValue({ photos: [PHOTO], limit: 40 });
+    await expectResponse(await f.app.request(BOX_PATH, { headers: auth }), 200, {
+      photos: [PHOTO],
+      limit: 40,
+    });
+    expect(f.services.loadApiPhotoBox).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID);
+  });
+
+  it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {
+    const f = fixture(true, undefined, boxOn);
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind });
+    expect((await f.app.request(BOX_PATH, { headers: auth })).status).toBe(
+      kind === "not_found" ? 404 : 403,
+    );
+    expect(f.services.loadApiPhotoBox).not.toHaveBeenCalled();
+  });
+
+  it("adds a photo, answering 201", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.addToApiPhotoBox.mockResolvedValue({
+      response: { status: 201, body: PHOTO },
+      replayed: false,
+    });
+    const response = await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth));
+    await expectResponse(response, 201, PHOTO);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(f.writes.services.addToApiPhotoBox).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      { media_id: MEDIA_ID, era: "old", caption: "Our first flat" },
+    );
+  });
+
+  it("refuses a body the contract does not allow before the service", async () => {
+    const f = fixture(true, undefined, boxOn);
+    const tooLong = JSON.stringify({ media_id: MEDIA_ID, era: "new", caption: "x".repeat(141) });
+    expect((await f.app.request(writeRequest("POST", BOX_PATH, tooLong, auth))).status).toBe(400);
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}`, "{}", auth))).status,
+    ).toBe(400);
+    expect(f.writes.services.addToApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.writes.services.changeApiPhotoBoxPhoto).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["photo_missing", 404, "not_found", "That photo is no longer here."],
+    ["in_box", 409, "conflict", "That photo is already in the photo box."],
+    ["box_full", 409, "conflict", "The photo box is full."],
+  ] as const)("answers a %s refusal with %i", async (reason, status, code, message) => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.addToApiPhotoBox.mockRejectedValue(new PhotoBoxRefusedError(reason));
+    await expectResponse(await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth)), status, {
+      error: { code, message, details: { reason } },
+    });
+    expect(f.logger.error).not.toHaveBeenCalled();
+  });
+
+  it("changes and removes a photo by its id", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.changeApiPhotoBoxPhoto.mockResolvedValue({
+      response: { status: 200, body: { ...PHOTO, caption: null } },
+      replayed: false,
+    });
+    f.writes.services.removeFromApiPhotoBox.mockResolvedValue({
+      response: { status: 200, body: { id: BOX_ID, removed: true } },
+      replayed: true,
+    });
+    await expectResponse(
+      await f.app.request(
+        writeRequest("POST", `/v1/photo-box/${BOX_ID}`, JSON.stringify({ caption: null }), auth),
+      ),
+      200,
+      { ...PHOTO, caption: null },
+    );
+    const removed = await f.app.request(
+      writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth),
+    );
+    await expectResponse(removed, 200, { id: BOX_ID, removed: true });
+    expect(removed.headers.get("idempotency-replayed")).toBe("true");
+  });
+
+  it("answers 404 for a photo the caller may not change", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.removeFromApiPhotoBox.mockRejectedValue(
+      new VelaError("not_found", "Photo not found"),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
+        .status,
+    ).toBe(404);
   });
 });

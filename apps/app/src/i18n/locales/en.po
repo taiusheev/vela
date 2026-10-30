@@ -92,6 +92,10 @@ msgstr "{count} of 4 panes lit · {chapterName}"
 msgid "{count} of the next 14 mornings"
 msgstr "{count} of the next 14 mornings"
 
+#: app/photo-box.tsx
+msgid "{count} of these photos could not be used."
+msgstr "{count} of these photos could not be used."
+
 #: app/ask.tsx
 msgid "{day} morning"
 msgstr "{day} morning"
@@ -139,6 +143,10 @@ msgstr "{giver} sent a hug"
 #: src/components/chat/chat-bubble.tsx
 msgid "{giver} sent a laugh"
 msgstr "{giver} sent a laugh"
+
+#: app/photo-box.tsx
+msgid "{held} of {limit} photos · Vela sees only the photos you choose."
+msgstr "{held} of {limit} photos · Vela sees only the photos you choose."
 
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
@@ -741,6 +749,14 @@ msgstr "Across Vela"
 msgid "Add"
 msgstr "Add"
 
+#: app/photo-box.tsx
+msgid "Add {waiting} photos"
+msgstr "Add {waiting} photos"
+
+#: app/photo-box.tsx
+msgid "Add 1 photo"
+msgstr "Add 1 photo"
+
 #: app/ask.tsx
 msgid "Add a photo"
 msgstr "Add a photo"
@@ -758,6 +774,10 @@ msgstr "Add a voice hello (10 seconds)"
 msgid "Add an option"
 msgstr "Add an option"
 
+#: app/photo-box.tsx
+msgid "Add from Photos"
+msgstr "Add from Photos"
+
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
 msgstr "Add one more"
@@ -765,6 +785,10 @@ msgstr "Add one more"
 #: src/components/parent-photo-settings.tsx
 msgid "Add photo"
 msgstr "Add photo"
+
+#: app/photo-box.tsx
+msgid "Add photos once. On a morning nobody writes for, about twice a week, Vela sends {name} one of them with a short question. Old photos ask for the story behind them."
+msgstr "Add photos once. On a morning nobody writes for, about twice a week, Vela sends {name} one of them with a short question. Old photos ask for the story behind them."
 
 #: src/components/onboarding/questions.tsx
 msgid "Add someone (up to two)"
@@ -774,6 +798,11 @@ msgstr "Add someone (up to two)"
 msgid "Add them"
 msgstr "Add them"
 
+#: app/photo-box.tsx
+msgid "Added by {added}"
+msgstr "Added by {added}"
+
+#: app/photo-box.tsx
 #: src/components/nearby-editor.tsx
 msgid "Adding…"
 msgstr "Adding…"
@@ -902,6 +931,10 @@ msgstr "Anyone"
 #: app/weekly-report.tsx
 msgid "Approve this offer for {count} days"
 msgstr "Approve this offer for {count} days"
+
+#: app/photo-box.tsx
+msgid "Are these photos new or old?"
+msgstr "Are these photos new or old?"
 
 #: src/components/reminders.tsx
 #: src/components/today-glance.tsx
@@ -1071,6 +1104,7 @@ msgstr "Call Mom"
 msgid "Canada"
 msgstr "Canada"
 
+#: app/photo-box.tsx
 #: src/components/back-button.tsx
 msgid "Cancel"
 msgstr "Cancel"
@@ -1207,6 +1241,7 @@ msgstr "Choose your country, type your number as you would at home, and we text 
 msgid "Chosen · choose another"
 msgstr "Chosen · choose another"
 
+#: app/photo-box.tsx
 #: app/sign-in.tsx
 #: src/components/chat/action-sheet.tsx
 #: src/components/quiet-notice.tsx
@@ -1422,6 +1457,10 @@ msgstr "Done"
 #: src/data/useNearby.ts
 msgid "downstairs"
 msgstr "downstairs"
+
+#: app/photo-box.tsx
+msgid "e.g. Lily at the beach"
+msgstr "e.g. Lily at the beach"
 
 #: src/components/onboarding/plan.tsx
 msgid "Each goes to {name} signed “— {you}”, one a morning, unless someone in the family writes that day. Take out any you would not send."
@@ -2022,6 +2061,10 @@ msgstr "Is {name} away?"
 msgid "Is there anything that would make this week easier for you? Big or small, just tell me."
 msgstr "Is there anything that would make this week easier for you? Big or small, just tell me."
 
+#: app/photo-box.tsx
+msgid "Is this photo new or old?"
+msgstr "Is this photo new or old?"
+
 #: src/components/onboarding/finish.tsx
 msgid "It comes from you, in {app}, so {name} knows it’s really you."
 msgstr "It comes from you, in {app}, so {name} knows it’s really you."
@@ -2095,6 +2138,7 @@ msgstr "Join a plan Dad mentioned"
 msgid "Kazakhstan"
 msgstr "Kazakhstan"
 
+#: app/photo-box.tsx
 #: src/components/family-book.tsx
 msgid "Keep it"
 msgstr "Keep it"
@@ -2207,6 +2251,10 @@ msgstr "Language"
 msgid "Last confirmed update"
 msgstr "Last confirmed update"
 
+#: app/photo-box.tsx
+msgid "Last shown {shownOn}"
+msgstr "Last shown {shownOn}"
+
 #: src/data/memories.ts
 msgid "last summer's tomatoes"
 msgstr "last summer's tomatoes"
@@ -2238,6 +2286,10 @@ msgstr "Leave the family"
 #: src/data/useNearby.ts
 msgid "Leave the number out. Vela asks them for it, with their yes."
 msgstr "Leave the number out. Vela asks them for it, with their yes."
+
+#: app/photo-box.tsx
+msgid "Leave this one out"
+msgstr "Leave this one out"
 
 #: app/settings.tsx
 msgid "Leaving…"
@@ -2320,6 +2372,10 @@ msgstr "Loading pilot setup…"
 #: src/components/nearby-editor.tsx
 msgid "Loading the people nearby…"
 msgstr "Loading the people nearby…"
+
+#: app/photo-box.tsx
+msgid "Loading the photo box…"
+msgstr "Loading the photo box…"
 
 #: app/precision.tsx
 msgid "Loading the quiet notices…"
@@ -2452,6 +2508,7 @@ msgstr "Mia"
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/nearby.tsx
+#: app/photo-box.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/onboarding/story.tsx
@@ -2581,6 +2638,14 @@ msgstr "Netherlands"
 msgid "Never known"
 msgstr "Never known"
 
+#: app/photo-box.tsx
+msgid "New"
+msgstr "New"
+
+#: app/photo-box.tsx
+msgid "New photo"
+msgstr "New photo"
+
 #: src/auth/phone.ts
 msgid "New Zealand"
 msgstr "New Zealand"
@@ -2617,6 +2682,10 @@ msgstr "No number here: Vela asks them for it, with their yes."
 #: src/components/onboarding/questions.tsx
 msgid "No photo on this phone"
 msgstr "No photo on this phone"
+
+#: app/photo-box.tsx
+msgid "No photos yet. A grandchild's new drawing, a day out, or an old family photo all make a good morning."
+msgstr "No photos yet. A grandchild's new drawing, a day out, or an old family photo all make a good morning."
 
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
@@ -2694,6 +2763,10 @@ msgstr "Not okay"
 #: src/components/onboarding/finish.tsx
 msgid "Not saved yet"
 msgstr "Not saved yet"
+
+#: app/photo-box.tsx
+msgid "Not shown yet"
+msgstr "Not shown yet"
 
 #: app/conversation.tsx
 msgid "Not sure where to start? Tap one to put it in the box."
@@ -2799,6 +2872,14 @@ msgstr "Offer practical help"
 msgid "Offer some company"
 msgstr "Offer some company"
 
+#: app/photo-box.tsx
+msgid "Old"
+msgstr "Old"
+
+#: app/photo-box.tsx
+msgid "Old photo"
+msgstr "Old photo"
+
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
 msgstr "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -2838,6 +2919,10 @@ msgstr "One email, one code, no password. Then {savingFor}’s invitation is rea
 #: app/sign-in.tsx
 msgid "One email, one code. No password to remember."
 msgstr "One email, one code. No password to remember."
+
+#: app/photo-box.tsx
+msgid "One line about it"
+msgstr "One line about it"
 
 #: src/components/onboarding/story.tsx
 msgid "One message from you"
@@ -3033,6 +3118,11 @@ msgstr "Photo"
 msgid "Photo {number}"
 msgstr "Photo {number}"
 
+#: app/(tabs)/you.tsx
+#: app/photo-box.tsx
+msgid "Photo box"
+msgstr "Photo box"
+
 #: src/components/family-photo.tsx
 msgid "Photo in the family group"
 msgstr "Photo in the family group"
@@ -3049,6 +3139,10 @@ msgstr "Photos are not switched on here yet."
 #: app/conversation.tsx
 msgid "Photos for her morning"
 msgstr "Photos for her morning"
+
+#: app/(tabs)/you.tsx
+msgid "Photos Vela shows her on free mornings"
+msgstr "Photos Vela shows her on free mornings"
 
 #: src/components/weekly-support.tsx
 msgid "Pick one to send {name}. You can change the words first."
@@ -3407,6 +3501,10 @@ msgstr "Said yes"
 msgid "Sam"
 msgstr "Sam"
 
+#: app/photo-box.tsx
+msgid "Save"
+msgstr "Save"
+
 #: src/components/onboarding/plan.tsx
 msgid "Save {name}’s mornings"
 msgstr "Save {name}’s mornings"
@@ -3720,6 +3818,10 @@ msgstr "Show {name}’s initials for now."
 msgid "Show test sign-in details"
 msgstr "Show test sign-in details"
 
+#: app/photo-box.tsx
+msgid "Shown to her"
+msgstr "Shown to her"
+
 #: src/components/keepsake.tsx
 msgid "Shows all of it"
 msgstr "Shows all of it"
@@ -3800,6 +3902,10 @@ msgstr "So every message sounds like your family, not like an app."
 #: src/components/onboarding/questions.tsx
 msgid "So Vela can make answering easy for {name}, the way {name} likes."
 msgstr "So Vela can make answering easy for {name}, the way {name} likes."
+
+#: app/photo-box.tsx
+msgid "Some photos did not go in. Check your connection and try again."
+msgstr "Some photos did not go in. Check your connection and try again."
 
 #. who the light is for
 #: src/data/onboarding.ts
@@ -3936,6 +4042,10 @@ msgstr "Take it out"
 msgid "Take out “{ask}”"
 msgstr "Take out “{ask}”"
 
+#: app/photo-box.tsx
+msgid "Take out of the box"
+msgstr "Take out of the box"
+
 #: src/components/family-book.tsx
 msgid "Take this page out of the book"
 msgstr "Take this page out of the book"
@@ -3943,6 +4053,10 @@ msgstr "Take this page out of the book"
 #: src/components/family-book.tsx
 msgid "Take this page out of the family book?"
 msgstr "Take this page out of the family book?"
+
+#: app/photo-box.tsx
+msgid "Take this photo out? It is deleted within a day."
+msgstr "Take this photo out? It is deleted within a day."
 
 #: src/components/chat/chat-link.tsx
 #: src/components/today-glance.tsx
@@ -3980,6 +4094,10 @@ msgstr "That action did not go through. Try again, or contact the person directl
 #: app/(tabs)/index.tsx
 msgid "That change did not go through. Try again."
 msgstr "That change did not go through. Try again."
+
+#: app/photo-box.tsx
+msgid "That change did not save. Try again."
+msgstr "That change did not save. Try again."
 
 #: app/sign-in.tsx
 msgid "That code did not work. Check it or resend the code below."
@@ -4067,6 +4185,10 @@ msgstr "That exchange is not here."
 msgid "That heart could not be sent just now. Tap to try again."
 msgstr "That heart could not be sent just now. Tap to try again."
 
+#: app/photo-box.tsx
+msgid "That is enough photos for today. Try the rest tomorrow."
+msgstr "That is enough photos for today. Try the rest tomorrow."
+
 #: src/components/legal-links.tsx
 msgid "That link could not open. Contact {SUPPORT_EMAIL}."
 msgstr "That link could not open. Contact {SUPPORT_EMAIL}."
@@ -4106,6 +4228,10 @@ msgstr "That photo did not go up. Try again."
 #: src/components/photo-slots.tsx
 msgid "That photo is no longer here. Choose it again."
 msgstr "That photo is no longer here. Choose it again."
+
+#: app/photo-box.tsx
+msgid "That photo is still in the box. Try again."
+msgstr "That photo is still in the box. Try again."
 
 #: app/my-memories.tsx
 msgid "That question was no longer current. Nothing was recorded."
@@ -4257,6 +4383,10 @@ msgstr "The people nearby could not be reached just now."
 #: app/(tabs)/questions.tsx
 msgid "The person who wrote this question can change it."
 msgstr "The person who wrote this question can change it."
+
+#: app/photo-box.tsx
+msgid "The photo box is full. Take a photo out to make room."
+msgstr "The photo box is full. Take a photo out to make room."
 
 #: src/components/parent-photo-settings.tsx
 msgid "The photo could not be changed. Your previous photo is still here. Try again."
@@ -4639,6 +4769,7 @@ msgstr "Trouble signing in?"
 #: app/my-memories.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
+#: app/photo-box.tsx
 #: app/precision.tsx
 #: app/settings.tsx
 #: app/vela-light.tsx
@@ -4858,6 +4989,10 @@ msgstr "Vela needs the microphone for a voice reply. You can allow it in Setting
 #: app/vela-light.tsx
 msgid "Vela pilot"
 msgstr "Vela pilot"
+
+#: app/photo-box.tsx
+msgid "Vela puts these words in her question, as you wrote them."
+msgstr "Vela puts these words in her question, as you wrote them."
 
 #: src/components/service-status.tsx
 msgid "Vela reports a service problem. Messages may be delayed."
@@ -5187,6 +5322,14 @@ msgstr "Who is this for?"
 msgid "Who lives close to {name}?"
 msgstr "Who lives close to {name}?"
 
+#: app/photo-box.tsx
+msgid "Who or where? e.g. Our first flat"
+msgstr "Who or where? e.g. Our first flat"
+
+#: app/photo-box.tsx
+msgid "Whoever added this photo, or an organiser, can change it."
+msgstr "Whoever added this photo, or an organiser, can change it."
+
 #: src/components/weekly-read-card.tsx
 msgid "Why: it grows from {name}'s answer on {day}."
 msgstr "Why: it grows from {name}'s answer on {day}."
@@ -5270,6 +5413,10 @@ msgstr "Yellow chrysanthemums on the balcony make the whole morning feel warm."
 #: app/(tabs)/questions.tsx
 msgid "Yes, remove question"
 msgstr "Yes, remove question"
+
+#: app/photo-box.tsx
+msgid "Yes, take it out"
+msgstr "Yes, take it out"
 
 #: src/components/set-up-phone.tsx
 msgid "Yes, this is {name}'s phone"
