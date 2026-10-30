@@ -54,6 +54,43 @@ export function adminLink(config: Pick<Config, "publicBaseUrl">, familyId: strin
   return `${config.publicBaseUrl.replace(/\/+$/, "")}${familyPagePath(familyId)}`;
 }
 
+/** The `{link}` where the founder approves families (ADR-52): the trial roster. */
+export function adminRosterLink(config: Pick<Config, "publicBaseUrl">): string {
+  return `${config.publicBaseUrl.replace(/\/+$/, "")}${ADMIN_OVERVIEW_PATH}/roster`;
+}
+
+/**
+ * Someone tapped yes before her light could start (ADR-52): the family is not approved yet, or no
+ * organiser has had a message. The founder hears it once per person, with her name, the family's
+ * name and the roster, nothing she said; her buttons stay, so her next tap counts.
+ */
+export function familyWaitingAlert(
+  deps: Pick<Deps, "config">,
+  input: { her: Member; family: Family },
+): OutboundRequest | null {
+  const admin = deps.config.adminConversationId;
+  if (admin === null) {
+    return null;
+  }
+  const { her, family } = input;
+  return {
+    kind: "system",
+    idempotencyKey: outboundKey("system", {
+      conversationId: admin,
+      suffix: `family_waiting:${her.id}`,
+    }),
+    memberId: her.id,
+    channel: ADMIN_CHANNEL,
+    conversationId: admin,
+    lang: ADMIN_LANG,
+    text: t(ADMIN_LANG, "admin.family_waiting", {
+      name: her.displayName,
+      family: family.name,
+      link: adminRosterLink(deps.config),
+    }),
+  };
+}
+
 /** The `{link}` in an admin message about no family, such as LINE's quota: the overview. */
 export function adminOverviewLink(config: Config): string {
   return `${config.publicBaseUrl.replace(/\/+$/, "")}${ADMIN_OVERVIEW_PATH}`;

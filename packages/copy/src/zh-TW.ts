@@ -282,6 +282,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "admin.not_okay_nobody_told":
     "緊急：{family}有人按了「不太好」，但沒有任何發起人收到通知。請立刻聯絡這個家庭。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
+  "admin.family_waiting":
+    "{family}的{name}按了同意，但燈還不能亮：請在試用名單核准這個家庭，並確認發起人收過 Vela 的訊息。然後請{name}再按一次同意。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
   "admin.organisers_unreachable":
     "{family}已經無法再通知{name}，也沒有其他發起人能收到通知：那裡有人安靜下來時，不會有人知道。查看： {link}",

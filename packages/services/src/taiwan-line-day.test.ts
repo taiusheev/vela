@@ -261,9 +261,46 @@ describe("a Taiwan family on LINE, in Chinese, with family approval on", () => {
     await inbound(tapLast(HER, t("zh-TW", "consent.both")));
     const mom = await her();
     expect(mom.lightOn).not.toBe(true);
+    // Only the wait reply reaches her, so nothing she did is lost in silence.
+    expect(lastTo(HER).message.text).toBe(t("zh-TW", "pilot.activation_wait"));
 
     const toHer = h.line.sentTo(HER).length;
     await runSchedulerUntil(mom.id, at("2026-09-16", "12:00"));
     expect(h.line.sentTo(HER)).toHaveLength(toHer);
+  });
+
+  it("answers Mom's early yes, tells the founder once, and counts her next tap after approval", async () => {
+    const token = await organiserSetsUp();
+    const [invite] = await h.db.select().from(invites);
+    if (invite === undefined) throw new Error("no invite");
+    await inbound(privately(HER, { kind: "start", startParam: token }));
+    const request = tapLast(HER, t("zh-TW", "consent.both"));
+
+    // The organiser sent the link before the founder's click: she taps yes, twice.
+    await inbound(request);
+    await inbound({ ...request, eventId: "line:again", callbackId: "cb-again" });
+    expect((await her()).lightOn).not.toBe(true);
+    expect(lastTo(HER).message.text).toBe(t("zh-TW", "pilot.activation_wait"));
+    const told = h.telegram
+      .sentTo(FOUNDER)
+      .filter((sent) => sent.message.text.includes("/admin/roster"));
+    expect(told).toHaveLength(1);
+    expect(told[0]?.message.text).toContain("媽媽");
+    expect(told[0]?.message.text).toContain("tapped yes");
+
+    // The founder approves; the same buttons are still there, and her next tap starts her light.
+    await approveFamily(h.deps, { admin: "founder@vela-light.com" }, invite.familyId);
+    (h.deps.config as Settable).pilotAdmission = await admissionWithRoster(h.db, BASE);
+    await inbound({ ...request, eventId: "line:after", callbackId: "cb-after" });
+    expect((await her()).lightOn).toBe(true);
+  });
+
+  it("lets Mom say no thanks before the founder approves the family", async () => {
+    const token = await organiserSetsUp();
+    await inbound(privately(HER, { kind: "start", startParam: token }));
+    await inbound(tapLast(HER, t("zh-TW", "consent.no")));
+    const left = await h.db.select().from(members).where(eq(members.role, "member"));
+    expect(left.every((row) => row.leftAt !== null || row.status !== "invited")).toBe(true);
+    expect(lastTo(HER).message.text).not.toBe(t("zh-TW", "pilot.activation_wait"));
   });
 });
