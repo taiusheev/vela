@@ -1639,8 +1639,9 @@ describe("the wrangler files", () => {
           `vela-outbound-${environment}`,
           `vela-media-${environment}`,
           `vela-understand-${environment}`,
-          // Staging's LINE is on since 6 October 2026, so its inbound queue is among them.
-          ...(environment === "staging" ? ["vela-inbound-staging"] : []),
+          // LINE is on in both (staging since 6 October 2026, production for the Taiwan test), so
+          // each inbound queue is among them.
+          `vela-inbound-${environment}`,
           `vela-dead-letter-${environment}`,
         ],
         pilotOrigin: `https://vela.${SUBDOMAINS[environment]}.workers.dev`,
@@ -1769,9 +1770,9 @@ describe("the wrangler files", () => {
 
   // Both are off until the staging loop (05 §8, step 8), and production is pinned off by
   // src/wrangler-config.test.ts; the commit that turns staging on changes this with the files.
-  it("give each environment's LINE_CHANNEL as the real files set it: on in staging, off in production", () => {
+  it("give each environment's LINE_CHANNEL as the real files set it: on in staging and production", () => {
     expect(readEnvironmentConfig(wranglerTexts(), "staging").lineChannel).toBe("on");
-    expect(readEnvironmentConfig(wranglerTexts(), "production").lineChannel).toBe("off");
+    expect(readEnvironmentConfig(wranglerTexts(), "production").lineChannel).toBe("on");
   });
 
   it.each(["on", "off"] as const)(

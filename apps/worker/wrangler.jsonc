@@ -455,7 +455,9 @@
         "producers": [
           { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" },
           { "binding": "MEDIA_QUEUE", "queue": "vela-media-production" },
-          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" }
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" },
+          // LINE on for the Taiwan test (ADR-52): the founder created vela-inbound-production first.
+          { "binding": "INBOUND_QUEUE", "queue": "vela-inbound-production" }
         ],
         "consumers": [
           {
@@ -480,6 +482,15 @@
             "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          // As vela-inbound in development: LINE's answers retried up to T_quiet's cap (05 §5.10).
+          {
+            "queue": "vela-inbound-production",
+            "max_batch_size": 10,
+            "max_batch_timeout": 1,
+            "max_retries": 64,
+            "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-production"
           },
           // Jobs that failed every retry are kept, sealed, for the founder (technical plan 2.7). Five
@@ -518,19 +529,20 @@
         "MEDIA_STORAGE": "r2",
         // Invitation-only English trial. Missing private roster refuses family work.
         "PILOT_ADMISSION": "on",
-        // ADR-52: off, and pinned off by src/wrangler-config.test.ts, until privacy-notice v10
-        // (LINE, Chinese) is the live notice: then the founder approves whole families on the admin
-        // page, on Telegram or LINE, in the languages PILOT_LANGUAGES lists.
-        "PILOT_FAMILY_APPROVAL": "off",
-        "PILOT_LANGUAGES": "en",
+        // ADR-52, on for the Taiwan test (founder, 29 October 2026; privacy-notice v12 names LINE
+        // and Chinese): the founder approves whole families on the admin page, on Telegram or LINE,
+        // in English or Traditional Chinese. The Telegram roster keeps working beside it.
+        "PILOT_FAMILY_APPROVAL": "on",
+        "PILOT_LANGUAGES": "en,zh-TW",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
         // pilot Worker at setup. Privacy notice v3 names Clerk.
         "API_V1": "on",
         "CLERK_ISSUER": "https://clerk.vela-light.com",
-        // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
-        // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
-        "LINE_CHANNEL": "off",
+        // On for the Taiwan test (05 §8, step 11): the "Vela Light" Official Account, its channel
+        // secret and access token and MEDIA_URL_SECRET on this Worker, vela-inbound-production created.
+        "LINE_CHANNEL": "on",
+        "LINE_BOT_BASIC_ID": "@675nhrpg",
         "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev",
         // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
         // push before a privacy notice names Expo, Apple and Google (ADR-34).

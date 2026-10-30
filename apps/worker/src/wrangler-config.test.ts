@@ -33,12 +33,12 @@ it("requires the private English trial roster in production", () => {
   expect(configOf("pilot", "production").vars.PILOT_ADMISSION).toBe("on");
 });
 
-// ADR-52: production stays the English Telegram trial until notice v10 (LINE, Chinese) is the live
-// notice and the founder says yes. The commit that turns either on changes this.
-it("keeps production in English, without family approval, until the Taiwan test's notice is live", () => {
+// ADR-52: the Taiwan test (founder, 29 October 2026) admits approved families in English or
+// Traditional Chinese; privacy-notice v12, the live notice, names LINE and Chinese.
+it("admits families the founder approves, in English or Chinese, in production", () => {
   const vars = configOf("pilot", "production").vars;
-  expect(vars.PILOT_FAMILY_APPROVAL).toBe("off");
-  expect(vars.PILOT_LANGUAGES).toBe("en");
+  expect(vars.PILOT_FAMILY_APPROVAL).toBe("on");
+  expect(vars.PILOT_LANGUAGES).toBe("en,zh-TW");
 });
 
 /**
@@ -372,11 +372,12 @@ describe("the two Workers' configurations", () => {
     },
   );
 
-  // Production speaks LINE only once the design's last step turns it on (05 §8, step 11): a real
-  // family's plan, the privacy notice's new version, and LY's terms first. That step changes this.
-  it("keep LINE off in production, in both Workers", () => {
-    expect(configOf("pilot", "production").vars.LINE_CHANNEL).toBe("off");
-    expect(configOf("admin", "production").vars.LINE_CHANNEL).toBe("off");
+  // The design's last step (05 §8, step 11), for the Taiwan test: production speaks LINE as the
+  // "Vela Light" Official Account, whose webhook is the production pilot Worker.
+  it("turn LINE on in production, in both Workers, as Vela Light", () => {
+    expect(configOf("pilot", "production").vars.LINE_CHANNEL).toBe("on");
+    expect(configOf("admin", "production").vars.LINE_CHANNEL).toBe("on");
+    expect(configOf("pilot", "production").vars.LINE_BOT_BASIC_ID).toBe("@675nhrpg");
   });
 
   // A LINE invite link from either Worker must open the account whose webhook the pilot serves;
