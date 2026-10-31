@@ -12,7 +12,7 @@ const env = {
 const app = siteAnalyticsApp();
 const payload = {
   id: "11111111-1111-4111-8111-111111111111",
-  noticeVersion: "website-usage.v2",
+  noticeVersion: "website-usage.v3",
   event: "section_viewed",
   section: "hero",
   language: "en",
@@ -42,7 +42,7 @@ describe("optional website analytics", () => {
       ).toBe(200);
       expect(
         await (await app.request("http://localhost:8787/analytics/config", {}, bindings)).json(),
-      ).toEqual({ enabled: false, region: null, noticeVersion: "website-usage.v2" });
+      ).toEqual({ enabled: false, region: null, noticeVersion: "website-usage.v3" });
       expect((await send(payload, bindings)).status).toBe(404);
     }
     expect(fetch).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("optional website analytics", () => {
       properties: {
         section: "hero",
         language: "en",
-        noticeVersion: "website-usage.v2",
+        noticeVersion: "website-usage.v3",
         surface: "website",
         environment: "development",
         $process_person_profile: false,

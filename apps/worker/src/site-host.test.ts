@@ -65,7 +65,10 @@ describe("the website's own address", () => {
     const form = await send(
       new Request("https://vela-light.com/waitlist", {
         method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          origin: "https://vela-light.com",
+        },
         body: new URLSearchParams({ email: "a@b.co", lang: "en" }),
       }),
     );
@@ -74,6 +77,29 @@ describe("the website's own address", () => {
     expect(form.response.status).toBe(303);
     expect(namesOf(form.fake.calls)).toEqual(["joinWaitlist"]);
     expect(privacy.response.status).toBe(200);
+  });
+
+  it("requires a trusted browser source for waitlist writes outside development", async () => {
+    const form = () =>
+      new Request("https://vela-light.com/waitlist", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ email: "a@b.co", lang: "en" }),
+      });
+    const missing = await send(form());
+    const referred = form();
+    referred.headers.set("referer", "https://vela-light.com/zh-TW");
+    const trusted = await send(referred);
+    const crossSite = form();
+    crossSite.headers.set("origin", "https://vela-light.com");
+    crossSite.headers.set("sec-fetch-site", "cross-site");
+    const refused = await send(crossSite);
+
+    expect(missing.response.status).toBe(403);
+    expect(trusted.response.status).toBe(303);
+    expect(refused.response.status).toBe(403);
+    expect(namesOf(missing.fake.calls)).toEqual([]);
+    expect(namesOf(refused.fake.calls)).toEqual([]);
   });
 
   it("leaves every other address as it was when no site host is set", async () => {
@@ -93,5 +119,18 @@ describe("the website's own address", () => {
     expect(other).toBe("User-agent: *\nDisallow: /\n");
     expect(map).toContain("<loc>https://vela-light.com/zh-TW/how-vela-is-doing</loc>");
     expect(map.match(/<url>/g)).toHaveLength(6);
+  });
+
+  it("keeps the production workers.dev address out of search engines", async () => {
+    const production = { ...public_, ENVIRONMENT: "production" as const };
+    const page = await (
+      await send("https://vela.vela-light.workers.dev/", production)
+    ).response.text();
+    const robots = await (
+      await send("https://vela.vela-light.workers.dev/robots.txt", production)
+    ).response.text();
+
+    expect(page).toContain('<meta name="robots" content="noindex, nofollow">');
+    expect(robots).toBe("User-agent: *\nDisallow: /\n");
   });
 });

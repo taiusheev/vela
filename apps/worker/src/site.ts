@@ -572,7 +572,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: "The exchange is free. The light is there when you need it.",
       free: {
         name: "Free",
-        tag: "For every family member, for ever",
+        tag: "For every family member during the pilot",
         items: [
           "Daily questions and answers",
           "Morning read-back for her",
@@ -637,7 +637,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         other: "Just curious",
       },
       submit: "Join the waitlist",
-      fine: `We use your email only to tell you when Vela opens. To be removed, write to ${SUPPORT_EMAIL}.`,
+      fine: `For adults 18+. We use your email only to tell you when Vela opens. Do not submit a child’s email. To be removed, write to ${SUPPORT_EMAIL}.`,
       fineLink: "How we handle it",
       joined: "You’re on the list. We’ll write when your family can start.",
       badEmail: "That email doesn’t look right. Please check it and try again.",
@@ -673,7 +673,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         ],
         [
           "What does it cost?",
-          "The daily exchange is free for every family member, for ever. Vela Light, with quiet notes, nearby people and the weekly read, starts with 30 days free and no card. Pricing is announced at launch.",
+          "The daily exchange is free for every family member during the pilot. Vela Light, with quiet notes, nearby people and the weekly read, starts with 30 days free and no card. Any future pricing will be shown before you choose it.",
         ],
         [
           "Who runs Vela?",
@@ -1154,7 +1154,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
       title: "交流是免費的。需要的時候，燈一直在。",
       free: {
         name: "免費",
-        tag: "每位家人，永久免費",
+        tag: "試辦期間每位家人免費",
         items: [
           "每天的提問和回答",
           "給她的早晨回顧",
@@ -1219,7 +1219,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         other: "只是好奇",
       },
       submit: "加入等候名單",
-      fine: `您的電子郵件只會用來通知您 Vela 開放的消息。如需移除，請寫信到 ${SUPPORT_EMAIL}。`,
+      fine: `限年滿 18 歲者。您的電子郵件只會用來通知您 Vela 開放的消息，請勿提交兒童的電子郵件。如需移除，請寫信到 ${SUPPORT_EMAIL}。`,
       fineLink: "我們如何處理",
       joined: "您已加入名單。等您的家人可以開始時，我們會寫信給您。",
       badEmail: "這個電子郵件看起來不太對，請檢查後再試一次。",
@@ -1255,7 +1255,7 @@ const COPY: Readonly<Record<SiteLang, SiteCopy>> = {
         ],
         [
           "要多少錢？",
-          "每日交流對每位家人永久免費。Vela Light 包含安靜通知、附近的人和每週回顧，可先免費試用 30 天，不需信用卡。價格會在正式推出時公布。",
+          "試辦期間，每位家人的每日交流皆為免費。Vela Light 包含安靜通知、附近的人和每週回顧，可先免費試用 30 天，不需信用卡。任何未來價格都會在您選擇前清楚顯示。",
         ],
         [
           "Vela 是誰經營的？",

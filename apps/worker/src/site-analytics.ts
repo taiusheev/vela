@@ -5,7 +5,7 @@ import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { sameSiteOrigin } from "./site-host.ts";
 
-const NOTICE_VERSION = "website-usage.v2";
+const NOTICE_VERSION = "website-usage.v3";
 
 const input = z
   .object({

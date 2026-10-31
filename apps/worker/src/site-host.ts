@@ -54,12 +54,13 @@ export function publicHostAnswer(
   return null;
 }
 
-/** Whether a page may be indexed: production, or the site's own public address. */
+/** Whether a page may be indexed: only the site's own public address when one is configured. */
 export function siteIndexable(
   env: { readonly ENVIRONMENT: string; readonly SITE_HOST?: string },
   url: URL,
 ): boolean {
-  return env.ENVIRONMENT === "production" || url.hostname.toLowerCase() === siteHostOf(env);
+  const site = siteHostOf(env);
+  return site === null ? env.ENVIRONMENT === "production" : url.hostname.toLowerCase() === site;
 }
 
 /** The origin canonical links name: the site's own address when it has one. */
@@ -98,6 +99,26 @@ export function sameSiteOrigin(
   if (origin === url.origin) return true;
   const site = siteHostOf(env);
   return site !== null && (origin === `https://${site}` || origin === `https://www.${site}`);
+}
+
+/** A browser write must prove that it came from this site. */
+export function sameSiteWrite(
+  request: Request,
+  env: { readonly ENVIRONMENT: string; readonly SITE_HOST?: string },
+): boolean {
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const url = new URL(request.url);
+  const origin = request.headers.get("origin");
+  if (origin !== null) return sameSiteOrigin(origin, url, env);
+  const referer = request.headers.get("referer");
+  if (referer !== null) {
+    try {
+      return sameSiteOrigin(new URL(referer).origin, url, env);
+    } catch {
+      return false;
+    }
+  }
+  return env.ENVIRONMENT === "development";
 }
 
 /** security.txt (RFC 9116): who to write to, valid for a year from the request. */

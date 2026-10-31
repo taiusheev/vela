@@ -400,7 +400,7 @@ describe("the website's privacy notice", () => {
     // The Art. 8 items: who, what, why, how long, where and by whom, rights, and if not given.
     expect(body.match(/<h2>/g)?.length).toBeGreaterThanOrEqual(8);
     expect(body).toContain("t.aiusheev@gmail.com");
-    expect(body).toContain(lang === "en" ? "within 15 days" : "15 日內");
+    expect(body).toContain(lang === "en" ? "within 15 days" : "15 日內決定");
     expect(body).toContain(lang === "en" ? "Singapore" : "新加坡");
     expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
     expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(3);
