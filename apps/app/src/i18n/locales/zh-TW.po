@@ -1193,6 +1193,7 @@ msgstr "更換電子郵件或電話號碼"
 #: app/personal-question.tsx
 msgid "Change starting points"
 msgstr "調整草稿方向"
+
 #: app/(tabs)/you.tsx
 msgid "Change the name your family sees"
 msgstr "更改家人看到的你的名字"

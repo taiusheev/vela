@@ -1192,6 +1192,7 @@ msgstr "Change email or number"
 #: app/personal-question.tsx
 msgid "Change starting points"
 msgstr "Change starting points"
+
 #: app/(tabs)/you.tsx
 msgid "Change the name your family sees"
 msgstr "Change the name your family sees"

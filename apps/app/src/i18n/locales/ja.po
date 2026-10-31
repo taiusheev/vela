@@ -1185,6 +1185,8 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "Change starting points"
+msgstr ""
+
 #: app/(tabs)/you.tsx
 msgid "Change the name your family sees"
 msgstr ""
