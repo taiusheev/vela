@@ -1,13 +1,14 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { FamilyAction, ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { BrandIcon } from "../../src/components/brand/icon.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
 import { Portrait } from "../../src/components/portrait-lamp.tsx";
 import { Text } from "../../src/components/scaled-text.tsx";
 import { ServiceStatus } from "../../src/components/service-status.tsx";
 import { SoftCard, useRoom } from "../../src/components/today-hero.tsx";
-import { Hairline } from "../../src/components/ui.tsx";
+import { Hairline, Words } from "../../src/components/ui.tsx";
 import { RoomCard, WarmPage } from "../../src/components/warm.tsx";
 import type { KeptLightRow } from "../../src/data/family.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
@@ -16,15 +17,19 @@ import { useMyMemories } from "../../src/data/useMyMemories.ts";
 import { photoBoxDemo } from "../../src/data/usePhotoBox.ts";
 import { usePortrait } from "../../src/data/usePortrait.ts";
 import { useToday } from "../../src/data/useToday.ts";
+import { usePalette } from "../../src/theme/theme.tsx";
 import { space, type } from "../../src/theme/tokens.ts";
 
-/** One parent whose light the family keeps: her face, her name, and her plan in one line. */
+/** One parent whose light the family keeps: her face, her name and her plan; tapping opens her page. */
 function KeptLightLine({ familyId, parent }: { familyId: string; parent: KeptLightRow }) {
   const room = useRoom();
   const photo = usePortrait(familyId, parent.memberId);
   return (
-    <View
-      style={{
+    <Pressable
+      accessibilityRole="button"
+      testID={`you-parent-${parent.memberId}`}
+      onPress={() => router.push({ pathname: "/kept-light", params: { member: parent.memberId } })}
+      style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
         gap: space.m,
@@ -33,14 +38,53 @@ function KeptLightLine({ familyId, parent }: { familyId: string; parent: KeptLig
         backgroundColor: room.glass,
         borderWidth: 1,
         borderColor: room.glassRule,
-      }}
+        opacity: pressed ? 0.75 : 1,
+      })}
     >
       <Portrait uri={photo.uri} name={parent.name} width={40} height={40} round />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[type.button, { color: room.ink }]}>{parent.name}</Text>
         <Text style={[type.caption, { fontSize: 13, color: room.muted }]}>{parent.line}</Text>
       </View>
-    </View>
+      <BrandIcon name="chevron" color={room.muted} size={16} strokeWidth={2} />
+    </Pressable>
+  );
+}
+
+/**
+ * The reader first, as a phone's own settings begin: their face and name, tapped to change the
+ * name. It replaces the "Your name · Change" row, so there is one way in and no second profile.
+ */
+function MeLine({ name, line, loading }: { name: string; line: string; loading: boolean }) {
+  const palette = usePalette();
+  const { t } = useLingui();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t`Your name, ${name}`}
+      accessibilityHint={t`Change the name your family sees`}
+      testID="you-name"
+      disabled={loading}
+      onPress={() => router.push("/profile")}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.l,
+        paddingHorizontal: space.xs,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      <Portrait uri={null} name={loading ? "" : name} width={56} height={56} round />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Words variant="heading">{loading ? t`Loading…` : name}</Words>
+        {loading ? null : (
+          <Words variant="caption" tone="ink2">
+            {line}
+          </Words>
+        )}
+      </View>
+      <BrandIcon name="chevron" color={palette.ink3} size={20} />
+    </Pressable>
   );
 }
 
@@ -55,9 +99,10 @@ export default function YouScreen() {
   return (
     <WarmPage>
       <ScreenHeading title={<Trans context="tab">You</Trans>} />
+      <MeLine name={myName} line={family.me.line} loading={loading} />
       <FamilyChooser day={day} />
-      {/* The family is what this tab is about, so it is lit as Today lights her morning. Everything
-          the reader can change sits in the one list under it; there is no second profile page. */}
+      {/* The family is what this tab is about, so it is lit as Today lights her morning. Each parent
+          opens her own page; everything else the reader can change sits in the one list under it. */}
       <RoomCard id="you-family">
         <Text style={[type.label, { letterSpacing: 0, color: room.muted }]}>
           <Trans>Your family</Trans>
@@ -76,21 +121,12 @@ export default function YouScreen() {
       </RoomCard>
       <SoftCard padding={space.s}>
         <View style={{ paddingHorizontal: space.s }}>
-          <FamilyAction
-            icon="you"
-            title={t`Your name`}
-            detail={loading ? undefined : myName}
-            actionLabel={t`Change`}
-            testID="you-name"
-            onPress={() => router.push("/profile")}
-          />
-          <Hairline />
           {memories.available ? (
             <>
               <FamilyAction
                 icon="heart"
                 title={t`Your memories`}
-                detail={t`Little things worth remembering from your own answers`}
+                detail={t`From your own answers`}
                 onPress={() => router.push("/my-memories")}
               />
               <Hairline />
@@ -101,7 +137,7 @@ export default function YouScreen() {
               <FamilyAction
                 icon="photo"
                 title={t`Photo box`}
-                detail={t`Photos Vela shows her on free mornings`}
+                detail={t`Shown on free mornings`}
                 testID="you-photo-box"
                 onPress={() => router.push("/photo-box")}
               />
@@ -111,16 +147,11 @@ export default function YouScreen() {
           <FamilyAction
             icon="settings"
             title={t`Settings`}
-            detail={t`Parents, notifications, language and account`}
+            detail={t`Notifications, language, privacy, account`}
             onPress={() => router.push("/settings")}
           />
           <Hairline />
-          <FamilyAction
-            icon="mail"
-            title={t`Help`}
-            detail={t`Get help with Vela or your family connection`}
-            onPress={() => router.push("/help")}
-          />
+          <FamilyAction icon="mail" title={t`Help`} onPress={() => router.push("/help")} />
         </View>
       </SoftCard>
       <ServiceStatus compact />

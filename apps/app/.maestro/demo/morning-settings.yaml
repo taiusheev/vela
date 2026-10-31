@@ -5,7 +5,8 @@ tags:
 ---
 - launchApp
 - tapOn: "You"
-- tapOn: "Settings"
+- tapOn:
+    id: "you-parent-.*"
 - scrollUntilVisible:
     element: "Change Mom's morning"
     direction: DOWN
@@ -24,4 +25,4 @@ tags:
 - tapOn: "Preview settings"
 - assertVisible: "Example settings previewed."
 - tapOn: "Cancel"
-- assertVisible: "Settings"
+- assertVisible: "Is Mom away\\?"
