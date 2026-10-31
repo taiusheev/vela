@@ -146,7 +146,7 @@ function systemFor(
   input: unknown,
 ): { readonly text: string; readonly version: string } {
   const prompt = promptFor(call, input);
-  if (call === "suggest" && prompt.version === "suggest.personal.v1")
+  if (call === "suggest" && prompt.version.startsWith("suggest.personal."))
     return { text: prompt.system, version: prompt.version };
   const reminder = OPENAI_REMINDERS[call];
   return reminder === undefined

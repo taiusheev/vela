@@ -54,7 +54,7 @@ retrieves parent replies. No setup words or provider output are written to the d
 records retain counters and identifiers only. Quiet time and obvious boundary conflicts call no
 provider. Failed or flagged output yields no draft, never a generic signed substitute.
 
-Reviewed drafting uses `suggest.personal.v1`; existing nightly work continues using `suggest.v5`.
+Reviewed drafting uses `suggest.personal.v2`; existing nightly work continues using `suggest.v5`.
 Explicit boundaries, grounded intent and restrained register precede style matching. Literal guards
 are conservative checks, not proof of semantic safety or authenticity; human review remains required.
 

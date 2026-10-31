@@ -239,13 +239,13 @@
     "input": {
       "lang": "en",
       "holderName": "Leo",
-      "recipientAddress": "Dad",
+      "recipientAddress": "dad",
       "forDate": "2026-11-01",
       "rotationType": "question",
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["dad how is the garden", "any new leaves"],
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
       "personalization": {
         "intent": "How are the tomatoes growing?",
         "connection": "practical",
@@ -279,10 +279,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -293,13 +304,13 @@
     "input": {
       "lang": "en",
       "holderName": "Leo",
-      "recipientAddress": "Dad",
+      "recipientAddress": "dad",
       "forDate": "2026-11-01",
       "rotationType": "question",
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["dad how is the garden", "any new leaves"],
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
       "personalization": {
         "intent": "How are the tomatoes growing?",
         "connection": "reconnecting",
@@ -333,10 +344,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -347,13 +369,13 @@
     "input": {
       "lang": "en",
       "holderName": "Leo",
-      "recipientAddress": "Dad",
+      "recipientAddress": "dad",
       "forDate": "2026-11-01",
       "rotationType": "question",
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["dad how is the garden", "any new leaves"],
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
       "personalization": {
         "intent": "How are the tomatoes growing?",
         "connection": "everyday",
@@ -387,10 +409,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -401,13 +434,13 @@
     "input": {
       "lang": "en",
       "holderName": "Leo",
-      "recipientAddress": "Dad",
+      "recipientAddress": "dad",
       "forDate": "2026-11-01",
       "rotationType": "question",
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["dad how is the garden", "any new leaves"],
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
       "personalization": {
         "intent": "How are the tomatoes growing?",
         "connection": "unsure",
@@ -441,10 +474,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -461,7 +505,7 @@
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["爸 番茄長怎樣", "你那邊有下雨嗎"],
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
       "personalization": {
         "intent": "番茄長得怎樣",
         "connection": "practical",
@@ -495,10 +539,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -515,7 +570,7 @@
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["爸 番茄長怎樣", "你那邊有下雨嗎"],
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
       "personalization": {
         "intent": "番茄長得怎樣",
         "connection": "reconnecting",
@@ -549,10 +604,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -569,7 +635,7 @@
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["爸 番茄長怎樣", "你那邊有下雨嗎"],
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
       "personalization": {
         "intent": "番茄長得怎樣",
         "connection": "everyday",
@@ -603,10 +669,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   },
   {
@@ -623,7 +700,7 @@
       "recentMentions": [],
       "familyDates": [],
       "holderLastAsk": null,
-      "holderWritingExamples": ["爸 番茄長怎樣", "你那邊有下雨嗎"],
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
       "personalization": {
         "intent": "番茄長得怎樣",
         "connection": "unsure",
@@ -657,10 +734,21 @@
         "kind": "notContains",
         "path": "text",
         "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
       }
     ],
     "rubric": [
-      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices."
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
     ]
   }
 ]

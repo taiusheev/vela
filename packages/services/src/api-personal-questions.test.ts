@@ -50,7 +50,7 @@ const good = () => ({
     text: "mom how are the tomatoes growing?",
     source: "rotation" as const,
   },
-  record: { ...fakeRecord("suggest"), promptVersion: "suggest.personal.v1" },
+  record: { ...fakeRecord("suggest"), promptVersion: "suggest.personal.v2" },
 });
 
 describe("request-only personal questions", () => {

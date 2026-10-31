@@ -31,7 +31,7 @@ describe("reviewed personalization provider contract", () => {
     expect(promptFor("suggest", baseline)).toBe(PROMPTS.suggest);
     expect(promptFor("suggest", baseline).version).toBe("suggest.v5");
     expect(promptFor("hello", personal)).toBe(PROMPTS.hello);
-    expect(promptFor("suggest", personal).version).toBe("suggest.personal.v1");
+    expect(promptFor("suggest", personal).version).toBe("suggest.personal.v2");
   });
 
   it("uses the isolated prompt and chosen Chinese register without the old forced 您 reminder", async () => {
@@ -57,7 +57,7 @@ describe("reviewed personalization provider contract", () => {
       personal,
     );
     expect(outcome.ok).toBe(true);
-    expect(outcome.record?.promptVersion).toBe("suggest.personal.v1");
+    expect(outcome.record?.promptVersion).toBe("suggest.personal.v2");
     const body = JSON.parse(requests[0]?.text ?? "{}");
     expect(body.store).toBe(false);
     expect(body.messages[0].content).toContain("not automatically formalize");
