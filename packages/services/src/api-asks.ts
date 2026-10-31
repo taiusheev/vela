@@ -344,7 +344,7 @@ export async function composeApiAsk(
             type,
             state: ask.when === "now" ? "scheduled" : "composed",
             text: ask.text,
-            textLang: asker.language,
+            textLang: ask.text_language ?? asker.language,
             // `arrivals.ts` reads a vote's options from this one key; anything else delivers empty.
             options: ask.vote_options === undefined ? {} : { vote_options: ask.vote_options },
             whenRule: ask.when,
@@ -358,7 +358,7 @@ export async function composeApiAsk(
         if (exchange === undefined) throw new Error("exchange insert returned no row");
         // Authored questions are the newest style evidence. Remove only unused future drafts so
         // the next writer can use those words instead of serving three days of stale drafts.
-        if (ask.suggestion_id === undefined) {
+        if (ask.suggestion_id === undefined && ask.ai_assisted !== true) {
           await tx
             .delete(suggestions)
             .where(
@@ -402,7 +402,7 @@ export async function composeApiAsk(
               source: "app",
               media: ask.media_ids?.length ?? 0,
               queued: false,
-              from_suggestion: fromSuggestion,
+              from_suggestion: fromSuggestion || ask.ai_assisted === true,
             },
           },
           now,

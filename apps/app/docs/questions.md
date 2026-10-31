@@ -37,3 +37,42 @@ from one sample. Prompt wording and automated tests do not establish that parent
 Review still needs real parent feedback on question quality, native Traditional Chinese review,
 and signed-iPhone microphone/keyboard/scheduling verification. Local demos use synthetic families
 only and cannot deliver messages. No production or phone release is part of this change.
+
+## Reviewed personal drafts (31 October 2026, first implementation)
+
+`/personal-question` is a three-step reviewed drafting flow. The Questions entry appears only in
+explicit demo builds or when the server advertises `personal_questions`. Notes are request-only:
+chosen address, current comfort, talking rhythm, the actual question intent, up to two examples
+written by this child to this parent, one avoided topic, and wording the child would never use.
+Changing account, family or parent destroys the form. These choices affect only this draft, not
+standing automatic questions, morning check-ins, or a permanent relationship profile.
+
+The optional `POST /v1/families/:familyId/personal-question-drafts` route uses authenticated,
+rate-limited active sessions and authorizes both before and after provider work. Caller identity is
+read from membership, never accepted from the body. It neither reads another sibling's examples nor
+retrieves parent replies. No setup words or provider output are written to the database; AI usage
+records retain counters and identifiers only. Quiet time and obvious boundary conflicts call no
+provider. Failed or flagged output yields no draft, never a generic signed substitute.
+
+Reviewed drafting uses `suggest.personal.v1`; existing nightly work continues using `suggest.v5`.
+Explicit boundaries, grounded intent and restrained register precede style matching. Literal guards
+are conservative checks, not proof of semantic safety or authenticity; human review remains required.
+
+The child edits the result, explicitly confirms it, then picks an available morning in the existing
+two-week calendar. Composing uses the existing idempotent API with `ai_assisted: true` and
+`text_language`. The saved `ask_composed.from_suggestion` marker excludes these words from independent
+human style evidence, including after editing. Authorship remains child-reviewed; this is not
+unattended sending. Draft notes are not copied into a scheduled question or its options.
+
+`PERSONAL_QUESTION_DRAFTS` is absent/off by default in every deployment configuration. An explicit on
+can configure synthetic development/staging evaluation. Production on is refused until a separately
+reviewed activation change. No provider/model was changed and no live consent or delivery behavior
+was migrated. Demo previews reuse supplied words and are explicitly labeled as examples, with no AI,
+persistence, or sending. They do not establish model quality.
+
+Next gates: run the expanded provider golden set and compare actual outputs; verify native behavior;
+review parent comprehension and independent controls; decide the retained-profile contract and
+retention; then implement relationship-sensitive automatic selection, invalidation and a first-month
+review policy. A persistent profile, independent parent input, and adaptive automatic delivery are
+not implemented by this first reviewed-draft slice. Real-family comfort and long-term benefit remain
+unverified. A family pilot and production activation require their separate approved steps.

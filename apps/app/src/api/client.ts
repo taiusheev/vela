@@ -26,6 +26,7 @@ import type {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPersonalQuestionDraft,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -46,6 +47,7 @@ import type {
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  DraftPersonalQuestion,
   EditAsk,
   KeptMemoryPage,
   MemoryCandidatePage,
@@ -164,6 +166,7 @@ export function fetchMe(token: string | null): Promise<ApiMe> {
 }
 
 export interface ApiCapabilities {
+  personal_questions?: boolean;
   pilot: boolean;
   telegram_first: boolean;
   english_only: boolean;
@@ -226,6 +229,21 @@ export function composeAsk(
     token,
     key,
     body: ask,
+  });
+}
+
+/** A request-only draft: no schedule, signature setting or relationship record is changed. */
+export function draftPersonalQuestion(
+  familyId: string,
+  key: string,
+  input: DraftPersonalQuestion,
+  token: string | null,
+): Promise<ApiPersonalQuestionDraft> {
+  return call<ApiPersonalQuestionDraft>({
+    path: `/v1/families/${familyId}/personal-question-drafts`,
+    token,
+    key,
+    body: input,
   });
 }
 

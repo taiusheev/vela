@@ -50,6 +50,7 @@ import {
   disableApiAccount,
   dismissApiSuggestion,
   dismissMemoryCandidate,
+  draftApiPersonalQuestion,
   editApiAsk,
   endApiAway,
   errorLabel,
@@ -120,8 +121,14 @@ import {
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig, readRichMemories, secret } from "./config.ts";
-import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
+import {
+  type ApiConfig,
+  readApiConfig,
+  readPersonalQuestionDrafts,
+  readRichMemories,
+  secret,
+} from "./config.ts";
+import { createAiPort, createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
 import {
@@ -393,6 +400,15 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
+    ...(readPersonalQuestionDrafts(env, config.environment)
+      ? {
+          personalQuestions: {
+            draft: draftApiPersonalQuestion,
+            ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
+            config: { pilotAdmission: config.pilotAdmission },
+          },
+        }
+      : {}),
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
     // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development

@@ -1,6 +1,6 @@
 import { genericChips, genericWeeklySuggestion } from "./defaults.ts";
 import { MODEL_FOR } from "./models.ts";
-import { PROMPTS } from "./prompts/index.ts";
+import { PROMPTS, promptFor } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -52,7 +52,14 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
       if (override !== undefined) {
         return override(input);
       }
-      return { ok: true, value: fallback(input), record: fakeRecord(call) };
+      return {
+        ok: true,
+        value: fallback(input),
+        record: {
+          ...fakeRecord(call),
+          promptVersion: promptFor(call, input).version,
+        },
+      };
     };
   }
 

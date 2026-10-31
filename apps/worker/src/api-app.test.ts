@@ -1,3 +1,4 @@
+import { createFakeAi } from "@vela/ai";
 import type {
   ApiComposedAsk,
   ApiCreatedFamily,
@@ -293,7 +294,7 @@ function fixture(
   push?: boolean,
   options: Pick<
     ApiRuntime,
-    "admission" | "capabilities" | "parentConnection" | "notificationControls"
+    "admission" | "capabilities" | "parentConnection" | "notificationControls" | "personalQuestions"
   > = {},
 ) {
   const db = database();
@@ -3715,6 +3716,68 @@ describe("individual notification controls wiring", () => {
       IDENTITY,
       "request-1",
       { turn_reminders: false },
+    );
+  });
+});
+
+describe("reviewed personal question route", () => {
+  const path = `/v1/families/${FAMILY_ID}/personal-question-drafts`;
+  const input = {
+    recipient_id: MEMBER_ID,
+    language: "en",
+    address_form: "Mom",
+    context: {
+      intent: "How is the garden?",
+      connection: "practical",
+      talking_rhythm: "rarely",
+      avoid_topics: [],
+      never_say: [],
+    },
+    writing_examples: [],
+  };
+  const request = (body: unknown = input, auth = "good") =>
+    writeRequest("POST", path, JSON.stringify(body), { authorization: `Bearer ${auth}` });
+  function enabled() {
+    const draft = vi
+      .fn<NonNullable<ApiRuntime["personalQuestions"]>["draft"]>()
+      .mockResolvedValue({ state: "review", text: "mom how is the garden?", language: "en" });
+    const personalQuestions = { draft, ai: createFakeAi(), config: {} };
+    return { ...fixture(true, undefined, { personalQuestions }), draft };
+  }
+  it("is absent and unadvertised by default", async () => {
+    const f = fixture(true);
+    expect((await f.app.request(request())).status).toBe(404);
+    expect(await (await f.app.request("/v1/capabilities")).json()).not.toHaveProperty(
+      "personal_questions",
+      true,
+    );
+  });
+  it("requires authentication, input validation, and an active session", async () => {
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(request(input, "bad"))).status).toBe(401);
+    expect((await f.app.request(request({ ...input, author_id: MEMBER_ID }))).status).toBe(400);
+    f.writes.verifyActiveSession.mockResolvedValueOnce(false);
+    expect((await f.app.request(request())).status).toBe(401);
+    expect(f.draft).not.toHaveBeenCalled();
+  });
+  it("returns an uncached review, passes verified identity, and never composes or sends", async () => {
+    const f = enabled();
+    const response = await f.app.request(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ state: "review" });
+    expect(f.draft).toHaveBeenCalledWith(
+      expect.objectContaining({ db: f.db }),
+      IDENTITY,
+      FAMILY_ID,
+      input,
+    );
+    expect(f.writes.services.composeApiAsk).not.toHaveBeenCalled();
+    expect(f.writes.nudges.deliver).not.toHaveBeenCalled();
+    expect(await (await f.app.request("/v1/capabilities")).json()).toHaveProperty(
+      "personal_questions",
+      true,
     );
   });
 });

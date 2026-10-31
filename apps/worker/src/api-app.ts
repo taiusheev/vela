@@ -39,6 +39,7 @@ import {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPersonalQuestionDraft,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -66,6 +67,7 @@ import {
   DeleteAccount,
   DeviceWrite,
   DismissKeepSuggestion,
+  DraftPersonalQuestion,
   EditAsk,
   EndAway,
   FinishReminder,
@@ -148,6 +150,7 @@ import {
   type disableApiAccount,
   type dismissApiSuggestion,
   type dismissMemoryCandidate,
+  type draftApiPersonalQuestion,
   type editApiAsk,
   type endApiAway,
   errorLabel,
@@ -322,6 +325,11 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  personalQuestions?: {
+    draft: typeof draftApiPersonalQuestion;
+    ai: Parameters<typeof draftApiPersonalQuestion>[0]["ai"];
+    config: Parameters<typeof draftApiPersonalQuestion>[0]["config"];
+  };
   weeklySupport?: {
     config: WeeklySupportConfig;
     services: {
@@ -653,8 +661,8 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     c.header("cache-control", "no-store");
     if (c.req.method === "HEAD") return c.json(NOT_FOUND, 404);
     return c.json(
-      ApiCapabilities.parse(
-        runtime.capabilities ?? {
+      ApiCapabilities.parse({
+        ...(runtime.capabilities ?? {
           pilot: false,
           telegram_first: false,
           english_only: false,
@@ -662,8 +670,11 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           book: false,
           parent_app: true,
           billing: true,
-        },
-      ),
+        }),
+        ...(runtime.personalQuestions !== undefined && runtime.writes !== undefined
+          ? { personal_questions: true }
+          : {}),
+      }),
       200,
     );
   });
@@ -1990,6 +2001,38 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             throw new Error("Invalid account link response");
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(ApiLinkOutcome.parse(result.response.body), 200);
+        },
+      );
+    }
+    if (runtime.personalQuestions !== undefined) {
+      const personal = runtime.personalQuestions;
+      app.post(
+        "/v1/families/:familyId/personal-question-drafts",
+        authenticate,
+        validateWrite(DraftPersonalQuestion, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await personal.draft(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              ai: personal.ai,
+              config: {
+                ...personal.config,
+                ...(runtime.admission === undefined
+                  ? {}
+                  : {
+                      pilotAdmission: c.get("pilotAdmission") ?? runtime.admission.config,
+                    }),
+              },
+            },
+            c.get("session"),
+            c.req.param("familyId"),
+            c.get("writeInput"),
+          );
+          c.header("Cache-Control", "no-store");
+          return c.json(ApiPersonalQuestionDraft.parse(result), 200);
         },
       );
     }

@@ -127,6 +127,7 @@ export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-
 export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
+export { draftApiPersonalQuestion } from "./api-personal-questions.ts";
 export {
   loadApiPrecision,
   loadPublicPrecision,
@@ -295,5 +296,4 @@ export {
   type WaitlistLang,
   type WaitlistRole,
 } from "./waitlist.ts";
-
 export * from "./weekly-support-live.ts";

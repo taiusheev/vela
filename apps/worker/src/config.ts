@@ -21,6 +21,22 @@ const ENVIRONMENTS = ["development", "staging", "production"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
 
+/** First phase is development/test only; never activates processing on production. */
+export function readPersonalQuestionDrafts(
+  env: { PERSONAL_QUESTION_DRAFTS?: string },
+  environment: Environment,
+): boolean {
+  const value = env.PERSONAL_QUESTION_DRAFTS?.trim() ?? "off";
+  if (value !== "on" && value !== "off")
+    throw new ConfigError("PERSONAL_QUESTION_DRAFTS", "Use on or off");
+  if (value === "on" && environment === "production")
+    throw new ConfigError(
+      "PERSONAL_QUESTION_DRAFTS",
+      "Reviewed drafting is not approved for production activation",
+    );
+  return value === "on";
+}
+
 /**
  * A configuration a Worker cannot run with. The variable to fix is the error's `code`, because
  * failures are logged through `errorLabel`, which keeps a code and never a message: the log line
