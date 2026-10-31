@@ -460,11 +460,13 @@ it("encrypts audience names and source fingerprints instead of storing report wo
   await permit();
   await source();
   await review();
-  const raw = await h.db.execute<{ audience: string }>(
-    sql`select audience::text as audience from weekly_support_permissions`,
+  const raw = await h.db.execute<{ name: string }>(
+    sql`select audience->0->>'name' as name from weekly_support_permissions`,
   );
-  expect(raw.rows[0]?.audience).not.toContain("Mia");
-  expect(raw.rows[0]?.audience).toContain("v1.");
+  // Ciphertext can contain any short base64 substring; check the sealed field and its round-trip.
+  expect(raw.rows[0]?.name).toMatch(/^v1\./);
+  const [permission] = await h.db.select().from(weeklySupportPermissions);
+  expect(permission?.audience[0]?.name).toBe("Mia");
   const selected = await h.db.execute<{ digest: string }>(
     sql`select source_digest as digest from weekly_support_selections`,
   );

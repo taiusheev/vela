@@ -108,3 +108,8 @@ maestro --device <simulator-id> test -e APP_ID=host.exp.Exponent -e QUESTIONS_UR
 Start the app with `EXPO_PUBLIC_DEMO_MODE=true`, empty API/Clerk variables, and port 8091.
 A native demo build can instead use its own bundle ID and questions deep link. This
 checks simulator navigation, not a signed TestFlight build or live family writes.
+
+`demo/personal-draft.yaml` also checks that one idea can reach a reviewed draft without mandatory
+voice setup, that the calendar follows approval, and that optional quiet preferences prepare no
+question. This remains a synthetic web-flow check; it does not call an AI provider or deliver a
+message. Normal 320/390 px review is separate from Maestro's taller automation viewport.

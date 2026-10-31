@@ -11,6 +11,7 @@ import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { LoadingLight } from "../../src/components/loading-light.tsx";
 import { MorningCalendar } from "../../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
+import { QuestionDisclosure } from "../../src/components/questions/flow.tsx";
 import { SoftCard } from "../../src/components/today-hero.tsx";
 import {
   Eyebrow,
@@ -26,6 +27,7 @@ import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { questionDates } from "../../src/data/question-schedule.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
 import { tomorrowIn } from "../../src/data/story.ts";
+import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { usePlannedQuestions } from "../../src/data/usePlannedQuestions.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { space } from "../../src/theme/tokens.ts";
@@ -33,6 +35,10 @@ import { space } from "../../src/theme/tokens.ts";
 export default function QuestionsScreen() {
   const { t } = useLingui();
   const day = useToday();
+  const capabilities = useCapabilities();
+  const personalDrafts =
+    capabilities.capabilities?.personal_questions === true ||
+    demoDataAllowed(apiConfigured(), accountsConfigured());
   const params = useLocalSearchParams<{ recipient?: string; saved?: string; day?: string }>();
   const schedule = usePlannedQuestions(day.familyId);
   const parent = selectedLight(day.today.lights, params.recipient);
@@ -86,6 +92,19 @@ export default function QuestionsScreen() {
               router.push({ pathname: "/ask", params: { recipient: parent.memberId } })
             }
           />
+          {personalDrafts ? (
+            <QuestionDisclosure
+              title={t`Find your words`}
+              detail={t`Have an idea? Turn it into a question that sounds like you.`}
+              icon="questions"
+              onPress={() =>
+                router.push({
+                  pathname: "/personal-question",
+                  params: { recipient: parent.memberId },
+                })
+              }
+            />
+          ) : null}
           {schedule.isError ? (
             <>
               <Words variant="body" tone="ink2">

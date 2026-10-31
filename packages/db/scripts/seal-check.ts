@@ -78,6 +78,11 @@ async function main(): Promise<void> {
 
     const jsonCandidates = [
       {
+        query: "select data as value from question_profiles where data is not null limit 1",
+        column: "question_profiles.data",
+        policy: undefined,
+      },
+      {
         query:
           "select audience as value from weekly_support_permissions where jsonb_array_length(audience)>0 limit 1",
         column: "weekly_support_permissions.audience",

@@ -358,10 +358,6 @@ msgstr "{name}：{what}，{day}"
 msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr "{name}：{what}。{day}會提醒你問一問。"
 
-#: src/components/onboarding/questions.tsx
-msgid "{name}’s first question"
-msgstr "給{name}的第一個問題"
-
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr "{name}的第一份每週回顧會在星期日到來，回顧一週的晨間訊息。"
@@ -609,6 +605,10 @@ msgstr "有亮點的照片是 Vela 已經傳過的。只有你挑選的照片會
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "與家人再近一點。使用電子郵件註冊或登入。"
 
+#: app/personal-question.tsx
+msgid "A little conversation, ready to begin."
+msgstr "一段小小的對話，準備好了。"
+
 #: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr "家裡傳來的一點光。"
@@ -620,6 +620,14 @@ msgstr "幫忙分擔一點日常瑣事"
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
+
+#: app/personal-question.tsx
+msgid "A message you would write to {name} (optional)"
+msgstr "你會傳給{name}的一句話（選填）"
+
+#: src/components/questions/flow.tsx
+msgid "A morning"
+msgstr "選個早晨"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -649,6 +657,10 @@ msgstr "每位父母的照片"
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
+
+#: src/components/onboarding/questions.tsx
+msgid "A preview for {name}"
+msgstr "給{name}的訊息預覽"
 
 #: src/data/ask.ts
 msgid "A question"
@@ -713,6 +725,10 @@ msgstr "{name}親口說的故事"
 #: src/components/story-day.tsx
 msgid "A story question for {name}'s {day} morning"
 msgstr "給{name}{day}早上的故事問題"
+
+#: app/personal-question.tsx
+msgid "A topic to leave out (optional)"
+msgstr "想避開的話題（選填）"
 
 #: app/conversation.tsx
 msgid "A voice hello for her morning"
@@ -788,6 +804,10 @@ msgstr "加一段語音問候（10 秒）"
 #: src/components/vote-options.tsx
 msgid "Add an option"
 msgstr "新增選項"
+
+#: app/personal-question.tsx
+msgid "Add another example"
+msgstr "再加一句範例"
 
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
@@ -925,6 +945,10 @@ msgstr "那安靜的早晨呢？"
 #: src/data/example-names.ts
 msgid "Anna"
 msgstr "安安"
+
+#: app/personal-question.tsx
+msgid "Another example (optional)"
+msgstr "另一句你會說的話（選填）"
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -1072,6 +1096,10 @@ msgstr "外出中 · 到{day}"
 msgid "Back"
 msgstr "返回"
 
+#: app/personal-question.tsx
+msgid "Back to questions"
+msgstr "回到問題"
+
 #: src/components/today-glance.tsx
 msgid "Be the first to answer {recipient}."
 msgstr "第一個回覆{recipient}吧。"
@@ -1162,6 +1190,10 @@ msgstr "送出前，每個字都可以修改。"
 msgid "Change email or number"
 msgstr "更換電子郵件或電話號碼"
 
+#: app/personal-question.tsx
+msgid "Change starting points"
+msgstr "調整草稿方向"
+
 #: app/(tabs)/you.tsx
 msgid "Change the name your family sees"
 msgstr "更改家人看到的你的名字"
@@ -1178,6 +1210,14 @@ msgstr "再次確認連結"
 #: app/help.tsx
 msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 msgstr "請確認你使用的是加入時的電子郵件地址。如果沒有收到驗證碼，請查看垃圾郵件資料夾，再試一次。"
+
+#: app/personal-question.tsx
+msgid "Check the facts, tone, and topic. Vela can get these wrong."
+msgstr "請確認內容、語氣和話題是否合適，Vela 也可能寫錯。"
+
+#: app/personal-question.tsx
+msgid "Check the length and number of topics or phrases before continuing."
+msgstr "請先確認話題或用語的長度與數量，再繼續。"
 
 #: app/weekly-report.tsx
 msgid "Check this offer"
@@ -1202,6 +1242,10 @@ msgstr "正在檢查 Vela…"
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "確認中…"
+
+#: app/personal-question.tsx
+msgid "Choose a morning."
+msgstr "選個早晨。"
 
 #: app/away.tsx
 msgid "Choose a parent in Settings before changing away dates."
@@ -1484,6 +1528,14 @@ msgstr "完成"
 msgid "downstairs"
 msgstr "樓下鄰居"
 
+#: app/personal-question.tsx
+msgid "Drafting can begin once this person has agreed and their light is on."
+msgstr "等對方同意加入、開啟晨間問候後，就能準備草稿。"
+
+#: app/personal-question.tsx
+msgid "Drafting is off here. Your saved choices are still yours to view or forget."
+msgstr "這裡目前不提供草稿功能。你仍可查看或刪除已儲存的設定。"
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr "例如：Lily 在海邊"
@@ -1512,6 +1564,10 @@ msgstr "之前的一週"
 msgid "Earlier weeks"
 msgstr "之前的每週小記"
 
+#: app/personal-question.tsx
+msgid "Ease back into talking"
+msgstr "慢慢重新聊起來"
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -1529,6 +1585,10 @@ msgstr "編輯問題"
 #: app/(tabs)/questions.tsx
 msgid "Edit question or day"
 msgstr "修改問題或日期"
+
+#: app/personal-question.tsx
+msgid "Edit your question"
+msgstr "修改問題"
 
 #: app/sign-in.tsx
 msgid "Email"
@@ -1566,6 +1626,10 @@ msgstr "每天的早安訊息都從這個稱呼開始。"
 msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 msgstr "以下每項提議都經過家庭聯絡人確認。收到提議的人自行決定是否有幫助，不會自動傳送訊息。"
 
+#: app/personal-question.tsx
+msgid "Everyday conversation"
+msgstr "聊聊日常"
+
 #: src/components/today-glance.tsx
 msgid "Everyone's light is on today"
 msgstr "今天每個人的燈都亮著"
@@ -1578,6 +1642,10 @@ msgstr "這裡的內容會一直保存，直到發起人把它拿出來，或在
 msgid "Example · heart sent"
 msgstr "示範 · 愛心已送出"
 
+#: app/personal-question.tsx
+msgid "Example complete. Nothing was saved or sent."
+msgstr "範例已完成，沒有儲存或傳送任何內容。"
+
 #: app/weekly-support-preview.tsx
 msgid "Example controls"
 msgstr "範例操作"
@@ -1585,6 +1653,10 @@ msgstr "範例操作"
 #: src/components/onboarding/story.tsx
 msgid "Example morning"
 msgstr "範例早晨"
+
+#: app/personal-question.tsx
+msgid "Example only. No AI or messages. Saved choices stay in this open example."
+msgstr "這是範例，不會使用 AI 或傳送訊息。設定只在這個範例開啟時保留。"
 
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
@@ -1651,9 +1723,17 @@ msgstr "找一則回憶來保存"
 msgid "Find my family"
 msgstr "找到我的家人"
 
+#: app/(tabs)/questions.tsx
+msgid "Find your words"
+msgstr "找找適合你的說法"
+
 #: src/data/precision.ts
 msgid "Fine, the family knew"
 msgstr "沒事，家人知道原因"
+
+#: app/personal-question.tsx
+msgid "Finish example"
+msgstr "結束範例"
 
 #: src/components/onboarding/questions.tsx
 msgid "First morning · {time}"
@@ -1678,6 +1758,14 @@ msgstr "早安訊息"
 #: app/vela-light.tsx
 msgid "For one parent. Each extra parent adds half the price."
 msgstr "以一位長輩計算。每多一位長輩，加收一半價格。"
+
+#: app/personal-question.tsx
+msgid "Forget saved choices"
+msgstr "刪除已儲存的設定"
+
+#: app/personal-question.tsx
+msgid "Forgetting clears these choices. Questions you already approved stay in your schedule."
+msgstr "刪除後，這些設定會被清除。你已確認的問題仍會保留在安排中。"
 
 #: src/auth/phone.ts
 msgid "France"
@@ -1789,6 +1877,10 @@ msgstr "阿公"
 #: src/data/useNearby.ts
 msgid "Has not said yes yet"
 msgstr "還沒有同意"
+
+#: app/(tabs)/questions.tsx
+msgid "Have an idea? Turn it into a question that sounds like you."
+msgstr "有個想法嗎？一起寫成你平常會問的一句話。"
 
 #: src/data/onboarding.ts
 msgid "Hawaii"
@@ -1908,13 +2000,13 @@ msgstr "{what}還順利嗎？"
 msgid "How does {name} like to reply?"
 msgstr "{name}喜歡怎麼回覆？"
 
-#: src/components/onboarding/questions.tsx
-msgid "How it reaches {name}"
-msgstr "{name}收到的樣子"
-
 #: app/weekly-report.tsx
 msgid "How long will this offer still be relevant?"
 msgstr "這項提議在多久以內仍然合適？"
+
+#: app/personal-question.tsx
+msgid "How often do you usually talk?"
+msgstr "你們平常多久聊一次？"
 
 #: app/vela-light.tsx
 msgid "How the 30 days work"
@@ -2179,6 +2271,10 @@ msgstr "哈薩克"
 msgid "Keep it"
 msgstr "留著"
 
+#: app/personal-question.tsx
+msgid "Keep it practical"
+msgstr "聊生活上的事就好"
+
 #: app/ask.tsx
 msgid "Keep it short, like a message you would send yourself."
 msgstr "簡短就好，就像你平常會傳的訊息。"
@@ -2283,6 +2379,10 @@ msgstr "{name}一答應，你就會知道。"
 msgid "Language"
 msgstr "語言"
 
+#: app/personal-question.tsx
+msgid "Language of this question"
+msgstr "這個問題使用的語言"
+
 #: src/components/today-glance.tsx
 msgid "Last confirmed update"
 msgstr "上次確認的狀態"
@@ -2307,9 +2407,17 @@ msgstr "離開"
 msgid "Leave {familyName}?"
 msgstr "要離開{familyName}嗎？"
 
+#: app/personal-question.tsx
+msgid "Leave a little room."
+msgstr "留一點空間。"
+
 #: app/my-memories.tsx
 msgid "Leave out"
 msgstr "略過"
+
+#: app/personal-question.tsx
+msgid "Leave room for now"
+msgstr "先留點空間"
 
 #: app/settings.tsx
 msgid "Leave the family"
@@ -2441,6 +2549,10 @@ msgstr "正在載入你家庭的方案…"
 msgid "Loading your notification preference…"
 msgstr "正在載入通知偏好設定…"
 
+#: app/personal-question.tsx
+msgid "Loading your private choices…"
+msgstr "正在載入你的私人設定…"
+
 #: app/(tabs)/questions.tsx
 msgid "Loading your schedule…"
 msgstr "正在載入安排…"
@@ -2466,6 +2578,14 @@ msgstr "期待的事"
 msgid "Make it mine"
 msgstr "改成我的說法"
 
+#: app/personal-question.tsx
+msgid "Make it sound like you"
+msgstr "用你平常的語氣"
+
+#: app/personal-question.tsx
+msgid "Make it yours."
+msgstr "改成你會說的話。"
+
 #: app/weekly-report.tsx
 msgid "Make time for an interest"
 msgstr "留點時間聊聊興趣"
@@ -2481,6 +2601,10 @@ msgstr "手作與修補"
 #: src/auth/phone.ts
 msgid "Malaysia"
 msgstr "馬來西亞"
+
+#: app/personal-question.tsx
+msgid "Manage saved choices"
+msgstr "管理已儲存的設定"
 
 #: src/components/photo-box.tsx
 msgid "Mark them all"
@@ -2689,9 +2813,17 @@ msgstr "下一步"
 msgid "Next free morning"
 msgstr "下一個空的早上"
 
+#: app/personal-question.tsx
+msgid "Next: choose a morning"
+msgstr "下一步：選個早晨"
+
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
 msgstr "媽媽今天還沒回覆。"
+
+#: app/personal-question.tsx
+msgid "No draft was kept. Try a different topic or write your own question."
+msgstr "這次沒有留下草稿。可以換個話題，或自己寫個問題。"
 
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
@@ -2712,6 +2844,10 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 #: src/components/onboarding/questions.tsx
 msgid "No photo on this phone"
 msgstr "這支手機上沒有照片"
+
+#: app/personal-question.tsx
+msgid "No question is needed right now. Your existing morning settings stay as they are."
+msgstr "現在不一定要問問題。原本的晨間問候設定會維持不變。"
 
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
@@ -2798,6 +2934,7 @@ msgstr "還沒傳出"
 msgid "Not sure where to start? Tap one to put it in the box."
 msgstr "不知道從哪裡開始？點一句放進輸入框。"
 
+#: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Not sure yet"
 msgstr "還不確定"
@@ -2902,6 +3039,10 @@ msgstr "問問需要什麼幫忙"
 msgid "Offer some company"
 msgstr "問問是否想有人陪伴"
 
+#: app/personal-question.tsx
+msgid "Often"
+msgstr "經常"
+
 #: src/components/photo-box.tsx
 msgid "Old"
 msgstr "老照片"
@@ -2971,6 +3112,18 @@ msgstr "你的一則訊息"
 msgid "One moment…"
 msgstr "請稍等…"
 
+#: app/personal-question.tsx
+msgid "One ordinary thing you would love to hear about."
+msgstr "一件你想聽對方說說的日常小事。"
+
+#: app/personal-question.tsx
+msgid "One phrase per line, up to 3 phrases of 60 characters each."
+msgstr "每行填一個用語，最多 3 個，每個不超過 60 字。"
+
+#: app/personal-question.tsx
+msgid "One topic per line, up to 5 topics of 40 characters each."
+msgstr "每行填一個話題，最多 5 個，每個不超過 40 字。"
+
 #: src/components/telegram-family-link.tsx
 msgid "Only confirm a request you just started from your own Vela app."
 msgstr "請只確認你剛從自己的 Vela 應用程式發起的要求。"
@@ -2978,6 +3131,10 @@ msgstr "請只確認你剛從自己的 Vela 應用程式發起的要求。"
 #: src/components/parent-photo-settings.tsx
 msgid "Only on this device. Removed when you sign out."
 msgstr "照片只留在這部裝置，登出時會移除。"
+
+#: app/personal-question.tsx
+msgid "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
+msgstr "只有你看得到你為這位長輩填寫的設定。儲存後，你的訊息範例、相處方式、聯絡頻率及話題界線會保留 30 天。這次想問的問題不會儲存在這裡。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open {messenger} again"
@@ -3066,6 +3223,10 @@ msgstr "打開照片，可以修改或拿出"
 msgid "Option {number}"
 msgstr "選項 {number}"
 
+#: app/personal-question.tsx
+msgid "Optional · your tone, usual wording, and topics to leave out"
+msgstr "選填・你的語氣、慣用說法，以及想避開的話題"
+
 #: src/components/calling-number-editor.tsx
 msgid "Optional calling number · {name}"
 msgstr "電話號碼（可不填）·{name}"
@@ -3133,6 +3294,10 @@ msgstr "附近的聯絡人"
 #: app/weekly-report.tsx
 msgid "People who can read this report"
 msgstr "可以閱讀這份報告的人"
+
+#: app/personal-question.tsx
+msgid "Personal drafts are not available here yet."
+msgstr "目前還無法在這裡準備個人化草稿。"
 
 #: src/data/onboarding.ts
 msgid "Perth"
@@ -3239,9 +3404,17 @@ msgstr "播放速度{rate}倍"
 msgid "Please contact {attentionName} now"
 msgstr "請現在聯絡{attentionName}"
 
+#: app/personal-question.tsx
+msgid "Prepare a draft"
+msgstr "準備草稿"
+
 #: app/(tabs)/questions.tsx
 msgid "Preparing for delivery. This question can no longer be changed."
 msgstr "正在準備傳送，這個問題已無法修改。"
+
+#: app/personal-question.tsx
+msgid "Preparing your draft…"
+msgstr "正在準備草稿…"
 
 #: app/settings.tsx
 msgid "Preview family setup"
@@ -3314,6 +3487,10 @@ msgstr "比較安靜"
 msgid "Quiet days covered, signed by you"
 msgstr "沒人寫的日子也有訊息，署名是你"
 
+#: app/personal-question.tsx
+msgid "Rarely"
+msgstr "很少"
+
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr "看家庭故事書"
@@ -3380,7 +3557,12 @@ msgstr "親戚"
 msgid "Reload report"
 msgstr "重新載入報告"
 
+#: app/personal-question.tsx
+msgid "Reload saved choices"
+msgstr "重新載入已儲存的設定"
+
 #: app/(tabs)/questions.tsx
+#: app/personal-question.tsx
 msgid "Reload schedule"
 msgstr "重新載入安排"
 
@@ -3589,6 +3771,18 @@ msgstr "儲存名字"
 msgid "Save question"
 msgstr "儲存問題"
 
+#: app/personal-question.tsx
+msgid "Save these choices for 30 days"
+msgstr "將這些設定儲存 30 天"
+
+#: app/personal-question.tsx
+msgid "Save this question"
+msgstr "儲存這個問題"
+
+#: app/personal-question.tsx
+msgid "Saved until {expiresOn}. Opening or using it does not extend this date."
+msgstr "保留至{expiresOn}。開啟或使用這些設定不會延長期限。"
+
 #: app/conversation.tsx
 msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "已儲存。第一則等待中的訊息會在{name}同意的那一刻送到，其餘的會跟著早安訊息送出。"
@@ -3600,6 +3794,18 @@ msgstr "已儲存。從現在起，家人會看到「{name}」。"
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
 msgstr "保存中"
+
+#: app/personal-question.tsx
+msgid "Saving choices…"
+msgstr "正在儲存設定…"
+
+#: app/personal-question.tsx
+msgid "Saving new choices is off. You can still view or forget your saved choices."
+msgstr "目前無法儲存新設定。你仍可查看或刪除已儲存的設定。"
+
+#: app/personal-question.tsx
+msgid "Saving was not confirmed. Keep this screen open and try again."
+msgstr "還無法確認是否已儲存。請先保持這個畫面開啟，再試一次。"
 
 #: src/components/app-privacy.tsx
 msgid "Saving your choice…"
@@ -3613,6 +3819,7 @@ msgstr "正在儲存你的偏好設定…"
 #: app/ask.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/personal-question.tsx
 #: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
@@ -3967,6 +4174,10 @@ msgstr "讓 Vela 用{name}喜歡的方式，讓回覆變得簡單。"
 msgid "Some photos did not go in. Check your connection and try again."
 msgstr "有些照片沒有加入成功。請檢查網路連線，再試一次。"
 
+#: app/personal-question.tsx
+msgid "Some space for now"
+msgstr "暫時留點空間"
+
 #. who the light is for
 #: src/data/onboarding.ts
 msgid "Someone else"
@@ -3988,6 +4199,10 @@ msgstr "給{name}早晨的東西"
 msgid "Something for her morning"
 msgstr "放進早安訊息"
 
+#: app/personal-question.tsx
+msgid "Something from their day, or a little thing on your mind…"
+msgstr "對方今天的日常，或一件你想問的小事…"
+
 #: src/data/precision.ts
 msgid "Something was wrong"
 msgstr "確實出了狀況"
@@ -3995,6 +4210,10 @@ msgstr "確實出了狀況"
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "{notices}則中有{wrong}則真的有狀況。"
+
+#: app/personal-question.tsx
+msgid "Sometimes"
+msgstr "偶爾"
 
 #: src/auth/phone.ts
 msgid "South Korea"
@@ -4011,6 +4230,10 @@ msgstr "用一張照片開始{name}的早上"
 #: app/vela-light.tsx
 msgid "Start 30 free days"
 msgstr "開始 30 天免費試用"
+
+#: src/components/onboarding/questions.tsx
+msgid "Start a conversation with {name}."
+msgstr "從一句話，和{name}聊起來。"
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
@@ -4031,6 +4254,10 @@ msgstr "正在開啟…"
 #: app/settings.tsx
 msgid "Stay"
 msgstr "留下"
+
+#: src/components/questions/flow.tsx
+msgid "Step {step} of 3"
+msgstr "第{step}步，共 3 步"
 
 #: src/data/precision.ts
 msgid "Still open"
@@ -4261,6 +4488,10 @@ msgstr "無法開啟連結，請聯絡{SUPPORT_EMAIL}。"
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "連結無法開啟。請透過下方地址聯絡 Vela。"
 
+#: app/personal-question.tsx
+msgid "That morning already has a question. Choose another morning."
+msgstr "那天早上已經有問題了，請選擇另一天。"
+
 #: src/components/family-book.tsx
 msgid "That page could not be taken out. Try again."
 msgstr "無法拿出這一頁，請再試一次。"
@@ -4342,6 +4573,10 @@ msgstr "人機驗證沒有完成。請稍後再試一次。"
 msgid "The call could not open. Call from your phone or messaging app directly."
 msgstr "無法開啟通話。請直接用電話或通訊軟體撥打。"
 
+#: app/personal-question.tsx
+msgid "The change was not confirmed. Reload your saved choices before trying again."
+msgstr "還無法確認是否已變更。請先重新載入已儲存的設定，再試一次。"
+
 #: src/data/family.ts
 msgid "The Chens"
 msgstr "陳家"
@@ -4353,6 +4588,10 @@ msgstr "無法確認連結狀態，這不代表長輩已中斷連結。"
 #: app/vela-light.tsx
 msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
 msgstr "每天的提問、問答、輪流提問、翻譯、故事日，還有家裡的每一個人。"
+
+#: app/personal-question.tsx
+msgid "The draft could not be prepared. Your words are still here."
+msgstr "暫時無法準備草稿。你輸入的文字都還在。"
 
 #: app/book.tsx
 #: src/components/family-book.tsx
@@ -4543,6 +4782,14 @@ msgstr "這裡還沒有可以保存的內容。"
 #: src/components/onboarding/questions.tsx
 msgid "There’s no one nearby yet"
 msgstr "附近還沒有人"
+
+#: app/personal-question.tsx
+msgid "These choices shape this draft only. They do not change automatic questions or morning check-ins."
+msgstr "這些選擇只用來準備這份草稿，不會變更自動問題或晨間報平安的設定。"
+
+#: app/personal-question.tsx
+msgid "These words feel like me, and I want to ask this."
+msgstr "這像是我會說的話，也是我想問的事。"
 
 #: app/my-memories.tsx
 msgid "These words will be removed from your memories in Vela. Your original chat does not change."
@@ -4957,6 +5204,10 @@ msgstr "改用私人連結碼"
 msgid "Use my email instead"
 msgstr "改用我的電子郵件"
 
+#: app/personal-question.tsx
+msgid "Use only your own words to this person. Leave out private details and other people's messages."
+msgstr "只填你自己會對這個人說的話，請不要加入隱私細節或別人的訊息。"
+
 #: app/(tabs)/index.tsx
 msgid "Use this"
 msgstr "用這個"
@@ -5105,6 +5356,10 @@ msgstr "Vela 的建議 · 取自這位家人說過的話"
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr "Vela 會依{name}喜歡的事建議問題。符合的都可以選。"
+
+#: app/personal-question.tsx
+msgid "Vela uses these notes to prepare a draft. They are kept for later only if you choose to save them."
+msgstr "Vela 會用這些內容準備草稿。只有在你選擇儲存時，才會保留供下次使用。"
 
 #: app/my-memories.tsx
 msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
@@ -5267,9 +5522,17 @@ msgstr "今天早上花園看起來怎麼樣？"
 msgid "What did you have for breakfast?"
 msgstr "您早餐吃了什麼？"
 
+#: app/personal-question.tsx
+msgid "What do you call {name}?"
+msgstr "你平常怎麼稱呼{name}？"
+
 #: src/components/onboarding/questions.tsx
 msgid "What does {name} love to talk about?"
 msgstr "{name}喜歡聊什麼？"
+
+#: app/personal-question.tsx
+msgid "What feels comfortable between you?"
+msgstr "你們怎麼聊會比較自在？"
 
 #: src/data/memories.ts
 msgid "What is the kitchen like in the morning?"
@@ -5301,6 +5564,7 @@ msgstr "Vela Light 多了什麼"
 msgid "What would help this week?"
 msgstr "這週可以怎麼陪伴？"
 
+#: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
 msgid "What would you like to ask {name}?"
 msgstr "你想問{name}什麼呢？"
@@ -5421,6 +5685,10 @@ msgstr "撤回範例的使用許可"
 #: src/data/onboarding.ts
 msgid "Words & sayings"
 msgstr "俗語與說法"
+
+#: app/personal-question.tsx
+msgid "Words you would never use (optional)"
+msgstr "你不會用的說法（選填）"
 
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
@@ -5574,6 +5842,10 @@ msgstr "你已經有一份草稿。可以繼續寫，也可以換成剛選的靈
 msgid "You need"
 msgstr "材料"
 
+#: app/personal-question.tsx
+msgid "You review every word before choosing a morning."
+msgstr "先由你確認每一句話，再決定哪天送出。"
+
 #: app/(tabs)/index.tsx
 msgid "You said {name} is fine. Nothing else was sent."
 msgstr "你說{name}沒事。沒有再傳送其他訊息。"
@@ -5638,6 +5910,10 @@ msgstr "你對每週報告的選擇"
 msgid "Your choice could not be saved. Please try again."
 msgstr "無法儲存你的選擇。請再試一次。"
 
+#: app/personal-question.tsx
+msgid "Your choices are saved."
+msgstr "你的設定已儲存。"
+
 #: app/sign-in.tsx
 msgid "Your code was sent to {sentTo}. Check spam if it is missing."
 msgstr "驗證碼已寄至 {sentTo}。如果沒有收到，請查看垃圾郵件。"
@@ -5695,8 +5971,13 @@ msgid "Your first days"
 msgstr "最初的幾天"
 
 #: src/components/onboarding/plan.tsx
+#: src/components/onboarding/questions.tsx
 msgid "Your first question"
 msgstr "你的第一個問題"
+
+#: src/components/questions/flow.tsx
+msgid "Your idea"
+msgstr "你的想法"
 
 #: app/settings.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
@@ -5770,13 +6051,49 @@ msgstr "長輩可以在自己的聊天中問「家人看得到什麼」。是否
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
 
+#: app/personal-question.tsx
+msgid "Your question"
+msgstr "你的問題"
+
 #: app/ask.tsx
 msgid "Your question for {name}"
 msgstr "你想問{name}的問題"
 
+#: app/personal-question.tsx
+msgid "Your question will arrive with their morning message."
+msgstr "這個問題會跟著對方的早安訊息送達。"
+
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
 msgstr "你的問題會用這個名字署名。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices are loaded. Change them anytime."
+msgstr "已載入你儲存的設定，隨時可以調整。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed elsewhere. Reload before continuing."
+msgstr "你已在其他地方變更設定。請先重新載入，再繼續。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before preparing another draft."
+msgstr "已儲存的設定已變更或到期。請先重新載入，再準備草稿。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before saving this question."
+msgstr "已儲存的設定已變更或到期。請先重新載入，再儲存這個問題。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices could not be loaded. Reload before continuing."
+msgstr "無法載入已儲存的設定。請先重新載入，再繼續。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices expired. Start fresh or reload."
+msgstr "已儲存的設定已到期。請重新填寫或重新載入。"
+
+#: app/personal-question.tsx
+msgid "Your saved choices were forgotten."
+msgstr "已儲存的設定已刪除。"
 
 #: app/(tabs)/questions.tsx
 msgid "Your schedule could not be loaded. Your saved questions are unchanged."
@@ -5790,13 +6107,17 @@ msgstr "登入已到期。請重新登入以完成連結。"
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "你的登入已過期。請重新登入，再刪除帳號。"
 
+#: app/personal-question.tsx
+msgid "Your starting point"
+msgstr "你想問的事"
+
 #: app/settings.tsx
 msgid "Your turns"
 msgstr "我的輪次"
 
-#: src/components/onboarding/questions.tsx
-msgid "Your words appear here."
-msgstr "你寫的內容會顯示在這裡。"
+#: src/components/questions/flow.tsx
+msgid "Your words"
+msgstr "你的說法"
 
 #: app/conversation.tsx
 msgid "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."

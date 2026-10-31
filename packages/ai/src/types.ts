@@ -12,6 +12,7 @@ import {
   Lang,
   LocalDate,
   LocalTime,
+  QuestionPersonalization,
   ReplyKind,
   WeeklyNotePattern,
 } from "@vela/contracts";
@@ -319,6 +320,8 @@ export const SuggestInput = z.object({
   holderLastAsk: z.object({ type: ExchangeType, text: FamilyText.nullable() }).nullable(),
   /** Recent words this holder wrote to this recipient, excluding accepted AI drafts. */
   holderWritingExamples: z.array(z.string().min(1).max(400)).max(5).optional(),
+  /** Request-only, reviewed personalization. Nightly suggestions never supply this. */
+  personalization: QuestionPersonalization.optional(),
 });
 export type SuggestInput = z.infer<typeof SuggestInput>;
 

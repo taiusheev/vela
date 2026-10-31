@@ -21,6 +21,7 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { insertOutbound } from "./gateway.ts";
+import { assertQuestionProfileRevision } from "./question-profiles.ts";
 import {
   channelLinkOfMember,
   familyById,
@@ -285,6 +286,15 @@ export async function composeApiAsk(
         }
         const asker = await memberById(tx, askerId);
         if (asker === null) throw new VelaError("not_found", "Asker not found");
+        if (ask.personal_profile_revision !== undefined)
+          await assertQuestionProfileRevision(
+            tx,
+            identity,
+            familyId,
+            locked.id,
+            ask.personal_profile_revision,
+            deps.clock.now(),
+          );
         // The contract refuses photos on a whenever ask; this only keeps it from reaching the insert.
         if (
           (ask.media_ids !== undefined || ask.voice_hello_id !== undefined) &&
@@ -344,7 +354,7 @@ export async function composeApiAsk(
             type,
             state: ask.when === "now" ? "scheduled" : "composed",
             text: ask.text,
-            textLang: asker.language,
+            textLang: ask.text_language ?? asker.language,
             // `arrivals.ts` reads a vote's options from this one key; anything else delivers empty.
             options: ask.vote_options === undefined ? {} : { vote_options: ask.vote_options },
             whenRule: ask.when,
@@ -358,7 +368,11 @@ export async function composeApiAsk(
         if (exchange === undefined) throw new Error("exchange insert returned no row");
         // Authored questions are the newest style evidence. Remove only unused future drafts so
         // the next writer can use those words instead of serving three days of stale drafts.
-        if (ask.suggestion_id === undefined) {
+        if (
+          ask.suggestion_id === undefined &&
+          ask.ai_assisted !== true &&
+          ask.personal_profile_revision === undefined
+        ) {
           await tx
             .delete(suggestions)
             .where(
@@ -402,7 +416,10 @@ export async function composeApiAsk(
               source: "app",
               media: ask.media_ids?.length ?? 0,
               queued: false,
-              from_suggestion: fromSuggestion,
+              from_suggestion:
+                fromSuggestion ||
+                ask.ai_assisted === true ||
+                ask.personal_profile_revision !== undefined,
             },
           },
           now,

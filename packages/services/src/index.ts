@@ -127,6 +127,7 @@ export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-
 export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
+export { draftApiPersonalQuestion } from "./api-personal-questions.ts";
 export {
   loadApiPrecision,
   loadPublicPrecision,
@@ -270,6 +271,12 @@ export {
 } from "./pilot-roster.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
+export {
+  forgetApiQuestionProfile,
+  loadApiQuestionProfile,
+  QuestionProfileChangedError,
+  saveApiQuestionProfile,
+} from "./question-profiles.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
   createApiReminder,
@@ -303,5 +310,4 @@ export {
   type WaitlistLang,
   type WaitlistRole,
 } from "./waitlist.ts";
-
 export * from "./weekly-support-live.ts";

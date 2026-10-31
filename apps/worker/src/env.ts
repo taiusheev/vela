@@ -61,6 +61,9 @@ interface SharedEnv {
  * the scheduler, the heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
+  /** Reviewed request-only drafting experiment. Absent/off everywhere until evaluated. */
+  readonly PERSONAL_QUESTION_DRAFTS?: string;
+  readonly PERSONAL_QUESTION_PROFILES?: string;
   /** Optional usage analytics. Absent is off. Public project token, never a personal API key. */
   readonly SITE_ANALYTICS?: string;
   readonly POSTHOG_PROJECT_TOKEN?: string;

@@ -52,10 +52,12 @@ import {
   disableApiAccount,
   dismissApiSuggestion,
   dismissMemoryCandidate,
+  draftApiPersonalQuestion,
   editApiAsk,
   endApiAway,
   errorLabel,
   finishApiReminder,
+  forgetApiQuestionProfile,
   inviteApiNearby,
   keepApiAnswer,
   keepBoxPhotoStored,
@@ -76,6 +78,7 @@ import {
   loadApiPhotoBox,
   loadApiPlannedQuestions,
   loadApiPrecision,
+  loadApiQuestionProfile,
   loadApiQuiet,
   loadApiReminders,
   loadApiToday,
@@ -106,6 +109,7 @@ import {
   removeKeptMemory,
   replyToApiExchange,
   resolveApiQuiet,
+  saveApiQuestionProfile,
   setApiAway,
   setApiMorningPreferences,
   setUpApiDevice,
@@ -125,8 +129,16 @@ import {
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig, readPhotoBox, readRichMemories, secret } from "./config.ts";
-import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
+import {
+  type ApiConfig,
+  readApiConfig,
+  readPersonalQuestionDrafts,
+  readPersonalQuestionProfiles,
+  readPhotoBox,
+  readRichMemories,
+  secret,
+} from "./config.ts";
+import { createAiPort, createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
 import {
@@ -403,6 +415,24 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
+    questionProfiles: {
+      saving:
+        readPersonalQuestionProfiles(env, config.environment) &&
+        readPersonalQuestionDrafts(env, config.environment),
+      config: { pilotAdmission: config.pilotAdmission },
+      load: loadApiQuestionProfile,
+      save: saveApiQuestionProfile,
+      forget: forgetApiQuestionProfile,
+    },
+    ...(readPersonalQuestionDrafts(env, config.environment)
+      ? {
+          personalQuestions: {
+            draft: draftApiPersonalQuestion,
+            ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
+            config: { pilotAdmission: config.pilotAdmission },
+          },
+        }
+      : {}),
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
     // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development

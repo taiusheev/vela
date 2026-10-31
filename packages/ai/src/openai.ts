@@ -3,7 +3,7 @@ import { normaliseFlag, normaliseUnderstanding } from "./claude.ts";
 import { SAFE_DEFAULTS } from "./defaults.ts";
 import { MAX_RETRIES, MAX_TOKENS_FOR, TIMEOUT_MS_FOR } from "./models.ts";
 import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
-import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
+import { promptFor, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -141,8 +141,13 @@ export const OPENAI_REMINDERS: Partial<Record<AiCallName, string>> = {
     "Use at most one line per day the elder answered and never more than three lines in a week of three answered days or fewer. The usual-time line counts toward that limit, so in a week of three answered days or fewer it takes the place of the least telling day. When usualAnswerTime is not null, give it in one short line (usually answered around 07:30), giving this week's time and later or earlier than usual only when patterns holds answer_time, and a single day's time only as its standout; never say by how many minutes a time moved, never count days, answers or asks, never state a pattern that is not in patterns, that it was the first week, or Vela's hello. Name people, places, asks and days as the patterns and the days list give them. Keep what the elder chose and taught in the elder's own words, Hokkien included. Every line is a full sentence starting with a capital letter. The suggestion is exactly one question with one question mark.",
 };
 
-function systemFor(call: AiCallName): { readonly text: string; readonly version: string } {
-  const prompt = PROMPTS[call];
+function systemFor(
+  call: AiCallName,
+  input: unknown,
+): { readonly text: string; readonly version: string } {
+  const prompt = promptFor(call, input);
+  if (call === "suggest" && prompt.version.startsWith("suggest.personal."))
+    return { text: prompt.system, version: prompt.version };
   const reminder = OPENAI_REMINDERS[call];
   return reminder === undefined
     ? { text: prompt.system, version: prompt.version }
@@ -227,7 +232,7 @@ async function invoke<K extends AiCallName>(
   const input = INPUT_SCHEMAS[spec.call].parse(rawInput);
   const outputSchema: z.ZodType<AiCallTypes[K]["output"]> = OUTPUT_SCHEMAS[spec.call];
   const model = OPENAI_MODEL_FOR[spec.call];
-  const prompt = systemFor(spec.call);
+  const prompt = systemFor(spec.call, input);
 
   const body = JSON.stringify({
     model: OPENAI_SNAPSHOT_FOR[model],

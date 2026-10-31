@@ -98,6 +98,7 @@ import {
   pilotRoster,
   pushDevices,
   pushTickets,
+  questionProfiles,
   quietEvents,
   RECIPE_STATUSES,
   recipes,
@@ -331,6 +332,17 @@ async function seedEveryTable(): Promise<void> {
   const seed = await seedFamily();
   const familyId = seed.family.id;
   const user = only(await db.insert(users).values({ displayName: "Mia" }).returning());
+  await db.update(members).set({ userId: user.id }).where(eq(members.id, seed.organiser.id));
+  await db.insert(questionProfiles).values({
+    familyId,
+    authorId: seed.organiser.id,
+    recipientId: seed.parent.id,
+    ownerUserId: user.id,
+    data: null,
+    noticeVersion: "question-profile.1",
+    changedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-15T00:00:00Z"),
+  });
   await db.insert(accountLinkChallenges).values(challengeValues(user.id));
   await db
     .insert(channelLinks)
@@ -2450,6 +2462,41 @@ describe("CHECK constraints on enumerated columns", () => {
     }
   });
 
+  it("keeps private question profile retention bounded, people distinct and data structured", async () => {
+    await seedEveryTable();
+    expect(
+      await rejection(
+        db.update(questionProfiles).set({ expiresAt: new Date("2026-10-15T00:00:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "question_profiles_bounded_retention" });
+    expect(
+      await rejection(db.execute(sql`update question_profiles set recipient_id = author_id`)),
+    ).toMatchObject({ constraint: "question_profiles_distinct_people" });
+    // Enable the existing recipient so the scope guard allows the CHECK to evaluate the shape.
+    const [profile] = await db.select().from(questionProfiles);
+    if (!profile) throw new Error("Missing profile");
+    await db
+      .update(members)
+      .set({ lightOn: true, lightConsentedAt: new Date("2026-09-14T00:00:00Z") })
+      .where(eq(members.id, profile.recipientId));
+    // Consent changes erase profiles; seed another null-content revision after that cleanup.
+    await db.insert(questionProfiles).values(profile);
+    expect(
+      await rejection(db.execute(sql`update question_profiles set data = '[]'::jsonb`)),
+    ).toMatchObject({ constraint: "question_profiles_data_object" });
+  });
+
+  it("keeps the 30-day profile lifetime exact across a database daylight-saving change", async () => {
+    await seedEveryTable();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local time zone 'America/New_York'`);
+      await tx.update(questionProfiles).set({
+        changedAt: new Date("2026-02-15T00:00:00Z"),
+        expiresAt: new Date("2026-03-17T00:00:00Z"),
+      });
+    });
+  });
+
   it("covers every CHECK constraint in the database", async () => {
     const result = await db.execute<{ conname: string }>(
       sql`select conname from pg_constraint
@@ -2494,6 +2541,9 @@ describe("CHECK constraints on enumerated columns", () => {
       "push_tickets_token_sha256_check",
       "waitlist_signups_email_check",
       "pilot_roster_telegram_user_id_check",
+      "question_profiles_bounded_retention",
+      "question_profiles_data_object",
+      "question_profiles_distinct_people",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

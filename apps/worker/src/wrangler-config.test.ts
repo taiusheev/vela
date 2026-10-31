@@ -817,3 +817,16 @@ it("keeps new report processing, purpose approval and family roster off everywhe
     expect(vars.WEEKLY_SUPPORT_FAMILIES).toBe("");
   }
 });
+
+describe("personal question test release", () => {
+  it("enables reviewed drafting only for the synthetic staging test app", () => {
+    expect(configOf("pilot", "development").vars.PERSONAL_QUESTION_DRAFTS).toBe("off");
+    expect(configOf("pilot", "staging").vars.PERSONAL_QUESTION_DRAFTS).toBe("on");
+    expect(configOf("pilot", "production").vars.PERSONAL_QUESTION_DRAFTS).toBe("off");
+  });
+  it("keeps private profile collection off everywhere pending notice approval", () => {
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(configOf("pilot", environment).vars.PERSONAL_QUESTION_PROFILES).toBe("off");
+    }
+  });
+});

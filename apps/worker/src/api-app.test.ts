@@ -1,3 +1,4 @@
+import { createFakeAi } from "@vela/ai";
 import type {
   ApiComposedAsk,
   ApiCreatedFamily,
@@ -26,6 +27,7 @@ import {
   NearbyInviteRefusedError,
   NearbyRefusedError,
   PhotoBoxRefusedError,
+  QuestionProfileChangedError,
   QuietUsefulRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
@@ -294,7 +296,12 @@ function fixture(
   push?: boolean,
   options: Pick<
     ApiRuntime,
-    "admission" | "capabilities" | "parentConnection" | "notificationControls"
+    | "admission"
+    | "capabilities"
+    | "parentConnection"
+    | "notificationControls"
+    | "personalQuestions"
+    | "questionProfiles"
   > = {},
 ) {
   const db = database();
@@ -3728,6 +3735,68 @@ describe("individual notification controls wiring", () => {
   });
 });
 
+describe("reviewed personal question route", () => {
+  const path = `/v1/families/${FAMILY_ID}/personal-question-drafts`;
+  const input = {
+    recipient_id: MEMBER_ID,
+    language: "en",
+    address_form: "Mom",
+    context: {
+      intent: "How is the garden?",
+      connection: "practical",
+      talking_rhythm: "rarely",
+      avoid_topics: [],
+      never_say: [],
+    },
+    writing_examples: [],
+  };
+  const request = (body: unknown = input, auth = "good") =>
+    writeRequest("POST", path, JSON.stringify(body), { authorization: `Bearer ${auth}` });
+  function enabled() {
+    const draft = vi
+      .fn<NonNullable<ApiRuntime["personalQuestions"]>["draft"]>()
+      .mockResolvedValue({ state: "review", text: "mom how is the garden?", language: "en" });
+    const personalQuestions = { draft, ai: createFakeAi(), config: {} };
+    return { ...fixture(true, undefined, { personalQuestions }), draft };
+  }
+  it("is absent and unadvertised by default", async () => {
+    const f = fixture(true);
+    expect((await f.app.request(request())).status).toBe(404);
+    expect(await (await f.app.request("/v1/capabilities")).json()).not.toHaveProperty(
+      "personal_questions",
+      true,
+    );
+  });
+  it("requires authentication, input validation, and an active session", async () => {
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(request(input, "bad"))).status).toBe(401);
+    expect((await f.app.request(request({ ...input, author_id: MEMBER_ID }))).status).toBe(400);
+    f.writes.verifyActiveSession.mockResolvedValueOnce(false);
+    expect((await f.app.request(request())).status).toBe(401);
+    expect(f.draft).not.toHaveBeenCalled();
+  });
+  it("returns an uncached review, passes verified identity, and never composes or sends", async () => {
+    const f = enabled();
+    const response = await f.app.request(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ state: "review" });
+    expect(f.draft).toHaveBeenCalledWith(
+      expect.objectContaining({ db: f.db }),
+      IDENTITY,
+      FAMILY_ID,
+      input,
+    );
+    expect(f.writes.services.composeApiAsk).not.toHaveBeenCalled();
+    expect(f.writes.nudges.deliver).not.toHaveBeenCalled();
+    expect(await (await f.app.request("/v1/capabilities")).json()).toHaveProperty(
+      "personal_questions",
+      true,
+    );
+  });
+});
+
 describe("the photo box (ADR-58)", () => {
   const BOX_PATH = `/v1/families/${FAMILY_ID}/photo-box`;
   const BOX_ID = "44444444-4444-7444-8444-444444444444";
@@ -3874,5 +3943,97 @@ describe("the photo box (ADR-58)", () => {
       (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
         .status,
     ).toBe(404);
+  });
+});
+
+describe("private question profile routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/question-profile`;
+  const input = {
+    expected_revision: null,
+    notice_version: "question-profile.1",
+    settings: {
+      language: "en",
+      address_form: "dad",
+      context: {
+        connection: "practical",
+        talking_rhythm: "rarely",
+        avoid_topics: [],
+        never_say: [],
+      },
+      writing_examples: [],
+    },
+  };
+  function enabled(admitted = true) {
+    const load = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["load"]>()
+      .mockResolvedValue({ revision: null, profile: null, saving_available: false });
+    const save = vi.fn<NonNullable<ApiRuntime["questionProfiles"]>["save"]>().mockResolvedValue({
+      response: {
+        status: 200,
+        body: { saved: true, revision: MEMBER_ID, expires_at: "2026-11-30T00:00:00.000Z" },
+      },
+      replayed: false,
+    });
+    const forget = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["forget"]>()
+      .mockResolvedValue({ response: { status: 200, body: { forgotten: true } }, replayed: false });
+    const permitsAccount = vi.fn().mockResolvedValue(admitted);
+    return {
+      ...fixture(true, undefined, {
+        questionProfiles: { saving: false, config: {}, load, save, forget },
+        admission: { config: { telegramUserIds: [] }, permitsAccount },
+      }),
+      load,
+      save,
+      forget,
+    };
+  }
+  const write = (suffix: string, body: unknown) =>
+    writeRequest("POST", `${path}/${suffix}`, JSON.stringify(body), {
+      authorization: "Bearer good",
+    });
+  it("is 404 when not mounted and requires authentication when mounted", async () => {
+    expect((await fixture(true).app.request(path)).status).toBe(404);
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(path)).status).toBe(401);
+  });
+  it("allows uncached own-data reads and forget while pilot admission refuses other work", async () => {
+    const f = enabled(false);
+    const read = await f.app.request(path, { headers: { authorization: "Bearer good" } });
+    expect(read.status).toBe(200);
+    expect(read.headers.get("cache-control")).toBe("no-store");
+    expect(f.load).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+    );
+    const remove = await f.app.request(write("forget", {}));
+    expect(remove.status).toBe(200);
+    expect(f.forget).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      {},
+    );
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    expect(f.save).not.toHaveBeenCalled();
+  });
+  it("validates ownership in the service and maps stale saves to a usable 409", async () => {
+    const f = enabled();
+    expect((await f.app.request(write("save", { ...input, author_id: USER_ID }))).status).toBe(400);
+    f.save.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    f.save.mockRejectedValueOnce(new QuestionProfileChangedError());
+    const conflict = await f.app.request(write("save", input));
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({
+      error: { code: "conflict", details: { reason: "question_profile_changed" } },
+    });
+    f.forget.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("forget", {}))).status).toBe(404);
   });
 });

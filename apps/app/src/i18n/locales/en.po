@@ -357,10 +357,6 @@ msgstr "{name}: {what}, {day}"
 msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr "{name}: {what}. You will be reminded to ask on {day}."
 
-#: src/components/onboarding/questions.tsx
-msgid "{name}’s first question"
-msgstr "{name}’s first question"
-
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
@@ -608,6 +604,10 @@ msgstr "A lit dot marks a photo Vela has already sent. Only the photos you choos
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "A little closer to your family. Use your email to get started or sign in."
 
+#: app/personal-question.tsx
+msgid "A little conversation, ready to begin."
+msgstr "A little conversation, ready to begin."
+
 #: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr "A little light from home."
@@ -619,6 +619,14 @@ msgstr "A little practical help"
 #: src/components/service-status.tsx
 msgid "A live connection has not been set up."
 msgstr "A live connection has not been set up."
+
+#: app/personal-question.tsx
+msgid "A message you would write to {name} (optional)"
+msgstr "A message you would write to {name} (optional)"
+
+#: src/components/questions/flow.tsx
+msgid "A morning"
+msgstr "A morning"
 
 #: app/help.tsx
 msgid "A morning message is missing"
@@ -648,6 +656,10 @@ msgstr "A photo of each parent"
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr "A photo of the street where you grew up — do you remember the shop on the corner?"
+
+#: src/components/onboarding/questions.tsx
+msgid "A preview for {name}"
+msgstr "A preview for {name}"
 
 #: src/data/ask.ts
 msgid "A question"
@@ -712,6 +724,10 @@ msgstr "A story in {name}'s words"
 #: src/components/story-day.tsx
 msgid "A story question for {name}'s {day} morning"
 msgstr "A story question for {name}'s {day} morning"
+
+#: app/personal-question.tsx
+msgid "A topic to leave out (optional)"
+msgstr "A topic to leave out (optional)"
 
 #: app/conversation.tsx
 msgid "A voice hello for her morning"
@@ -787,6 +803,10 @@ msgstr "Add a voice hello (10 seconds)"
 #: src/components/vote-options.tsx
 msgid "Add an option"
 msgstr "Add an option"
+
+#: app/personal-question.tsx
+msgid "Add another example"
+msgstr "Add another example"
 
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
@@ -924,6 +944,10 @@ msgstr "And on a quiet morning?"
 #: src/data/example-names.ts
 msgid "Anna"
 msgstr "Anna"
+
+#: app/personal-question.tsx
+msgid "Another example (optional)"
+msgstr "Another example (optional)"
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -1071,6 +1095,10 @@ msgstr "away · {day}"
 msgid "Back"
 msgstr "Back"
 
+#: app/personal-question.tsx
+msgid "Back to questions"
+msgstr "Back to questions"
+
 #: src/components/today-glance.tsx
 msgid "Be the first to answer {recipient}."
 msgstr "Be the first to answer {recipient}."
@@ -1161,6 +1189,10 @@ msgstr "Change any words before you send."
 msgid "Change email or number"
 msgstr "Change email or number"
 
+#: app/personal-question.tsx
+msgid "Change starting points"
+msgstr "Change starting points"
+
 #: app/(tabs)/you.tsx
 msgid "Change the name your family sees"
 msgstr "Change the name your family sees"
@@ -1177,6 +1209,14 @@ msgstr "Check connection again"
 #: app/help.tsx
 msgid "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
 msgstr "Check that you are using the email address you joined with. If a code does not arrive, check your spam folder and try again."
+
+#: app/personal-question.tsx
+msgid "Check the facts, tone, and topic. Vela can get these wrong."
+msgstr "Check the facts, tone, and topic. Vela can get these wrong."
+
+#: app/personal-question.tsx
+msgid "Check the length and number of topics or phrases before continuing."
+msgstr "Check the length and number of topics or phrases before continuing."
 
 #: app/weekly-report.tsx
 msgid "Check this offer"
@@ -1201,6 +1241,10 @@ msgstr "Checking Vela…"
 #: app/sign-in.tsx
 msgid "Checking…"
 msgstr "Checking…"
+
+#: app/personal-question.tsx
+msgid "Choose a morning."
+msgstr "Choose a morning."
 
 #: app/away.tsx
 msgid "Choose a parent in Settings before changing away dates."
@@ -1483,6 +1527,14 @@ msgstr "Done"
 msgid "downstairs"
 msgstr "downstairs"
 
+#: app/personal-question.tsx
+msgid "Drafting can begin once this person has agreed and their light is on."
+msgstr "Drafting can begin once this person has agreed and their light is on."
+
+#: app/personal-question.tsx
+msgid "Drafting is off here. Your saved choices are still yours to view or forget."
+msgstr "Drafting is off here. Your saved choices are still yours to view or forget."
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr "e.g. Lily at the beach"
@@ -1511,6 +1563,10 @@ msgstr "Earlier week"
 msgid "Earlier weeks"
 msgstr "Earlier weeks"
 
+#: app/personal-question.tsx
+msgid "Ease back into talking"
+msgstr "Ease back into talking"
+
 #. a time zone
 #. a time zone
 #: src/data/onboarding.ts
@@ -1528,6 +1584,10 @@ msgstr "Edit question"
 #: app/(tabs)/questions.tsx
 msgid "Edit question or day"
 msgstr "Edit question or day"
+
+#: app/personal-question.tsx
+msgid "Edit your question"
+msgstr "Edit your question"
 
 #: app/sign-in.tsx
 msgid "Email"
@@ -1565,6 +1625,10 @@ msgstr "Every morning starts with it."
 msgid "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 msgstr "Every offer below was checked by a family organiser. The person receiving the offer chooses what feels helpful. Nothing is sent automatically."
 
+#: app/personal-question.tsx
+msgid "Everyday conversation"
+msgstr "Everyday conversation"
+
 #: src/components/today-glance.tsx
 msgid "Everyone's light is on today"
 msgstr "Everyone's light is on today"
@@ -1577,6 +1641,10 @@ msgstr "Everything here stays until an organiser takes it out, or memories are t
 msgid "Example · heart sent"
 msgstr "Example · heart sent"
 
+#: app/personal-question.tsx
+msgid "Example complete. Nothing was saved or sent."
+msgstr "Example complete. Nothing was saved or sent."
+
 #: app/weekly-support-preview.tsx
 msgid "Example controls"
 msgstr "Example controls"
@@ -1584,6 +1652,10 @@ msgstr "Example controls"
 #: src/components/onboarding/story.tsx
 msgid "Example morning"
 msgstr "Example morning"
+
+#: app/personal-question.tsx
+msgid "Example only. No AI or messages. Saved choices stay in this open example."
+msgstr "Example only. No AI or messages. Saved choices stay in this open example."
 
 #: app/conversation.tsx
 msgid "Example only. Nothing was sent."
@@ -1650,9 +1722,17 @@ msgstr "Find a memory to keep"
 msgid "Find my family"
 msgstr "Find my family"
 
+#: app/(tabs)/questions.tsx
+msgid "Find your words"
+msgstr "Find your words"
+
 #: src/data/precision.ts
 msgid "Fine, the family knew"
 msgstr "Fine, the family knew"
+
+#: app/personal-question.tsx
+msgid "Finish example"
+msgstr "Finish example"
 
 #: src/components/onboarding/questions.tsx
 msgid "First morning · {time}"
@@ -1677,6 +1757,14 @@ msgstr "For her morning"
 #: app/vela-light.tsx
 msgid "For one parent. Each extra parent adds half the price."
 msgstr "For one parent. Each extra parent adds half the price."
+
+#: app/personal-question.tsx
+msgid "Forget saved choices"
+msgstr "Forget saved choices"
+
+#: app/personal-question.tsx
+msgid "Forgetting clears these choices. Questions you already approved stay in your schedule."
+msgstr "Forgetting clears these choices. Questions you already approved stay in your schedule."
 
 #: src/auth/phone.ts
 msgid "France"
@@ -1788,6 +1876,10 @@ msgstr "Grandpa"
 #: src/data/useNearby.ts
 msgid "Has not said yes yet"
 msgstr "Has not said yes yet"
+
+#: app/(tabs)/questions.tsx
+msgid "Have an idea? Turn it into a question that sounds like you."
+msgstr "Have an idea? Turn it into a question that sounds like you."
 
 #: src/data/onboarding.ts
 msgid "Hawaii"
@@ -1907,13 +1999,13 @@ msgstr "How did {what} go?"
 msgid "How does {name} like to reply?"
 msgstr "How does {name} like to reply?"
 
-#: src/components/onboarding/questions.tsx
-msgid "How it reaches {name}"
-msgstr "How it reaches {name}"
-
 #: app/weekly-report.tsx
 msgid "How long will this offer still be relevant?"
 msgstr "How long will this offer still be relevant?"
+
+#: app/personal-question.tsx
+msgid "How often do you usually talk?"
+msgstr "How often do you usually talk?"
 
 #: app/vela-light.tsx
 msgid "How the 30 days work"
@@ -2178,6 +2270,10 @@ msgstr "Kazakhstan"
 msgid "Keep it"
 msgstr "Keep it"
 
+#: app/personal-question.tsx
+msgid "Keep it practical"
+msgstr "Keep it practical"
+
 #: app/ask.tsx
 msgid "Keep it short, like a message you would send yourself."
 msgstr "Keep it short, like a message you would send yourself."
@@ -2282,6 +2378,10 @@ msgstr "Know the moment {name} says yes."
 msgid "Language"
 msgstr "Language"
 
+#: app/personal-question.tsx
+msgid "Language of this question"
+msgstr "Language of this question"
+
 #: src/components/today-glance.tsx
 msgid "Last confirmed update"
 msgstr "Last confirmed update"
@@ -2306,9 +2406,17 @@ msgstr "Leave"
 msgid "Leave {familyName}?"
 msgstr "Leave {familyName}?"
 
+#: app/personal-question.tsx
+msgid "Leave a little room."
+msgstr "Leave a little room."
+
 #: app/my-memories.tsx
 msgid "Leave out"
 msgstr "Leave out"
+
+#: app/personal-question.tsx
+msgid "Leave room for now"
+msgstr "Leave room for now"
 
 #: app/settings.tsx
 msgid "Leave the family"
@@ -2440,6 +2548,10 @@ msgstr "Loading your family’s plan…"
 msgid "Loading your notification preference…"
 msgstr "Loading your notification preference…"
 
+#: app/personal-question.tsx
+msgid "Loading your private choices…"
+msgstr "Loading your private choices…"
+
 #: app/(tabs)/questions.tsx
 msgid "Loading your schedule…"
 msgstr "Loading your schedule…"
@@ -2465,6 +2577,14 @@ msgstr "Looking forward"
 msgid "Make it mine"
 msgstr "Make it mine"
 
+#: app/personal-question.tsx
+msgid "Make it sound like you"
+msgstr "Make it sound like you"
+
+#: app/personal-question.tsx
+msgid "Make it yours."
+msgstr "Make it yours."
+
 #: app/weekly-report.tsx
 msgid "Make time for an interest"
 msgstr "Make time for an interest"
@@ -2480,6 +2600,10 @@ msgstr "Making & mending"
 #: src/auth/phone.ts
 msgid "Malaysia"
 msgstr "Malaysia"
+
+#: app/personal-question.tsx
+msgid "Manage saved choices"
+msgstr "Manage saved choices"
 
 #: src/components/photo-box.tsx
 msgid "Mark them all"
@@ -2688,9 +2812,17 @@ msgstr "Next"
 msgid "Next free morning"
 msgstr "Next free morning"
 
+#: app/personal-question.tsx
+msgid "Next: choose a morning"
+msgstr "Next: choose a morning"
+
 #: src/components/onboarding/story.tsx
 msgid "No answer from Mom yet today."
 msgstr "No answer from Mom yet today."
+
+#: app/personal-question.tsx
+msgid "No draft was kept. Try a different topic or write your own question."
+msgstr "No draft was kept. Try a different topic or write your own question."
 
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
@@ -2711,6 +2843,10 @@ msgstr "No number here: Vela asks them for it, with their yes."
 #: src/components/onboarding/questions.tsx
 msgid "No photo on this phone"
 msgstr "No photo on this phone"
+
+#: app/personal-question.tsx
+msgid "No question is needed right now. Your existing morning settings stay as they are."
+msgstr "No question is needed right now. Your existing morning settings stay as they are."
 
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
@@ -2797,6 +2933,7 @@ msgstr "Not shown yet"
 msgid "Not sure where to start? Tap one to put it in the box."
 msgstr "Not sure where to start? Tap one to put it in the box."
 
+#: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Not sure yet"
 msgstr "Not sure yet"
@@ -2901,6 +3038,10 @@ msgstr "Offer practical help"
 msgid "Offer some company"
 msgstr "Offer some company"
 
+#: app/personal-question.tsx
+msgid "Often"
+msgstr "Often"
+
 #: src/components/photo-box.tsx
 msgid "Old"
 msgstr "Old"
@@ -2970,6 +3111,18 @@ msgstr "One message from you"
 msgid "One moment…"
 msgstr "One moment…"
 
+#: app/personal-question.tsx
+msgid "One ordinary thing you would love to hear about."
+msgstr "One ordinary thing you would love to hear about."
+
+#: app/personal-question.tsx
+msgid "One phrase per line, up to 3 phrases of 60 characters each."
+msgstr "One phrase per line, up to 3 phrases of 60 characters each."
+
+#: app/personal-question.tsx
+msgid "One topic per line, up to 5 topics of 40 characters each."
+msgstr "One topic per line, up to 5 topics of 40 characters each."
+
 #: src/components/telegram-family-link.tsx
 msgid "Only confirm a request you just started from your own Vela app."
 msgstr "Only confirm a request you just started from your own Vela app."
@@ -2977,6 +3130,10 @@ msgstr "Only confirm a request you just started from your own Vela app."
 #: src/components/parent-photo-settings.tsx
 msgid "Only on this device. Removed when you sign out."
 msgstr "Only on this device. Removed when you sign out."
+
+#: app/personal-question.tsx
+msgid "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
+msgstr "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
 
 #: src/components/telegram-family-link.tsx
 msgid "Open {messenger} again"
@@ -3065,6 +3222,10 @@ msgstr "Opens the photo to change or take it out"
 msgid "Option {number}"
 msgstr "Option {number}"
 
+#: app/personal-question.tsx
+msgid "Optional · your tone, usual wording, and topics to leave out"
+msgstr "Optional · your tone, usual wording, and topics to leave out"
+
 #: src/components/calling-number-editor.tsx
 msgid "Optional calling number · {name}"
 msgstr "Optional calling number · {name}"
@@ -3132,6 +3293,10 @@ msgstr "People nearby"
 #: app/weekly-report.tsx
 msgid "People who can read this report"
 msgstr "People who can read this report"
+
+#: app/personal-question.tsx
+msgid "Personal drafts are not available here yet."
+msgstr "Personal drafts are not available here yet."
 
 #: src/data/onboarding.ts
 msgid "Perth"
@@ -3238,9 +3403,17 @@ msgstr "Playback speed {rate} times"
 msgid "Please contact {attentionName} now"
 msgstr "Please contact {attentionName} now"
 
+#: app/personal-question.tsx
+msgid "Prepare a draft"
+msgstr "Prepare a draft"
+
 #: app/(tabs)/questions.tsx
 msgid "Preparing for delivery. This question can no longer be changed."
 msgstr "Preparing for delivery. This question can no longer be changed."
+
+#: app/personal-question.tsx
+msgid "Preparing your draft…"
+msgstr "Preparing your draft…"
 
 #: app/settings.tsx
 msgid "Preview family setup"
@@ -3313,6 +3486,10 @@ msgstr "quiet"
 msgid "Quiet days covered, signed by you"
 msgstr "Quiet days covered, signed by you"
 
+#: app/personal-question.tsx
+msgid "Rarely"
+msgstr "Rarely"
+
 #: src/components/story-day.tsx
 msgid "Read the family book"
 msgstr "Read the family book"
@@ -3379,7 +3556,12 @@ msgstr "Relative"
 msgid "Reload report"
 msgstr "Reload report"
 
+#: app/personal-question.tsx
+msgid "Reload saved choices"
+msgstr "Reload saved choices"
+
 #: app/(tabs)/questions.tsx
+#: app/personal-question.tsx
 msgid "Reload schedule"
 msgstr "Reload schedule"
 
@@ -3588,6 +3770,18 @@ msgstr "Save name"
 msgid "Save question"
 msgstr "Save question"
 
+#: app/personal-question.tsx
+msgid "Save these choices for 30 days"
+msgstr "Save these choices for 30 days"
+
+#: app/personal-question.tsx
+msgid "Save this question"
+msgstr "Save this question"
+
+#: app/personal-question.tsx
+msgid "Saved until {expiresOn}. Opening or using it does not extend this date."
+msgstr "Saved until {expiresOn}. Opening or using it does not extend this date."
+
 #: app/conversation.tsx
 msgid "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr "Saved. The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
@@ -3599,6 +3793,18 @@ msgstr "Saved. Your family sees {name} from now on."
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
 msgstr "Saving"
+
+#: app/personal-question.tsx
+msgid "Saving choices…"
+msgstr "Saving choices…"
+
+#: app/personal-question.tsx
+msgid "Saving new choices is off. You can still view or forget your saved choices."
+msgstr "Saving new choices is off. You can still view or forget your saved choices."
+
+#: app/personal-question.tsx
+msgid "Saving was not confirmed. Keep this screen open and try again."
+msgstr "Saving was not confirmed. Keep this screen open and try again."
 
 #: src/components/app-privacy.tsx
 msgid "Saving your choice…"
@@ -3612,6 +3818,7 @@ msgstr "Saving your preference…"
 #: app/ask.tsx
 #: app/away.tsx
 #: app/morning-settings.tsx
+#: app/personal-question.tsx
 #: app/profile.tsx
 #: src/components/app-privacy.tsx
 #: src/components/calling-number-editor.tsx
@@ -3966,6 +4173,10 @@ msgstr "So Vela can make answering easy for {name}, the way {name} likes."
 msgid "Some photos did not go in. Check your connection and try again."
 msgstr "Some photos did not go in. Check your connection and try again."
 
+#: app/personal-question.tsx
+msgid "Some space for now"
+msgstr "Some space for now"
+
 #. who the light is for
 #: src/data/onboarding.ts
 msgid "Someone else"
@@ -3987,6 +4198,10 @@ msgstr "Something for {name}'s morning"
 msgid "Something for her morning"
 msgstr "Something for her morning"
 
+#: app/personal-question.tsx
+msgid "Something from their day, or a little thing on your mind…"
+msgstr "Something from their day, or a little thing on your mind…"
+
 #: src/data/precision.ts
 msgid "Something was wrong"
 msgstr "Something was wrong"
@@ -3994,6 +4209,10 @@ msgstr "Something was wrong"
 #: src/data/precision.ts
 msgid "Something was wrong in {wrong} of {notices}."
 msgstr "Something was wrong in {wrong} of {notices}."
+
+#: app/personal-question.tsx
+msgid "Sometimes"
+msgstr "Sometimes"
 
 #: src/auth/phone.ts
 msgid "South Korea"
@@ -4010,6 +4229,10 @@ msgstr "Start {name}'s mornings with a photo"
 #: app/vela-light.tsx
 msgid "Start 30 free days"
 msgstr "Start 30 free days"
+
+#: src/components/onboarding/questions.tsx
+msgid "Start a conversation with {name}."
+msgstr "Start a conversation with {name}."
 
 #: app/(tabs)/index.tsx
 msgid "Start with one question in your own words. Choose a morning that suits them."
@@ -4030,6 +4253,10 @@ msgstr "Starting…"
 #: app/settings.tsx
 msgid "Stay"
 msgstr "Stay"
+
+#: src/components/questions/flow.tsx
+msgid "Step {step} of 3"
+msgstr "Step {step} of 3"
 
 #: src/data/precision.ts
 msgid "Still open"
@@ -4260,6 +4487,10 @@ msgstr "That link could not open. Contact {SUPPORT_EMAIL}."
 msgid "That link could not open. Contact Vela at the address below."
 msgstr "That link could not open. Contact Vela at the address below."
 
+#: app/personal-question.tsx
+msgid "That morning already has a question. Choose another morning."
+msgstr "That morning already has a question. Choose another morning."
+
 #: src/components/family-book.tsx
 msgid "That page could not be taken out. Try again."
 msgstr "That page could not be taken out. Try again."
@@ -4341,6 +4572,10 @@ msgstr "The bot check did not finish. Try again in a moment."
 msgid "The call could not open. Call from your phone or messaging app directly."
 msgstr "The call could not open. Call from your phone or messaging app directly."
 
+#: app/personal-question.tsx
+msgid "The change was not confirmed. Reload your saved choices before trying again."
+msgstr "The change was not confirmed. Reload your saved choices before trying again."
+
 #: src/data/family.ts
 msgid "The Chens"
 msgstr "The Chens"
@@ -4352,6 +4587,10 @@ msgstr "The connection status could not be checked. This does not mean your pare
 #: app/vela-light.tsx
 msgid "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
 msgstr "The daily ask, the exchanges, turns, translation, story day, everyone in the family."
+
+#: app/personal-question.tsx
+msgid "The draft could not be prepared. Your words are still here."
+msgstr "The draft could not be prepared. Your words are still here."
 
 #: app/book.tsx
 #: src/components/family-book.tsx
@@ -4542,6 +4781,14 @@ msgstr "There is nothing to keep here yet."
 #: src/components/onboarding/questions.tsx
 msgid "There’s no one nearby yet"
 msgstr "There’s no one nearby yet"
+
+#: app/personal-question.tsx
+msgid "These choices shape this draft only. They do not change automatic questions or morning check-ins."
+msgstr "These choices shape this draft only. They do not change automatic questions or morning check-ins."
+
+#: app/personal-question.tsx
+msgid "These words feel like me, and I want to ask this."
+msgstr "These words feel like me, and I want to ask this."
 
 #: app/my-memories.tsx
 msgid "These words will be removed from your memories in Vela. Your original chat does not change."
@@ -4956,6 +5203,10 @@ msgstr "Use a private connection code instead"
 msgid "Use my email instead"
 msgstr "Use my email instead"
 
+#: app/personal-question.tsx
+msgid "Use only your own words to this person. Leave out private details and other people's messages."
+msgstr "Use only your own words to this person. Leave out private details and other people's messages."
+
 #: app/(tabs)/index.tsx
 msgid "Use this"
 msgstr "Use this"
@@ -5104,6 +5355,10 @@ msgstr "Vela suggests · from her own words"
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr "Vela suggests questions about what {name} enjoys. Choose as many as fit."
+
+#: app/personal-question.tsx
+msgid "Vela uses these notes to prepare a draft. They are kept for later only if you choose to save them."
+msgstr "Vela uses these notes to prepare a draft. They are kept for later only if you choose to save them."
 
 #: app/my-memories.tsx
 msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
@@ -5266,9 +5521,17 @@ msgstr "What did the garden look like this morning?"
 msgid "What did you have for breakfast?"
 msgstr "What did you have for breakfast?"
 
+#: app/personal-question.tsx
+msgid "What do you call {name}?"
+msgstr "What do you call {name}?"
+
 #: src/components/onboarding/questions.tsx
 msgid "What does {name} love to talk about?"
 msgstr "What does {name} love to talk about?"
+
+#: app/personal-question.tsx
+msgid "What feels comfortable between you?"
+msgstr "What feels comfortable between you?"
 
 #: src/data/memories.ts
 msgid "What is the kitchen like in the morning?"
@@ -5300,6 +5563,7 @@ msgstr "What Vela Light adds"
 msgid "What would help this week?"
 msgstr "What would help this week?"
 
+#: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
 msgid "What would you like to ask {name}?"
 msgstr "What would you like to ask {name}?"
@@ -5420,6 +5684,10 @@ msgstr "Withdraw example permission"
 #: src/data/onboarding.ts
 msgid "Words & sayings"
 msgstr "Words & sayings"
+
+#: app/personal-question.tsx
+msgid "Words you would never use (optional)"
+msgstr "Words you would never use (optional)"
 
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
@@ -5573,6 +5841,10 @@ msgstr "You have a draft. Keep writing, or replace it with the selected idea."
 msgid "You need"
 msgstr "You need"
 
+#: app/personal-question.tsx
+msgid "You review every word before choosing a morning."
+msgstr "You review every word before choosing a morning."
+
 #: app/(tabs)/index.tsx
 msgid "You said {name} is fine. Nothing else was sent."
 msgstr "You said {name} is fine. Nothing else was sent."
@@ -5637,6 +5909,10 @@ msgstr "Your choice about weekly reports"
 msgid "Your choice could not be saved. Please try again."
 msgstr "Your choice could not be saved. Please try again."
 
+#: app/personal-question.tsx
+msgid "Your choices are saved."
+msgstr "Your choices are saved."
+
 #: app/sign-in.tsx
 msgid "Your code was sent to {sentTo}. Check spam if it is missing."
 msgstr "Your code was sent to {sentTo}. Check spam if it is missing."
@@ -5694,8 +5970,13 @@ msgid "Your first days"
 msgstr "Your first days"
 
 #: src/components/onboarding/plan.tsx
+#: src/components/onboarding/questions.tsx
 msgid "Your first question"
 msgstr "Your first question"
+
+#: src/components/questions/flow.tsx
+msgid "Your idea"
+msgstr "Your idea"
 
 #: app/settings.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
@@ -5769,13 +6050,49 @@ msgstr "Your parent can ask “what does the family see” in their own chat. He
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 msgstr "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
 
+#: app/personal-question.tsx
+msgid "Your question"
+msgstr "Your question"
+
 #: app/ask.tsx
 msgid "Your question for {name}"
 msgstr "Your question for {name}"
 
+#: app/personal-question.tsx
+msgid "Your question will arrive with their morning message."
+msgstr "Your question will arrive with their morning message."
+
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
 msgstr "Your questions are signed with it."
+
+#: app/personal-question.tsx
+msgid "Your saved choices are loaded. Change them anytime."
+msgstr "Your saved choices are loaded. Change them anytime."
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed elsewhere. Reload before continuing."
+msgstr "Your saved choices changed elsewhere. Reload before continuing."
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before preparing another draft."
+msgstr "Your saved choices changed or expired. Reload before preparing another draft."
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before saving this question."
+msgstr "Your saved choices changed or expired. Reload before saving this question."
+
+#: app/personal-question.tsx
+msgid "Your saved choices could not be loaded. Reload before continuing."
+msgstr "Your saved choices could not be loaded. Reload before continuing."
+
+#: app/personal-question.tsx
+msgid "Your saved choices expired. Start fresh or reload."
+msgstr "Your saved choices expired. Start fresh or reload."
+
+#: app/personal-question.tsx
+msgid "Your saved choices were forgotten."
+msgstr "Your saved choices were forgotten."
 
 #: app/(tabs)/questions.tsx
 msgid "Your schedule could not be loaded. Your saved questions are unchanged."
@@ -5789,13 +6106,17 @@ msgstr "Your sign-in expired. Sign in again to finish connecting."
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "Your sign-in has expired. Sign in again, then delete your account."
 
+#: app/personal-question.tsx
+msgid "Your starting point"
+msgstr "Your starting point"
+
 #: app/settings.tsx
 msgid "Your turns"
 msgstr "Your turns"
 
-#: src/components/onboarding/questions.tsx
-msgid "Your words appear here."
-msgstr "Your words appear here."
+#: src/components/questions/flow.tsx
+msgid "Your words"
+msgstr "Your words"
 
 #: app/conversation.tsx
 msgid "Your words reach {name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned."

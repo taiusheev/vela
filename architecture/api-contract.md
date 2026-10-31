@@ -832,3 +832,47 @@ variants, rejects additional sensitive wording, and permits narrow ordinary cont
 all surrounding text. Discovery and saved-report reads use the same rule. Original source words and
 digests are unchanged, as are the stricter shared memory/AI screen and current upstream flag/health
 checks. This bounded safeguard is not exhaustive language or sensitive-content detection.
+
+## Private saved question choices (question-profile.1, gated; 31 October 2026)
+
+`GET /v1/families/:familyId/members/:memberId/question-profile` authenticates the requester,
+derives their author membership, and returns `ApiQuestionProfile`: `{ revision, saving_available,
+profile: null | { settings, saved_at, expires_at, notice_version } }`. It is private to the author's
+account and the one recipient, with `Cache-Control: no-store`. A missing/expired/forgotten profile
+returns null content; a current metadata revision can remain. GET never extends expiry or calls AI.
+`personal_question_profiles` capability advertises access/deletion, **not permission to collect**;
+`saving_available` is authoritative for saving. Reading/forgetting remains available when the
+collection switch or pilot admission is off. Family authorization still applies, with opaque 404.
+
+`POST .../question-profile/save` requires the normal authenticated, active-session write contract,
+`Idempotency-Key`, and strict `SaveQuestionProfile`:
+`{ expected_revision: UUID | null, notice_version: "question-profile.1", settings }`.
+Settings contain en/zh-TW language, address_form, connection/talking_rhythm, avoid_topics, never_say,
+and at most 2 own-writing examples; **no intent, inferred attributes, or another person's messages**.
+Saves replace the current row, rotate its revision and set expiry to 30 days after this explicit save.
+The response is metadata only: `{ saved: true, revision, expires_at }`.
+`POST .../question-profile/forget` requires the same write authentication/key and strict empty `{}`.
+It immediately clears words/selections and rotates a content-free revision for 30 days to reject
+older saves. Returns `{ forgotten: true }`. Retrying a completed save returns only its receipt
+metadata and cannot restore deleted content; clients reload current state after acknowledgment.
+Use a new forget key after a new save. Both POSTs return `Idempotency-Replayed` and use runApiMutation.
+
+Errors: 400 malformed input/notice/key; 401 missing/revoked session; 404 unknown/other-family/self
+recipient or unavailable collection/admission/lifecycle; 409 standard idempotency conflict or
+`{ error: { code: "conflict", details: { reason: "question_profile_changed" }, ... } }` for a stale
+expected revision, expired or forgotten setup. Reload before retrying a version conflict. 429/503
+follow normal write limits/availability. Read and delete authorization failures stay opaque 404,
+rather than distinguishing someone else's private setup with 403.
+
+Reviewed drafting accepts optional `profile_revision`; it validates that own setup before and after
+AI work and echoes the revision on a review. ComposeAsk accepts `personal_profile_revision` and
+revalidates before scheduling, preserving AI-assisted provenance. Locally edited choices can still
+name their saved basis. No endpoint automatically loads choices into nightly generation. Forgetting
+choices does not cancel independently approved scheduled questions.
+
+`PERSONAL_QUESTION_PROFILES` and `PERSONAL_QUESTION_DRAFTS` are pinned OFF in all checked-in
+environments. Both refuse ON in production. Collection needs **both** switches, approved notice
+supplement and family notification; the draft supplement is not served. Encrypted content lives only
+in `question_profiles.data`; mutation receipts hold no notes. Expiry blocks read/use immediately;
+`applyRetention` deletes due rows. Scope/lifecycle database guards erase affected rows on member,
+account and family removal/withdrawal. Revision metadata has the same bounded expiry.

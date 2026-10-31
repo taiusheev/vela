@@ -632,7 +632,10 @@ describe("the runtime staging's API app runs on", () => {
     expect(runtime.writes?.links?.telegramBotUsername).toBe("VelaStagingBot");
     const response = await createApiApp(runtime).request("/v1/capabilities");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(runtime.capabilities);
+    expect(await response.json()).toEqual({
+      ...runtime.capabilities,
+      personal_question_profiles: true,
+    });
   });
   let network: Mock<typeof fetch>;
 

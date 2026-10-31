@@ -402,6 +402,19 @@ From then on no morning message, repeat, quiet notice or turn prompt is due for 
 
 After the identity question in the notice ("How"), run the queries for that person and send the results only to them. For the person the light is for, add the second group.
 
+### Optional saved question choices: not activated
+
+The saved-profile feature is OFF; do not turn it on to fulfil a data request or treat its draft
+notice supplement as approved. If choices exist in an authorized test account, the authenticated
+`GET /v1/families/:familyId/members/:recipientId/question-profile` supplies **that requester's**
+current unexpired setup for that parent. Derive the author from the verified account; never query
+or send all family profiles to an organiser. This is one component of a data copy, not the whole
+account export. Reading never renews expiry and is available with collection/pilot admission off.
+The strict save endpoint supports correction using the current revision and explicit 30-day save.
+The authenticated `POST .../question-profile/forget` with `{}` and a write key removes words and
+selections immediately, retaining only bounded revision/scope metadata to reject stale saves.
+Already-approved scheduled questions must be reviewed/removed separately in their schedule.
+
 ### Kept conversational memories: not activated
 
 Rich conversational memories are still disabled and have no live consent or download flow. Do

@@ -230,5 +230,525 @@
     "rubric": [
       "An ask from 阿偉 that invites 阿公 to teach a word, a saying, or what something is called, in Traditional Chinese within 50 characters; it does not repeat 阿偉's question about today's weather and invents nothing about 阿公."
     ]
+  },
+  {
+    "id": "suggest-en-personal-practical",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "en",
+      "holderName": "Leo",
+      "recipientAddress": "dad",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
+      "personalization": {
+        "intent": "How are the tomatoes growing?",
+        "connection": "practical",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["money"],
+        "never_say": ["darling"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "en"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["tomato"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-en-personal-reconnecting",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "en",
+      "holderName": "Leo",
+      "recipientAddress": "dad",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
+      "personalization": {
+        "intent": "How are the tomatoes growing?",
+        "connection": "reconnecting",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["money"],
+        "never_say": ["darling"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "en"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["tomato"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-en-personal-everyday",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "en",
+      "holderName": "Leo",
+      "recipientAddress": "dad",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
+      "personalization": {
+        "intent": "How are the tomatoes growing?",
+        "connection": "everyday",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["money"],
+        "never_say": ["darling"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "en"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["tomato"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-en-personal-unsure",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "en",
+      "holderName": "Leo",
+      "recipientAddress": "dad",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["dad how is the garden", "dad any new leaves"],
+      "personalization": {
+        "intent": "How are the tomatoes growing?",
+        "connection": "unsure",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["money"],
+        "never_say": ["darling"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "en"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["tomato"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["money", "darling", "I remember", "I read", "our relationship"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^dad[ ,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["this year", "this week", "this season", "ripening", "new leaves"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-zh-personal-practical",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "阿偉",
+      "recipientAddress": "爸",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
+      "personalization": {
+        "intent": "番茄長得怎樣",
+        "connection": "practical",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["金錢"],
+        "never_say": ["親愛的"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "zh-TW"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["番茄"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-zh-personal-reconnecting",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "阿偉",
+      "recipientAddress": "爸",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
+      "personalization": {
+        "intent": "番茄長得怎樣",
+        "connection": "reconnecting",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["金錢"],
+        "never_say": ["親愛的"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "zh-TW"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["番茄"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-zh-personal-everyday",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "阿偉",
+      "recipientAddress": "爸",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
+      "personalization": {
+        "intent": "番茄長得怎樣",
+        "connection": "everyday",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["金錢"],
+        "never_say": ["親愛的"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "zh-TW"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["番茄"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
+  },
+  {
+    "id": "suggest-zh-personal-unsure",
+    "call": "suggest",
+    "description": "Explicit request-only reviewed drafting; one child-parent pair with no inferred facts.",
+    "tags": ["no-invention"],
+    "input": {
+      "lang": "zh-TW",
+      "holderName": "阿偉",
+      "recipientAddress": "爸",
+      "forDate": "2026-11-01",
+      "rotationType": "question",
+      "recentMentions": [],
+      "familyDates": [],
+      "holderLastAsk": null,
+      "holderWritingExamples": ["爸 番茄長怎樣", "爸 你那邊有下雨嗎"],
+      "personalization": {
+        "intent": "番茄長得怎樣",
+        "connection": "unsure",
+        "talking_rhythm": "rarely",
+        "avoid_topics": ["金錢"],
+        "never_say": ["親愛的"]
+      }
+    },
+    "checks": [
+      {
+        "kind": "writtenIn",
+        "path": "text",
+        "lang": "zh-TW"
+      },
+      {
+        "kind": "equals",
+        "path": "type",
+        "value": "question"
+      },
+      {
+        "kind": "equals",
+        "path": "source",
+        "value": "rotation"
+      },
+      {
+        "kind": "containsAny",
+        "path": "text",
+        "texts": ["番茄"]
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["金錢", "親愛的", "我記得", "我看了", "我們的關係"]
+      },
+      {
+        "kind": "matches",
+        "path": "text",
+        "pattern": "^爸[ ，,]"
+      },
+      {
+        "kind": "notContains",
+        "path": "text",
+        "texts": ["這週", "今年", "新芽", "成熟"]
+      }
+    ],
+    "rubric": [
+      "One brief ordinary question about the requested tomatoes, in this person’s restrained register. No invented news, affection, commitment, or awareness. The supplied examples teach style, not present-day facts. Rare contact never justifies pressure or disclosure of private setup choices.",
+      "Both examples consistently begin with the parent address and use informal short fragments without question marks. Preserve the supported register rather than polishing it; ask only the requested thing, with no appended question or unsupported time frame."
+    ]
   }
 ]
