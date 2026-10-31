@@ -967,7 +967,7 @@ Decision: when she taps "Not okay", each organiser whose live account has a phon
 
 ## ADR-58 · The family's photo box: photos added once, turned into her free mornings by Vela, kept until taken out
 
-30 October 2026. Accepted for development and staging (founder: "yes, build Phase 1" of the pictures proposal, 30 October 2026). Production waits for privacy-notice v13 (`plan/materials/pilot/privacy-notice.v13-photo-box-draft.en.md`), the founder's approval of its wording and the families being told; `PHOTO_BOX` is pinned off there.
+30 October 2026. Accepted for development and staging (founder: "yes, build Phase 1" of the pictures proposal, 30 October 2026). Production waits for privacy-notice v13 (`plan/materials/pilot/privacy-notice.v13-photo-box-approved.en.md`, wording approved by the founder on 31 October 2026) to go live in a release and the families being told; `PHOTO_BOX` is pinned off there.
 
 Context: older parents love pictures. A photo reached her only when someone attached one to one morning by hand (ADR-33), every photo was deleted after 30 days, and Vela's own mornings (the question bank, ADR-49's drafts) never carried one. The founder asked for photos the family can give Vela once, for its automated mornings. Reading a phone's whole library, or a shared iCloud or Google Photos album, was rejected (below).
 

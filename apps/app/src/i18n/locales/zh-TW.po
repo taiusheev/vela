@@ -14,6 +14,10 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/photo-box.tsx
+msgid "— Vela"
+msgstr "—— 家人的小幫手 Vela"
+
 #: src/components/keepsake.tsx
 msgid "“{text}”"
 msgstr "「{text}」"
@@ -144,10 +148,6 @@ msgstr "{giver}送了一個擁抱"
 #: src/components/chat/chat-bubble.tsx
 msgid "{giver} sent a laugh"
 msgstr "{giver}笑了"
-
-#: app/photo-box.tsx
-msgid "{held} of {limit} photos · Vela sees only the photos you choose."
-msgstr "{held}／{limit}張照片 · Vela 只會收到你挑選的照片。"
 
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
@@ -600,6 +600,10 @@ msgstr "來自 Vela 的問候"
 msgid "A light comes on when they answer their morning."
 msgstr "早晨的問題一有回覆，燈就會亮起。"
 
+#: app/photo-box.tsx
+msgid "A lit dot marks a photo Vela has already sent. Only the photos you choose leave your phone."
+msgstr "有亮點的照片是 Vela 已經傳過的。只有你挑選的照片會離開你的手機。"
+
 #: app/sign-in.tsx
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr "與家人再近一點。使用電子郵件註冊或登入。"
@@ -619,6 +623,14 @@ msgstr "尚未設定即時連線。"
 #: app/help.tsx
 msgid "A morning message is missing"
 msgstr "早晨訊息沒有送達"
+
+#: src/components/photo-box.tsx
+msgid "A new photo from your family: “{caption}”. What does it make you think of?"
+msgstr "家人傳來一張新照片：「{caption}」。您看了想到什麼呢？"
+
+#: src/components/photo-box.tsx
+msgid "A new photo from your family. What does it make you think of?"
+msgstr "家人傳來一張新照片。您看了想到什麼呢？"
 
 #: src/components/keepsake.tsx
 #: src/data/chat.ts
@@ -747,14 +759,15 @@ msgid "Across Vela"
 msgstr "整個 Vela"
 
 #: src/components/onboarding/questions.tsx
+#: src/components/photo-box.tsx
 msgid "Add"
 msgstr "加入"
 
-#: app/photo-box.tsx
-msgid "Add {waiting} photos"
-msgstr "加入{waiting}張照片"
+#: src/components/photo-box.tsx
+msgid "Add {count} photos"
+msgstr "加入 {count} 張照片"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Add 1 photo"
 msgstr "加入 1 張照片"
 
@@ -775,10 +788,6 @@ msgstr "加一段語音問候（10 秒）"
 msgid "Add an option"
 msgstr "新增選項"
 
-#: app/photo-box.tsx
-msgid "Add from Photos"
-msgstr "從相簿加入"
-
 #: src/components/onboarding/questions.tsx
 msgid "Add one more"
 msgstr "再加一位"
@@ -788,8 +797,9 @@ msgid "Add photo"
 msgstr "新增照片"
 
 #: app/photo-box.tsx
-msgid "Add photos once. On a morning nobody writes for, about twice a week, Vela sends {name} one of them with a short question. Old photos ask for the story behind them."
-msgstr "照片只要加入一次。在沒有人寫問題的早上，大約一週兩次，Vela 會挑一張傳給{name}，附上一個簡短的問題。老照片會請長輩說說背後的故事。"
+#: src/components/photo-box.tsx
+msgid "Add photos"
+msgstr "加入照片"
 
 #: src/components/onboarding/questions.tsx
 msgid "Add someone (up to two)"
@@ -799,11 +809,14 @@ msgstr "加入一位（最多兩位）"
 msgid "Add them"
 msgstr "加入"
 
-#: app/photo-box.tsx
-msgid "Added by {added}"
-msgstr "由{added}加入"
+#: src/components/photo-box.tsx
+msgid "Added by {adder}"
+msgstr "由{adder}加入"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
+msgid "Adding {step} of {total}…"
+msgstr "正在加入第{step}張，共{total}張…"
+
 #: src/components/nearby-editor.tsx
 msgid "Adding…"
 msgstr "加入中…"
@@ -876,6 +889,14 @@ msgstr "給{name}的邀請"
 msgid "An old photo"
 msgstr "一張老照片"
 
+#: src/components/photo-box.tsx
+msgid "An old photo from your family: “{caption}”. What do you remember about that time?"
+msgstr "家人找到一張老照片：「{caption}」。您還記得那時候的事嗎？"
+
+#: src/components/photo-box.tsx
+msgid "An old photo from your family. What do you remember about it?"
+msgstr "家人找到一張老照片。您還記得這張照片的故事嗎？"
+
 #: src/data/chat.ts
 msgid "And a jar of the plum jam."
 msgstr "還有一罐梅子果醬。"
@@ -932,10 +953,6 @@ msgstr "大家"
 #: app/weekly-report.tsx
 msgid "Approve this offer for {count} days"
 msgstr "確認這項提議，保留 {count} 天"
-
-#: app/photo-box.tsx
-msgid "Are these photos new or old?"
-msgstr "這些是新照片還是老照片？"
 
 #: src/components/reminders.tsx
 #: src/components/today-glance.tsx
@@ -1105,7 +1122,6 @@ msgstr "打給媽媽"
 msgid "Canada"
 msgstr "加拿大"
 
-#: app/photo-box.tsx
 #: src/components/back-button.tsx
 msgid "Cancel"
 msgstr "取消"
@@ -1242,9 +1258,9 @@ msgstr "選擇你的國家，照平常的方式輸入手機號碼，我們會用
 msgid "Chosen · choose another"
 msgstr "已選擇 · 換一張"
 
-#: app/photo-box.tsx
 #: app/sign-in.tsx
 #: src/components/chat/action-sheet.tsx
+#: src/components/photo-box.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "關閉"
@@ -1459,9 +1475,13 @@ msgstr "完成"
 msgid "downstairs"
 msgstr "樓下鄰居"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr "例如：Lily 在海邊"
+
+#: src/components/photo-box.tsx
+msgid "e.g. Our first flat, 1982"
+msgstr "例如：我們的第一個家，1982 年"
 
 #: src/components/onboarding/plan.tsx
 msgid "Each goes to {name} signed “— {you}”, one a morning, unless someone in the family writes that day. Take out any you would not send."
@@ -1828,6 +1848,10 @@ msgstr "早安訊息在 {time} 送出。方便的話，打個電話給媽媽。"
 msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
 msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早上沒回應，當天也不會再補發訊息。"
 
+#: src/components/photo-box.tsx
+msgid "Her question"
+msgstr "長輩會收到的問題"
+
 #: src/components/onboarding/finish.tsx
 msgid "Hi {name}, it’s {you}. I’ve set up Vela for us: one small question from me each morning. Tap to see it, then decide. (An example invitation: nothing was sent.)"
 msgstr "{name}，我是{you}。我幫我們設定了 Vela：每天早上我會傳一個小問題給您。點開看看，再決定要不要。（這是範例邀請，沒有傳給任何人。）"
@@ -2026,6 +2050,10 @@ msgstr "就在媽媽平常用的通訊軟體裡，不用另外裝 App。"
 msgid "In none of them was something wrong."
 msgstr "沒有一則是真的有狀況。"
 
+#: app/photo-box.tsx
+msgid "In the box · {held} of {limit}"
+msgstr "相片盒 · {held}／{limit}"
+
 #: src/components/telegram-family-link.tsx
 msgid "In your own Vela chat, check the account and connection reference, then tap Connect my family. Return here to finish. No code to copy."
 msgstr "請在你自己的 Vela 聊天確認帳號與連結編號，然後按「連結我的家人」。再回到這裡完成，不用複製代碼。"
@@ -2061,10 +2089,6 @@ msgstr "{name}不在家嗎？"
 #: src/components/weekly-support.tsx
 msgid "Is there anything that would make this week easier for you? Big or small, just tell me."
 msgstr "這週有什麼事能讓你輕鬆一點嗎？大事小事都可以跟我說。"
-
-#: app/photo-box.tsx
-msgid "Is this photo new or old?"
-msgstr "這是新照片還是老照片？"
 
 #: src/components/onboarding/finish.tsx
 msgid "It comes from you, in {app}, so {name} knows it’s really you."
@@ -2139,8 +2163,8 @@ msgstr "一起參與爸爸提過的計畫"
 msgid "Kazakhstan"
 msgstr "哈薩克"
 
-#: app/photo-box.tsx
 #: src/components/family-book.tsx
+#: src/components/photo-box.tsx
 msgid "Keep it"
 msgstr "留著"
 
@@ -2252,10 +2276,6 @@ msgstr "語言"
 msgid "Last confirmed update"
 msgstr "上次確認的狀態"
 
-#: app/photo-box.tsx
-msgid "Last shown {shownOn}"
-msgstr "上次傳出：{shownOn}"
-
 #: src/data/memories.ts
 msgid "last summer's tomatoes"
 msgstr "去年夏天番茄"
@@ -2288,7 +2308,7 @@ msgstr "離開這個家庭"
 msgid "Leave the number out. Vela asks them for it, with their yes."
 msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號碼。"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Leave this one out"
 msgstr "這張先不要"
 
@@ -2639,11 +2659,7 @@ msgstr "荷蘭"
 msgid "Never known"
 msgstr "始終不知道"
 
-#: app/photo-box.tsx
-msgid "New"
-msgstr "新照片"
-
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "New photo"
 msgstr "新照片"
 
@@ -2683,10 +2699,6 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 #: src/components/onboarding/questions.tsx
 msgid "No photo on this phone"
 msgstr "這支手機上沒有照片"
-
-#: app/photo-box.tsx
-msgid "No photos yet. A grandchild's new drawing, a day out, or an old family photo all make a good morning."
-msgstr "還沒有照片。孫子新畫的圖、出遊的照片，或是一張全家福老照片，都很適合當早上的話題。"
 
 #: app/precision.tsx
 msgid "No quiet notice in the last 12 months."
@@ -2765,7 +2777,7 @@ msgstr "不太好"
 msgid "Not saved yet"
 msgstr "還沒保存"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Not shown yet"
 msgstr "還沒傳出"
 
@@ -2873,13 +2885,21 @@ msgstr "問問需要什麼幫忙"
 msgid "Offer some company"
 msgstr "問問是否想有人陪伴"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Old"
 msgstr "老照片"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Old photo"
 msgstr "老照片"
+
+#: src/components/photo-box.tsx
+msgid "On a free morning, about twice a week, in {name}'s own language. Your own questions always come first."
+msgstr "在沒人寫問題的早上，大約一週兩次，用{name}慣用的語言傳出。你們自己寫的問題永遠優先。"
+
+#: src/components/photo-box.tsx
+msgid "On a morning nobody writes for, about twice a week, Vela sends one of your photos with a short question. Old photos ask for the story behind them."
+msgstr "在沒人寫問題的早上，大約一週兩次，Vela 會挑一張你們的照片，附上一個簡短的問題傳出。老照片會請長輩說說背後的故事。"
 
 #: src/components/onboarding/questions.tsx
 msgid "On a quiet morning you’ll see them with a Call button. Nobody hears from Vela until they say yes themselves."
@@ -2921,9 +2941,9 @@ msgstr "一個 Email、一組驗證碼，不需要密碼。接著就能把邀請
 msgid "One email, one code. No password to remember."
 msgstr "用電子郵件接收驗證碼，不必記住密碼。"
 
-#: app/photo-box.tsx
-msgid "One line about it"
-msgstr "寫一句話介紹"
+#: src/components/photo-box.tsx
+msgid "One line about it (optional)"
+msgstr "寫一句話介紹（可不填）"
 
 #: src/components/onboarding/story.tsx
 msgid "One message from you"
@@ -3021,6 +3041,10 @@ msgstr "正在開啟…"
 msgid "Opens a question to {name} with this text, ready to change or send"
 msgstr "打開寫給{name}的問題，文字已經填好，可以修改或直接傳送"
 
+#: src/components/photo-box.tsx
+msgid "Opens the photo to change or take it out"
+msgstr "打開照片，可以修改或拿出"
+
 #: src/components/vote-options.tsx
 msgid "Option {number}"
 msgstr "選項 {number}"
@@ -3116,6 +3140,7 @@ msgid "Photo"
 msgstr "照片"
 
 #: app/parent.tsx
+#: src/components/photo-box.tsx
 msgid "Photo {number}"
 msgstr "照片 {number}"
 
@@ -3233,6 +3258,14 @@ msgstr "隱私、條款與安全"
 #: app/weekly-report.tsx
 msgid "Private test · reviewed family support"
 msgstr "私人測試・家人確認過的支持提議"
+
+#: src/components/photo-box.tsx
+msgid "Put {count} photos in the box"
+msgstr "把 {count} 張照片放進相片盒"
+
+#: src/components/photo-box.tsx
+msgid "Put 1 photo in the box"
+msgstr "把 1 張照片放進相片盒"
 
 #: src/components/ask-ideas.tsx
 msgid "Puts these words in your question, to send or change"
@@ -3502,10 +3535,6 @@ msgstr "已同意"
 msgid "Sam"
 msgstr "阿杰"
 
-#: app/photo-box.tsx
-msgid "Save"
-msgstr "儲存"
-
 #: src/components/onboarding/plan.tsx
 msgid "Save {name}’s mornings"
 msgstr "保存{name}的早晨"
@@ -3519,6 +3548,7 @@ msgid "Save calling number"
 msgstr "儲存電話號碼"
 
 #: app/ask.tsx
+#: src/components/photo-box.tsx
 msgid "Save changes"
 msgstr "儲存修改"
 
@@ -3589,6 +3619,10 @@ msgstr "現在說點什麼，會馬上送到{name}的聊天室。"
 #: app/exchange/[id].tsx
 msgid "Say something short"
 msgstr "寫一句簡短的話"
+
+#: src/components/photo-box.tsx
+msgid "Say whether each one is new or old, and add a line if it helps: who, where, or when. Vela puts your line in her question as you wrote it."
+msgstr "請標示每張是新照片還是老照片；需要的話寫一句話：誰、在哪裡、什麼時候。Vela 會把這句話照原樣放進問題裡。"
 
 #: app/(tabs)/exchanges.tsx
 msgid "Search memories"
@@ -3819,7 +3853,11 @@ msgstr "先顯示{name}的名字縮寫。"
 msgid "Show test sign-in details"
 msgstr "顯示測試登入資訊"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
+msgid "Shown {shownOn}"
+msgstr "{shownOn}傳出"
+
+#: src/components/photo-box.tsx
 msgid "Shown to her"
 msgstr "已傳給長輩"
 
@@ -3945,6 +3983,10 @@ msgstr "韓國"
 msgid "Spain"
 msgstr "西班牙"
 
+#: src/components/photo-box.tsx
+msgid "Start {name}'s mornings with a photo"
+msgstr "用一張照片開始{name}的早上"
+
 #: app/vela-light.tsx
 msgid "Start 30 free days"
 msgstr "開始 30 天免費試用"
@@ -4043,7 +4085,7 @@ msgstr "移除故事"
 msgid "Take out “{ask}”"
 msgstr "拿掉「{ask}」"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Take out of the box"
 msgstr "從相片盒拿出"
 
@@ -4055,9 +4097,9 @@ msgstr "把這一頁從書裡拿出來"
 msgid "Take this page out of the family book?"
 msgstr "要把這一頁從家庭之書拿出來嗎？"
 
-#: app/photo-box.tsx
-msgid "Take this photo out? It is deleted within a day."
-msgstr "要拿出這張照片嗎？照片會在一天內刪除。"
+#: src/components/photo-box.tsx
+msgid "Take this photo out? It is deleted within a day, and Vela won't send it."
+msgstr "要拿出這張照片嗎？照片會在一天內刪除，Vela 不會再傳出。"
 
 #: src/components/chat/chat-link.tsx
 #: src/components/today-glance.tsx
@@ -4922,6 +4964,10 @@ msgstr "Vela · 早安訊息 · {time}"
 msgid "Vela {version}"
 msgstr "Vela 版本{version}"
 
+#: src/components/photo-box.tsx
+msgid "Vela asks for the story behind it."
+msgstr "Vela 會請長輩說說背後的故事。"
+
 #: src/components/onboarding/questions.tsx
 msgid "Vela asks in its own name"
 msgstr "Vela 以自己的名義提問"
@@ -4929,6 +4975,10 @@ msgstr "Vela 以自己的名義提問"
 #: src/components/onboarding/plan.tsx
 msgid "Vela asks on mornings nobody writes"
 msgstr "沒人寫的早晨由 Vela 提問"
+
+#: src/components/photo-box.tsx
+msgid "Vela asks what it makes her think of."
+msgstr "Vela 會問長輩看了想到什麼。"
 
 #: app/(tabs)/index.tsx
 #: src/components/today-feed.tsx
@@ -4990,10 +5040,6 @@ msgstr "語音回覆需要使用麥克風，你可以在「設定」中允許。
 #: app/vela-light.tsx
 msgid "Vela pilot"
 msgstr "Vela 試辦"
-
-#: app/photo-box.tsx
-msgid "Vela puts these words in her question, as you wrote them."
-msgstr "Vela 會把這句話照原樣放進問題裡。"
 
 #: src/components/service-status.tsx
 msgid "Vela reports a service problem. Messages may be delayed."
@@ -5170,6 +5216,10 @@ msgstr "歡迎回來。"
 msgid "Welcome to Vela"
 msgstr "歡迎使用 Vela"
 
+#: src/components/photo-box.tsx
+msgid "What {name} sees next"
+msgstr "{name}接下來會看到的"
+
 #: src/components/weekly-read-card.tsx
 msgid "What {name} told the family"
 msgstr "{name}跟家人說了什麼"
@@ -5323,11 +5373,7 @@ msgstr "這個提問要傳給誰？"
 msgid "Who lives close to {name}?"
 msgstr "誰住在{name}附近？"
 
-#: app/photo-box.tsx
-msgid "Who or where? e.g. Our first flat"
-msgstr "誰？在哪裡？例如：我們的第一個家"
-
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Whoever added this photo, or an organiser, can change it."
 msgstr "加入這張照片的人或發起人可以修改。"
 
@@ -5415,7 +5461,7 @@ msgstr "陽台上的黃色菊花，讓整個早上都暖了起來。"
 msgid "Yes, remove question"
 msgstr "確定移除問題"
 
-#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "Yes, take it out"
 msgstr "好，拿出來"
 

@@ -1,9 +1,11 @@
-# Privacy notice v13: The family's photo box (draft, awaiting the founder's approval, not live)
+# Privacy notice v13: The family's photo box (wording approved by the founder, not live)
 
-30 October 2026 · draft for the founder. Builds on v12 (live). Production keeps the photo box off
-(`PHOTO_BOX` off, pinned in `apps/worker/src/wrangler-config.test.ts`) until the founder approves this
-wording, it is merged into `privacy-notice.en.md` and `privacy-notice.zh-TW.md`, and the families are
-told. The Chinese lines below are a first draft; a native reader checks them before they go live.
+Approved 31 October 2026 (founder: "approve all"). Builds on v12 (live). Production keeps the photo
+box off (`PHOTO_BOX` off, pinned in `apps/worker/src/wrangler-config.test.ts`) until this wording is
+merged into `privacy-notice.en.md` and `privacy-notice.zh-TW.md` in a release, and the families are
+told. That release, and the commit that turns `PHOTO_BOX` on in production, are separate steps that
+each need the founder's yes. The Chinese below was checked against the live v12's terms (發起人,
+被留燈的家人) and the app's wording rules.
 
 ## Line to add to "In short", after the line on keeping as little as we can
 
@@ -51,9 +53,7 @@ Add: "photos put in the family's photo box, and the line written about each (see
 
 ---
 
-# 隱私權聲明 v13：家庭相片盒（草稿，待創辦人核准，尚未生效）
-
-以下為中文初稿，上線前須由母語審閱者確認。
+# 隱私權聲明 v13：家庭相片盒（文字已核准，尚未生效）
 
 ## 「重點摘要」新增一行
 

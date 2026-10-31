@@ -51,6 +51,8 @@ export interface PhotoBoxView {
   /** Adds each photo in turn; answers the ones that did not go in, with why. */
   add(pending: readonly PendingPhoto[]): Promise<{ photo: PendingPhoto; failure: AddFailure }[]>;
   adding: boolean;
+  /** How far an `add` has gone: photos done of the photos sent. */
+  progress: { done: number; total: number } | undefined;
   change(id: string, change: { era?: PhotoBoxEra; caption?: string | null }): Promise<boolean>;
   remove(id: string): Promise<boolean>;
   busy: boolean;
@@ -73,6 +75,7 @@ export function usePhotoBox(familyId: string | undefined, enabled: boolean): Pho
   const changeKey = useIdempotencyKey("photo-box-change");
   const removeKey = useIdempotencyKey("photo-box-remove");
   const [adding, setAdding] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number }>();
   const live = apiConfigured() && account.signedIn && familyId !== undefined && enabled;
   const read = useQuery({
     queryKey: ["photo-box", familyId],
@@ -107,9 +110,11 @@ export function usePhotoBox(familyId: string | undefined, enabled: boolean): Pho
     demo: false,
     refresh: again,
     adding,
+    progress,
     add: async (pending) => {
       if (familyId === undefined) return pending.map((photo) => ({ photo, failure: "trouble" }));
       setAdding(true);
+      setProgress({ done: 0, total: pending.length });
       const failed: { photo: PendingPhoto; failure: AddFailure }[] = [];
       try {
         for (const photo of pending) {
@@ -135,9 +140,13 @@ export function usePhotoBox(familyId: string | undefined, enabled: boolean): Pho
           } catch (error) {
             failed.push({ photo, failure: failureOf(error) });
           }
+          setProgress((current) =>
+            current === undefined ? current : { ...current, done: current.done + 1 },
+          );
         }
       } finally {
         setAdding(false);
+        setProgress(undefined);
         await again();
       }
       return failed;
@@ -174,6 +183,7 @@ function useExamplePhotoBox(): PhotoBoxView {
     demo: true,
     refresh: async () => {},
     adding: false,
+    progress: undefined,
     add: async (pending) => {
       setPhotos((current) => [
         ...pending.map((photo) => ({
