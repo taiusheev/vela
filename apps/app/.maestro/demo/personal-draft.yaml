@@ -25,3 +25,8 @@ tags:
 - tapOn: "Leave room for now"
 - assertVisible: "Leave a little room."
 - assertVisible: "No question is needed right now. Your existing morning settings stay as they are."
+
+# Leaving a draft returns to the same parent, including a parent who is not yet asking-ready.
+- openLink: ${APP_URL}/personal-question?recipient=m2
+- tapOn: "Back to questions"
+- assertVisible: "Write a question for Dad"

@@ -71,7 +71,12 @@ export default function PersonalQuestionScreen() {
   );
   if ((!available && !profileAccess) || parent === undefined)
     return (
-      <QuestionPage title={t`Back to questions`} onBack={() => router.replace("/questions")}>
+      <QuestionPage
+        title={t`Back to questions`}
+        onBack={() =>
+          router.replace({ pathname: "/questions", params: { recipient: parent?.memberId } })
+        }
+      >
         {chooser}
         <Words tone="ink2">
           <Trans>Personal drafts are not available here yet.</Trans>
@@ -146,7 +151,12 @@ function PersonalSetup({
   };
   if (profileAccess && !profile.data)
     return (
-      <QuestionPage title={t`Back to questions`} onBack={() => router.replace("/questions")}>
+      <QuestionPage
+        title={t`Back to questions`}
+        onBack={() =>
+          router.replace({ pathname: "/questions", params: { recipient: parent?.memberId } })
+        }
+      >
         {chooser}
         <Words tone="ink2">
           {profile.isError
@@ -408,7 +418,9 @@ function PersonalDraft({
   return (
     <QuestionPage
       title={t`Back to questions`}
-      onBack={() => router.replace("/questions")}
+      onBack={() =>
+        router.replace({ pathname: "/questions", params: { recipient: parent?.memberId } })
+      }
       resetKey={`${step}:${profileView.revision}:${profileNotice}:${profileError !== null}`}
     >
       {chooser}
