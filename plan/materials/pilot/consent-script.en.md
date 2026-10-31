@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v7` · 27 October 2026 · goes with `privacy-notice.v12` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
+Version `consent-script.v8` · 31 October 2026 · goes with `privacy-notice.v13` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes to both" or "Yes, health private" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
@@ -43,7 +43,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 
 ### 3. How answering works
 
-"The message comes at about [time] in [Telegram or LINE]. It might be a question from [a family member's name], two photos to choose between, or a voice message. You answer in your own words: a short voice message, or a few written words. If you haven't answered a while after you usually do, Vela sends a short "just checking in" with two buttons, "I'm okay" and "Not okay, tell my family". One tap on "Not okay" tells [organiser] straight away, so they can call you. It is not an emergency service: in an emergency, call for help directly. The next morning, you'll hear what the family said back to you."
+"The message comes at about [time] in [Telegram or LINE]. It might be a question from [a family member's name], two photos to choose between, a voice message, or, on a morning nobody in the family wrote, a family photo with a short question from Vela. You answer in your own words: a short voice message, or a few written words. If you haven't answered a while after you usually do, Vela sends a short "just checking in" with two buttons, "I'm okay" and "Not okay, tell my family". One tap on "Not okay" tells [organiser] straight away, so they can call you. It is not an emergency service: in an emergency, call for help directly. The next morning, you'll hear what the family said back to you."
 
 ### 4. What else you should know
 
@@ -57,7 +57,7 @@ Replace everything in [brackets]. Words in *italics* are notes for you, not for 
 - "A computer program helps with the messages: it writes down voice messages as text, translates between Chinese and English when someone in the family reads the other language."
 - "On a morning when nobody in the family has written you a question, Vela sends one of its own, signed 'Vela'. [Organiser] can also choose to let the program write that question in their style, or pick one from Vela's own list worded the way family members write, and send it with their name on it. It is still [organiser]'s choice, and in the family's app it is marked as written by Vela. You can always ask [organiser] or me whether a question was written by Vela. If you'd rather every question come only from the family's own words, tell [organiser] or me and it will be turned off."
 - "Companies that run Vela process your messages for it: the database is in Singapore, the program that writes down and understands voice messages works in the United States, Cloudflare's network, which runs Vela, works worldwide, and [Telegram or LINE] carries the messages."
-- "Your voice messages, photos and the words of your answers are deleted after 30 days. A one-line summary of each answer stays while the family uses Vela."
+- "Your voice messages, photos and the words of your answers are deleted after 30 days. A one-line summary of each answer stays while the family uses Vela. Photos your family puts in their photo box for your mornings stay until they take them out."
 - "While we test Vela over these first weeks, I read the messages too, only to make sure everything works."
 - "You can ask me at any time to see what Vela has about you, to get a copy, to correct it or to delete it."
 - "On Sundays [organiser] gets a few lines about your week: what you told the family, and what changed in how you answered, compared only with your own earlier weeks. Those lines are never a score and never advice. Whenever you like, write 'what does the family see', and you'll get what the family saw from your latest answers and the lines about your week."

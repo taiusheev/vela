@@ -1,6 +1,6 @@
 # Privacy notice v13: The family's photo box (wording approved by the founder, not live)
 
-Approved 31 October 2026 (founder: "approve all"). Builds on v12 (live). Production keeps the photo
+Approved 31 October 2026 (founder: "approve all"). Merged into `privacy-notice.en.md` and `privacy-notice.zh-TW.md` on branch `release/photo-box-production`, which releases after the Taiwan first week. Builds on v12 (live). Production keeps the photo
 box off (`PHOTO_BOX` off, pinned in `apps/worker/src/wrangler-config.test.ts`) until this wording is
 merged into `privacy-notice.en.md` and `privacy-notice.zh-TW.md` in a release, and the families are
 told. That release, and the commit that turns `PHOTO_BOX` on in production, are separate steps that

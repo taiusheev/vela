@@ -615,14 +615,14 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
-  // ADR-58: the family's photo box keeps photos beyond 30 days, which the live notice does not yet
-  // describe, so it is on only where test families are. The commit that turns it on changes this.
-  it("keep the family's photo box in development and staging, and not yet in production", () => {
+  // ADR-58: the family's photo box, on everywhere since privacy-notice.v13 and consent-script.v8
+  // describe it (founder's approval of 31 October 2026), released after the families were told.
+  it("keeps the family's photo box in every environment", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.PHOTO_BOX,
       ),
-    ).toEqual(["on", "on", "off"]);
+    ).toEqual(["on", "on", "on"]);
   });
 
   // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and

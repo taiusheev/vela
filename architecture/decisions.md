@@ -985,4 +985,6 @@ Consequences: a box photo costs one R2 copy and delete when it is added and noth
 
 **Update 31 October 2026 (testing across channels and states).** A use now counts only once its morning reached her (`exchanges.delivered_at`): a morning dropped for a pause, or one that failed, no longer marks its photo shown, spends her turn, or counts toward her rhythm. A picture morning whose photos are all gone when it is sent (taken out of the box after the morning was made) goes as the plain hello, never a question about a photo she cannot see; a choice left with one photo asks about that one. The page's preview comes from the server (`next` in `ApiPhotoBox`, from the same plan `takePictureMorning` follows), in her language. The test LINE adapter now names stored photos by key, as the real one does (`mediaByUrl`).
 
+**Production (prepared 31 October 2026, released after the Taiwan first week).** privacy-notice.v13 and consent-script.v8 go live with `PHOTO_BOX` on in production, in one release, after the founder has told the families (`plan/materials/pilot/photo-box-family-message.md`).
+
 Revisit if: families want the box to say which parent a photo is for; she answers picture mornings less than others (the weekly numbers' `said_something`); a model should write the question from the line or see the photo; or the box's 40 photos prove too few or too many.
