@@ -170,3 +170,66 @@ export function QuestionPaper({ children }: { children: ReactNode }) {
     </View>
   );
 }
+
+/**
+ * A promise the writer ticks, drawn as a checkbox rather than a button: it is a choice, and the
+ * button below stays the only thing on the page that looks pressable (Refactoring UI).
+ */
+export function QuestionConfirm({
+  label,
+  checked,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  checked: boolean;
+  onPress(): void;
+  disabled?: boolean;
+}) {
+  const p = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked, disabled }}
+      aria-checked={checked}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: space.m,
+        minHeight: 44,
+        paddingVertical: space.xs,
+        opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: 7,
+          borderWidth: 2,
+          borderColor: checked ? p.action : p.control,
+          backgroundColor: checked ? p.action : p.surface,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checked ? <BrandIcon name="check" color={p.onAction} size={16} strokeWidth={2.5} /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Words variant="bodyMedium">{label}</Words>
+      </View>
+    </Pressable>
+  );
+}
+
+/** One question and its answers sit close; the next question starts after a wider gap. */
+export function QuestionGroup({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <View style={{ gap: space.m }}>
+      {title === undefined ? null : <Words variant="bodyMedium">{title}</Words>}
+      {children}
+    </View>
+  );
+}

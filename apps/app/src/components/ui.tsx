@@ -382,12 +382,15 @@ export function TextField({
   autoFocus = false,
   maxLength,
   minHeight,
+  labelHidden = false,
   disabled = false,
   onSubmit,
   inputRef,
   onContentSizeChange,
 }: {
   label?: string;
+  /** When the heading above already asks the question, the label is only read aloud, not shown. */
+  labelHidden?: boolean;
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
@@ -416,7 +419,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: space.s }}>
-      {label === undefined ? null : <Words variant="bodyMedium">{label}</Words>}
+      {label === undefined || labelHidden ? null : <Words variant="bodyMedium">{label}</Words>}
       <TextInput
         ref={inputRef}
         editable={!disabled}

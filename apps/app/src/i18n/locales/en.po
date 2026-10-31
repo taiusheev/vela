@@ -621,8 +621,8 @@ msgid "A live connection has not been set up."
 msgstr "A live connection has not been set up."
 
 #: app/personal-question.tsx
-msgid "A message you would write to {name} (optional)"
-msgstr "A message you would write to {name} (optional)"
+msgid "A message you would write to {name}"
+msgstr "A message you would write to {name}"
 
 #: src/components/questions/flow.tsx
 msgid "A morning"
@@ -724,10 +724,6 @@ msgstr "A story in {name}'s words"
 #: src/components/story-day.tsx
 msgid "A story question for {name}'s {day} morning"
 msgstr "A story question for {name}'s {day} morning"
-
-#: app/personal-question.tsx
-msgid "A topic to leave out (optional)"
-msgstr "A topic to leave out (optional)"
 
 #: app/conversation.tsx
 msgid "A voice hello for her morning"
@@ -946,8 +942,8 @@ msgid "Anna"
 msgstr "Anna"
 
 #: app/personal-question.tsx
-msgid "Another example (optional)"
-msgstr "Another example (optional)"
+msgid "Another example"
+msgstr "Another example"
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -5068,6 +5064,10 @@ msgstr "Too many photos for now. Try again later."
 msgid "Too many photos for now. Try again tomorrow."
 msgstr "Too many photos for now. Try again tomorrow."
 
+#: app/personal-question.tsx
+msgid "Topics to leave out"
+msgstr "Topics to leave out"
+
 #: app/help.tsx
 msgid "Trouble signing in?"
 msgstr "Trouble signing in?"
@@ -5686,8 +5686,8 @@ msgid "Words & sayings"
 msgstr "Words & sayings"
 
 #: app/personal-question.tsx
-msgid "Words you would never use (optional)"
-msgstr "Words you would never use (optional)"
+msgid "Words you would never use"
+msgstr "Words you would never use"
 
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
