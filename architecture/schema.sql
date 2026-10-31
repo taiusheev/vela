@@ -655,7 +655,7 @@ CREATE TABLE "question_profiles" (
 	"expires_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "question_profiles_pkey" PRIMARY KEY("family_id","author_id","recipient_id"),
 	CONSTRAINT "question_profiles_distinct_people" CHECK ("question_profiles"."author_id" <> "question_profiles"."recipient_id"),
-	CONSTRAINT "question_profiles_bounded_retention" CHECK ("question_profiles"."expires_at" > "question_profiles"."changed_at" and "question_profiles"."expires_at" <= "question_profiles"."changed_at" + interval '30 days'),
+	CONSTRAINT "question_profiles_bounded_retention" CHECK ("question_profiles"."expires_at" > "question_profiles"."changed_at" and "question_profiles"."expires_at" <= "question_profiles"."changed_at" + interval '720 hours'),
 	CONSTRAINT "question_profiles_data_object" CHECK ("question_profiles"."data" is null or jsonb_typeof("question_profiles"."data") = 'object')
 );
 

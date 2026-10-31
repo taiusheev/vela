@@ -6163,7 +6163,7 @@
         },
         "question_profiles_bounded_retention": {
           "name": "question_profiles_bounded_retention",
-          "value": "\"question_profiles\".\"expires_at\" > \"question_profiles\".\"changed_at\" and \"question_profiles\".\"expires_at\" <= \"question_profiles\".\"changed_at\" + interval '30 days'"
+          "value": "\"question_profiles\".\"expires_at\" > \"question_profiles\".\"changed_at\" and \"question_profiles\".\"expires_at\" <= \"question_profiles\".\"changed_at\" + interval '720 hours'"
         },
         "question_profiles_data_object": {
           "name": "question_profiles_data_object",

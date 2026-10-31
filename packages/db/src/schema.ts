@@ -386,7 +386,7 @@ export const questionProfiles = pgTable(
     check("question_profiles_distinct_people", sql`${t.authorId} <> ${t.recipientId}`),
     check(
       "question_profiles_bounded_retention",
-      sql`${t.expiresAt} > ${t.changedAt} and ${t.expiresAt} <= ${t.changedAt} + interval '30 days'`,
+      sql`${t.expiresAt} > ${t.changedAt} and ${t.expiresAt} <= ${t.changedAt} + interval '720 hours'`,
     ),
     check(
       "question_profiles_data_object",

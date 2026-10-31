@@ -2486,6 +2486,17 @@ describe("CHECK constraints on enumerated columns", () => {
     ).toMatchObject({ constraint: "question_profiles_data_object" });
   });
 
+  it("keeps the 30-day profile lifetime exact across a database daylight-saving change", async () => {
+    await seedEveryTable();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local time zone 'America/New_York'`);
+      await tx.update(questionProfiles).set({
+        changedAt: new Date("2026-02-15T00:00:00Z"),
+        expiresAt: new Date("2026-03-17T00:00:00Z"),
+      });
+    });
+  });
+
   it("covers every CHECK constraint in the database", async () => {
     const result = await db.execute<{ conname: string }>(
       sql`select conname from pg_constraint
