@@ -38,11 +38,13 @@ import {
   ApiIdempotencyError,
   type ApiNudges,
   addApiNearby,
+  addToApiPhotoBox,
   admissionWithRoster,
   answerMemoryPermission,
   askApiToLookIn,
   authorizeFamilyAccess,
   cancelAccountLink,
+  changeApiPhotoBoxPhoto,
   completeAccountLink,
   composeApiAsk,
   createApiFamily,
@@ -56,6 +58,7 @@ import {
   finishApiReminder,
   inviteApiNearby,
   keepApiAnswer,
+  keepBoxPhotoStored,
   keepMemoryCandidate,
   type Logger,
   leaveApiFamily,
@@ -70,6 +73,7 @@ import {
   loadApiMe,
   loadApiMorningPreferences,
   loadApiParentConnection,
+  loadApiPhotoBox,
   loadApiPlannedQuestions,
   loadApiPrecision,
   loadApiQuiet,
@@ -98,6 +102,7 @@ import {
   removeApiDevice,
   removeApiNearby,
   removeApiPushDevice,
+  removeFromApiPhotoBox,
   removeKeptMemory,
   replyToApiExchange,
   resolveApiQuiet,
@@ -120,7 +125,7 @@ import {
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig, readRichMemories, secret } from "./config.ts";
+import { type ApiConfig, readApiConfig, readPhotoBox, readRichMemories, secret } from "./config.ts";
 import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
@@ -162,6 +167,7 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiFamily,
   loadApiBook,
   loadApiReminders,
+  loadApiPhotoBox,
   loadApiExchange,
   loadApiPlannedQuestions,
   loadApiExchanges,
@@ -225,6 +231,10 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   dismissApiSuggestion,
   createApiReminder,
   finishApiReminder,
+  addToApiPhotoBox,
+  changeApiPhotoBoxPhoto,
+  removeFromApiPhotoBox,
+  keepBoxPhotoStored,
   markApiQuietUseful,
   inviteApiNearby,
   registerApiPushDevice,
@@ -407,6 +417,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       english_only: config.pilotAdmission != null && !pilotSpeaks(config.pilotAdmission, "zh-TW"),
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
+      photo_box: readPhotoBox(env),
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
     },

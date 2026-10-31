@@ -218,6 +218,13 @@
       "when": 1793069386032,
       "tag": "0030_answer_not_okay",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793375263634,
+      "tag": "0031_photo_box",
+      "breakpoints": true
     }
   ]
 }

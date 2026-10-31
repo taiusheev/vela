@@ -140,6 +140,9 @@ function fixture(options: FixtureOptions = {}) {
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
+    loadApiPhotoBox: vi
+      .fn<ApiReadServices["loadApiPhotoBox"]>()
+      .mockResolvedValue({ photos: [], limit: 40 }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiPlannedQuestions: vi.fn(unused("planned questions")),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
@@ -197,6 +200,10 @@ function fixture(options: FixtureOptions = {}) {
         .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
       createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      addToApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      changeApiPhotoBoxPhoto: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      removeFromApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      keepBoxPhotoStored: vi.fn().mockResolvedValue(true),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),

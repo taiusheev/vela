@@ -171,6 +171,8 @@ export const CONSENT_PROOF_KEYS = ["chat_id", "message_id", "text_sha256", "reco
 export const SUBSCRIPTION_PROVIDERS = ["trial", "stripe", "revenuecat", "manual"] as const;
 export { SUBSCRIPTION_STATUSES };
 export const PLAN_INTERVALS = ["month", "year"] as const;
+/** A photo in the family's photo box (ADR-58): one from today, or one from long ago. */
+export const PHOTO_BOX_ERAS = ["new", "old"] as const;
 
 type JsonObject = Record<string, unknown>;
 
@@ -1360,6 +1362,61 @@ export const memoryStoryMoments = pgTable(
   (t) => [primaryKey({ name: "memory_story_moments_pkey", columns: [t.storyId, t.exchangeId] })],
 );
 
+/**
+ * The family's photo box (ADR-58): photos the family added once, which Vela turns into her free
+ * mornings. A photo here has no deletion date (`media.expires_at` null) and lives under `book/`,
+ * which no bucket rule clears; taking it out of the box gives it its deletion date again.
+ */
+export const photoBox = pgTable(
+  "photo_box",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    mediaId: uuid("media_id")
+      .notNull()
+      .unique("photo_box_media_id_key")
+      .references(() => media.id, { onDelete: "cascade" }),
+    era: text("era", { enum: PHOTO_BOX_ERAS }).notNull(),
+    /** The family's one line about the photo, in their words; null when they wrote none. */
+    caption: sealedText("photo_box.caption"),
+    addedBy: uuid("added_by").references(() => members.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("photo_box_family_idx").on(t.familyId, t.createdAt),
+    check("photo_box_era_check", isOneOf(t.era, PHOTO_BOX_ERAS)),
+  ],
+);
+
+/**
+ * A morning Vela made from the photo box (ADR-58): which of her mornings, and which box photos it
+ * showed. A photo taken out of the box leaves its uses behind (`box_id` null), so her rhythm of
+ * picture mornings still counts the morning.
+ */
+export const photoBoxUses = pgTable(
+  "photo_box_uses",
+  {
+    id: uuidv7Id(),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    boxId: uuid("box_id").references(() => photoBox.id, { onDelete: "set null" }),
+    /** Her local day of the morning. */
+    localDay: date("local_day").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("photo_box_uses_member_day_idx").on(t.memberId, t.localDay),
+    index("photo_box_uses_box_idx").on(t.boxId),
+    index("photo_box_uses_exchange_idx").on(t.exchangeId),
+  ],
+);
+
 export const weeklyReads = pgTable(
   "weekly_reads",
   {
@@ -2127,6 +2184,7 @@ export type NewOnboardingSession = typeof onboardingSessions.$inferInsert;
 export type NearbyContact = typeof nearbyContacts.$inferSelect;
 export type NewNearbyContact = typeof nearbyContacts.$inferInsert;
 export type Media = typeof media.$inferSelect;
+export type PhotoBoxRow = typeof photoBox.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
 export type Exchange = typeof exchanges.$inferSelect;
 export type NewExchange = typeof exchanges.$inferInsert;

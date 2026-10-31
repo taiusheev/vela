@@ -1,5 +1,6 @@
 import {
   AddNearby,
+  AddToPhotoBox,
   ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
@@ -39,6 +40,9 @@ import {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPhotoBox,
+  ApiPhotoBoxPhoto,
+  ApiPhotoBoxRemoved,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -59,6 +63,7 @@ import {
   ApiWeeklyReadOpened,
   ApiWithdrawn,
   AskToLookIn,
+  ChangePhotoBoxPhoto,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
@@ -106,6 +111,7 @@ import {
   RegisterPushDevice,
   RemoveBookEntry,
   RemoveNearby,
+  RemovePhotoBoxPhoto,
   RemovePushDevice,
   SetAway,
   SetMorningPreferences,
@@ -132,12 +138,14 @@ import {
   AskVoiceMissingError,
   AwayRefusedError,
   type addApiNearby,
+  type addToApiPhotoBox,
   type answerMemoryPermission,
   type answerWeeklySupportPermission,
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
   type cancelAccountLink,
+  type changeApiPhotoBoxPhoto,
   type completeAccountLink,
   type composeApiAsk,
   type confirmMemorySharing,
@@ -155,6 +163,7 @@ import {
   type finishApiReminder,
   type inviteApiNearby,
   type keepApiAnswer,
+  type keepBoxPhotoStored,
   type keepMemoryCandidate,
   type Logger,
   LookInRefusedError,
@@ -171,6 +180,7 @@ import {
   type loadApiMe,
   type loadApiMorningPreferences,
   type loadApiParentConnection,
+  type loadApiPhotoBox,
   type loadApiPlannedQuestions,
   type loadApiPrecision,
   type loadApiQuiet,
@@ -197,6 +207,7 @@ import {
   NearbyInviteRefusedError,
   NearbyRefusedError,
   type openApiWeeklyRead,
+  PhotoBoxRefusedError,
   type PilotAdmission,
   type pauseApiMember,
   type pilotApiAccountAllowed,
@@ -214,6 +225,7 @@ import {
   type removeApiDevice,
   type removeApiNearby,
   type removeApiPushDevice,
+  type removeFromApiPhotoBox,
   type removeKeptMemory,
   type removeWeeklySupportReview,
   type replyToApiExchange,
@@ -271,6 +283,7 @@ export interface ApiReadServices {
   loadApiFamily: typeof loadApiFamily;
   loadApiBook: typeof loadApiBook;
   loadApiReminders: typeof loadApiReminders;
+  loadApiPhotoBox: typeof loadApiPhotoBox;
   loadApiExchange: typeof loadApiExchange;
   loadApiPlannedQuestions: typeof loadApiPlannedQuestions;
   loadApiExchanges: typeof loadApiExchanges;
@@ -315,6 +328,10 @@ export interface ApiWriteServices {
   dismissApiSuggestion: typeof dismissApiSuggestion;
   createApiReminder: typeof createApiReminder;
   finishApiReminder: typeof finishApiReminder;
+  addToApiPhotoBox: typeof addToApiPhotoBox;
+  changeApiPhotoBoxPhoto: typeof changeApiPhotoBoxPhoto;
+  removeFromApiPhotoBox: typeof removeFromApiPhotoBox;
+  keepBoxPhotoStored: typeof keepBoxPhotoStored;
   markApiQuietUseful: typeof markApiQuietUseful;
   inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
@@ -503,6 +520,12 @@ const PHOTO_REFUSALS = {
   photo_limit: "Too many photos for now.",
   m4a_only: "Only an .m4a recording can be kept.",
   voice_limit: "Too many voices for now.",
+} as const;
+/** What a refused photo box write is told, by `PhotoBoxRefusedError.reason` (ADR-58). */
+const PHOTO_BOX_REFUSALS = {
+  photo_missing: "That photo is no longer here.",
+  in_box: "That photo is already in the photo box.",
+  box_full: "The photo box is full.",
 } as const;
 const MAX_BODY_BYTES = 4096;
 const JSON_CONTENT_TYPE = /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i;
@@ -844,6 +867,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         };
         return c.json(refused, 400);
       }
+      if (error instanceof PhotoBoxRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: error.reason === "photo_missing" ? "not_found" : "conflict",
+            message: PHOTO_BOX_REFUSALS[error.reason],
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, error.reason === "photo_missing" ? 404 : 409);
+      }
       if (error instanceof FactMissingError) {
         // The fact is gone, past, not of the family, or about the caller (spec §12).
         const missing: ApiErrorBody = {
@@ -1129,6 +1162,29 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         runtime.now(),
       );
       return found === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiReminders.parse(found));
+    },
+  );
+  // The family's photo box (ADR-58): every live member reads it, where the box is on.
+  app.get(
+    "/v1/families/:familyId/photo-box",
+    authenticate,
+    async (c, next) => {
+      if (runtime.capabilities?.photo_box !== true) return c.json(NOT_FOUND, 404);
+      await next();
+      return c.res;
+    },
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const box = await runtime.services.loadApiPhotoBox(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+      );
+      return box === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiPhotoBox.parse(box));
     },
   );
   // One exchange, for a link or a tapped notice: the service reads its family and answers null for
@@ -2575,6 +2631,99 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         }
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ApiKeepSuggestionDismissed.parse(result.response.body), 200);
+      },
+    );
+    // The photo box (ADR-58), where it is on: a photo the caller uploaded goes in, and its object is
+    // moved out of the prefix the bucket clears after the commit (retention moves any this misses).
+    const photoBoxOn: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+      if (runtime.capabilities?.photo_box !== true) return c.json(NOT_FOUND, 404);
+      await next();
+      return c.res;
+    };
+    app.post(
+      "/v1/families/:familyId/photo-box",
+      authenticate,
+      photoBoxOn,
+      validateWrite(AddToPhotoBox, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.addToApiPhotoBox(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const added = ApiPhotoBoxPhoto.parse(result.response.body);
+        const media = runtime.media;
+        if (media !== undefined) {
+          try {
+            await writes.services.keepBoxPhotoStored(
+              {
+                db: c.get("db"),
+                clock: writes.clock,
+                media: media.store,
+                logger: { warn: (event, fields) => runtime.logger.error(event, fields) },
+                random: media.random,
+              },
+              added.media_id,
+            );
+          } catch (error) {
+            runtime.logger.error("photo_box_keep_after_commit_failed", {
+              error: errorLabel(error),
+            });
+          }
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(added, 201);
+      },
+    );
+    app.post(
+      "/v1/photo-box/:boxId",
+      authenticate,
+      photoBoxOn,
+      validateWrite(ChangePhotoBoxPhoto, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.changeApiPhotoBoxPhoto(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("boxId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiPhotoBoxPhoto.parse(result.response.body), 200);
+      },
+    );
+    app.post(
+      "/v1/photo-box/:boxId/remove",
+      authenticate,
+      photoBoxOn,
+      validateWrite(RemovePhotoBoxPhoto, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.removeFromApiPhotoBox(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("boxId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiPhotoBoxRemoved.parse(result.response.body), 200);
       },
     );
     // "Remind me to ask" (spec §12): a reminder exists only after this tap.

@@ -48,3 +48,32 @@ export async function pickPhoto(): Promise<PickedPhoto | null> {
   const asset = picked.canceled ? undefined : picked.assets[0];
   return asset === undefined ? null : reencodePhoto(asset.uri);
 }
+
+/**
+ * Several photos from the phone's library at once, for the photo box (ADR-58), each re-encoded as
+ * `pickPhoto` does; an empty list when nothing was chosen. At most `limit` can be chosen. A photo
+ * the phone cannot re-encode is left out, and counted, so the screen can say so.
+ */
+export async function pickPhotos(
+  limit: number,
+): Promise<{ photos: PickedPhoto[]; unusable: number }> {
+  const picked = await launchImageLibraryAsync({
+    mediaTypes: ["images"],
+    allowsMultipleSelection: true,
+    selectionLimit: limit,
+    orderedSelection: true,
+    quality: 1,
+    exif: false,
+  });
+  if (picked.canceled) return { photos: [], unusable: 0 };
+  const photos: PickedPhoto[] = [];
+  let unusable = 0;
+  for (const asset of picked.assets.slice(0, limit)) {
+    try {
+      photos.push(await reencodePhoto(asset.uri));
+    } catch {
+      unusable += 1;
+    }
+  }
+  return { photos, unusable };
+}
