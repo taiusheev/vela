@@ -76,3 +76,34 @@ retention; then implement relationship-sensitive automatic selection, invalidati
 review policy. A persistent profile, independent parent input, and adaptive automatic delivery are
 not implemented by this first reviewed-draft slice. Real-family comfort and long-term benefit remain
 unverified. A family pilot and production activation require their separate approved steps.
+
+
+## Explicit private saved choices (31 October 2026, second implementation)
+
+The request-only behavior above remains available. A separate, gated option now saves the child's
+own setup for one parent: address, comfort/contact choices, 2 selected writing examples, up to 5
+avoided topics and 3 unused phrases, plus language. The one-time question intent is never included.
+`Save these choices for 30 days` is explicit. Loading or drafting does not renew the fixed expiry.
+The private card shows the expiry date and expandable explanation/reload/forget controls. Initial
+loading finishes before mounting the form, so an arriving response cannot overwrite newly typed words.
+Switching account/family/parent destroys unsaved words and loads only that pair's authorized setup.
+
+Saved choices are sealed, private to their author account and scoped to one parent. Siblings and
+parents cannot read this setup through the app. Forgetting immediately clears saved words, hydrated
+choices and the current candidate; a content-free revision prevents older requests from restoring
+notes. Edited, forgotten or expired saved bases reject in-flight provider results and scheduling.
+Conflict handling exposes Reload; expiry clears local choices/candidates even while the page is open.
+The server validates the saved revision independently. Already-approved scheduled questions stay in
+the schedule and must be removed there separately.
+
+Own-data reads and forget remain available with collection/pilot admission off; saving requires both
+personalization switches and parent eligibility. There is no durable device cache for these notes.
+Example-mode saved choices live only in this screen's in-memory map, with explicit labeling, no
+model, API persistence or sending. Tests use synthetic families; a browser demo is not a real-phone
+or participant naturalness check.
+
+Both switches are now explicitly pinned OFF in development/staging/production; production refuses
+ON. Migration 0032 adds only this private setup and lifecycle guards. The new notice supplement
+question-profile.1 is **draft and unserved**. No nightly selection, check-in behavior or signer
+setting is altered. Independent parent input, automatic-policy integration and first-month review
+windows remain later approved implementation work; real-family activation is a separate gate.

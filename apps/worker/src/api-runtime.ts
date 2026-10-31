@@ -57,6 +57,7 @@ import {
   endApiAway,
   errorLabel,
   finishApiReminder,
+  forgetApiQuestionProfile,
   inviteApiNearby,
   keepApiAnswer,
   keepBoxPhotoStored,
@@ -77,6 +78,7 @@ import {
   loadApiPhotoBox,
   loadApiPlannedQuestions,
   loadApiPrecision,
+  loadApiQuestionProfile,
   loadApiQuiet,
   loadApiReminders,
   loadApiToday,
@@ -107,6 +109,7 @@ import {
   removeKeptMemory,
   replyToApiExchange,
   resolveApiQuiet,
+  saveApiQuestionProfile,
   setApiAway,
   setApiMorningPreferences,
   setUpApiDevice,
@@ -130,6 +133,7 @@ import {
   type ApiConfig,
   readApiConfig,
   readPersonalQuestionDrafts,
+  readPersonalQuestionProfiles,
   readPhotoBox,
   readRichMemories,
   secret,
@@ -411,6 +415,15 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const photos = apiMediaFor(env, config, logger);
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
+    questionProfiles: {
+      saving:
+        readPersonalQuestionProfiles(env, config.environment) &&
+        readPersonalQuestionDrafts(env, config.environment),
+      config: { pilotAdmission: config.pilotAdmission },
+      load: loadApiQuestionProfile,
+      save: saveApiQuestionProfile,
+      forget: forgetApiQuestionProfile,
+    },
     ...(readPersonalQuestionDrafts(env, config.environment)
       ? {
           personalQuestions: {

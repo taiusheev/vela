@@ -26,8 +26,8 @@ quality evaluation are distinct gates before activation.
    baselines rather than a claimed improvement target without data.
 2. Separate private parent input and comprehension controls; resolve delivery/no-question behavior
    independently from the existing check-in promise.
-3. Explicit profile persistence/retention contract, scoped correction/export/deletion and evidence
-   lineage. No inferred backfill. The first request-only prototype creates none of this data.
+3. Private saved choices are implemented in the second slice below. Full account-export assembly
+   and field-level historical evidence beyond explicit save lineage remain separate work. No inferred backfill.
 4. Add policy before nightly content selection and preserve one signer/one question per parent/day.
    Honor restrictions through every fallback, existing prepared days and enqueued delivery.
 5. First-month review windows driven by explicit choices. Never increase intimacy from elapsed
@@ -38,3 +38,22 @@ quality evaluation are distinct gates before activation.
 These remaining items are not complete. No migration, automatic signer, parent channel, feature pin,
 privacy notice version, check-in timing, production deployment, family activation, or provider account
 was changed in the first slice. Photo-box work retains its separate migration and notice scope.
+
+
+## Second slice: explicit private saved choices (31 October 2026)
+
+Implemented behind OFF switches: an encrypted setup for each author-account/parent pair, explicit
+30-day save, correction, own-data copy component and immediate forget. The one-time question intent
+is excluded. Reads/uses do not extend expiry; a null-content revision after forget blocks old-tab
+resurrection. Version checks run before/after model calls and at scheduling. Account, family,
+member and light withdrawal guards erase affected profiles. Expired rows and metadata enter the
+existing daily retention job; content becomes inaccessible at expiry even before physical cleanup.
+The app supports profile reload/conflict handling and clears an expired or forgotten setup/candidate.
+Demo profiles live only in memory while the example screen is open and never call a model or API.
+
+Privacy supplement question-profile.1 is a separate **unapproved, unserved draft**, not a replacement
+for the live notice. Both switches are pinned OFF in every environment and refuse production ON.
+No nightly personalization, inferred intimacy escalation, parental private input or family activation
+is included. Parent consent/input and automatic-policy integration remain the next major work.
+Native Chinese review and observed comprehension/voice checks with separately authorized participants
+remain outstanding. Synthetic tests and coding-assistant checks are not participant research.

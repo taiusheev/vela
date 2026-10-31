@@ -53,6 +53,7 @@ import {
   onboardingSessions,
   outbound,
   pushTickets,
+  questionProfiles,
   quietEvents,
   recipes,
   reminders,
@@ -1128,6 +1129,13 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   cutoff5y.setUTCFullYear(cutoff5y.getUTCFullYear() - PROOF_RETENTION_YEARS);
   const counts: Record<string, number> = {};
   const db = deps.db;
+
+  counts.question_profiles_deleted = (
+    await db
+      .delete(questionProfiles)
+      .where(lte(questionProfiles.expiresAt, now))
+      .returning({ id: questionProfiles.authorId })
+  ).length;
 
   counts.weekly_support_presentations_deleted = (
     await db

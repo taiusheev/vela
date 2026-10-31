@@ -87,6 +87,7 @@ import {
   PUSH_PERMISSIONS,
   PUSH_PLATFORMS,
   QUIET_OUTCOMES,
+  type QuestionProfileSettings,
   REACTION_KINDS,
   REGIONS,
   REPLY_KINDS,
@@ -349,6 +350,48 @@ export const members = pgTable(
     check("members_reply_ways_check", isSubsetOf(t.replyWays, REPLY_WAYS)),
     check("members_status_check", isOneOf(t.status, MEMBER_STATUSES)),
     check("members_primary_surface_check", isOneOf(t.primarySurface, SURFACES)),
+  ],
+);
+
+/** Private, explicitly saved drafting choices. Null data is a content-free deletion revision. */
+export const questionProfiles = pgTable(
+  "question_profiles",
+  {
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: uuid("revision").notNull().default(sql`uuidv7()`),
+    data: sealedJsonb<QuestionProfileSettings>("question_profiles.data"),
+    noticeVersion: text("notice_version").notNull(),
+    changedAt: timestamptz("changed_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (t) => [
+    primaryKey({
+      name: "question_profiles_pkey",
+      columns: [t.familyId, t.authorId, t.recipientId],
+    }),
+    index("question_profiles_expiry_idx").on(t.expiresAt),
+    index("question_profiles_recipient_idx").on(t.recipientId),
+    index("question_profiles_owner_idx").on(t.ownerUserId),
+    check("question_profiles_distinct_people", sql`${t.authorId} <> ${t.recipientId}`),
+    check(
+      "question_profiles_bounded_retention",
+      sql`${t.expiresAt} > ${t.changedAt} and ${t.expiresAt} <= ${t.changedAt} + interval '30 days'`,
+    ),
+    check(
+      "question_profiles_data_object",
+      sql`${t.data} is null or jsonb_typeof(${t.data}) = 'object'`,
+    ),
   ],
 );
 

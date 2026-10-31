@@ -123,3 +123,19 @@ Each gap says what was found and, where the sprint 1 contract decisions of 14 Se
 ## Onboarding and device-only portraits — 19 October 2026
 
 The See It First setup adds relationship, interests and reply-way preferences to the invited member profile (migration 0017); they use the existing invited/member lifecycle and deletion paths, not a separate marketing profile. Before saving, the answers are an in-memory preview; an optional portrait can be a temporary local cache file. Saved portraits remain device/account scoped and are not server profile images or AI inputs. Photos explicitly attached to messages remain server media with 30-day retention. This distinction is disclosed in notice v6. The app draft’s cross-account cleanup and abandoned portrait cleanup require integration tests before public distribution.
+
+## Optional private question choices — DRAFT, 31 October 2026
+
+Not active for real families. Notice supplement `privacy-notice.question-profile.1-draft.*.md` is
+unapproved and unserved. Both personalization switches are pinned OFF in all environments, with
+production refusing ON. This entry does not authorize collection.
+
+| Data | Purpose and access | Storage and retention |
+|---|---|---|
+| Explicit address, relationship comfort/contact selections, 2 own-writing examples, topic/phrase exclusions, language | Reuse the author's own setup for one parent; only the authenticated author can read/edit/forget it, never siblings or the recipient through the app. No imported history or inferred scores. AI receives displayed choices only on an explicit reviewed-draft request | All settings sealed in `question_profiles.data` (Neon, family region; CF service). 30 days after explicit save; read/use does not renew. Expiry blocks reads/use immediately, next healthy daily retention physically deletes. Member withdrawal/departure, account change/deletion, and family deletion erase immediately; pause preserves until expiry/forget |
+| Pair/account IDs, random revision, notice version, changed/expiry dates | Ownership, notice lineage and optimistic concurrency; null-data revision prevents stale saves after forgetting | Metadata remains up to 30 days after forget, deleted by next healthy retention run when due. Lifecycle erasure/cascade also applies |
+| Mutation request hashes and success metadata | Safe retry; never copies settings into receipts | Existing API-receipt rules (24-hour replay and following daily retention); no words, examples or selected values in response bodies |
+
+The per-question intent and generated candidate remain request-only. Approved scheduled questions use
+existing communication retention independently. Own-data copy uses the authenticated GET component;
+this does not complete a full account export and never includes another member's private setup.

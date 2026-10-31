@@ -35,6 +35,8 @@ import type {
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
+  ApiQuestionProfile,
+  ApiQuestionProfileSaved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReminder,
@@ -63,6 +65,7 @@ import type {
   MemoryPermissionState,
   PhotoBoxRefusal,
   RegisterPushDevice,
+  SaveQuestionProfile,
   SetAway,
 } from "@vela/contracts";
 import {
@@ -172,6 +175,7 @@ export function fetchMe(token: string | null): Promise<ApiMe> {
 }
 
 export interface ApiCapabilities {
+  personal_question_profiles?: boolean;
   personal_questions?: boolean;
   pilot: boolean;
   telegram_first: boolean;
@@ -253,6 +257,54 @@ export function draftPersonalQuestion(
     key,
     body: input,
   });
+}
+
+export function fetchQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  token: string | null,
+): Promise<ApiQuestionProfile> {
+  return read<ApiQuestionProfile>(
+    `/v1/families/${familyId}/members/${recipientId}/question-profile`,
+    token,
+  );
+}
+export function saveQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  key: string,
+  input: SaveQuestionProfile,
+  token: string | null,
+): Promise<ApiQuestionProfileSaved> {
+  return call<ApiQuestionProfileSaved>({
+    path: `/v1/families/${familyId}/members/${recipientId}/question-profile/save`,
+    token,
+    key,
+    body: input,
+  });
+}
+export function forgetQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  key: string,
+  token: string | null,
+): Promise<{ forgotten: true }> {
+  return call({
+    path: `/v1/families/${familyId}/members/${recipientId}/question-profile/forget`,
+    token,
+    key,
+    body: {},
+  });
+}
+export function questionProfileChanged(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 409 &&
+    typeof error.details === "object" &&
+    error.details !== null &&
+    "reason" in error.details &&
+    error.details.reason === "question_profile_changed"
+  );
 }
 
 /** The family book (`GET /v1/families/:familyId/book`, ADR-39): every kept story, newest first. */

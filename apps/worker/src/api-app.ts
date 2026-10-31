@@ -48,6 +48,9 @@ import {
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
+  ApiQuestionProfile,
+  ApiQuestionProfileForgotten,
+  ApiQuestionProfileSaved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReminder,
@@ -76,6 +79,7 @@ import {
   EditAsk,
   EndAway,
   FinishReminder,
+  ForgetQuestionProfile,
   InviteNearby,
   KeepBookEntry,
   KeptMemoryPage,
@@ -115,6 +119,7 @@ import {
   RemoveNearby,
   RemovePhotoBoxPhoto,
   RemovePushDevice,
+  SaveQuestionProfile,
   SetAway,
   SetMorningPreferences,
   SharedKeptMemoryPage,
@@ -164,6 +169,7 @@ import {
   errorLabel,
   FactMissingError,
   type finishApiReminder,
+  type forgetApiQuestionProfile,
   type inviteApiNearby,
   type keepApiAnswer,
   type keepBoxPhotoStored,
@@ -186,6 +192,7 @@ import {
   type loadApiPhotoBox,
   type loadApiPlannedQuestions,
   type loadApiPrecision,
+  type loadApiQuestionProfile,
   type loadApiQuiet,
   type loadApiReminders,
   type loadApiToday,
@@ -218,6 +225,7 @@ import {
   type prepareMemoryPermission,
   type prepareWeeklySupportPermission,
   type provisionApiAccount,
+  QuestionProfileChangedError,
   QuietUsefulRefusedError,
   type Random,
   ReplyRefusedError,
@@ -236,6 +244,7 @@ import {
   type reviewWeeklySupport,
   runAfterCommit,
   type SessionIdentity,
+  type saveApiQuestionProfile,
   type setApiAway,
   type setApiMorningPreferences,
   type setUpApiDevice,
@@ -342,6 +351,13 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  questionProfiles?: {
+    saving: boolean;
+    config: Parameters<typeof saveApiQuestionProfile>[0]["config"];
+    load: typeof loadApiQuestionProfile;
+    save: typeof saveApiQuestionProfile;
+    forget: typeof forgetApiQuestionProfile;
+  };
   personalQuestions?: {
     draft: typeof draftApiPersonalQuestion;
     ai: Parameters<typeof draftApiPersonalQuestion>[0]["ai"];
@@ -661,6 +677,9 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       const removal =
         c.req.path.endsWith("/left") ||
         c.req.path.endsWith("/remove") ||
+        c.req.path.endsWith("/question-profile/forget") ||
+        (c.req.method === "GET" &&
+          /^\/v1\/families\/[^/]+\/members\/[^/]+\/question-profile$/.test(c.req.path)) ||
         c.req.path.endsWith("/sharing/stop") ||
         c.req.path.endsWith("/stop");
       if (
@@ -697,6 +716,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         ...(runtime.personalQuestions !== undefined && runtime.writes !== undefined
           ? { personal_questions: true }
           : {}),
+        ...(runtime.questionProfiles !== undefined ? { personal_question_profiles: true } : {}),
       }),
       200,
     );
@@ -723,6 +743,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           return c.json(UNAVAILABLE, 503);
         }
       }
+      if (error instanceof QuestionProfileChangedError)
+        return c.json(
+          {
+            error: {
+              code: "conflict",
+              message: "Saved question choices changed.",
+              details: { reason: "question_profile_changed" },
+            },
+          },
+          409,
+        );
       if (error instanceof AlreadyOrganiserError) {
         const running: ApiErrorBody = {
           error: {
@@ -1378,6 +1409,28 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
   }
   const writes = runtime.writes;
+  const questionProfiles = runtime.questionProfiles;
+  if (questionProfiles !== undefined) {
+    app.get(
+      "/v1/families/:familyId/members/:memberId/question-profile",
+      authenticate,
+      withDatabase,
+      async (c) => {
+        const result = await questionProfiles.load(
+          {
+            db: c.get("db"),
+            clock: { now: () => runtime.now() },
+            savingEnabled: questionProfiles.saving && runtime.writes !== undefined,
+          },
+          c.get("session"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+        );
+        c.header("Cache-Control", "no-store");
+        return c.json(ApiQuestionProfile.parse(result), 200);
+      },
+    );
+  }
   const sharing = runtime.memorySharing;
   const sharingIds: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
     if (Object.values(c.req.param()).some((id) => typeof id !== "string" || !MEDIA_ID.test(id)))
@@ -2059,6 +2112,47 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           return c.json(ApiLinkOutcome.parse(result.response.body), 200);
         },
       );
+    }
+    if (questionProfiles !== undefined) {
+      for (const operation of ["save", "forget"] as const) {
+        app.post(
+          `/v1/families/:familyId/members/:memberId/question-profile/${operation}`,
+          authenticate,
+          validateWrite(
+            operation === "save" ? SaveQuestionProfile : ForgetQuestionProfile,
+            runtime.logger,
+          ),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await questionProfiles[operation](
+              {
+                db: c.get("db"),
+                clock: writes.clock,
+                savingEnabled: questionProfiles.saving,
+                config: {
+                  ...questionProfiles.config,
+                  ...(runtime.admission === undefined
+                    ? {}
+                    : { pilotAdmission: c.get("pilotAdmission") ?? runtime.admission.config }),
+                },
+              },
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId"),
+              c.req.param("memberId"),
+              c.get("writeInput"),
+            );
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(
+              operation === "save"
+                ? ApiQuestionProfileSaved.parse(result.response.body)
+                : ApiQuestionProfileForgotten.parse(result.response.body),
+              200,
+            );
+          },
+        );
+      }
     }
     if (runtime.personalQuestions !== undefined) {
       const personal = runtime.personalQuestions;

@@ -116,6 +116,7 @@ export const ApiCapabilities = z.strictObject({
   memory: z.boolean(),
   book: z.boolean().default(false),
   personal_questions: z.boolean().optional(),
+  personal_question_profiles: z.boolean().optional(),
   /** The family's photo box (ADR-58): photos Vela turns into her free mornings. */
   photo_box: z.boolean().default(false),
   parent_app: z.boolean(),
@@ -684,6 +685,8 @@ export const ComposeAsk = z
     suggestion_id: z.uuid().optional(),
     /** Reviewed assisted wording is never independent evidence of the author's writing style. */
     ai_assisted: z.boolean().optional(),
+    /** Reject a reviewed draft when the saved setup it used was changed, expired or forgotten. */
+    personal_profile_revision: z.uuid().optional(),
     /** The language of reviewed words, which can differ from the app/account language. */
     text_language: Lang.optional(),
     /**

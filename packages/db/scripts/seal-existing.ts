@@ -27,6 +27,12 @@ type FieldSpec = {
 };
 
 const fields: readonly FieldSpec[] = [
+  {
+    table: "question_profiles",
+    keys: ["family_id", "author_id", "recipient_id"],
+    column: "data",
+    kind: "jsonb",
+  },
   { table: "weekly_support_permissions", keys: ["member_id"], column: "audience", kind: "jsonb" },
   { table: "weekly_support_presentations", keys: ["id"], column: "audience", kind: "jsonb" },
   { table: "weekly_support_selections", keys: ["id"], column: "source_digest", kind: "text" },
@@ -154,6 +160,9 @@ async function main(): Promise<void> {
         } else {
           value = resealJsonb(row.value, `${field.table}.${field.column}`, field.policy, key);
         }
+        // Saved profiles start with codecs. Verify sealed values without rewriting a paused
+        // recipient's read-only profile; the scope guard intentionally refuses new content there.
+        if (field.table === "question_profiles" && JSON.stringify(row.value) === value) continue;
         const setCast =
           field.kind === "jsonb" ? "::jsonb" : field.kind === "text[]" ? "::text[]" : "";
         const conditions = field.keys

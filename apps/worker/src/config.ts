@@ -21,6 +21,21 @@ const ENVIRONMENTS = ["development", "staging", "production"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
 
+export function readPersonalQuestionProfiles(
+  env: { PERSONAL_QUESTION_PROFILES?: string },
+  environment: Environment,
+): boolean {
+  const value = env.PERSONAL_QUESTION_PROFILES?.trim() ?? "off";
+  if (value !== "on" && value !== "off")
+    throw new ConfigError("PERSONAL_QUESTION_PROFILES", "Use on or off");
+  if (value === "on" && environment === "production")
+    throw new ConfigError(
+      "PERSONAL_QUESTION_PROFILES",
+      "Saved question profiles need approved notice and activation",
+    );
+  return value === "on";
+}
+
 /** First phase is development/test only; never activates processing on production. */
 export function readPersonalQuestionDrafts(
   env: { PERSONAL_QUESTION_DRAFTS?: string },

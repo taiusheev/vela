@@ -271,6 +271,12 @@ export {
 } from "./pilot-roster.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
+export {
+  forgetApiQuestionProfile,
+  loadApiQuestionProfile,
+  QuestionProfileChangedError,
+  saveApiQuestionProfile,
+} from "./question-profiles.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
   createApiReminder,

@@ -18,7 +18,7 @@ describe("named-memory sharing guard definitions", () => {
     expect(
       readFileSync(new URL("../../../architecture/schema.sql", import.meta.url), "utf8")
         .trim()
-        .endsWith(guards),
+        .includes(guards),
     ).toBe(true);
   });
 });

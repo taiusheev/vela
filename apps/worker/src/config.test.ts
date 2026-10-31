@@ -11,6 +11,8 @@ import {
   readLineConfig,
   readNotificationControls,
   readPeerHealthz,
+  readPersonalQuestionDrafts,
+  readPersonalQuestionProfiles,
   readPilotAdmission,
   readPushConfig,
   readPushSend,
@@ -980,4 +982,21 @@ describe("individual notification controls switch", () => {
     expect(readNotificationControls({ NOTIFICATION_CONTROLS: "on" })).toBe(true);
     expect(() => readNotificationControls({ NOTIFICATION_CONTROLS: "yes" })).toThrow();
   });
+});
+
+describe("personalization collection switches", () => {
+  it.each([readPersonalQuestionProfiles, readPersonalQuestionDrafts])(
+    "defaults off and refuses production activation",
+    (read) => {
+      expect(read({}, "development")).toBe(false);
+      const key =
+        read === readPersonalQuestionProfiles
+          ? "PERSONAL_QUESTION_PROFILES"
+          : "PERSONAL_QUESTION_DRAFTS";
+      expect(read({ [key]: "off" }, "production")).toBe(false);
+      expect(read({ [key]: "on" }, "staging")).toBe(true);
+      expect(() => read({ [key]: "yes" }, "staging")).toThrow();
+      expect(() => read({ [key]: "on" }, "production")).toThrow();
+    },
+  );
 });

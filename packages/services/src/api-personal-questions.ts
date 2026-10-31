@@ -8,6 +8,7 @@ import { canBeAsked } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { pilotFamilyAllowed, pilotSpeaks } from "./pilot-admission.ts";
+import { assertQuestionProfileRevision } from "./question-profiles.ts";
 import { familyHasEnded, memberById } from "./repo.ts";
 
 const normalized = (text: string) =>
@@ -52,6 +53,18 @@ export async function draftApiPersonalQuestion(
     return { parent, child };
   }
   const { parent, child } = await authorized();
+  const checkProfile = async () => {
+    if (input.profile_revision !== undefined)
+      await assertQuestionProfileRevision(
+        deps.db,
+        identity,
+        family,
+        recipientId,
+        input.profile_revision,
+        deps.clock.now(),
+      );
+  };
+  await checkProfile();
   if (input.context.connection === "quiet") return { state: "not_drafted", reason: "quiet" };
   const blocked = [...input.context.avoid_topics, ...input.context.never_say];
   if (crossesDraftBoundary(input.context.intent, blocked))
@@ -71,6 +84,7 @@ export async function draftApiPersonalQuestion(
   const outcome = await deps.ai.suggest(brief);
   // An in-flight request cannot return family content after departure, deletion, pause or withdrawal.
   await authorized();
+  await checkProfile();
   if (outcome.record !== null) {
     const record = outcome.record;
     await deps.db.insert(aiCalls).values({
@@ -101,5 +115,10 @@ export async function draftApiPersonalQuestion(
     (text.match(/[?？]/gu)?.length ?? 0) > 1
   )
     return { state: "not_drafted", reason: "needs_rewording" };
-  return ApiPersonalQuestionDraft.parse({ state: "review", text, language: input.language });
+  return ApiPersonalQuestionDraft.parse({
+    state: "review",
+    text,
+    language: input.language,
+    ...(input.profile_revision === undefined ? {} : { profile_revision: input.profile_revision }),
+  });
 }

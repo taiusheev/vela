@@ -817,3 +817,16 @@ it("keeps new report processing, purpose approval and family roster off everywhe
     expect(vars.WEEKLY_SUPPORT_FAMILIES).toBe("");
   }
 });
+
+describe("unapproved personal question processing", () => {
+  it.each(["PERSONAL_QUESTION_DRAFTS", "PERSONAL_QUESTION_PROFILES"] as const)(
+    "keeps %s off in every deployed environment",
+    (key) => {
+      expect(
+        (["development", ...DEPLOYED] as const).map(
+          (environment) => configOf("pilot", environment).vars[key],
+        ),
+      ).toEqual(["off", "off", "off"]);
+    },
+  );
+});

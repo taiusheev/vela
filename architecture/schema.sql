@@ -1,5 +1,5 @@
 -- Vela · Postgres schema
--- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/memory-*-guards.sql.
+-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/*-guards.sql.
 -- Regenerate with: pnpm --filter @vela/db export-sql
 -- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).
 -- Column meanings, retention rules, and the invariants behind each index are documented in
@@ -80,7 +80,7 @@ CREATE TABLE "answers" (
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"words_expired_at" timestamp with time zone,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
-	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
+	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'not_okay', 'sticker', 'other')),
 	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
@@ -586,6 +586,27 @@ CREATE TABLE "outbound" (
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
 
+CREATE TABLE "photo_box" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"media_id" uuid NOT NULL,
+	"era" text NOT NULL,
+	"caption" text,
+	"added_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "photo_box_media_id_key" UNIQUE("media_id"),
+	CONSTRAINT "photo_box_era_check" CHECK ("era" in ('new', 'old'))
+);
+
+CREATE TABLE "photo_box_uses" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"box_id" uuid,
+	"local_day" date NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE "pilot_families" (
 	"family_id" uuid PRIMARY KEY NOT NULL,
 	"approved_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -620,6 +641,22 @@ CREATE TABLE "push_tickets" (
 	"outbound_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "push_tickets_token_sha256_check" CHECK ("token_sha256" ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE "question_profiles" (
+	"family_id" uuid NOT NULL,
+	"author_id" uuid NOT NULL,
+	"recipient_id" uuid NOT NULL,
+	"owner_user_id" uuid NOT NULL,
+	"revision" uuid DEFAULT uuidv7() NOT NULL,
+	"data" jsonb,
+	"notice_version" text NOT NULL,
+	"changed_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "question_profiles_pkey" PRIMARY KEY("family_id","author_id","recipient_id"),
+	CONSTRAINT "question_profiles_distinct_people" CHECK ("question_profiles"."author_id" <> "question_profiles"."recipient_id"),
+	CONSTRAINT "question_profiles_bounded_retention" CHECK ("question_profiles"."expires_at" > "question_profiles"."changed_at" and "question_profiles"."expires_at" <= "question_profiles"."changed_at" + interval '30 days'),
+	CONSTRAINT "question_profiles_data_object" CHECK ("question_profiles"."data" is null or jsonb_typeof("question_profiles"."data") = 'object')
 );
 
 CREATE TABLE "quiet_events" (
@@ -774,6 +811,8 @@ CREATE TABLE "users" (
 	"language" text DEFAULT 'en' NOT NULL,
 	"tz" text DEFAULT 'UTC' NOT NULL,
 	"one_moment_a_day" boolean DEFAULT true NOT NULL,
+	"reply_notifications" boolean DEFAULT true NOT NULL,
+	"turn_reminders" boolean DEFAULT true NOT NULL,
 	"privacy_acceptance" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
@@ -937,10 +976,20 @@ ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_invited_by_members
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_added_by_members_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_box_id_photo_box_id_fk" FOREIGN KEY ("box_id") REFERENCES "public"."photo_box"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "pilot_families" ADD CONSTRAINT "pilot_families_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_devices" ADD CONSTRAINT "push_devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_device_id_push_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."push_devices"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_outbound_id_outbound_id_fk" FOREIGN KEY ("outbound_id") REFERENCES "public"."outbound"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_author_id_members_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_resolved_by_members_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
@@ -1033,9 +1082,16 @@ CREATE INDEX "memory_stories_title_answer_idx" ON "memory_stories" USING btree (
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
+CREATE INDEX "photo_box_family_idx" ON "photo_box" USING btree ("family_id","created_at");
+CREATE INDEX "photo_box_uses_member_day_idx" ON "photo_box_uses" USING btree ("member_id","local_day");
+CREATE INDEX "photo_box_uses_box_idx" ON "photo_box_uses" USING btree ("box_id");
+CREATE INDEX "photo_box_uses_exchange_idx" ON "photo_box_uses" USING btree ("exchange_id");
 CREATE INDEX "push_devices_user_idx" ON "push_devices" USING btree ("user_id");
 CREATE INDEX "push_tickets_created_idx" ON "push_tickets" USING btree ("created_at");
 CREATE INDEX "push_tickets_device_idx" ON "push_tickets" USING btree ("device_id");
+CREATE INDEX "question_profiles_expiry_idx" ON "question_profiles" USING btree ("expires_at");
+CREATE INDEX "question_profiles_recipient_idx" ON "question_profiles" USING btree ("recipient_id");
+CREATE INDEX "question_profiles_owner_idx" ON "question_profiles" USING btree ("owner_user_id");
 CREATE INDEX "quiet_open_idx" ON "quiet_events" USING btree ("member_id") WHERE "resolved_at" is null;
 CREATE UNIQUE INDEX "reminders_one_per_fact" ON "reminders" USING btree ("member_id","fact_id");
 CREATE INDEX "reminders_member_idx" ON "reminders" USING btree ("member_id","due_date");
@@ -1199,3 +1255,65 @@ $$;
 --> statement-breakpoint
 CREATE TRIGGER memory_sharing_keep_guard BEFORE UPDATE OF removed_at, sharing_revision ON "public"."memory_keeps"
 FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_keep"();
+
+-- Scope and lifecycle guards for optional, private question drafting profiles.
+CREATE FUNCTION question_profiles_check_scope() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM members a
+    JOIN members r ON r.id = NEW.recipient_id AND r.family_id = a.family_id
+    JOIN families f ON f.id = a.family_id AND f.deleted_at IS NULL
+    JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
+    WHERE a.id = NEW.author_id AND a.family_id = NEW.family_id AND u.id = NEW.owner_user_id
+      AND a.left_at IS NULL AND a.status IN ('active', 'paused')
+      AND (r.user_id IS NULL OR EXISTS (SELECT 1 FROM users ru WHERE ru.id = r.user_id AND ru.deleted_at IS NULL))
+      AND (NEW.data IS NULL OR (a.status = 'active' AND r.status = 'active' AND r.left_at IS NULL
+        AND r.light_on AND r.light_consented_at IS NOT NULL))
+  ) THEN
+    RAISE EXCEPTION 'Question profile scope is invalid' USING ERRCODE = '23514', CONSTRAINT = 'question_profiles_scope';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_scope_guard BEFORE INSERT OR UPDATE ON question_profiles
+FOR EACH ROW EXECUTE FUNCTION question_profiles_check_scope();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_member_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.family_id IS DISTINCT FROM OLD.family_id OR NEW.user_id IS DISTINCT FROM OLD.user_id
+    OR NEW.left_at IS NOT NULL OR NEW.status IN ('left', 'deceased')
+    OR (OLD.light_on AND NOT NEW.light_on)
+    OR NEW.light_consented_at IS DISTINCT FROM OLD.light_consented_at THEN
+    DELETE FROM question_profiles WHERE author_id = OLD.id OR recipient_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_member_cleanup AFTER UPDATE OF family_id, user_id, left_at, status, light_on, light_consented_at ON members
+FOR EACH ROW EXECUTE FUNCTION question_profiles_member_changed();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_account_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.deleted_at IS NOT NULL OR NEW.auth_subject IS DISTINCT FROM OLD.auth_subject THEN
+    DELETE FROM question_profiles WHERE owner_user_id = OLD.id
+      OR author_id IN (SELECT id FROM members WHERE user_id = OLD.id)
+      OR recipient_id IN (SELECT id FROM members WHERE user_id = OLD.id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_account_cleanup AFTER UPDATE OF deleted_at, auth_subject ON users
+FOR EACH ROW EXECUTE FUNCTION question_profiles_account_changed();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_family_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.deleted_at IS NOT NULL THEN DELETE FROM question_profiles WHERE family_id = OLD.id; END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_family_cleanup AFTER UPDATE OF deleted_at ON families
+FOR EACH ROW EXECUTE FUNCTION question_profiles_family_changed();

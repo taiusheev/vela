@@ -282,6 +282,8 @@
     // On: her stories are kept in the family book (ADR-39).
     "BOOK": "on",
     "PHOTO_BOX": "on",
+    "PERSONAL_QUESTION_DRAFTS": "off",
+    "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
     "WEEKLY_INSIGHT": "on",
     "WEEKLY_SUPPORT": "off",
@@ -417,6 +419,8 @@
         // On: staging holds test families only (ADR-39).
         "BOOK": "on",
         "PHOTO_BOX": "on",
+        "PERSONAL_QUESTION_DRAFTS": "off",
+        "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
         "WEEKLY_SUPPORT": "off",
@@ -557,6 +561,8 @@
         // book comes later in the pilot, so no story is kept before a notice describes it.
         "BOOK": "off",
         "PHOTO_BOX": "off",
+        "PERSONAL_QUESTION_DRAFTS": "off",
+        "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",

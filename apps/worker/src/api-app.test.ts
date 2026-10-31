@@ -27,6 +27,7 @@ import {
   NearbyInviteRefusedError,
   NearbyRefusedError,
   PhotoBoxRefusedError,
+  QuestionProfileChangedError,
   QuietUsefulRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
@@ -295,7 +296,12 @@ function fixture(
   push?: boolean,
   options: Pick<
     ApiRuntime,
-    "admission" | "capabilities" | "parentConnection" | "notificationControls" | "personalQuestions"
+    | "admission"
+    | "capabilities"
+    | "parentConnection"
+    | "notificationControls"
+    | "personalQuestions"
+    | "questionProfiles"
   > = {},
 ) {
   const db = database();
@@ -3928,5 +3934,97 @@ describe("the photo box (ADR-58)", () => {
       (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
         .status,
     ).toBe(404);
+  });
+});
+
+describe("private question profile routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/question-profile`;
+  const input = {
+    expected_revision: null,
+    notice_version: "question-profile.1",
+    settings: {
+      language: "en",
+      address_form: "dad",
+      context: {
+        connection: "practical",
+        talking_rhythm: "rarely",
+        avoid_topics: [],
+        never_say: [],
+      },
+      writing_examples: [],
+    },
+  };
+  function enabled(admitted = true) {
+    const load = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["load"]>()
+      .mockResolvedValue({ revision: null, profile: null, saving_available: false });
+    const save = vi.fn<NonNullable<ApiRuntime["questionProfiles"]>["save"]>().mockResolvedValue({
+      response: {
+        status: 200,
+        body: { saved: true, revision: MEMBER_ID, expires_at: "2026-11-30T00:00:00.000Z" },
+      },
+      replayed: false,
+    });
+    const forget = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["forget"]>()
+      .mockResolvedValue({ response: { status: 200, body: { forgotten: true } }, replayed: false });
+    const permitsAccount = vi.fn().mockResolvedValue(admitted);
+    return {
+      ...fixture(true, undefined, {
+        questionProfiles: { saving: false, config: {}, load, save, forget },
+        admission: { config: { telegramUserIds: [] }, permitsAccount },
+      }),
+      load,
+      save,
+      forget,
+    };
+  }
+  const write = (suffix: string, body: unknown) =>
+    writeRequest("POST", `${path}/${suffix}`, JSON.stringify(body), {
+      authorization: "Bearer good",
+    });
+  it("is 404 when not mounted and requires authentication when mounted", async () => {
+    expect((await fixture(true).app.request(path)).status).toBe(404);
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(path)).status).toBe(401);
+  });
+  it("allows uncached own-data reads and forget while pilot admission refuses other work", async () => {
+    const f = enabled(false);
+    const read = await f.app.request(path, { headers: { authorization: "Bearer good" } });
+    expect(read.status).toBe(200);
+    expect(read.headers.get("cache-control")).toBe("no-store");
+    expect(f.load).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+    );
+    const remove = await f.app.request(write("forget", {}));
+    expect(remove.status).toBe(200);
+    expect(f.forget).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      {},
+    );
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    expect(f.save).not.toHaveBeenCalled();
+  });
+  it("validates ownership in the service and maps stale saves to a usable 409", async () => {
+    const f = enabled();
+    expect((await f.app.request(write("save", { ...input, author_id: USER_ID }))).status).toBe(400);
+    f.save.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    f.save.mockRejectedValueOnce(new QuestionProfileChangedError());
+    const conflict = await f.app.request(write("save", input));
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({
+      error: { code: "conflict", details: { reason: "question_profile_changed" } },
+    });
+    f.forget.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("forget", {}))).status).toBe(404);
   });
 });

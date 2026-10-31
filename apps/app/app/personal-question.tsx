@@ -2,17 +2,22 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   ApiPersonalQuestionDraft,
+  ApiQuestionProfile,
   DraftPersonalQuestion,
+  QuestionProfileSettings as ProfileSettings,
   QuestionPersonalization,
 } from "@vela/contracts";
+import { QUESTION_PROFILE_NOTICE_VERSION, QuestionProfileSettings } from "@vela/contracts";
+import { randomUUID } from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import {
   apiConfigured,
   askConflict,
   composeAsk,
   draftPersonalQuestion,
+  questionProfileChanged,
 } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
@@ -31,16 +36,24 @@ import {
 import { WarmPage } from "../src/components/warm.tsx";
 import { finishQuestionSave } from "../src/data/finish-question-save.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
+import {
+  currentQuestionProfile,
+  profileLines,
+  profileSettingsOf,
+} from "../src/data/question-profile.ts";
 import { questionDates } from "../src/data/question-schedule.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
 import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight } from "../src/data/today.ts";
 import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePlannedQuestions } from "../src/data/usePlannedQuestions.ts";
+import { useQuestionProfile } from "../src/data/useQuestionProfile.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { space } from "../src/theme/tokens.ts";
 
-/** Notes are component state only. Account, family and recipient changes destroy the whole form. */
+const UNKNOWN_CHOICE = "unsure";
+
+/** Unsaved notes are component state; saved notes are private to the signed-in child and parent. */
 export default function PersonalQuestionScreen() {
   const { t } = useLingui();
   const account = useAccount();
@@ -51,6 +64,8 @@ export default function PersonalQuestionScreen() {
   const lights = demo || day.live ? day.today.lights : [];
   const parent = selectedLight(lights, params.recipient);
   const available = demo || (caps.capabilities?.personal_questions === true && day.live);
+  const profileAccess = !demo && caps.capabilities?.personal_question_profiles === true && day.live;
+  const demoProfiles = useRef(new Map<string, ApiQuestionProfile>());
   return (
     <WarmPage gap={space.l}>
       <ScreenHeading title={<Trans>A question in your words</Trans>} />
@@ -59,16 +74,19 @@ export default function PersonalQuestionScreen() {
         selected={parent?.memberId}
         onSelect={(recipient) => router.setParams({ recipient })}
       />
-      {!available || parent === undefined ? (
+      {(!available && !profileAccess) || parent === undefined ? (
         <Words tone="ink2">
           <Trans>Personal drafts are not available here yet.</Trans>
         </Words>
       ) : (
-        <PersonalDraft
+        <PersonalSetup
           key={`${sessionScope(account)}:${day.familyId}:${parent.memberId}`}
           familyId={day.familyId}
           parent={parent}
           demo={demo}
+          drafting={available}
+          profileAccess={profileAccess}
+          demoProfiles={demoProfiles.current}
         />
       )}
       <SecondaryButton label={t`Back to questions`} onPress={() => router.replace("/questions")} />
@@ -76,14 +94,98 @@ export default function PersonalQuestionScreen() {
   );
 }
 
-function PersonalDraft({
+type ProfileControls = {
+  save(settings: ProfileSettings, revision: string | null): Promise<ApiQuestionProfile>;
+  forget(): Promise<ApiQuestionProfile>;
+  reload(): Promise<ApiQuestionProfile>;
+  clearLocal(): void;
+};
+function PersonalSetup({
   familyId,
   parent,
   demo,
+  drafting,
+  profileAccess,
+  demoProfiles,
 }: {
   familyId: string | undefined;
   parent: TodayLight;
   demo: boolean;
+  drafting: boolean;
+  profileAccess: boolean;
+  demoProfiles: Map<string, ApiQuestionProfile>;
+}) {
+  const { t } = useLingui();
+  const profile = useQuestionProfile(familyId, parent.memberId, profileAccess);
+  const empty: ApiQuestionProfile = { revision: null, profile: null, saving_available: demo };
+  const demoView = () => demoProfiles.get(parent.memberId) ?? empty;
+  const demoControls: ProfileControls = {
+    reload: async () => demoView(),
+    clearLocal: () => {
+      demoProfiles.delete(parent.memberId);
+    },
+    save: async (settings) => {
+      const view: ApiQuestionProfile = {
+        revision: randomUUID(),
+        saving_available: true,
+        profile: {
+          settings,
+          saved_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+          notice_version: QUESTION_PROFILE_NOTICE_VERSION,
+        },
+      };
+      demoProfiles.set(parent.memberId, view);
+      return view;
+    },
+    forget: async () => {
+      const view = { ...empty, revision: randomUUID() };
+      demoProfiles.set(parent.memberId, view);
+      return view;
+    },
+  };
+  if (profileAccess && !profile.data)
+    return (
+      <>
+        <Words tone="ink2">
+          {profile.isError
+            ? t`Your saved choices could not be loaded. Reload before continuing.`
+            : t`Loading your private choices…`}
+        </Words>
+        {profile.isError ? (
+          <SecondaryButton
+            label={t`Reload saved choices`}
+            onPress={() => void profile.reload().catch(() => {})}
+          />
+        ) : null}
+      </>
+    );
+  return (
+    <PersonalDraft
+      familyId={familyId}
+      parent={parent}
+      demo={demo}
+      drafting={drafting}
+      initialProfile={demo ? demoView() : (profile.data ?? empty)}
+      profiles={demo ? demoControls : profileAccess ? profile : undefined}
+    />
+  );
+}
+
+function PersonalDraft({
+  familyId,
+  parent,
+  demo,
+  drafting,
+  initialProfile,
+  profiles,
+}: {
+  familyId: string | undefined;
+  parent: TodayLight;
+  demo: boolean;
+  drafting: boolean;
+  initialProfile: ApiQuestionProfile;
+  profiles: ProfileControls | undefined;
 }) {
   const { t, i18n } = useLingui();
   const account = useAccount();
@@ -98,17 +200,33 @@ function PersonalDraft({
   }, []);
   const draftKey = useIdempotencyKey("personal-draft");
   const saveKey = useIdempotencyKey("personal-question");
+  const profileEpoch = useRef(0);
+  const [profileView, setProfileView] = useState(initialProfile);
+  const initialSettings = currentQuestionProfile(initialProfile)?.settings;
+  const [profileBasis, setProfileBasis] = useState(
+    initialSettings ? initialProfile.revision : null,
+  );
+  const [profileDetails, setProfileDetails] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState<unknown>(null);
+  const [profileNotice, setProfileNotice] = useState<"saved" | "forgotten" | "expired" | null>(
+    null,
+  );
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [connection, setConnection] = useState<QuestionPersonalization["connection"]>("unsure");
-  const [contact, setContact] = useState<QuestionPersonalization["talking_rhythm"]>("unsure");
-  const [address, setAddress] = useState(parent.displayName);
+  const [connection, setConnection] = useState<QuestionPersonalization["connection"]>(
+    initialSettings?.context.connection ?? UNKNOWN_CHOICE,
+  );
+  const [contact, setContact] = useState<QuestionPersonalization["talking_rhythm"]>(
+    initialSettings?.context.talking_rhythm ?? UNKNOWN_CHOICE,
+  );
+  const [address, setAddress] = useState(initialSettings?.address_form ?? parent.displayName);
   const [intent, setIntent] = useState("");
-  const [example1, setExample1] = useState("");
-  const [example2, setExample2] = useState("");
-  const [avoid, setAvoid] = useState("");
-  const [never, setNever] = useState("");
+  const [example1, setExample1] = useState(initialSettings?.writing_examples[0] ?? "");
+  const [example2, setExample2] = useState(initialSettings?.writing_examples[1] ?? "");
+  const [avoid, setAvoid] = useState(initialSettings?.context.avoid_topics.join("\n") ?? "");
+  const [never, setNever] = useState(initialSettings?.context.never_say.join("\n") ?? "");
   const [language, setLanguage] = useState<"en" | "zh-TW">(
-    i18n.locale === "zh-TW" ? "zh-TW" : "en",
+    initialSettings?.language ?? (i18n.locale === "zh-TW" ? "zh-TW" : "en"),
   );
   const [result, setResult] = useState<ApiPersonalQuestionDraft | null>(null);
   const [words, setWords] = useState("");
@@ -124,25 +242,27 @@ function PersonalDraft({
   );
   const input: DraftPersonalQuestion = {
     recipient_id: parent.memberId,
+    ...(profileBasis ? { profile_revision: profileBasis } : {}),
     language,
     address_form: address.trim(),
     context: {
       intent: intent.trim(),
       connection,
       talking_rhythm: contact,
-      avoid_topics: avoid.trim() ? [avoid.trim()] : [],
-      never_say: never.trim() ? [never.trim()] : [],
+      avoid_topics: profileLines(avoid),
+      never_say: profileLines(never),
     },
     writing_examples: [example1.trim(), example2.trim()].filter(Boolean),
   };
   const generate = useMutation({
     gcTime: 0,
+    onMutate: () => ({ epoch: profileEpoch.current }),
     mutationFn: async () => {
       if (connection === "quiet") return { state: "not_drafted", reason: "quiet" } as const;
       if (demo) {
         const normalize = (value: string) => value.normalize("NFKC").toLowerCase();
         if (
-          [avoid.trim(), never.trim()]
+          [...profileLines(avoid), ...profileLines(never)]
             .filter(Boolean)
             .some((term) => normalize(intent).includes(normalize(term)))
         )
@@ -151,14 +271,15 @@ function PersonalDraft({
         const ownWords = intent.trim().replace(/[?？]+$/u, "");
         return {
           state: "review",
+          ...(profileBasis ? { profile_revision: profileBasis } : {}),
           language,
           text: language === "zh-TW" ? `${address}，${ownWords}？` : `${address}, ${ownWords}?`,
         } as const;
       }
       return draftPersonalQuestion(familyId ?? "", draftKey(input), input, await account.token());
     },
-    onSuccess: (next) => {
-      if (!mounted.current) return;
+    onSuccess: (next, _variables, context) => {
+      if (!mounted.current || context?.epoch !== profileEpoch.current) return;
       setExampleFinished(false);
       setResult(next);
       setWords(next.state === "review" ? next.text : "");
@@ -178,6 +299,7 @@ function PersonalDraft({
         date,
         ai_assisted: true,
         text_language: result.language,
+        ...(result.profile_revision ? { personal_profile_revision: result.profile_revision } : {}),
       };
       if (!demo) await composeAsk(familyId ?? "", saveKey(ask), ask, await account.token());
       if (demo) return "example";
@@ -203,6 +325,73 @@ function PersonalDraft({
       });
     },
   });
+  const settings = QuestionProfileSettings.safeParse(profileSettingsOf(input));
+  const hydrate = useCallback(
+    (view: ApiQuestionProfile) => {
+      if (!mounted.current) return;
+      profileEpoch.current += 1;
+      const saved = currentQuestionProfile(view)?.settings;
+      setProfileView(view);
+      setProfileBasis(saved ? view.revision : null);
+      setAddress(saved?.address_form ?? parent.displayName);
+      setConnection(saved?.context.connection ?? UNKNOWN_CHOICE);
+      setContact(saved?.context.talking_rhythm ?? UNKNOWN_CHOICE);
+      setExample1(saved?.writing_examples[0] ?? "");
+      setExample2(saved?.writing_examples[1] ?? "");
+      setAvoid(saved?.context.avoid_topics.join("\n") ?? "");
+      setNever(saved?.context.never_say.join("\n") ?? "");
+      setLanguage(saved?.language ?? (i18n.locale === "zh-TW" ? "zh-TW" : "en"));
+      setResult(null);
+      setWords("");
+      setConfirmed(false);
+      setStep(1);
+      generate.reset();
+      save.reset();
+    },
+    [parent.displayName, i18n.locale, generate.reset, save.reset],
+  );
+  async function changeProfile(action: "save" | "forget" | "reload") {
+    if (!profiles || profileBusy) return;
+    setProfileBusy(true);
+    setProfileError(null);
+    setProfileNotice(null);
+    try {
+      const view =
+        action === "save" && settings.success
+          ? await profiles.save(settings.data, profileView.revision)
+          : action === "forget"
+            ? await profiles.forget()
+            : await profiles.reload();
+      hydrate(view);
+      if (mounted.current)
+        setProfileNotice(action === "reload" ? null : action === "save" ? "saved" : "forgotten");
+    } catch (error) {
+      if (mounted.current) setProfileError(error);
+    } finally {
+      if (mounted.current) setProfileBusy(false);
+    }
+  }
+  useEffect(() => {
+    const expires = profileView.profile?.expires_at;
+    if (!expires) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = () => {
+      const remaining = Date.parse(expires) - Date.now();
+      if (remaining > 0) {
+        timer = setTimeout(check, Math.min(remaining, 86400000));
+        return;
+      }
+      profiles?.clearLocal();
+      hydrate({ ...profileView, profile: null });
+      setProfileNotice("expired");
+    };
+    check();
+    return () => clearTimeout(timer);
+    // The deadline is fixed; re-arming after an edit never extends it.
+  }, [profileView, hydrate, profiles?.clearLocal]);
+  const expiresOn = profileView.profile
+    ? new Date(profileView.profile.expires_at).toLocaleDateString(i18n.locale)
+    : "";
   const name = parent.displayName;
   const blockedParent = parent.invited || parent.state === "resting";
   return (
@@ -221,9 +410,93 @@ function PersonalDraft({
       {demo ? (
         <Words variant="caption" tone="action">
           <Trans>
-            Example mode: the preview uses your own words. No AI is called and nothing is saved or
-            sent.
+            Example mode: choices are remembered only while this example screen stays open. The
+            preview uses your own words. No AI is called or question sent.
           </Trans>
+        </Words>
+      ) : null}
+      {profiles ? (
+        <SoftCard>
+          <Eyebrow>
+            <Trans>Your private choices</Trans>
+          </Eyebrow>
+          <Words variant="caption" tone="ink2">
+            <Trans>Only you can see these choices. They expire 30 days after saving.</Trans>
+          </Words>
+          {profileView.profile ? (
+            <Words
+              variant="caption"
+              tone="ink2"
+            >{t`Saved until ${expiresOn}. Opening or using it does not extend this date.`}</Words>
+          ) : null}
+          <SecondaryButton
+            label={profileDetails ? t`Hide details` : t`About saved choices`}
+            onPress={() => setProfileDetails(!profileDetails)}
+          />
+          {profileDetails ? (
+            <>
+              <Words variant="caption" tone="ink2">
+                <Trans>
+                  Only you can see this setup for this parent. Saving keeps your wording examples,
+                  comfort level, usual contact, and boundaries for 30 days. The question you want to
+                  ask is not saved here.
+                </Trans>
+              </Words>
+              <Words variant="caption" tone="ink2">
+                <Trans>
+                  Forgetting clears these choices. Questions you already approved stay in your
+                  schedule.
+                </Trans>
+              </Words>
+            </>
+          ) : null}
+          {profileNotice ? (
+            <Words tone="action">
+              {profileNotice === "saved"
+                ? t`Your choices are saved.`
+                : profileNotice === "forgotten"
+                  ? t`Your saved choices were forgotten.`
+                  : t`Your saved choices expired. Start fresh or reload.`}
+            </Words>
+          ) : null}
+          {profileError ? (
+            <Words tone="error">
+              {questionProfileChanged(profileError)
+                ? t`Your saved choices changed elsewhere. Reload before continuing.`
+                : t`The change was not confirmed. Reload your saved choices before trying again.`}
+            </Words>
+          ) : null}
+          {profileDetails ||
+          profileError ||
+          questionProfileChanged(generate.error) ||
+          questionProfileChanged(save.error) ? (
+            <>
+              <SecondaryButton
+                label={t`Reload saved choices`}
+                disabled={profileBusy || generate.isPending || save.isPending}
+                onPress={() => void changeProfile("reload")}
+              />
+              {profileView.profile || profileBasis ? (
+                <SecondaryButton
+                  label={t`Forget saved choices`}
+                  disabled={profileBusy || save.isPending}
+                  onPress={() => void changeProfile("forget")}
+                />
+              ) : null}
+            </>
+          ) : null}
+          {!profileView.saving_available ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>
+                Saving new choices is off. You can still view or forget your saved choices.
+              </Trans>
+            </Words>
+          ) : null}
+        </SoftCard>
+      ) : null}
+      {!drafting ? (
+        <Words tone="ink2">
+          <Trans>Drafting is off here. Your saved choices are still yours to view or forget.</Trans>
         </Words>
       ) : null}
       <Eyebrow>{t`Step ${step} of 3`}</Eyebrow>
@@ -267,9 +540,16 @@ function PersonalDraft({
               Occasional contact is okay. More personal questions are always your choice.
             </Trans>
           </Words>
+          {profiles && profileView.saving_available && connection === "quiet" ? (
+            <SecondaryButton
+              label={t`Save these choices for 30 days`}
+              disabled={profileBusy || !settings.success || blockedParent}
+              onPress={() => void changeProfile("save")}
+            />
+          ) : null}
           <PrimaryButton
             label={connection === "quiet" ? t`Leave room for now` : t`Next: your words`}
-            disabled={!address.trim()}
+            disabled={!address.trim() || profileBusy || !drafting}
             onPress={() => (connection === "quiet" ? generate.mutate() : setStep(2))}
           />
         </>
@@ -305,14 +585,18 @@ function PersonalDraft({
             label={t`A topic to leave out (optional)`}
             value={avoid}
             onChangeText={setAvoid}
-            maxLength={40}
+            maxLength={204}
+            multiline
+            helper={t`One topic per line, up to 5 topics of 40 characters each.`}
             disabled={generate.isPending}
           />
           <TextField
             label={t`Words you would never use (optional)`}
             value={never}
             onChangeText={setNever}
-            maxLength={60}
+            maxLength={182}
+            multiline
+            helper={t`One phrase per line, up to 3 phrases of 60 characters each.`}
             disabled={generate.isPending}
           />
           <Words variant="bodyMedium">
@@ -329,18 +613,39 @@ function PersonalDraft({
           />
           <Words variant="caption" tone="ink2">
             <Trans>
-              Vela uses these notes to prepare a draft. They are not added to a lasting relationship
-              profile.
+              Vela uses these notes to prepare a draft. They are kept for later only if you choose
+              to save them.
             </Trans>
           </Words>
+          {profiles && profileView.saving_available ? (
+            <SecondaryButton
+              label={profileBusy ? t`Saving choices…` : t`Save these choices for 30 days`}
+              disabled={profileBusy || generate.isPending || !settings.success || blockedParent}
+              onPress={() => void changeProfile("save")}
+            />
+          ) : null}
+          {!settings.success ? (
+            <Words tone="error">
+              <Trans>Check the length and number of topics or phrases before continuing.</Trans>
+            </Words>
+          ) : null}
           {generate.isError ? (
             <Words tone="error">
-              <Trans>The draft could not be prepared. Your words are still here.</Trans>
+              {questionProfileChanged(generate.error)
+                ? t`Your saved choices changed or expired. Reload before preparing another draft.`
+                : t`The draft could not be prepared. Your words are still here.`}
             </Words>
           ) : null}
           <PrimaryButton
             label={generate.isPending ? t`Preparing your draft…` : t`Prepare a draft`}
-            disabled={generate.isPending || !intent.trim() || blockedParent}
+            disabled={
+              generate.isPending ||
+              profileBusy ||
+              !drafting ||
+              !settings.success ||
+              !intent.trim() ||
+              blockedParent
+            }
             onPress={() => generate.mutate()}
           />
           {blockedParent ? (
@@ -397,14 +702,18 @@ function PersonalDraft({
           ) : null}
           {save.isError ? (
             <Words tone="error">
-              {askConflict(save.error) !== null
-                ? t`That morning already has a question. Choose another morning.`
-                : t`Saving was not confirmed. Keep this screen open and try again.`}
+              {questionProfileChanged(save.error)
+                ? t`Your saved choices changed or expired. Reload before saving this question.`
+                : askConflict(save.error) !== null
+                  ? t`That morning already has a question. Choose another morning.`
+                  : t`Saving was not confirmed. Keep this screen open and try again.`}
             </Words>
           ) : null}
           <PrimaryButton
             label={save.isPending ? t`Saving…` : demo ? t`Finish example` : t`Save this question`}
-            disabled={!confirmed || !date || !words.trim() || save.isPending}
+            disabled={
+              !confirmed || !date || !words.trim() || save.isPending || profileBusy || !drafting
+            }
             onPress={() => save.mutate()}
           />
           <SecondaryButton

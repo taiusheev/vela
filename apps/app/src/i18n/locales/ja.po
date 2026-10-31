@@ -747,6 +747,10 @@ msgstr ""
 msgid "About a quiet notice"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "About saved choices"
+msgstr ""
+
 #: src/components/keepsake.tsx
 msgid "About someone"
 msgstr ""
@@ -1196,6 +1200,10 @@ msgstr ""
 msgid "Check the facts, tone, and topic. Vela can get these wrong."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Check the length and number of topics or phrases before continuing."
+msgstr ""
+
 #: app/weekly-report.tsx
 msgid "Check this offer"
 msgstr ""
@@ -1509,6 +1517,10 @@ msgstr ""
 msgid "Drafting can begin once this person has agreed and their light is on."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Drafting is off here. Your saved choices are still yours to view or forget."
+msgstr ""
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr ""
@@ -1620,7 +1632,7 @@ msgid "Example controls"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Example mode: the preview uses your own words. No AI is called and nothing is saved or sent."
+msgid "Example mode: choices are remembered only while this example screen stays open. The preview uses your own words. No AI is called or question sent."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -1726,6 +1738,14 @@ msgstr ""
 
 #: app/vela-light.tsx
 msgid "For one parent. Each extra parent adds half the price."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Forget saved choices"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Forgetting clears these choices. Questions you already approved stay in your schedule."
 msgstr ""
 
 #: src/auth/phone.ts
@@ -1916,6 +1936,10 @@ msgstr ""
 
 #: src/components/nearby-editor.tsx
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Hide details"
 msgstr ""
 
 #: app/ask.tsx
@@ -2507,6 +2531,10 @@ msgstr ""
 msgid "Loading your notification preference…"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Loading your private choices…"
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 msgid "Loading your schedule…"
 msgstr ""
@@ -3053,12 +3081,28 @@ msgstr ""
 msgid "One ordinary thing you actually want to hear about."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "One phrase per line, up to 3 phrases of 60 characters each."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "One topic per line, up to 5 topics of 40 characters each."
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Only confirm a request you just started from your own Vela app."
 msgstr ""
 
 #: src/components/parent-photo-settings.tsx
 msgid "Only on this device. Removed when you sign out."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Only you can see these choices. They expire 30 days after saving."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
@@ -3478,6 +3522,10 @@ msgstr ""
 msgid "Reload report"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Reload saved choices"
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 #: app/personal-question.tsx
 msgid "Reload schedule"
@@ -3689,7 +3737,15 @@ msgid "Save question"
 msgstr ""
 
 #: app/personal-question.tsx
+msgid "Save these choices for 30 days"
+msgstr ""
+
+#: app/personal-question.tsx
 msgid "Save this question"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Saved until {expiresOn}. Opening or using it does not extend this date."
 msgstr ""
 
 #: app/conversation.tsx
@@ -3702,6 +3758,14 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "Saving"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Saving choices…"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Saving new choices is off. You can still view or forget your saved choices."
 msgstr ""
 
 #: app/personal-question.tsx
@@ -4464,6 +4528,10 @@ msgstr ""
 
 #: src/components/not-okay-follow-up.tsx
 msgid "The call could not open. Call from your phone or messaging app directly."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "The change was not confirmed. Reload your saved choices before trying again."
 msgstr ""
 
 #: src/data/family.ts
@@ -5243,7 +5311,7 @@ msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Vela uses these notes to prepare a draft. They are not added to a lasting relationship profile."
+msgid "Vela uses these notes to prepare a draft. They are kept for later only if you choose to save them."
 msgstr ""
 
 #: app/my-memories.tsx
@@ -5794,6 +5862,10 @@ msgstr ""
 msgid "Your choice could not be saved. Please try again."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Your choices are saved."
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Your code was sent to {sentTo}. Check spam if it is missing."
 msgstr ""
@@ -5924,6 +5996,10 @@ msgid "Your pilot is free. Quiet notices and important updates arrive in the org
 msgstr ""
 
 #: app/personal-question.tsx
+msgid "Your private choices"
+msgstr ""
+
+#: app/personal-question.tsx
 msgid "Your question"
 msgstr ""
 
@@ -5933,6 +6009,30 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed elsewhere. Reload before continuing."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before preparing another draft."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices changed or expired. Reload before saving this question."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices could not be loaded. Reload before continuing."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices expired. Start fresh or reload."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices were forgotten."
 msgstr ""
 
 #: app/(tabs)/questions.tsx
