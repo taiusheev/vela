@@ -4,7 +4,7 @@
  * prompt to the family group. Every function is safe to run twice: the exchange is unique per day,
  * the outbound rows are keyed by member and date, and the turn is keyed by the day.
  */
-import type { Channel, LocalDate, OutboundMediaRef } from "@vela/contracts";
+import { type Channel, Lang, type LocalDate, type OutboundMediaRef } from "@vela/contracts";
 import { t } from "@vela/copy";
 import {
   type ArrivalAsk,
@@ -524,6 +524,19 @@ export async function loadAsk(
   } else if (type === "photo_choice") {
     attached = images;
   }
+  // Vela's picture morning (ADR-58) asks about the photo it shows: with none left to show (taken
+  // out of the box after the morning was made, or gone), it is the plain hello instead, and a
+  // choice left with one photo asks about that one.
+  let text = exchange.text;
+  if (isVelaPictureMorning(exchange)) {
+    if (!attached.some((file) => file.kind === "image")) {
+      deps.logger.warn("picture_morning_without_photo", { exchangeId: exchange.id });
+      return { ask: { type: "hello", question: null }, media: [] };
+    }
+    if (exchange.type === "photo_choice" && type !== "photo_choice") {
+      text = t(Lang.parse(exchange.textLang), "photo_box.look");
+    }
+  }
   const options = ExchangeOptions.safeParse(exchange.options);
   const hello =
     exchange.voiceHelloId === null
@@ -540,7 +553,7 @@ export async function loadAsk(
       type,
       askerName: asker?.displayName ?? family.name,
       onBehalfOf: exchange.onBehalfOf,
-      text: exchange.text,
+      text,
       voteOptions: type === "vote" && options.success ? (options.data.vote_options ?? []) : [],
       imageCount: attached.filter((file) => file.kind === "image").length,
       byVela: isVelaPictureMorning(exchange),

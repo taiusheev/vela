@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ApiPhotoBoxPhoto, PHOTO_BOX_LIMIT, type PhotoBoxEra } from "@vela/contracts";
+import {
+  type ApiPhotoBoxNext,
+  type ApiPhotoBoxPhoto,
+  PHOTO_BOX_LIMIT,
+  type PhotoBoxEra,
+} from "@vela/contracts";
 import { useCallback, useState } from "react";
 import {
   addToPhotoBox,
@@ -41,6 +46,8 @@ export type AddFailure = "limit" | "full" | "unusable" | "trouble";
 
 export interface PhotoBoxView {
   photos: BoxPhoto[];
+  /** Each parent's next picture morning as the server plans it; empty in the example family. */
+  next: ApiPhotoBoxNext[];
   limit: number;
   /** Places still free in the box. */
   room: number;
@@ -103,6 +110,7 @@ export function usePhotoBox(familyId: string | undefined, enabled: boolean): Pho
   const limit = read.data?.limit ?? PHOTO_BOX_LIMIT;
   return {
     photos,
+    next: read.data?.next ?? [],
     limit,
     room: Math.max(0, limit - photos.length),
     loading: live && read.isPending,
@@ -176,6 +184,7 @@ function useExamplePhotoBox(): PhotoBoxView {
   const [photos, setPhotos] = useState<BoxPhoto[]>([]);
   return {
     photos,
+    next: [],
     limit: PHOTO_BOX_LIMIT,
     room: PHOTO_BOX_LIMIT - photos.length,
     loading: false,

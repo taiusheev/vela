@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/photo-box.tsx
+#: app/photo-box.tsx
 msgid "— Vela"
 msgstr "— Vela"
 
@@ -867,6 +867,14 @@ msgstr "All four panes lit"
 #: app/(tabs)/index.tsx
 msgid "All memories"
 msgstr "All memories"
+
+#: src/components/photo-box.tsx
+msgid "All new"
+msgstr "All new"
+
+#: src/components/photo-box.tsx
+msgid "All old"
+msgstr "All old"
 
 #: src/data/family.ts
 msgid "All said yes"
@@ -2580,6 +2588,10 @@ msgstr "Making & mending"
 #: src/auth/phone.ts
 msgid "Malaysia"
 msgstr "Malaysia"
+
+#: src/components/photo-box.tsx
+msgid "Mark them all"
+msgstr "Mark them all"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
