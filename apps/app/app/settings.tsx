@@ -370,7 +370,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                 key="reply-notifications"
                 icon="bell"
                 title={t`When a parent replies`}
-                detail={t`A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone.`}
+                detail={t`A quiet alert when a parent answers. At most once a day, never at night.`}
                 trailing={
                   <Switch
                     accessibilityLabel={t`When a parent replies`}
@@ -388,7 +388,7 @@ function FamilyYou({ day }: { day: TodayView }) {
                 key="turn-reminders"
                 icon="sunday"
                 title={t`Before your turn`}
-                detail={t`A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone.`}
+                detail={t`A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night.`}
                 trailing={
                   <Switch
                     accessibilityLabel={t`Before your turn`}

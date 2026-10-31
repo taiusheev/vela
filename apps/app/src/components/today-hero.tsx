@@ -388,13 +388,16 @@ export function SoftCard({
   padding?: number;
 }) {
   const p = usePalette();
+  const { scheme } = useTheme();
   return (
     <View
       style={[
         {
           backgroundColor: tone === "paper" ? p.surface2 : p.surface,
+          // A card gets an edge or a shadow, not both: by day its soft shadow sets it apart, and
+          // only at night, where a shadow cannot show, does it need the line (Refactoring UI).
           borderColor: p.rule,
-          borderWidth: 1,
+          borderWidth: scheme === "dark" ? 1 : 0,
           borderRadius: radius.panel,
           padding,
           gap: space.m,

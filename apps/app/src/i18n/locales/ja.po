@@ -659,6 +659,10 @@ msgstr ""
 msgid "A quick tap, like a heart"
 msgstr ""
 
+#: app/settings.tsx
+msgid "A quiet alert when a parent answers. At most once a day, never at night."
+msgstr ""
+
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr ""
@@ -671,16 +675,12 @@ msgstr ""
 msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
 msgstr ""
 
+#: app/settings.tsx
+msgid "A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night."
+msgstr ""
+
 #: src/data/ask.ts
 msgid "A recipe"
-msgstr ""
-
-#: app/settings.tsx
-msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
-msgstr ""
-
-#: app/settings.tsx
-msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx

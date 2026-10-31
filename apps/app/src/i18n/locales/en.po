@@ -665,6 +665,10 @@ msgstr "A question for her morning"
 msgid "A quick tap, like a heart"
 msgstr "A quick tap, like a heart"
 
+#: app/settings.tsx
+msgid "A quiet alert when a parent answers. At most once a day, never at night."
+msgstr "A quiet alert when a parent answers. At most once a day, never at night."
+
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr "A quiet morning"
@@ -677,17 +681,13 @@ msgstr "A quiet notice means Vela has not recorded an answer. Call or message yo
 msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
 msgstr "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
 
+#: app/settings.tsx
+msgid "A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night."
+msgstr "A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night."
+
 #: src/data/ask.ts
 msgid "A recipe"
 msgstr "A recipe"
-
-#: app/settings.tsx
-msgid "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
-msgstr "A silent notification when a parent answers your question. At most one per family each day, between 08:00 and 21:00 in your time zone."
-
-#: app/settings.tsx
-msgid "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
-msgstr "A silent reminder to prepare tomorrow’s question, only if it still needs you. At most one a day across your parents, between 08:00 and 21:00 in your time zone."
 
 #: src/components/onboarding/questions.tsx
 msgid "A small, specific question feels more like you than a perfect one."
