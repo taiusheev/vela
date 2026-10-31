@@ -615,7 +615,7 @@ msgid "A live connection has not been set up."
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "A message you would write to {name} (optional)"
+msgid "A message you would write to {name}"
 msgstr ""
 
 #: src/components/questions/flow.tsx
@@ -717,10 +717,6 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "A story question for {name}'s {day} morning"
-msgstr ""
-
-#: app/personal-question.tsx
-msgid "A topic to leave out (optional)"
 msgstr ""
 
 #: app/conversation.tsx
@@ -940,7 +936,7 @@ msgid "Anna"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Another example (optional)"
+msgid "Another example"
 msgstr ""
 
 #: src/components/story-day.tsx
@@ -5062,6 +5058,10 @@ msgstr ""
 msgid "Too many photos for now. Try again tomorrow."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Topics to leave out"
+msgstr ""
+
 #: app/help.tsx
 msgid "Trouble signing in?"
 msgstr ""
@@ -5680,7 +5680,7 @@ msgid "Words & sayings"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Words you would never use (optional)"
+msgid "Words you would never use"
 msgstr ""
 
 #: app/delete-account.tsx

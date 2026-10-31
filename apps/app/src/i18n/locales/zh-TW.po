@@ -622,8 +622,8 @@ msgid "A live connection has not been set up."
 msgstr "尚未設定即時連線。"
 
 #: app/personal-question.tsx
-msgid "A message you would write to {name} (optional)"
-msgstr "你會傳給{name}的一句話（選填）"
+msgid "A message you would write to {name}"
+msgstr "你會傳給{name}的一句話"
 
 #: src/components/questions/flow.tsx
 msgid "A morning"
@@ -725,10 +725,6 @@ msgstr "{name}親口說的故事"
 #: src/components/story-day.tsx
 msgid "A story question for {name}'s {day} morning"
 msgstr "給{name}{day}早上的故事問題"
-
-#: app/personal-question.tsx
-msgid "A topic to leave out (optional)"
-msgstr "想避開的話題（選填）"
 
 #: app/conversation.tsx
 msgid "A voice hello for her morning"
@@ -947,8 +943,8 @@ msgid "Anna"
 msgstr "安安"
 
 #: app/personal-question.tsx
-msgid "Another example (optional)"
-msgstr "另一句你會說的話（選填）"
+msgid "Another example"
+msgstr "另一句你會說的話"
 
 #: src/components/story-day.tsx
 msgid "Another question"
@@ -5069,6 +5065,10 @@ msgstr "目前照片太多了，請稍後再試。"
 msgid "Too many photos for now. Try again tomorrow."
 msgstr "目前照片太多了，請明天再試。"
 
+#: app/personal-question.tsx
+msgid "Topics to leave out"
+msgstr "想避開的話題"
+
 #: app/help.tsx
 msgid "Trouble signing in?"
 msgstr "無法登入嗎？"
@@ -5687,8 +5687,8 @@ msgid "Words & sayings"
 msgstr "俗語與說法"
 
 #: app/personal-question.tsx
-msgid "Words you would never use (optional)"
-msgstr "你不會用的說法（選填）"
+msgid "Words you would never use"
+msgstr "你不會用的說法"
 
 #: app/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
