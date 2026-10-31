@@ -1,5 +1,5 @@
-# You is one page: the family card, then the reader's name, memories, Settings and Help. "Your name"
-# opens the name ready to edit. The example family's name changes on that screen only.
+# You is one page: the reader's name first, the family card, then memories, Settings and Help.
+# Tapping the name opens it ready to edit. The example family's name changes on that screen only.
 url: ${APP_URL}
 name: You shows the family and changes the reader's name on one short page
 tags:
@@ -9,7 +9,9 @@ tags:
 - openLink: ${APP_URL}/you
 - assertVisible: "The Chens"
 - assertNotVisible: "Your profile"
-- tapOn: "Change"
+# On the web an element's spoken label stands in for its id.
+- tapOn:
+    id: "Your name, Anna"
 - assertVisible: "Your family sees this name on your questions and replies."
 - tapOn:
     id: "Your name"

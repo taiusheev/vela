@@ -395,13 +395,9 @@ msgstr "{name}的早晨"
 msgid "{name}’s own phone, with Vela"
 msgstr "{name}自己的手機，使用 Vela"
 
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "{name}'s phone"
 msgstr "{name}的手機"
-
-#: app/settings.tsx
-msgid "{name}’s photo and parent link"
-msgstr "{name}的照片與邀請連結"
 
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
@@ -1177,12 +1173,8 @@ msgstr "取消連結"
 msgid "Central"
 msgstr "中部時間"
 
-#: app/(tabs)/you.tsx
-msgid "Change"
-msgstr "更改"
-
 #: app/conversation.tsx
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "Change {name}'s morning"
 msgstr "更改{name}的早安訊息"
 
@@ -1201,6 +1193,9 @@ msgstr "更換電子郵件或電話號碼"
 #: app/personal-question.tsx
 msgid "Change starting points"
 msgstr "調整草稿方向"
+#: app/(tabs)/you.tsx
+msgid "Change the name your family sees"
+msgstr "更改家人看到的你的名字"
 
 #: src/components/service-status.tsx
 msgid "Check again"
@@ -1388,8 +1383,8 @@ msgid "Connection reference: {connectionReference}"
 msgstr "連結編號：{connectionReference}"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
-msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同意後，可以在「你」→「設定」中新增聯絡電話。"
+msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
+msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同意後，可以在「你」→「{name}」中新增聯絡電話。"
 
 #: app/parent-photos.tsx
 #: app/sign-in.tsx
@@ -1779,6 +1774,7 @@ msgstr "法國"
 msgid "Free"
 msgstr "免費"
 
+#: app/kept-light.tsx
 #: app/settings.tsx
 msgid "Free pilot"
 msgstr "免費試辦"
@@ -1811,6 +1807,10 @@ msgstr "來自{name}的廚房"
 msgid "From {name}'s own words"
 msgstr "來自{name}自己說的話"
 
+#: app/(tabs)/you.tsx
+msgid "From your own answers"
+msgstr "來自你自己的回答"
+
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr "園藝與植物"
@@ -1829,13 +1829,10 @@ msgstr "取得連結協助"
 msgid "Get help or request your data"
 msgstr "尋求協助或索取你的資料"
 
-#: app/(tabs)/you.tsx
-msgid "Get help with Vela or your family connection"
-msgstr "取得 Vela 或家庭連結方面的協助"
-
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/conversation.tsx
+#: app/kept-light.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to Settings"
@@ -2187,7 +2184,7 @@ msgstr "邀請已送出"
 
 #: app/away.tsx
 #: app/conversation.tsx
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "Is {name} away?"
 msgstr "{name}不在家嗎？"
 
@@ -2487,10 +2484,6 @@ msgstr "聽聽你的錄音"
 msgid "Lit on each day {name} answered."
 msgstr "{name}有回覆的那天，窗就會亮。"
 
-#: app/(tabs)/you.tsx
-msgid "Little things worth remembering from your own answers"
-msgstr "從你自己的回答中，值得記住的小事"
-
 #: app/my-memories.tsx
 msgid "Little things worth remembering from your own answers. Only you can see them."
 msgstr "從你自己的回答中，值得記住的小事。只有你看得到。"
@@ -2534,6 +2527,7 @@ msgstr "正在載入對話…"
 #: app/(tabs)/questions.tsx
 #: app/(tabs)/you.tsx
 #: app/away.tsx
+#: app/kept-light.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/parent-photos.tsx
@@ -2562,6 +2556,7 @@ msgstr "正在載入你的私人設定…"
 msgid "Loading your schedule…"
 msgstr "正在載入安排…"
 
+#: app/(tabs)/you.tsx
 #: app/profile.tsx
 msgid "Loading…"
 msgstr "載入中…"
@@ -3019,6 +3014,10 @@ msgstr "通知已開啟。"
 msgid "Notifications come to the Vela app on a phone, not to a browser."
 msgstr "通知會送到手機上的 Vela App，不會送到瀏覽器。"
 
+#: app/(tabs)/you.tsx
+msgid "Notifications, language, privacy, account"
+msgstr "通知、語言、隱私、帳號"
+
 #: src/components/today-hero.tsx
 msgid "Notifications, something new"
 msgstr "通知，有新消息"
@@ -3258,9 +3257,9 @@ msgstr "父母的照片"
 msgid "Parent settings"
 msgstr "父母的設定"
 
-#: app/(tabs)/you.tsx
-msgid "Parents, notifications, language and account"
-msgstr "長輩、通知、語言與帳號"
+#: app/settings.tsx
+msgid "Parents"
+msgstr "長輩"
 
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
@@ -3283,7 +3282,7 @@ msgstr "暫停中"
 msgid "Paused · {plan}"
 msgstr "暫停中 · {plan}"
 
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "People near {name}"
 msgstr "{name}附近的人"
 
@@ -3326,6 +3325,10 @@ msgstr "照片"
 msgid "Photo {number}"
 msgstr "照片 {number}"
 
+#: app/kept-light.tsx
+msgid "Photo and parent link"
+msgstr "照片與邀請連結"
+
 #: app/(tabs)/you.tsx
 #: app/photo-box.tsx
 msgid "Photo box"
@@ -3347,10 +3350,6 @@ msgstr "這裡還沒有開啟照片功能。"
 #: app/conversation.tsx
 msgid "Photos for her morning"
 msgstr "放進早安訊息的照片"
-
-#: app/(tabs)/you.tsx
-msgid "Photos Vela shows her on free mornings"
-msgstr "Vela 在沒人寫問題的早上傳給長輩的照片"
 
 #: src/components/weekly-support.tsx
 msgid "Pick one to send {name}. You can change the words first."
@@ -4080,6 +4079,10 @@ msgstr "顯示測試登入資訊"
 #: src/components/photo-box.tsx
 msgid "Shown {shownOn}"
 msgstr "{shownOn}傳出"
+
+#: app/(tabs)/you.tsx
+msgid "Shown on free mornings"
+msgstr "在沒人寫問題的早上給長輩看"
 
 #: src/components/photo-box.tsx
 msgid "Shown to her"
@@ -4884,6 +4887,10 @@ msgstr "這一頁是給這個家庭的發起人看的，早上比較安靜時，
 #: app/parent-settings.tsx
 msgid "This parent is no longer available. Go back to Settings and choose your family again."
 msgstr "目前無法顯示這位家人。請返回設定並重新選擇家庭。"
+
+#: app/kept-light.tsx
+msgid "This parent is no longer in this family."
+msgstr "這位長輩已不在這個家庭中。"
 
 #: app/settings.tsx
 msgid "This phone"
@@ -6000,7 +6007,6 @@ msgstr "你的手機號碼。國碼會自動幫你加上。"
 msgid "Your morning message"
 msgstr "您的早晨訊息"
 
-#: app/(tabs)/you.tsx
 #: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
@@ -6010,6 +6016,10 @@ msgstr "你的名字"
 #: app/profile.tsx
 msgid "Your name could not be saved. Nothing changed. Try again."
 msgstr "名字沒有儲存成功，什麼都沒有改變。請再試一次。"
+
+#: app/(tabs)/you.tsx
+msgid "Your name, {name}"
+msgstr "你的名字：{name}"
 
 #: src/components/telegram-family-link.tsx
 msgid "Your name, as the family says it."
