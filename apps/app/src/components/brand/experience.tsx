@@ -145,7 +145,14 @@ export function FamilyAction({
       >
         <BrandIcon name={icon} color={p.action} />
       </View>
-      <View style={{ flex: fontScale > 1.3 ? undefined : 1, alignSelf: "stretch", gap: space.xs }}>
+      <View
+        style={{
+          flex: fontScale > 1.3 ? undefined : 1,
+          alignSelf: "stretch",
+          justifyContent: "center",
+          gap: space.xs,
+        }}
+      >
         <Words variant="heading">{title}</Words>
         {detail === undefined ? null : (
           <Words variant="caption" tone="ink2">

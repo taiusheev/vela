@@ -398,13 +398,9 @@ msgstr "{name}’s mornings"
 msgid "{name}’s own phone, with Vela"
 msgstr "{name}’s own phone, with Vela"
 
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "{name}'s phone"
 msgstr "{name}'s phone"
-
-#: app/settings.tsx
-msgid "{name}’s photo and parent link"
-msgstr "{name}’s photo and parent link"
 
 #: app/vela-light.tsx
 msgid "{name}'s thirty days have ended. The daily ask and the exchanges carry on as before."
@@ -1148,12 +1144,8 @@ msgstr "Cancel connection"
 msgid "Central"
 msgstr "Central"
 
-#: app/(tabs)/you.tsx
-msgid "Change"
-msgstr "Change"
-
 #: app/conversation.tsx
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "Change {name}'s morning"
 msgstr "Change {name}'s morning"
 
@@ -1168,6 +1160,10 @@ msgstr "Change any words before you send."
 #: app/sign-in.tsx
 msgid "Change email or number"
 msgstr "Change email or number"
+
+#: app/(tabs)/you.tsx
+msgid "Change the name your family sees"
+msgstr "Change the name your family sees"
 
 #: src/components/service-status.tsx
 msgid "Check again"
@@ -1343,8 +1339,8 @@ msgid "Connection reference: {connectionReference}"
 msgstr "Connection reference: {connectionReference}"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
-msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → Settings, with their permission."
+msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
+msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
 
 #: app/parent-photos.tsx
 #: app/sign-in.tsx
@@ -1690,6 +1686,7 @@ msgstr "France"
 msgid "Free"
 msgstr "Free"
 
+#: app/kept-light.tsx
 #: app/settings.tsx
 msgid "Free pilot"
 msgstr "Free pilot"
@@ -1722,6 +1719,10 @@ msgstr "From {name}'s kitchen"
 msgid "From {name}'s own words"
 msgstr "From {name}'s own words"
 
+#: app/(tabs)/you.tsx
+msgid "From your own answers"
+msgstr "From your own answers"
+
 #: src/data/onboarding.ts
 msgid "Garden & plants"
 msgstr "Garden & plants"
@@ -1740,13 +1741,10 @@ msgstr "Get help connecting"
 msgid "Get help or request your data"
 msgstr "Get help or request your data"
 
-#: app/(tabs)/you.tsx
-msgid "Get help with Vela or your family connection"
-msgstr "Get help with Vela or your family connection"
-
 #: app/(tabs)/index.tsx
 #: app/away.tsx
 #: app/conversation.tsx
+#: app/kept-light.tsx
 #: app/morning-settings.tsx
 #: app/nearby.tsx
 msgid "Go to Settings"
@@ -2094,7 +2092,7 @@ msgstr "Invitation sent"
 
 #: app/away.tsx
 #: app/conversation.tsx
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "Is {name} away?"
 msgstr "Is {name} away?"
 
@@ -2378,10 +2376,6 @@ msgstr "Listen to your recording"
 msgid "Lit on each day {name} answered."
 msgstr "Lit on each day {name} answered."
 
-#: app/(tabs)/you.tsx
-msgid "Little things worth remembering from your own answers"
-msgstr "Little things worth remembering from your own answers"
-
 #: app/my-memories.tsx
 msgid "Little things worth remembering from your own answers. Only you can see them."
 msgstr "Little things worth remembering from your own answers. Only you can see them."
@@ -2425,6 +2419,7 @@ msgstr "Loading your conversation…"
 #: app/(tabs)/questions.tsx
 #: app/(tabs)/you.tsx
 #: app/away.tsx
+#: app/kept-light.tsx
 #: app/nearby.tsx
 #: app/onboarding.tsx
 #: app/parent-photos.tsx
@@ -2449,6 +2444,7 @@ msgstr "Loading your notification preference…"
 msgid "Loading your schedule…"
 msgstr "Loading your schedule…"
 
+#: app/(tabs)/you.tsx
 #: app/profile.tsx
 msgid "Loading…"
 msgstr "Loading…"
@@ -2881,6 +2877,10 @@ msgstr "Notifications are on."
 msgid "Notifications come to the Vela app on a phone, not to a browser."
 msgstr "Notifications come to the Vela app on a phone, not to a browser."
 
+#: app/(tabs)/you.tsx
+msgid "Notifications, language, privacy, account"
+msgstr "Notifications, language, privacy, account"
+
 #: src/components/today-hero.tsx
 msgid "Notifications, something new"
 msgstr "Notifications, something new"
@@ -3096,9 +3096,9 @@ msgstr "Parent photo"
 msgid "Parent settings"
 msgstr "Parent settings"
 
-#: app/(tabs)/you.tsx
-msgid "Parents, notifications, language and account"
-msgstr "Parents, notifications, language and account"
+#: app/settings.tsx
+msgid "Parents"
+msgstr "Parents"
 
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
@@ -3121,7 +3121,7 @@ msgstr "paused"
 msgid "Paused · {plan}"
 msgstr "Paused · {plan}"
 
-#: app/settings.tsx
+#: app/kept-light.tsx
 msgid "People near {name}"
 msgstr "People near {name}"
 
@@ -3160,6 +3160,10 @@ msgstr "Photo"
 msgid "Photo {number}"
 msgstr "Photo {number}"
 
+#: app/kept-light.tsx
+msgid "Photo and parent link"
+msgstr "Photo and parent link"
+
 #: app/(tabs)/you.tsx
 #: app/photo-box.tsx
 msgid "Photo box"
@@ -3181,10 +3185,6 @@ msgstr "Photos are not switched on here yet."
 #: app/conversation.tsx
 msgid "Photos for her morning"
 msgstr "Photos for her morning"
-
-#: app/(tabs)/you.tsx
-msgid "Photos Vela shows her on free mornings"
-msgstr "Photos Vela shows her on free mornings"
 
 #: src/components/weekly-support.tsx
 msgid "Pick one to send {name}. You can change the words first."
@@ -3872,6 +3872,10 @@ msgstr "Show test sign-in details"
 #: src/components/photo-box.tsx
 msgid "Shown {shownOn}"
 msgstr "Shown {shownOn}"
+
+#: app/(tabs)/you.tsx
+msgid "Shown on free mornings"
+msgstr "Shown on free mornings"
 
 #: src/components/photo-box.tsx
 msgid "Shown to her"
@@ -4636,6 +4640,10 @@ msgstr "This page is for the family's organisers, who are told of quiet mornings
 #: app/parent-settings.tsx
 msgid "This parent is no longer available. Go back to Settings and choose your family again."
 msgstr "This parent is no longer available. Go back to Settings and choose your family again."
+
+#: app/kept-light.tsx
+msgid "This parent is no longer in this family."
+msgstr "This parent is no longer in this family."
 
 #: app/settings.tsx
 msgid "This phone"
@@ -5718,7 +5726,6 @@ msgstr "Your mobile number. The country code is added for you."
 msgid "Your morning message"
 msgstr "Your morning message"
 
-#: app/(tabs)/you.tsx
 #: app/profile.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/telegram-family-link.tsx
@@ -5728,6 +5735,10 @@ msgstr "Your name"
 #: app/profile.tsx
 msgid "Your name could not be saved. Nothing changed. Try again."
 msgstr "Your name could not be saved. Nothing changed. Try again."
+
+#: app/(tabs)/you.tsx
+msgid "Your name, {name}"
+msgstr "Your name, {name}"
 
 #: src/components/telegram-family-link.tsx
 msgid "Your name, as the family says it."

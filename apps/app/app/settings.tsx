@@ -1,4 +1,3 @@
-import { t as translate } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -9,15 +8,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
 import { BackButton } from "../src/components/back-button.tsx";
-import { BrandIcon } from "../src/components/brand/icon.tsx";
-import { CallingNumberEditor } from "../src/components/calling-number-editor.tsx";
 import { ConfirmationDialog } from "../src/components/confirmation-dialog.tsx";
 import { FamilyChooser } from "../src/components/family-chooser.tsx";
-import { Light } from "../src/components/light.tsx";
 import { LoadingLight } from "../src/components/loading-light.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
 import { ServiceStatus } from "../src/components/service-status.tsx";
-import { SetUpPhone } from "../src/components/set-up-phone.tsx";
 import {
   RowAction,
   SettingsNote,
@@ -39,7 +34,7 @@ import { usePush } from "../src/push/provider.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-export default function YouScreen() {
+export default function SettingsScreen() {
   const day = useToday();
   return <FamilyYou key={day.familyId ?? ""} day={day} />;
 }
@@ -48,7 +43,7 @@ function FamilyYou({ day }: { day: TodayView }) {
   const palette = usePalette();
   const insets = useSafeAreaInsets();
   const account = useAccount();
-  const { capabilities, pilot, englishOnly } = useCapabilities();
+  const { pilot, englishOnly } = useCapabilities();
   const { t } = useLingui();
   const language = useAppLocale();
   const { familyId, noAccount, pushSent, loading: todayLoading } = day;
@@ -128,35 +123,8 @@ function FamilyYou({ day }: { day: TodayView }) {
           gap: space.xxl,
         }}
       >
-        {/* Who is signed in, first, as every phone's settings begin. */}
+        {/* Who is signed in lives on You; this page starts with which family it is changing. */}
         <View style={{ gap: space.l }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.l,
-              paddingHorizontal: space.xs,
-            }}
-          >
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: palette.actionSoft,
-              }}
-            >
-              <BrandIcon name="you" size={26} color={palette.action} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Words variant="title">{family.me.name}</Words>
-              <Words variant="caption" tone="ink2">
-                {family.me.line}
-              </Words>
-            </View>
-          </View>
           <FamilyChooser day={day} />
           <ServiceStatus compact />
           {trouble || day.trouble ? (
@@ -184,97 +152,23 @@ function FamilyYou({ day }: { day: TodayView }) {
           ) : null}
         </View>
 
-        {/* Each parent's own group: everything about her light in one place (spec §8). */}
-        {family.keptLight.map((member) => {
-          const name = member.name;
-          const nearby = family.me.organiser ? (member.nearby ?? family.nearby) : undefined;
-          return (
-            <View key={member.memberId} style={{ gap: space.xxl }}>
-              <SettingsSection
-                title={name}
-                footer={
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-                    <Light state={member.paused ? "paused" : "resting"} height={16} />
-                    <SettingsNote>
-                      {pilot && member.light === "on" ? t`Free pilot` : member.line}
-                    </SettingsNote>
-                  </View>
+        {/* Each parent's things live on her own page, opened here or by tapping her on You. */}
+        {family.keptLight.length === 0 ? null : (
+          <SettingsSection title={t`Parents`}>
+            {family.keptLight.map((member) => (
+              <SettingsRow
+                key={member.memberId}
+                icon="you"
+                title={member.name}
+                detail={pilot && member.light === "on" ? t`Free pilot` : member.line}
+                testID={`kept-light-${member.memberId}`}
+                onPress={() =>
+                  router.push({ pathname: "/kept-light", params: { member: member.memberId } })
                 }
-              >
-                <SettingsRow
-                  icon="photo"
-                  title={parentSettingsTitle(name)}
-                  testID={`parent-settings-${member.memberId}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/parent-settings",
-                      params: { member: member.memberId },
-                    })
-                  }
-                />
-                {family.me.organiser ? (
-                  <SettingsRow
-                    icon="time"
-                    title={morningTitle(name)}
-                    testID={`morning-settings-${member.memberId}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/morning-settings",
-                        params: { member: member.memberId },
-                      })
-                    }
-                  />
-                ) : null}
-                {nearby === undefined ? null : (
-                  <SettingsRow
-                    icon="nearby"
-                    title={t`People near ${name}`}
-                    detail={nearby.line}
-                    onPress={() =>
-                      router.push({ pathname: "/nearby", params: { member: member.memberId } })
-                    }
-                  />
-                )}
-                {/* Away mode (spec §8): any member may say she is away. */}
-                {member.paused ? null : (
-                  <SettingsRow
-                    icon="calendar"
-                    title={awayTitle(name)}
-                    onPress={() =>
-                      router.push({ pathname: "/away", params: { member: member.memberId } })
-                    }
-                  />
-                )}
-                {capabilities?.billing === true && family.me.organiser && member.light === "on" ? (
-                  <SettingsRow
-                    icon="heart"
-                    title="Vela Light"
-                    onPress={() =>
-                      router.push({
-                        pathname: "/vela-light",
-                        params: { member: member.memberId },
-                      })
-                    }
-                  />
-                ) : null}
-              </SettingsSection>
-              {live && family.me.organiser ? (
-                <CallingNumberEditor
-                  familyId={family.familyId}
-                  memberId={member.memberId}
-                  name={name}
-                />
-              ) : null}
-              {capabilities?.parent_app === true && family.me.organiser ? (
-                <SettingsSection title={t`${name}'s phone`}>
-                  <View style={{ padding: space.l }}>
-                    <SetUpPhone familyId={family.familyId} memberId={member.memberId} name={name} />
-                  </View>
-                </SettingsSection>
-              ) : null}
-            </View>
-          );
-        })}
+              />
+            ))}
+          </SettingsSection>
+        )}
 
         <SettingsSection title={t`Family`}>
           {family.others === undefined ? null : (
@@ -655,18 +549,6 @@ function FamilyYou({ day }: { day: TodayView }) {
       ) : null}
     </>
   );
-}
-
-function morningTitle(name: string) {
-  return translate`Change ${name}'s morning`;
-}
-
-function parentSettingsTitle(name: string) {
-  return translate`${name}’s photo and parent link`;
-}
-
-function awayTitle(name: string) {
-  return translate`Is ${name} away?`;
 }
 
 /** React Native Web draws a switch that is on with a teal thumb of its own unless told otherwise. */
