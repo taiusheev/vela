@@ -398,16 +398,6 @@ function FamilyToday({ day }: { day: TodayView }) {
           onQuiet={mayOpen ? (light) => openQuiet(light) : undefined}
           onReplay={replayLight}
         />
-        {needsContact ||
-        focused === undefined ||
-        !(live || demoDataAllowed(apiConfigured(), accountsConfigured())) ? null : (
-          <ParentPhotoNudge
-            key={`photo-${focused.memberId}`}
-            familyId={portraitFamily}
-            memberId={focused.memberId}
-            name={focused.displayName}
-          />
-        )}
         <FamilyChooser day={day} />
         {day.loading ? <LoadingShapes label={t`Loading your family’s morning`} /> : null}
         {focused === undefined || focused.notOkayAt !== undefined ? null : (
@@ -438,6 +428,18 @@ function FamilyToday({ day }: { day: TodayView }) {
         {capabilities?.memory === true || demoDataAllowed(apiConfigured(), accountsConfigured()) ? (
           <RemindersCard familyId={familyId} />
         ) : null}
+        {/* Her words come straight after her window; adding her photo is setup, so it waits below
+          them instead of standing between the reader and her answer (Refactoring UI: hierarchy). */}
+        {needsContact ||
+        focused === undefined ||
+        !(live || demoDataAllowed(apiConfigured(), accountsConfigured())) ? null : (
+          <ParentPhotoNudge
+            key={`photo-${focused.memberId}`}
+            familyId={portraitFamily}
+            memberId={focused.memberId}
+            name={focused.displayName}
+          />
+        )}
         {noAccount || noFamily ? (
           <Words variant="body" tone="ink2">
             <Trans>Setting up your family…</Trans>

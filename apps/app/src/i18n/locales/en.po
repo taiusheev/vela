@@ -148,6 +148,11 @@ msgstr "{giver} sent a hug"
 msgid "{giver} sent a laugh"
 msgstr "{giver} sent a laugh"
 
+#. names inside a sentence: Mom and Dad
+#: app/(tabs)/exchanges.tsx
+msgid "{head} and {last}"
+msgstr "{head} and {last}"
+
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
@@ -5725,8 +5730,8 @@ msgid "written by Vela"
 msgstr "written by Vela"
 
 #: src/components/today-glance.tsx
-msgid "Wrote to {recipient}"
-msgstr "Wrote to {recipient}"
+msgid "wrote to {recipient}"
+msgstr "wrote to {recipient}"
 
 #: app/vela-light.tsx
 msgid "Yearly"

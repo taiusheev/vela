@@ -149,6 +149,11 @@ msgstr "{giver}送了一個擁抱"
 msgid "{giver} sent a laugh"
 msgstr "{giver}笑了"
 
+#. names inside a sentence: Mom and Dad
+#: app/(tabs)/exchanges.tsx
+msgid "{head} and {last}"
+msgstr "{head}和{last}"
+
 #: src/data/weekly.ts
 msgid "{hellos, plural, one {On # morning nobody in the family asked, so Vela sent {name} a hello.} other {On # mornings nobody in the family asked, so Vela sent {name} a hello.}}"
 msgstr "{hellos, plural, other {有 # 天早上家裡沒有人提問，Vela 就傳了早安問候給{name}。}}"
@@ -5726,7 +5731,7 @@ msgid "written by Vela"
 msgstr "Vela 代筆"
 
 #: src/components/today-glance.tsx
-msgid "Wrote to {recipient}"
+msgid "wrote to {recipient}"
 msgstr "寫給{recipient}"
 
 #: app/vela-light.tsx

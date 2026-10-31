@@ -1,7 +1,7 @@
 import { type ReactNode, type Ref, useState } from "react";
 import { Platform, Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
-import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
+import { hitSlop, linkHitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
 import { Text } from "./scaled-text.tsx";
 
@@ -307,9 +307,11 @@ export function Chip({
         maxWidth: "100%",
         flexShrink: 1,
         justifyContent: "center",
+        // The chosen one is filled dark and ticked, not just a shade darker: it must read as "on"
+        // in sunlight and to older eyes, without relying on colour (Refactoring UI).
         borderWidth: 1,
         borderColor: selected ? palette.action : palette.control,
-        backgroundColor: selected ? palette.actionSoft : palette.surface,
+        backgroundColor: selected ? palette.action : palette.surface,
         paddingVertical: initials === undefined ? space.m : space.xs,
         paddingLeft: initials === undefined ? space.l : space.xs + 2,
         paddingRight: space.l,
@@ -330,7 +332,7 @@ export function Chip({
                 borderRadius: 14,
                 marginLeft: index === 0 ? 0 : -10,
                 borderWidth: 2,
-                borderColor: selected ? palette.actionSoft : palette.surface,
+                borderColor: selected ? palette.action : palette.surface,
                 backgroundColor: palette.surface2,
                 alignItems: "center",
                 justifyContent: "center",
@@ -346,10 +348,13 @@ export function Chip({
           ))}
         </View>
       )}
+      {selected && initials === undefined ? (
+        <BrandIcon name="check" color={palette.onAction} size={16} strokeWidth={2.5} />
+      ) : null}
       <Text
         style={[
           type.bodyMedium,
-          { color: selected ? palette.action : palette.ink, textAlign: "center" },
+          { color: selected ? palette.onAction : palette.ink, textAlign: "center" },
         ]}
       >
         {label}
@@ -455,6 +460,49 @@ export function TextField({
         </Words>
       )}
     </View>
+  );
+}
+
+/**
+ * The third level: plain words, for the choice that should not compete with the button beside it
+ * ("Not now", "Remove"). Grey by default; `careful` draws a step that is hard to undo in red, quiet
+ * here, loud only in the confirmation that follows.
+ */
+export function TextButton({
+  label,
+  onPress,
+  disabled = false,
+  careful = false,
+  icon,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  careful?: boolean;
+  icon?: BrandIconName;
+}) {
+  const palette = usePalette();
+  const ink = careful ? palette.error : palette.ink2;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      hitSlop={linkHitSlop}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: space.s,
+        paddingHorizontal: space.s,
+        opacity: disabled ? 0.45 : pressed ? 0.6 : 1,
+      })}
+    >
+      {icon === undefined ? null : <BrandIcon name={icon} color={ink} size={18} strokeWidth={2} />}
+      <Text style={[type.button, { color: ink }]}>{label}</Text>
+    </Pressable>
   );
 }
 
