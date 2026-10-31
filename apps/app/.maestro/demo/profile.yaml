@@ -9,8 +9,9 @@ tags:
 - openLink: ${APP_URL}/you
 - assertVisible: "The Chens"
 - assertNotVisible: "Your profile"
+# On the web an element's spoken label stands in for its id.
 - tapOn:
-    id: "you-name"
+    id: "Your name, Anna"
 - assertVisible: "Your family sees this name on your questions and replies."
 - tapOn:
     id: "Your name"
