@@ -1507,6 +1507,8 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "Drafting can begin once this person has agreed and their light is on."
+msgstr ""
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr ""
@@ -2976,6 +2978,8 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "Often"
+msgstr ""
+
 #: src/components/photo-box.tsx
 msgid "Old"
 msgstr ""
@@ -4063,10 +4067,12 @@ msgstr ""
 msgid "So Vela can make answering easy for {name}, the way {name} likes."
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "Some space for now"
 #: app/photo-box.tsx
 msgid "Some photos did not go in. Check your connection and try again."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Some space for now"
 msgstr ""
 
 #. who the light is for

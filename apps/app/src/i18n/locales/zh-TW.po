@@ -1515,6 +1515,7 @@ msgstr "樓下鄰居"
 #: app/personal-question.tsx
 msgid "Drafting can begin once this person has agreed and their light is on."
 msgstr "等對方同意加入、開啟晨間問候後，就能準備草稿。"
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr "例如：Lily 在海邊"
@@ -2985,6 +2986,7 @@ msgstr "問問是否想有人陪伴"
 #: app/personal-question.tsx
 msgid "Often"
 msgstr "經常"
+
 #: src/components/photo-box.tsx
 msgid "Old"
 msgstr "老照片"
@@ -4072,12 +4074,13 @@ msgstr "讓每一則訊息聽起來都像家人說的，不像 App。"
 msgid "So Vela can make answering easy for {name}, the way {name} likes."
 msgstr "讓 Vela 用{name}喜歡的方式，讓回覆變得簡單。"
 
-#: app/personal-question.tsx
-msgid "Some space for now"
-msgstr "暫時留點空間"
 #: app/photo-box.tsx
 msgid "Some photos did not go in. Check your connection and try again."
 msgstr "有些照片沒有加入成功。請檢查網路連線，再試一次。"
+
+#: app/personal-question.tsx
+msgid "Some space for now"
+msgstr "暫時留點空間"
 
 #. who the light is for
 #: src/data/onboarding.ts

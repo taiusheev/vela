@@ -1514,6 +1514,7 @@ msgstr "downstairs"
 #: app/personal-question.tsx
 msgid "Drafting can begin once this person has agreed and their light is on."
 msgstr "Drafting can begin once this person has agreed and their light is on."
+
 #: src/components/photo-box.tsx
 msgid "e.g. Lily at the beach"
 msgstr "e.g. Lily at the beach"
@@ -2984,6 +2985,7 @@ msgstr "Offer some company"
 #: app/personal-question.tsx
 msgid "Often"
 msgstr "Often"
+
 #: src/components/photo-box.tsx
 msgid "Old"
 msgstr "Old"
@@ -4071,12 +4073,13 @@ msgstr "So every message sounds like your family, not like an app."
 msgid "So Vela can make answering easy for {name}, the way {name} likes."
 msgstr "So Vela can make answering easy for {name}, the way {name} likes."
 
-#: app/personal-question.tsx
-msgid "Some space for now"
-msgstr "Some space for now"
 #: app/photo-box.tsx
 msgid "Some photos did not go in. Check your connection and try again."
 msgstr "Some photos did not go in. Check your connection and try again."
+
+#: app/personal-question.tsx
+msgid "Some space for now"
+msgstr "Some space for now"
 
 #. who the light is for
 #: src/data/onboarding.ts
