@@ -22,6 +22,8 @@ tags:
 - tapOn: "Make it sound like you"
 - assertVisible: "How often do you usually talk?"
 - tapOn: "Some space for now"
+# Return to the primary task before continuing; preferences scroll inside the app on phones.
+- tapOn: "Make it sound like you"
 - tapOn: "Leave room for now"
 - assertVisible: "Leave a little room."
 - assertVisible: "No question is needed right now. Your existing morning settings stay as they are."
