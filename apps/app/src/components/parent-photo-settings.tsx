@@ -7,7 +7,7 @@ import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
 import { Portrait } from "./portrait-lamp.tsx";
-import { Card, Eyebrow, SecondaryButton, Words } from "./ui.tsx";
+import { Card, Eyebrow, SecondaryButton, TextButton, Words } from "./ui.tsx";
 
 export function ParentPhotoSettings({
   familyId,
@@ -136,7 +136,8 @@ export function ParentPhotoNudge({
           </Words>
         </View>
       </View>
-      <View style={{ flexDirection: "row", gap: space.s }}>
+      {/* One button and one plain choice: "Not now" never weighs as much as adding her photo. */}
+      <View style={{ flexDirection: "row", gap: space.s, alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <SecondaryButton
             label={busy ? t`Opening photos…` : t`Add photo`}
@@ -152,16 +153,14 @@ export function ParentPhotoNudge({
             }}
           />
         </View>
-        <View style={{ flex: 1 }}>
-          <SecondaryButton
-            label={t`Not now`}
-            disabled={busy}
-            onPress={() => {
-              setOffered(true);
-              void writeFlag(flag);
-            }}
-          />
-        </View>
+        <TextButton
+          label={t`Not now`}
+          disabled={busy}
+          onPress={() => {
+            setOffered(true);
+            void writeFlag(flag);
+          }}
+        />
       </View>
       {photoError ? (
         <Words variant="caption" tone="ink2">

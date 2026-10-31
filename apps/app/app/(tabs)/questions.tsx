@@ -13,12 +13,11 @@ import { MorningCalendar } from "../../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
 import { SoftCard } from "../../src/components/today-hero.tsx";
 import {
-  ActionGroup,
-  ActionRow,
   Eyebrow,
   Hairline,
   PrimaryButton,
   SecondaryButton,
+  TextButton,
   Words,
 } from "../../src/components/ui.tsx";
 import { WarmPage } from "../../src/components/warm.tsx";
@@ -298,9 +297,9 @@ function PlannedQuestion({ question, tomorrow }: { question: ApiPlannedAsk; tomo
               />
             </View>
           ) : (
-            <ActionGroup>
-              <ActionRow
-                first
+            // Editing is the usual next step; removing is rarer and asks first, so it stays quiet.
+            <View style={{ gap: space.xs }}>
+              <SecondaryButton
                 icon="ask"
                 label={t`Edit question or day`}
                 onPress={() =>
@@ -310,13 +309,15 @@ function PlannedQuestion({ question, tomorrow }: { question: ApiPlannedAsk; tomo
                   })
                 }
               />
-              <ActionRow
-                icon="trash"
-                careful
-                label={t`Remove question`}
-                onPress={() => setConfirm(true)}
-              />
-            </ActionGroup>
+              <View style={{ alignSelf: "flex-start" }}>
+                <TextButton
+                  careful
+                  icon="trash"
+                  label={t`Remove question`}
+                  onPress={() => setConfirm(true)}
+                />
+              </View>
+            </View>
           )}
           {remove.isError ? (
             <Words variant="body" tone="ink2">
