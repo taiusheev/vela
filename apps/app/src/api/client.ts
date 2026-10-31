@@ -1,4 +1,5 @@
 import type {
+  AddToPhotoBox,
   ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
@@ -27,6 +28,9 @@ import type {
   ApiParentConnection,
   ApiParentLink,
   ApiPersonalQuestionDraft,
+  ApiPhotoBox,
+  ApiPhotoBoxPhoto,
+  ApiPhotoBoxRemoved,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -44,6 +48,7 @@ import type {
   ApiWeeklyReadList,
   ApiWeeklyReadOpened,
   ApiWithdrawn,
+  ChangePhotoBoxPhoto,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
@@ -56,6 +61,7 @@ import type {
   MemoryPermissionPrepared,
   MemoryPermissionPreview,
   MemoryPermissionState,
+  PhotoBoxRefusal,
   RegisterPushDevice,
   SetAway,
 } from "@vela/contracts";
@@ -172,6 +178,8 @@ export interface ApiCapabilities {
   english_only: boolean;
   memory: boolean;
   book: boolean;
+  /** The family's photo box (ADR-58); absent from a server that has none. */
+  photo_box?: boolean;
   parent_app: boolean;
   billing: boolean;
 }
@@ -302,6 +310,51 @@ export function createReminder(
     key,
     body: { fact_id: factId },
   });
+}
+
+/** The family's photo box (ADR-58), where it is on. */
+export function fetchPhotoBox(familyId: string, token: string | null): Promise<ApiPhotoBox> {
+  return read<ApiPhotoBox>(`/v1/families/${familyId}/photo-box`, token);
+}
+
+/** Puts a photo the caller uploaded into the box, marked new or old, with an optional line. */
+export function addToPhotoBox(
+  familyId: string,
+  add: AddToPhotoBox,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxPhoto> {
+  return call<ApiPhotoBoxPhoto>({
+    path: `/v1/families/${familyId}/photo-box`,
+    token,
+    key,
+    body: add,
+  });
+}
+
+/** Changes a box photo's era or line; a null caption clears the line. */
+export function changePhotoBoxPhoto(
+  boxId: string,
+  change: ChangePhotoBoxPhoto,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxPhoto> {
+  return call<ApiPhotoBoxPhoto>({ path: `/v1/photo-box/${boxId}`, token, key, body: change });
+}
+
+/** Takes a photo out of the box; the server deletes it within a day. */
+export function removeFromPhotoBox(
+  boxId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxRemoved> {
+  return call<ApiPhotoBoxRemoved>({ path: `/v1/photo-box/${boxId}/remove`, token, key, body: {} });
+}
+
+/** Why a photo did not go into the box, as the API names it. */
+export function photoBoxRefusal(error: unknown): PhotoBoxRefusal | null {
+  const reason = refusalReason(error);
+  return reason === "photo_missing" || reason === "in_box" || reason === "box_full" ? reason : null;
 }
 
 /** Takes an ask back before her morning is prepared (spec §19); only its asker may. */

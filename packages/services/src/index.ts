@@ -238,6 +238,14 @@ export {
   watchPeer,
 } from "./ops.ts";
 export {
+  addToApiPhotoBox,
+  changeApiPhotoBoxPhoto,
+  keepBoxPhotoStored,
+  loadApiPhotoBox,
+  PhotoBoxRefusedError,
+  removeFromApiPhotoBox,
+} from "./photo-box.ts";
+export {
   type PilotAdmission,
   pilotAdmitsInbound,
   pilotAllowsTelegram,

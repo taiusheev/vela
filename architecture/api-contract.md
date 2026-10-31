@@ -404,6 +404,10 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 | GET | /families/:id/reminders | Built: see "Reminders" below |
 | POST | /families/:id/reminders | Built: create from a suggestion (only after a tap) |
 | POST | /reminders/:id/done | Built: the caller's own reminder, finished |
+| GET | /families/:id/photo-box | Built (30 October 2026): the family's photo box, where `PHOTO_BOX` is on; see "The family's photo box" |
+| POST | /families/:id/photo-box | Built: put a photo the caller uploaded into the box |
+| POST | /photo-box/:id | Built: change a box photo's era or line |
+| POST | /photo-box/:id/remove | Built: take a photo out of the box |
 
 ### The family book (3 October 2026, spec §10, A10, ADR-39)
 
@@ -440,6 +444,16 @@ Understanding (`understand.v5`) returns `dated`: up to three things she said wil
 `POST /v1/families/:familyId/reminders` with `{fact_id}` and an `Idempotency-Key` makes the caller's reminder, due the day after the fact, through `runApiMutation` (operation `reminder.create:v1`). It answers 201 `ApiReminder`. A member has one per fact (`reminders_one_per_fact`, migration 0009), so a second tap answers with the first. It answers 404 `fact_missing` for a fact that is gone, past, of another family or about the caller, and 404 for a family not the caller's.
 
 `POST /v1/reminders/:reminderId/done` with an `Idempotency-Key` finishes the caller's own reminder (operation `reminder.done:v1`) and answers 200 `ApiReminderDone` (`id`, `done: true`), or 404 for anyone else's. Retention deletes a reminder two days after it was due, and any reminder or fact older than 30 days.
+
+### The family's photo box (30 October 2026, ADR-58)
+
+Served only where the Worker's `PHOTO_BOX` is `on` (development and staging; production is `off`, pinned); elsewhere every route below is 404 before a connection is opened, and `GET /v1/capabilities` says `photo_box: false`.
+
+`GET /v1/families/:familyId/photo-box` answers `ApiPhotoBox`: `photos`, newest first, each `id`, `media_id` (read through `GET /v1/families/:familyId/media/:mediaId`, which serves a box photo to every live member), `era` (`new` or `old`), `caption` or null, `width`, `height`, `added_by_name`, `can_change` (whoever added it, or an organiser) and `last_used_on` (her local day of the last morning that showed it, or null); and `limit` (40). Any live member reads it; anyone else gets 404.
+
+`POST /v1/families/:familyId/photo-box` with `{media_id, era, caption?}` (`AddToPhotoBox`; a caption is trimmed, at most 140 characters, and an empty one is none) and an `Idempotency-Key` puts a photo the caller uploaded into the box, through `runApiMutation` (operation `photo_box.add:v1`). It answers 201 `ApiPhotoBoxPhoto`. The photo then has no deletion date, and its object is moved out of `asks/` after the commit. Refusals, in `details.reason`: 404 `photo_missing` (not an app image the caller uploaded to this family, no longer stored, or past its deletion date), 409 `in_box`, 409 `box_full`. A family not the caller's is 404.
+
+`POST /v1/photo-box/:boxId` with `{era?, caption?}` (`ChangePhotoBoxPhoto`, at least one; a null or empty caption clears it) changes a photo (operation `photo_box.change:v1`) and answers 200 `ApiPhotoBoxPhoto`. `POST /v1/photo-box/:boxId/remove` with an empty body takes it out (operation `photo_box.remove:v1`), gives the photo its deletion date now, and answers 200 `ApiPhotoBoxRemoved` (`id`, `removed: true`). Both are 404 for a photo the caller may not change, or one already gone.
 
 ## 7. Weekly read, settings, billing
 

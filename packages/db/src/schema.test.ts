@@ -90,7 +90,10 @@ import {
   nearbyContacts,
   onboardingSessions,
   outbound,
+  PHOTO_BOX_ERAS,
   PLAN_INTERVALS,
+  photoBox,
+  photoBoxUses,
   pilotFamilies,
   pilotRoster,
   pushDevices,
@@ -370,6 +373,24 @@ async function seedEveryTable(): Promise<void> {
     .insert(media)
     .values({ familyId, kind: "audio", storageKey: "apac/a.ogg", mime: "audio/ogg", bytes: 1 });
   const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+  const boxPhoto = only(
+    await db
+      .insert(media)
+      .values({ familyId, kind: "image", storageKey: "book/box.jpg", mime: "image/jpeg" })
+      .returning(),
+  );
+  const boxed = only(
+    await db
+      .insert(photoBox)
+      .values({ familyId, mediaId: boxPhoto.id, era: "old", caption: "Our first flat" })
+      .returning(),
+  );
+  await db.insert(photoBoxUses).values({
+    exchangeId: exchange.id,
+    memberId: seed.parent.id,
+    boxId: boxed.id,
+    localDay: "2026-09-15",
+  });
   await db.insert(bookEntries).values({
     familyId,
     memberId: seed.parent.id,
@@ -2243,6 +2264,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "onboarding_sessions", column: "channel", values: CHANNELS },
     { table: "nearby_contacts", column: "channel", values: NEARBY_CONTACT_CHANNELS },
     { table: "media", column: "kind", values: MEDIA_KINDS },
+    { table: "photo_box", column: "era", values: PHOTO_BOX_ERAS },
     { table: "media", column: "channel", values: CHANNELS },
     { table: "exchanges", column: "type", values: EXCHANGE_TYPES },
     { table: "exchanges", column: "state", values: EXCHANGE_STATES },

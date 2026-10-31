@@ -259,6 +259,41 @@ describe("renderArrival in English", () => {
   });
 });
 
+describe("renderArrival of Vela's picture morning (ADR-58)", () => {
+  it("signs a photo from the photo box as Vela, and invites a voice answer", () => {
+    const arrival = render({
+      ask: question({
+        type: "memory_photo",
+        askerName: "The Chens",
+        text: "An old photo from your family. What do you remember about it?",
+        imageCount: 1,
+        byVela: true,
+      }),
+    });
+    expect(paragraphs(arrival)[1]).toBe(
+      "An old photo from your family. What do you remember about it? Tell me in a voice message, and I'll pass it on to the family.\n— Vela",
+    );
+    expectSendable(arrival, "en");
+  });
+
+  it("keeps a choice's 1 and 2, signed by Vela, in Chinese too", () => {
+    const arrival = render({
+      lang: "zh-TW",
+      ask: question({
+        type: "photo_choice",
+        text: t("zh-TW", "photo_box.choice"),
+        imageCount: 2,
+        byVela: true,
+      }),
+    });
+    expect(paragraphs(arrival)[1]).toBe(
+      `${t("zh-TW", "photo_box.choice")}\n${t("zh-TW", "arrival.photo_choice")}\n${t("zh-TW", "arrival.hello_signature")}`,
+    );
+    expect(arrival.buttons[0]).toHaveLength(2);
+    expectSendable(arrival, "zh-TW");
+  });
+});
+
 describe("renderArrival with the check-in on (ADR-54)", () => {
   it("sends her morning with no buttons, and a hint that asks for her words", () => {
     const arrival = render({ checkIn: true });

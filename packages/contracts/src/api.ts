@@ -116,6 +116,8 @@ export const ApiCapabilities = z.strictObject({
   memory: z.boolean(),
   book: z.boolean().default(false),
   personal_questions: z.boolean().optional(),
+  /** The family's photo box (ADR-58): photos Vela turns into her free mornings. */
+  photo_box: z.boolean().default(false),
   parent_app: z.boolean(),
   billing: z.boolean(),
 });
@@ -1459,6 +1461,75 @@ export type RemoveBookEntry = z.infer<typeof RemoveBookEntry>;
 
 export const ApiBookRemoved = z.object({ exchange_id: z.uuid(), removed: z.literal(true) });
 export type ApiBookRemoved = z.infer<typeof ApiBookRemoved>;
+
+// The photo box (ADR-58) ----------------------------------------------------------------------------
+
+/** A photo of today ("new") or of long ago ("old"): Vela asks about each differently. */
+export const PhotoBoxEra = z.enum(["new", "old"]);
+export type PhotoBoxEra = z.infer<typeof PhotoBoxEra>;
+
+/** The family's one line about a photo, which Vela puts in the question it asks her. */
+export const PHOTO_BOX_CAPTION_MAX = 140;
+const PhotoBoxCaption = z
+  .string()
+  .trim()
+  .max(PHOTO_BOX_CAPTION_MAX)
+  .transform((caption) => (caption.length === 0 ? null : caption));
+
+/** How many photos a family's box holds at once. */
+export const PHOTO_BOX_LIMIT = 40;
+
+/** One photo in the box, as every live member of the family sees it. */
+export const ApiPhotoBoxPhoto = z.object({
+  id: z.uuid(),
+  /** Read through `GET /v1/families/:familyId/media/:mediaId`, as any family photo is. */
+  media_id: z.uuid(),
+  era: PhotoBoxEra,
+  caption: z.string().nullable(),
+  width: z.number().int().positive().nullable(),
+  height: z.number().int().positive().nullable(),
+  added_by_name: z.string().nullable(),
+  /** Whether the caller may change or remove it: whoever added it, or an organiser. */
+  can_change: z.boolean(),
+  /** Her local day of the last morning Vela showed it on, or null while it waits its turn. */
+  last_used_on: LocalDate.nullable(),
+});
+export type ApiPhotoBoxPhoto = z.infer<typeof ApiPhotoBoxPhoto>;
+
+export const ApiPhotoBox = z.object({
+  photos: z.array(ApiPhotoBoxPhoto),
+  limit: z.number().int().positive(),
+});
+export type ApiPhotoBox = z.infer<typeof ApiPhotoBox>;
+
+/** Put a photo the caller uploaded (`POST /v1/families/:familyId/media`) into the family's box. */
+export const AddToPhotoBox = z.strictObject({
+  media_id: z.uuid(),
+  era: PhotoBoxEra,
+  caption: PhotoBoxCaption.optional(),
+});
+export type AddToPhotoBox = z.infer<typeof AddToPhotoBox>;
+
+/** Change a box photo's era or its line; a null or empty caption clears the line. */
+export const ChangePhotoBoxPhoto = z
+  .strictObject({ era: PhotoBoxEra.optional(), caption: PhotoBoxCaption.nullable().optional() })
+  .refine((change) => change.era !== undefined || change.caption !== undefined);
+export type ChangePhotoBoxPhoto = z.infer<typeof ChangePhotoBoxPhoto>;
+
+/** Take a photo out of the box: no body, the photo is in the path. */
+export const RemovePhotoBoxPhoto = z.strictObject({});
+export type RemovePhotoBoxPhoto = z.infer<typeof RemovePhotoBoxPhoto>;
+
+export const ApiPhotoBoxRemoved = z.object({ id: z.uuid(), removed: z.literal(true) });
+export type ApiPhotoBoxRemoved = z.infer<typeof ApiPhotoBoxRemoved>;
+
+/**
+ * Why a photo box write was refused, in `details.reason`: `photo_missing` (404), the photo is not the
+ * caller's upload, is gone, or is not a photo; `in_box` (409), it is in the box already; `box_full`
+ * (409), the box holds `PHOTO_BOX_LIMIT` photos.
+ */
+export const PHOTO_BOX_REFUSALS = ["photo_missing", "in_box", "box_full"] as const;
+export type PhotoBoxRefusal = (typeof PHOTO_BOX_REFUSALS)[number];
 
 /** An organiser keeps one of her answers (`POST /v1/book/:exchangeId/keep`, ADR-50). */
 export const KeepBookEntry = z.strictObject({});
