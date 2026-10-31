@@ -122,6 +122,7 @@ function dayState(day: SimDay, now: Date): DayState {
     deliveryFailed: day.deliveryFailed,
     answeredAt: answered,
     repeatSentAt: day.repeats[0] ?? null,
+    wroteOvernight: false,
     quiet:
       day.quietOpenedAt === null
         ? null

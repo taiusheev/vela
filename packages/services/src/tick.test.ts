@@ -454,6 +454,42 @@ describe("loadScheduleInput", () => {
     );
   });
 
+  it("says she wrote overnight only for a message from 22:00 the evening before until the morning went out", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    const yesterday = await seedExchange(h.db, seed, {
+      date: "2026-09-15",
+      state: "answered",
+      deliveredAt: at("2026-09-15", "08:00"),
+      answeredAt: at("2026-09-15", "09:00"),
+    });
+    await seedExchange(h.db, seed, {
+      date: "2026-09-16",
+      state: "delivered",
+      deliveredAt: at("2026-09-16", "08:00"),
+    });
+    const message = (receivedAt: Date, id: string) =>
+      h.db.insert(answers).values({
+        exchangeId: yesterday.id,
+        memberId: her,
+        kind: "text",
+        channel: "telegram",
+        externalId: `${HER_CHAT}:${id}`,
+        payload: { text: "Can't sleep" },
+        receivedAt,
+      });
+    const wrote = async () =>
+      (await loadScheduleInput(h.deps, her, at("2026-09-16", "09:00")))?.days.map(
+        (day) => day.wroteOvernight,
+      );
+
+    await message(at("2026-09-15", "21:59"), "1");
+    expect(await wrote()).toEqual([false, false]);
+
+    await message(at("2026-09-15", "22:00"), "2");
+    expect(await wrote()).toEqual([false, true]);
+  });
+
   it("is null for a member who does not exist or whose family is being deleted", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     expect(
@@ -702,6 +738,40 @@ describe("tickMember", () => {
       expect(await nextWake(her)).toEqual(at("2026-09-14", "19:00"));
       expect(h.scheduler.wakes.get(her)).toEqual(at("2026-09-14", "19:00"));
     }
+  });
+});
+
+describe("a message she wrote in the night", () => {
+  it("still sends her morning and turns it quiet, but sends no repeat", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const her = seed.member.id;
+    const tuesday = await seedExchange(h.db, seed, {
+      date: "2026-09-15",
+      state: "answered",
+      deliveredAt: at("2026-09-15", "08:00"),
+      answeredAt: at("2026-09-15", "09:00"),
+    });
+    await seedExchange(h.db, seed, { date: "2026-09-16", state: "scheduled" });
+    // Tuesday 23:10 she writes to Vela; it attaches to Tuesday's morning and counts for Tuesday.
+    await h.db.insert(answers).values({
+      exchangeId: tuesday.id,
+      memberId: her,
+      kind: "text",
+      channel: "telegram",
+      externalId: `${HER_CHAT}:1`,
+      payload: { text: "Can't sleep, thinking of you all" },
+      receivedAt: at("2026-09-15", "23:10"),
+    });
+
+    h.clock.set(at("2026-09-16", "07:00"));
+    await tickMember(h.deps, her);
+    await settle(her);
+    await advanceTo(her, at("2026-09-16", "14:00"));
+
+    expect((await outboundRows("arrival")).map((row) => row.localDay)).toEqual(["2026-09-16"]);
+    expect(await outboundRows("repeat")).toEqual([]);
+    const [quiet] = await h.db.select().from(quietEvents);
+    expect(quiet).toMatchObject({ openedAt: at("2026-09-16", "14:00") });
   });
 });
 
