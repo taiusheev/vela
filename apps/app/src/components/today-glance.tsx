@@ -827,7 +827,7 @@ export function FamilyFeed({
               line: (
                 <Text style={[type.body, { color: p.ink3 }]}>
                   <Text style={[type.bodyMedium, { color: p.ink }]}>{from}</Text>{" "}
-                  {t`Wrote to ${recipient}`}
+                  {t`wrote to ${recipient}`}
                 </Text>
               ),
               words,

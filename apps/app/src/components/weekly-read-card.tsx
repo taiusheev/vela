@@ -61,9 +61,8 @@ export function WeeklyReadCard({
             gap: space.s,
             padding: space.l,
             borderRadius: radius.panel,
+            // Set apart by its glass alone: an outline inside the lit card was one edge too many.
             backgroundColor: room.glass,
-            borderWidth: 1,
-            borderColor: room.glow,
           }}
         >
           <Text style={[type.label, { letterSpacing: 0.4, color: room.hot }]}>
