@@ -289,8 +289,21 @@ function PlanCard({
       ) : (
         <Text style={[type.label, { color: palette.ink3 }]}> </Text>
       )}
-      <Words variant="bodyMedium">{title}</Words>
-      <Text style={[type.heading, { color: palette.ink, fontVariant: ["tabular-nums"] }]}>
+      {/* The price is what a reader compares, so it is the largest line; the plan's name labels it. */}
+      <Words variant="caption" tone="ink2">
+        {title}
+      </Words>
+      <Text
+        style={[
+          type.heading,
+          {
+            fontSize: type.preview.fontSize,
+            lineHeight: type.preview.lineHeight,
+            color: palette.ink,
+            fontVariant: ["tabular-nums"],
+          },
+        ]}
+      >
         {price}
       </Text>
       <Words variant="caption" tone="ink2">

@@ -79,9 +79,20 @@ export default function MemoriesScreen() {
   const stateOf = (id: string, kept: boolean): KeepState =>
     kept || book.keptIds.has(id) ? "kept" : book.keepingIds.has(id) ? "keeping" : "open";
   const names = day.today.lights.map((light) => light.displayName);
-  const who = names.length === 0 ? t`your parent` : listOf(names);
+  // "Mom and Dad", never "Mom, Dad": the names sit inside a sentence, not in a list.
+  const head = listOf(names.slice(0, -1));
+  const last = names.at(-1);
+  const who =
+    last === undefined
+      ? t`your parent`
+      : names.length === 1
+        ? last
+        : t({ comment: "names inside a sentence: Mom and Dad", message: `${head} and ${last}` });
   const several = names.length > 1;
   const mine = memories.filter((memory) => parent === undefined || memory.memberId === parent);
+  // A card names its parent only when the list shown holds more than one: her words already say
+  // who is speaking, so a label repeated on every card is noise (Refactoring UI: labels last).
+  const mixed = new Set(mine.map((memory) => memory.memberId)).size > 1;
   const counts = filterCounts(mine);
   const shown = narrowMemories(memories, { filter, query, parent });
   const storiesShown = stories.filter((story) => parent === undefined || story.memberId === parent);
@@ -353,7 +364,7 @@ export default function MemoriesScreen() {
                     key={memory.id}
                     memory={memory}
                     familyId={day.familyId}
-                    showName={several && parent === undefined}
+                    showName={mixed}
                     keepState={
                       refused === undefined && !failed ? stateOf(memory.id, memory.kept) : "open"
                     }

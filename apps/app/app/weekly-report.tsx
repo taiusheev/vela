@@ -23,7 +23,7 @@ import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { ScreenHeading } from "../src/components/brand/experience.tsx";
 import { Text } from "../src/components/scaled-text.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
-import { SecondaryButton, Words } from "../src/components/ui.tsx";
+import { PrimaryButton, SecondaryButton, TextButton, Words } from "../src/components/ui.tsx";
 import { WarmPage } from "../src/components/warm.tsx";
 import { exampleNames } from "../src/data/example-names.ts";
 import { localDayMonth } from "../src/data/format.ts";
@@ -270,7 +270,7 @@ export function ReportPanel({
                     {untilLabel(item.expires_at, item.reviewed_by)}
                   </Words>
                   {!report.owner ? (
-                    <SecondaryButton
+                    <PrimaryButton
                       label={t`Edit an offer before sending`}
                       onPress={() =>
                         router.push({
@@ -280,10 +280,13 @@ export function ReportPanel({
                       }
                     />
                   ) : null}
-                  <SecondaryButton
-                    label={t`Remove this offer`}
-                    onPress={() => action("remove", { source_id: item.source.id })}
-                  />
+                  {/* Sending help is the step this card exists for; removing it stays plain words. */}
+                  <View style={{ alignSelf: "flex-start" }}>
+                    <TextButton
+                      label={t`Remove this offer`}
+                      onPress={() => action("remove", { source_id: item.source.id })}
+                    />
+                  </View>
                 </View>
               </SoftCard>
             ))
@@ -427,7 +430,9 @@ export function ReportPanel({
           </View>
         </SoftCard>
       ) : null}
-      <SecondaryButton label={t`Reload report`} onPress={refresh} />
+      <View style={{ alignSelf: "center" }}>
+        <TextButton label={t`Reload report`} onPress={refresh} />
+      </View>
     </View>
   );
 }
