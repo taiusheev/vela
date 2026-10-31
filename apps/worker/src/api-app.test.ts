@@ -321,7 +321,7 @@ function fixture(
       .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiPhotoBox: vi
       .fn<ApiReadServices["loadApiPhotoBox"]>()
-      .mockResolvedValue({ photos: [], limit: 40 }),
+      .mockResolvedValue({ photos: [], limit: 40, next: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiPlannedQuestions: vi.fn().mockResolvedValue({ questions: [] }),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
@@ -3773,10 +3773,19 @@ describe("the photo box (ADR-58)", () => {
 
   it("answers the box to a member of the family", async () => {
     const f = fixture(true, undefined, boxOn);
-    f.services.loadApiPhotoBox.mockResolvedValue({ photos: [PHOTO], limit: 40 });
+    const next = {
+      member_id: "66666666-6666-7666-8666-666666666666",
+      name: "Mom",
+      type: "memory_photo" as const,
+      box_ids: [BOX_ID],
+      text: "An old photo from your family: “Our first flat”. What do you remember about that time?",
+      signature: "— Vela",
+    };
+    f.services.loadApiPhotoBox.mockResolvedValue({ photos: [PHOTO], limit: 40, next: [next] });
     await expectResponse(await f.app.request(BOX_PATH, { headers: auth }), 200, {
       photos: [PHOTO],
       limit: 40,
+      next: [next],
     });
     expect(f.services.loadApiPhotoBox).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID);
   });

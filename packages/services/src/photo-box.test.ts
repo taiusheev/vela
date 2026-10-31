@@ -20,6 +20,7 @@ import { composeApiAsk } from "./api-asks.ts";
 import { readApiMedia, uploadApiMedia } from "./api-media.ts";
 import { deliverArrival, prepareDay } from "./arrivals.ts";
 import type { Deps } from "./deps.ts";
+import { deliverOutbound } from "./gateway.ts";
 import { applyRetention } from "./jobs.ts";
 import {
   addToApiPhotoBox,
@@ -286,9 +287,13 @@ describe("her picture mornings", () => {
     return addDays(TODAY, day);
   }
 
+  /** Her morning `day` days on, made and sent at 08:00 her time: only a sent morning counts. */
   async function prepared(day: number, deps: Deps = boxOn()) {
     const date = morning(day);
+    h.clock.set(zonedInstant(date, "08:00", TZ));
     const id = await prepareDay(deps, seed.member.id, date);
+    await deliverArrival(deps, seed.member.id, date, false);
+    await h.run({ outbound: (job) => deliverOutbound(deps, job.outboundId) });
     const [row] = await h.db.select().from(exchanges).where(eq(exchanges.id, id));
     if (row === undefined) throw new Error(`no exchange for ${date}`);
     return row;
@@ -304,7 +309,7 @@ describe("her picture mornings", () => {
       askerId: null,
       draftedByVela: true,
       mediaIds: [added.media_id],
-      state: "scheduled",
+      state: "delivered",
     });
     expect(row.text).toContain("“Lily at the beach”");
     h.clock.set(zonedInstant(morning(1), "08:00", TZ));
@@ -318,6 +323,31 @@ describe("her picture mornings", () => {
     ]);
     const box = ApiPhotoBox.parse(await loadApiPhotoBox(h.db, mia, seed.family.id));
     expect(box.photos[0]?.last_used_on).toBe(morning(1));
+  });
+
+  it("previews exactly the morning she is then sent, in her language, turn after turn", async () => {
+    await boxed(1, "new", "Lily at the beach");
+    await boxed(2, "new");
+    await boxed(3, "old", "Our first flat");
+
+    for (const day of [1, 3, 8]) {
+      const box = ApiPhotoBox.parse(await loadApiPhotoBox(h.db, mia, seed.family.id));
+      const [next] = box.next;
+      const mediaOf = new Map(box.photos.map((photo) => [photo.id, photo.media_id]));
+      const row = await prepared(day);
+      expect(next).toMatchObject({
+        member_id: seed.member.id,
+        type: row.type,
+        text: row.text,
+        signature: "— Vela",
+      });
+      expect(next?.box_ids.map((id) => mediaOf.get(id))).toEqual(row.mediaIds);
+    }
+  });
+
+  it("previews nothing for a parent when the box is empty", async () => {
+    const box = ApiPhotoBox.parse(await loadApiPhotoBox(h.db, mia, seed.family.id));
+    expect(box.next).toEqual([]);
   });
 
   it("asks the question bank as before with the box off", async () => {

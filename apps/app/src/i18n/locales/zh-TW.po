@@ -14,7 +14,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/photo-box.tsx
+#: app/photo-box.tsx
 msgid "— Vela"
 msgstr "—— 家人的小幫手 Vela"
 
@@ -848,6 +848,14 @@ msgstr "四扇窗都亮了"
 #: app/(tabs)/index.tsx
 msgid "All memories"
 msgstr "所有回憶"
+
+#: src/components/photo-box.tsx
+msgid "All new"
+msgstr "全部是新照片"
+
+#: src/components/photo-box.tsx
+msgid "All old"
+msgstr "全部是老照片"
 
 #: src/data/family.ts
 msgid "All said yes"
@@ -2472,6 +2480,10 @@ msgstr "手作與修補"
 #: src/auth/phone.ts
 msgid "Malaysia"
 msgstr "馬來西亞"
+
+#: src/components/photo-box.tsx
+msgid "Mark them all"
+msgstr "全部一起標示"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
