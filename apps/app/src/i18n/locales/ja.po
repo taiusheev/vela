@@ -7,7 +7,7 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: ja\n"
 
-#: src/components/photo-box.tsx
+#: app/photo-box.tsx
 msgid "— Vela"
 msgstr ""
 
@@ -840,6 +840,14 @@ msgstr ""
 
 #: app/(tabs)/index.tsx
 msgid "All memories"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "All new"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "All old"
 msgstr ""
 
 #: src/data/family.ts
@@ -2464,6 +2472,10 @@ msgstr ""
 
 #: src/auth/phone.ts
 msgid "Malaysia"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "Mark them all"
 msgstr ""
 
 #: app/(tabs)/_layout.tsx

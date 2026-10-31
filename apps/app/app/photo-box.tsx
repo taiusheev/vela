@@ -9,10 +9,13 @@ import { LoadingLight } from "../src/components/loading-light.tsx";
 import {
   AddSheet,
   AddTile,
+  examplePreview,
+  FirstPhoto,
   NextMorning,
-  nextUp,
   PhotoSheet,
   PhotoTile,
+  type PreviewMorning,
+  useQuestionFor,
 } from "../src/components/photo-box.tsx";
 import { SectionTitle } from "../src/components/today-hero.tsx";
 import { PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
@@ -53,6 +56,31 @@ export default function PhotoBoxScreen() {
   const held = box.photos.length;
   const limit = box.limit;
   const full = box.room <= 0;
+  const question = useQuestionFor();
+  // The server plans her next picture morning, so the family sees what she is sent; the example
+  // family has no server, and is shown the photo's own question.
+  const byId = new Map(box.photos.map((photo) => [photo.id, photo]));
+  const previews: PreviewMorning[] = box.demo
+    ? [examplePreview(box.photos, name, question, t`— Vela`)].filter(
+        (preview): preview is PreviewMorning => preview !== undefined,
+      )
+    : box.next.flatMap((next) => {
+        const photos = next.box_ids.flatMap((id) => {
+          const photo = byId.get(id);
+          return photo === undefined ? [] : [photo];
+        });
+        return photos.length === 0
+          ? []
+          : [
+              {
+                memberId: next.member_id,
+                name: next.name,
+                photos,
+                text: next.text,
+                signature: next.signature,
+              },
+            ];
+      });
 
   const failureLine = (failure: AddFailure, count: number): string => {
     switch (failure) {
@@ -122,12 +150,13 @@ export default function PhotoBoxScreen() {
             <SecondaryButton label={t`Try again`} onPress={() => void box.refresh()} />
           ) : (
             <>
-              <NextMorning
-                familyId={day.familyId}
-                name={name}
-                photo={nextUp(box.photos)}
-                onAdd={() => void choose()}
-              />
+              {held === 0 ? (
+                <FirstPhoto name={name} onAdd={() => void choose()} />
+              ) : (
+                previews.map((next) => (
+                  <NextMorning key={next.memberId} familyId={day.familyId} next={next} />
+                ))
+              )}
               {pageProblem === undefined ? null : (
                 <Words variant="caption" tone="error">
                   {pageProblem}
@@ -198,6 +227,7 @@ export default function PhotoBoxScreen() {
               current.map((photo) => (photo.key === key ? { ...photo, ...next } : photo)),
             )
           }
+          onEditAll={(era) => setPending((current) => current.map((photo) => ({ ...photo, era })))}
           onDrop={(key) => setPending((current) => current.filter((photo) => photo.key !== key))}
           onAdd={() => void addAll()}
           onClose={() => {

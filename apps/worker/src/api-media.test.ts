@@ -142,7 +142,7 @@ function fixture(options: FixtureOptions = {}) {
       .mockResolvedValue({ suggestions: [], reminders: [] }),
     loadApiPhotoBox: vi
       .fn<ApiReadServices["loadApiPhotoBox"]>()
-      .mockResolvedValue({ photos: [], limit: 40 }),
+      .mockResolvedValue({ photos: [], limit: 40, next: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
     loadApiPlannedQuestions: vi.fn(unused("planned questions")),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),

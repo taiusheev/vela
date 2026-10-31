@@ -78,86 +78,130 @@ export function useQuestionFor(): (photo: Pick<BoxPhoto, "era" | "caption">) => 
   };
 }
 
-/** The photo Vela is likely to send next: one she has not been shown, newest first, else the longest ago. */
-export function nextUp(photos: readonly BoxPhoto[]): BoxPhoto | undefined {
-  const unseen = photos.find((photo) => photo.last_used_on === null);
-  if (unseen !== undefined) return unseen;
-  return [...photos].sort((a, b) => (a.last_used_on ?? "").localeCompare(b.last_used_on ?? ""))[0];
+/** Her next picture morning as the server plans it: the photos she will see and the words. */
+export interface PreviewMorning {
+  memberId: string;
+  name: string;
+  photos: BoxPhoto[];
+  text: string;
+  signature: string;
 }
 
 /**
- * Her next picture morning, drawn as her message will read: the photo, Vela's question, Vela's
- * name. Before there is a photo, the window waits with the way to fill it.
+ * The example family's preview, made on the phone (there is no server to plan it): a photo she
+ * has not been shown, newest first, with the question its era asks.
  */
-export function NextMorning({
-  familyId,
-  name,
-  photo,
-  onAdd,
-}: {
-  familyId: string | undefined;
-  name: string;
-  photo: BoxPhoto | undefined;
-  onAdd: () => void;
-}) {
+export function examplePreview(
+  photos: readonly BoxPhoto[],
+  name: string,
+  question: (photo: Pick<BoxPhoto, "era" | "caption">) => string,
+  signature: string,
+): PreviewMorning | undefined {
+  const photo =
+    photos.find((one) => one.last_used_on === null) ??
+    [...photos].sort((a, b) => (a.last_used_on ?? "").localeCompare(b.last_used_on ?? ""))[0];
+  return photo === undefined
+    ? undefined
+    : { memberId: "example", name, photos: [photo], text: question(photo), signature };
+}
+
+/** Before there is a photo: the window waits, with the way to fill it. */
+export function FirstPhoto({ name, onAdd }: { name: string; onAdd: () => void }) {
   const room = useRoom();
   const { t } = useLingui();
-  const question = useQuestionFor();
   return (
     <RoomCard id="photo-box-next">
       <Text accessibilityRole="header" style={[type.heading, { color: room.ink }]}>
-        {photo === undefined ? t`Start ${name}'s mornings with a photo` : t`What ${name} sees next`}
+        {t`Start ${name}'s mornings with a photo`}
       </Text>
-      {photo === undefined ? (
-        <>
-          <Text style={[type.body, { color: room.muted }]}>
-            <Trans>
-              On a morning nobody writes for, about twice a week, Vela sends one of your photos with
-              a short question. Old photos ask for the story behind them.
-            </Trans>
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onAdd}
-            style={({ pressed }) => ({
-              alignSelf: "flex-start",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.s,
-              paddingHorizontal: space.l,
-              minHeight: 44,
-              borderRadius: radius.chip,
-              backgroundColor: room.cream,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <BrandIcon name="plus" color={room.creamInk} size={18} />
-            <Text style={[type.button, { color: room.creamInk }]}>{t`Add photos`}</Text>
-          </Pressable>
-        </>
-      ) : (
-        <View
-          style={{
-            borderRadius: 20,
-            overflow: "hidden",
-            backgroundColor: room.cream,
-          }}
-        >
-          <BoxImage familyId={familyId} photo={photo} size="full" aspectRatio={16 / 10} />
-          <View style={{ padding: space.l, gap: space.s }}>
-            <Text style={[type.preview, { color: room.creamInk }]}>{question(photo)}</Text>
-            <Text style={[type.caption, { color: room.creamInk, opacity: 0.72 }]}>{t`— Vela`}</Text>
+      <Text style={[type.body, { color: room.muted }]}>
+        <Trans>
+          On a morning nobody writes for, about twice a week, Vela sends one of your photos with a
+          short question. Old photos ask for the story behind them.
+        </Trans>
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onAdd}
+        style={({ pressed }) => ({
+          alignSelf: "flex-start",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.s,
+          paddingHorizontal: space.l,
+          minHeight: 44,
+          borderRadius: radius.chip,
+          backgroundColor: room.cream,
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <BrandIcon name="plus" color={room.creamInk} size={18} />
+        <Text style={[type.button, { color: room.creamInk }]}>{t`Add photos`}</Text>
+      </Pressable>
+    </RoomCard>
+  );
+}
+
+/**
+ * Her next picture morning, drawn as her message will read: the photo (or the two to choose
+ * from, numbered as her buttons are), Vela's question in her language, Vela's name.
+ */
+export function NextMorning({
+  familyId,
+  next,
+}: {
+  familyId: string | undefined;
+  next: PreviewMorning;
+}) {
+  const room = useRoom();
+  const { t } = useLingui();
+  const name = next.name;
+  const choice = next.photos.length > 1;
+  return (
+    <RoomCard id={`photo-box-next-${next.memberId}`}>
+      <Text accessibilityRole="header" style={[type.heading, { color: room.ink }]}>
+        {t`What ${name} sees next`}
+      </Text>
+      <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: room.cream }}>
+        {choice ? (
+          <View style={{ flexDirection: "row", gap: 2 }}>
+            {next.photos.map((photo, index) => (
+              <View key={photo.id} style={{ flex: 1 }}>
+                <BoxImage familyId={familyId} photo={photo} size="full" aspectRatio={4 / 5} />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: space.s,
+                    top: space.s,
+                    width: 26,
+                    height: 26,
+                    borderRadius: 13,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(30,26,22,0.72)",
+                  }}
+                >
+                  <Text style={[type.button, { color: "#FFF8EE" }]}>{String(index + 1)}</Text>
+                </View>
+              </View>
+            ))}
           </View>
+        ) : next.photos[0] === undefined ? null : (
+          <BoxImage familyId={familyId} photo={next.photos[0]} size="full" aspectRatio={16 / 10} />
+        )}
+        <View style={{ padding: space.l, gap: space.s }}>
+          <Text style={[type.preview, { color: room.creamInk }]}>{next.text}</Text>
+          <Text style={[type.caption, { color: room.creamInk, opacity: 0.72 }]}>
+            {next.signature}
+          </Text>
         </View>
-      )}
-      {photo === undefined ? null : (
-        <Text style={[type.caption, { color: room.muted }]}>
-          <Trans>
-            On a free morning, about twice a week, in {name}'s own language. Your own questions
-            always come first.
-          </Trans>
-        </Text>
-      )}
+      </View>
+      <Text style={[type.caption, { color: room.muted }]}>
+        <Trans>
+          On a free morning, about twice a week, in {name}'s own language. Your own questions always
+          come first.
+        </Trans>
+      </Text>
     </RoomCard>
   );
 }
@@ -280,16 +324,20 @@ export function EraSwitch({
   era,
   disabled = false,
   onChange,
+  all = false,
 }: {
-  era: PhotoBoxEra;
+  /** Undefined when photos marked together differ: neither half is lit. */
+  era: PhotoBoxEra | undefined;
   disabled?: boolean;
   onChange: (era: PhotoBoxEra) => void;
+  /** Marks several photos at once: its halves say so, and it says nothing under itself. */
+  all?: boolean;
 }) {
   const palette = usePalette();
   const { t } = useLingui();
   const options: { era: PhotoBoxEra; label: string }[] = [
-    { era: "new", label: t`New photo` },
-    { era: "old", label: t`Old photo` },
+    { era: "new", label: all ? t`All new` : t`New photo` },
+    { era: "old", label: all ? t`All old` : t`Old photo` },
   ];
   return (
     <View style={{ gap: space.s }}>
@@ -333,11 +381,13 @@ export function EraSwitch({
           );
         })}
       </View>
-      <Words variant="caption" tone="ink3">
-        {era === "old"
-          ? t`Vela asks for the story behind it.`
-          : t`Vela asks what it makes her think of.`}
-      </Words>
+      {all || era === undefined ? null : (
+        <Words variant="caption" tone="ink3">
+          {era === "old"
+            ? t`Vela asks for the story behind it.`
+            : t`Vela asks what it makes her think of.`}
+        </Words>
+      )}
     </View>
   );
 }
@@ -439,6 +489,7 @@ export function AddSheet({
   progress,
   problem,
   onEdit,
+  onEditAll,
   onDrop,
   onAdd,
   onClose,
@@ -448,6 +499,8 @@ export function AddSheet({
   progress: { done: number; total: number } | undefined;
   problem: string | undefined;
   onEdit: (key: string, next: Partial<Pick<PendingPhoto, "era" | "caption">>) => void;
+  /** Marks every chosen photo new or old at once. */
+  onEditAll: (era: PhotoBoxEra) => void;
   onDrop: (key: string) => void;
   onAdd: () => void;
   onClose: () => void;
@@ -491,6 +544,25 @@ export function AddSheet({
           puts your line in her question as you wrote it.
         </Trans>
       </Words>
+      {count < 2 ? null : (
+        <View style={{ gap: space.s }}>
+          <Words variant="caption" tone="ink2">
+            <Trans>Mark them all</Trans>
+          </Words>
+          <EraSwitch
+            all
+            era={
+              pending.every((photo) => photo.era === "new")
+                ? "new"
+                : pending.every((photo) => photo.era === "old")
+                  ? "old"
+                  : undefined
+            }
+            disabled={adding}
+            onChange={onEditAll}
+          />
+        </View>
+      )}
       {pending.map((photo, index) => {
         const number = index + 1;
         return (
@@ -509,7 +581,7 @@ export function AddSheet({
           >
             <Image
               source={{ uri: photo.uri }}
-              style={{ width: "100%", aspectRatio: 4 / 3 }}
+              style={{ width: "100%", aspectRatio: 16 / 9, maxHeight: 220 }}
               resizeMode="cover"
               accessibilityLabel={t`Photo ${number}`}
               accessibilityIgnoresInvertColors

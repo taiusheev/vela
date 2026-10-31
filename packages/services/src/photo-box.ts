@@ -14,6 +14,7 @@
 import type {
   ApiMutationResponse,
   ApiPhotoBox,
+  ApiPhotoBoxNext,
   ApiPhotoBoxPhoto,
   ApiPhotoBoxRemoved,
   ExchangeType,
@@ -60,6 +61,7 @@ import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps, Logger } from "./deps.ts";
 import { errorLabel, VelaError } from "./errors.ts";
+import { isKeptLightMember } from "./group.ts";
 import type { Queryable } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -73,6 +75,15 @@ const ASKS_PREFIX = "asks/";
 
 /** How many box photos one retention run moves out of `asks/`. */
 const MOVES_PER_RUN = 25;
+
+/**
+ * A use counts once its morning reached her (`exchanges.delivered_at`): a morning dropped for a
+ * pause, or one that failed, showed her nothing, so its photo keeps its turn and her rhythm.
+ */
+const deliveredUse = and(
+  eq(exchanges.id, photoBoxUses.exchangeId),
+  isNotNull(exchanges.deliveredAt),
+);
 
 /** A photo box write the family is told about, by `reason` (`PHOTO_BOX_REFUSALS`). */
 export class PhotoBoxRefusedError extends Error {
@@ -115,10 +126,38 @@ export async function loadApiPhotoBox(
       : await db
           .select({ boxId: photoBoxUses.boxId, last: max(photoBoxUses.localDay) })
           .from(photoBoxUses)
+          .innerJoin(exchanges, deliveredUse)
           .where(inArray(photoBoxUses.boxId, ids))
           .groupBy(photoBoxUses.boxId);
   const lastOf = new Map(lastUses.map((use) => [use.boxId, use.last]));
+  const parents = (
+    await db
+      .select()
+      .from(members)
+      .where(
+        and(
+          eq(members.familyId, access.familyId),
+          inArray(members.status, ["active", "paused"]),
+          isNull(members.leftAt),
+        ),
+      )
+      .orderBy(asc(members.createdAt), asc(members.id))
+  ).filter(isKeptLightMember);
+  const next: ApiPhotoBoxNext[] = [];
+  for (const parent of parents) {
+    const plan = await nextPictureMorning(db, parent);
+    if (plan === null) continue;
+    next.push({
+      member_id: parent.id,
+      name: parent.displayName,
+      type: plan.type,
+      box_ids: plan.chosen.map((c) => c.boxId),
+      text: plan.text,
+      signature: t(parent.language, "arrival.hello_signature"),
+    });
+  }
   return {
+    next,
     photos: rows.map(({ box, file, adder }) => ({
       id: box.id,
       media_id: box.mediaId,
@@ -320,6 +359,7 @@ export async function changeApiPhotoBoxPhoto(
         const [last] = await tx
           .select({ last: max(photoBoxUses.localDay) })
           .from(photoBoxUses)
+          .innerJoin(exchanges, deliveredUse)
           .where(eq(photoBoxUses.boxId, box.id));
         return {
           status: 200,
@@ -560,6 +600,7 @@ async function pictureMorningDue(
       yesterday: sql<number>`count(*) filter (where ${photoBoxUses.localDay} = ${addDays(date, -1)})`,
     })
     .from(photoBoxUses)
+    .innerJoin(exchanges, deliveredUse)
     .where(
       and(
         eq(photoBoxUses.memberId, memberId),
@@ -578,10 +619,11 @@ async function pictureMorningDue(
  * The box photos she may be shown, the ones she has seen least recently first (never-shown first),
  * then the newest added: each still in the box, stored, an image, and with no deletion date.
  */
-async function candidatesFor(tx: VelaTransaction, member: Member): Promise<Candidate[]> {
+async function candidatesFor(tx: Queryable, member: Member): Promise<Candidate[]> {
   const lastShown = tx
     .select({ boxId: photoBoxUses.boxId, last: max(photoBoxUses.localDay).as("last") })
     .from(photoBoxUses)
+    .innerJoin(exchanges, deliveredUse)
     .where(and(eq(photoBoxUses.memberId, member.id), isNotNull(photoBoxUses.boxId)))
     .groupBy(photoBoxUses.boxId)
     .as("last_shown");
@@ -638,6 +680,59 @@ function pictureText(lang: Member["language"], kind: PictureKind, caption: strin
     : t(lang, "photo_box.story_caption", { caption });
 }
 
+/** What a picture morning shows and says: its kind, its type, its photos in order, its words. */
+export interface PicturePlan {
+  type: "question" | "memory_photo" | "photo_choice";
+  chosen: Candidate[];
+  text: string;
+}
+
+/**
+ * The picture morning `candidates` make for her `shown`th one: the kind in turn, walked forward to
+ * one the box can make, and the photos she has seen least recently. Shared by her morning and by
+ * the box's preview, so what the family is shown is what she is sent.
+ */
+function planFrom(
+  member: Pick<Member, "language">,
+  candidates: readonly Candidate[],
+  shown: number,
+): PicturePlan | null {
+  const kind = kindFor(shown, candidates);
+  if (kind === null) return null;
+  const chosen =
+    kind === "story"
+      ? candidates.filter((c) => c.era === "old").slice(0, 1)
+      : candidates.filter((c) => c.era === "new").slice(0, kind === "choice" ? 2 : 1);
+  const first = chosen[0];
+  if (first === undefined) return null;
+  return {
+    type: kind === "story" ? "memory_photo" : kind === "choice" ? "photo_choice" : "question",
+    chosen,
+    text: pictureText(member.language, kind, kind === "choice" ? null : first.caption),
+  };
+}
+
+/** Her picture mornings that reached her so far: the turn the next one's kind follows. */
+async function picturesShown(db: Queryable, memberId: string): Promise<number> {
+  const [shown] = await db
+    .select({ mornings: countDistinct(photoBoxUses.exchangeId) })
+    .from(photoBoxUses)
+    .innerJoin(exchanges, deliveredUse)
+    .where(eq(photoBoxUses.memberId, memberId));
+  return shown?.mornings ?? 0;
+}
+
+/**
+ * The picture morning Vela would make for her next, whenever her rhythm next allows one: what the
+ * box's page shows the family. Null when the box has nothing she can be shown.
+ */
+export async function nextPictureMorning(
+  db: Queryable,
+  member: Member,
+): Promise<PicturePlan | null> {
+  return planFrom(member, await candidatesFor(db, member), await picturesShown(db, member.id));
+}
+
 /**
  * Her free morning of `date` made from the photo box, when it is one of her picture mornings and
  * the box has a photo for it: the exchange, scheduled, asked by nobody and drafted by Vela, so it
@@ -670,21 +765,14 @@ export async function takePictureMorning(
     )
     .for("share");
   const live = new Set(held.map((row) => row.id));
-  const candidates = listed.filter((c) => live.has(c.mediaId));
-  const [shown] = await tx
-    .select({ mornings: countDistinct(photoBoxUses.exchangeId) })
-    .from(photoBoxUses)
-    .where(eq(photoBoxUses.memberId, member.id));
-  const kind = kindFor(shown?.mornings ?? 0, candidates);
-  if (kind === null) return null;
-  const chosen =
-    kind === "story"
-      ? candidates.filter((c) => c.era === "old").slice(0, 1)
-      : candidates.filter((c) => c.era === "new").slice(0, kind === "choice" ? 2 : 1);
-  const first = chosen[0];
-  if (first === undefined) return null;
-  const type: ExchangeType =
-    kind === "story" ? "memory_photo" : kind === "choice" ? "photo_choice" : "question";
+  const plan = planFrom(
+    member,
+    listed.filter((c) => live.has(c.mediaId)),
+    await picturesShown(tx, member.id),
+  );
+  if (plan === null) return null;
+  const { chosen } = plan;
+  const type: ExchangeType = plan.type;
   const [exchange] = await tx
     .insert(exchanges)
     .values({
@@ -693,7 +781,7 @@ export async function takePictureMorning(
       askerId: null,
       type,
       state: "scheduled",
-      text: pictureText(member.language, kind, kind === "choice" ? null : first.caption),
+      text: plan.text,
       textLang: member.language,
       whenRule: "date",
       scheduledFor: date,

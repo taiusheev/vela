@@ -1491,9 +1491,25 @@ export const ApiPhotoBoxPhoto = z.object({
 });
 export type ApiPhotoBoxPhoto = z.infer<typeof ApiPhotoBoxPhoto>;
 
+/**
+ * The picture morning Vela would send one parent next, as she will read it: its type, the box
+ * photos it shows in her order, and its words and signature in her language.
+ */
+export const ApiPhotoBoxNext = z.object({
+  member_id: z.uuid(),
+  name: z.string(),
+  type: z.enum(["question", "memory_photo", "photo_choice"]),
+  box_ids: z.array(z.uuid()).min(1).max(2),
+  text: z.string(),
+  signature: z.string(),
+});
+export type ApiPhotoBoxNext = z.infer<typeof ApiPhotoBoxNext>;
+
 export const ApiPhotoBox = z.object({
   photos: z.array(ApiPhotoBoxPhoto),
   limit: z.number().int().positive(),
+  /** One per parent whose light the family keeps, when the box has a morning for them. */
+  next: z.array(ApiPhotoBoxNext).default([]),
 });
 export type ApiPhotoBox = z.infer<typeof ApiPhotoBox>;
 
