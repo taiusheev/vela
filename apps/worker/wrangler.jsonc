@@ -419,7 +419,7 @@
         // On: staging holds test families only (ADR-39).
         "BOOK": "on",
         "PHOTO_BOX": "on",
-        "PERSONAL_QUESTION_DRAFTS": "off",
+        "PERSONAL_QUESTION_DRAFTS": "on",
         "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",

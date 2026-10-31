@@ -64,9 +64,9 @@ two-week calendar. Composing uses the existing idempotent API with `ai_assisted:
 human style evidence, including after editing. Authorship remains child-reviewed; this is not
 unattended sending. Draft notes are not copied into a scheduled question or its options.
 
-`PERSONAL_QUESTION_DRAFTS` is absent/off by default in every deployment configuration. An explicit on
-can configure synthetic development/staging evaluation. Production on is refused until a separately
-reviewed activation change. No provider/model was changed and no live consent or delivery behavior
+`PERSONAL_QUESTION_DRAFTS` defaults off. The founder-selected TestFlight test release enables it
+only in staging for synthetic evaluation. Development and production remain off; production on is
+refused until a separately reviewed activation change. No provider/model was changed and no live consent or delivery behavior
 was migrated. Demo previews reuse supplied words and are explicitly labeled as examples, with no AI,
 persistence, or sending. They do not establish model quality.
 
@@ -102,8 +102,8 @@ Example-mode saved choices live only in this screen's in-memory map, with explic
 model, API persistence or sending. Tests use synthetic families; a browser demo is not a real-phone
 or participant naturalness check.
 
-Both switches are now explicitly pinned OFF in development/staging/production; production refuses
-ON. Migration 0032 adds only this private setup and lifecycle guards. The new notice supplement
+Private profile collection is pinned OFF everywhere. Drafting alone is ON in synthetic staging
+for the TestFlight test release; both switches stay OFF in production, which refuses ON. Migration 0032 adds only this private setup and lifecycle guards. The new notice supplement
 question-profile.1 is **draft and unserved**. No nightly selection, check-in behavior or signer
 setting is altered. Independent parent input, automatic-policy integration and first-month review
 windows remain later approved implementation work; real-family activation is a separate gate.
@@ -141,4 +141,5 @@ improved conversion or family naturalness; participant usability observation rem
 synthetic web demo. Manual review covers 320/390 px layouts, English/Traditional Chinese, edited
 approval, occupied dates, demo completion, profile management and onboarding. Native keyboard,
 VoiceOver and participant behavior must still be checked on a signed phone; a browser capture is not
-that evidence. Both backend processing/storage switches remain OFF; no release or family activation.
+that evidence. The TestFlight test release enables draft previews only in synthetic staging.
+Private profile storage remains OFF everywhere; no production or real-family activation is included.

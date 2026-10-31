@@ -57,3 +57,14 @@ No nightly personalization, inferred intimacy escalation, parental private input
 is included. Parent consent/input and automatic-policy integration remain the next major work.
 Native Chinese review and observed comprehension/voice checks with separately authorized participants
 remain outstanding. Synthetic tests and coding-assistant checks are not participant research.
+
+
+## TestFlight test release (31 October 2026)
+
+The founder selected the TestFlight test app for deployment. Staging alone enables
+`PERSONAL_QUESTION_DRAFTS` so synthetic test families can reach the reviewed draft flow.
+One-time inputs and unsent candidates remain request-only. No private profile is collected:
+`PERSONAL_QUESTION_PROFILES` stays OFF everywhere, and the profile notice remains an unapproved,
+unserved draft. Both personalization switches stay OFF in production; production ON remains
+refused by configuration. This test release does not approve real-family use or automatic
+nightly personalization. The new feature requires a signed app build, not an OTA update.
