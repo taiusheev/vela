@@ -10,7 +10,7 @@ import type {
 import { QUESTION_PROFILE_NOTICE_VERSION, QuestionProfileSettings } from "@vela/contracts";
 import { randomUUID } from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import {
   apiConfigured,
@@ -21,19 +21,15 @@ import {
 } from "../src/api/client.ts";
 import { useIdempotencyKey } from "../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
-import { ScreenHeading } from "../src/components/brand/experience.tsx";
 import { MorningCalendar, type MorningMark } from "../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../src/components/parent-chooser.tsx";
-import { SoftCard } from "../src/components/today-hero.tsx";
 import {
-  Chip,
-  Eyebrow,
-  PrimaryButton,
-  SecondaryButton,
-  TextField,
-  Words,
-} from "../src/components/ui.tsx";
-import { WarmPage } from "../src/components/warm.tsx";
+  QuestionDisclosure,
+  QuestionPage,
+  QuestionPaper,
+  QuestionProgress,
+} from "../src/components/questions/flow.tsx";
+import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
 import { finishQuestionSave } from "../src/data/finish-question-save.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
 import {
@@ -66,31 +62,33 @@ export default function PersonalQuestionScreen() {
   const available = demo || (caps.capabilities?.personal_questions === true && day.live);
   const profileAccess = !demo && caps.capabilities?.personal_question_profiles === true && day.live;
   const demoProfiles = useRef(new Map<string, ApiQuestionProfile>());
-  return (
-    <WarmPage gap={space.l}>
-      <ScreenHeading title={<Trans>A question in your words</Trans>} />
-      <ParentChooser
-        lights={lights}
-        selected={parent?.memberId}
-        onSelect={(recipient) => router.setParams({ recipient })}
-      />
-      {(!available && !profileAccess) || parent === undefined ? (
+  const chooser = (
+    <ParentChooser
+      lights={lights}
+      selected={parent?.memberId}
+      onSelect={(recipient) => router.setParams({ recipient })}
+    />
+  );
+  if ((!available && !profileAccess) || parent === undefined)
+    return (
+      <QuestionPage title={t`Back to questions`} onBack={() => router.replace("/questions")}>
+        {chooser}
         <Words tone="ink2">
           <Trans>Personal drafts are not available here yet.</Trans>
         </Words>
-      ) : (
-        <PersonalSetup
-          key={`${sessionScope(account)}:${day.familyId}:${parent.memberId}`}
-          familyId={day.familyId}
-          parent={parent}
-          demo={demo}
-          drafting={available}
-          profileAccess={profileAccess}
-          demoProfiles={demoProfiles.current}
-        />
-      )}
-      <SecondaryButton label={t`Back to questions`} onPress={() => router.replace("/questions")} />
-    </WarmPage>
+      </QuestionPage>
+    );
+  return (
+    <PersonalSetup
+      key={`${sessionScope(account)}:${day.familyId}:${parent.memberId}`}
+      familyId={day.familyId}
+      parent={parent}
+      demo={demo}
+      drafting={available}
+      profileAccess={profileAccess}
+      demoProfiles={demoProfiles.current}
+      chooser={chooser}
+    />
   );
 }
 
@@ -107,6 +105,7 @@ function PersonalSetup({
   drafting,
   profileAccess,
   demoProfiles,
+  chooser,
 }: {
   familyId: string | undefined;
   parent: TodayLight;
@@ -114,6 +113,7 @@ function PersonalSetup({
   drafting: boolean;
   profileAccess: boolean;
   demoProfiles: Map<string, ApiQuestionProfile>;
+  chooser: ReactNode;
 }) {
   const { t } = useLingui();
   const profile = useQuestionProfile(familyId, parent.memberId, profileAccess);
@@ -146,7 +146,8 @@ function PersonalSetup({
   };
   if (profileAccess && !profile.data)
     return (
-      <>
+      <QuestionPage title={t`Back to questions`} onBack={() => router.replace("/questions")}>
+        {chooser}
         <Words tone="ink2">
           {profile.isError
             ? t`Your saved choices could not be loaded. Reload before continuing.`
@@ -158,7 +159,7 @@ function PersonalSetup({
             onPress={() => void profile.reload().catch(() => {})}
           />
         ) : null}
-      </>
+      </QuestionPage>
     );
   return (
     <PersonalDraft
@@ -166,6 +167,7 @@ function PersonalSetup({
       parent={parent}
       demo={demo}
       drafting={drafting}
+      chooser={chooser}
       initialProfile={demo ? demoView() : (profile.data ?? empty)}
       profiles={demo ? demoControls : profileAccess ? profile : undefined}
     />
@@ -179,6 +181,7 @@ function PersonalDraft({
   drafting,
   initialProfile,
   profiles,
+  chooser,
 }: {
   familyId: string | undefined;
   parent: TodayLight;
@@ -186,6 +189,7 @@ function PersonalDraft({
   drafting: boolean;
   initialProfile: ApiQuestionProfile;
   profiles: ProfileControls | undefined;
+  chooser: ReactNode;
 }) {
   const { t, i18n } = useLingui();
   const account = useAccount();
@@ -206,6 +210,8 @@ function PersonalDraft({
   const [profileBasis, setProfileBasis] = useState(
     initialSettings ? initialProfile.revision : null,
   );
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [secondExample, setSecondExample] = useState(Boolean(initialSettings?.writing_examples[1]));
   const [profileDetails, setProfileDetails] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState<unknown>(null);
@@ -284,7 +290,7 @@ function PersonalDraft({
       setResult(next);
       setWords(next.state === "review" ? next.text : "");
       setConfirmed(false);
-      setStep(3);
+      setStep(2);
     },
   });
   const save = useMutation({
@@ -394,350 +400,411 @@ function PersonalDraft({
     : "";
   const name = parent.displayName;
   const blockedParent = parent.invited || parent.state === "resting";
+  const busy = generate.isPending || save.isPending || profileBusy;
+  const changed =
+    questionProfileChanged(generate.error) ||
+    questionProfileChanged(save.error) ||
+    questionProfileChanged(profileError);
   return (
-    <>
-      <Words tone="ink2">
-        <Trans>
-          Start with something you genuinely want to ask. You choose the final words and the day.
-        </Trans>
-      </Words>
-      <Words variant="caption" tone="ink2">
-        <Trans>
-          These choices shape this draft only. They do not change automatic questions or morning
-          check-ins.
-        </Trans>
-      </Words>
-      {demo ? (
-        <Words variant="caption" tone="action">
-          <Trans>
-            Example mode: choices are remembered only while this example screen stays open. The
-            preview uses your own words. No AI is called or question sent.
-          </Trans>
+    <QuestionPage
+      title={t`Back to questions`}
+      onBack={() => router.replace("/questions")}
+      resetKey={`${step}:${profileView.revision}:${profileNotice}:${profileError !== null}`}
+    >
+      {chooser}
+      {profileNotice ? (
+        <View accessibilityLiveRegion="polite">
+          <Words tone="action">
+            {profileNotice === "saved"
+              ? t`Your choices are saved.`
+              : profileNotice === "forgotten"
+                ? t`Your saved choices were forgotten.`
+                : t`Your saved choices expired. Start fresh or reload.`}
+          </Words>
+        </View>
+      ) : null}
+      {profileError ? (
+        <Words tone="error">
+          {changed
+            ? t`Your saved choices changed elsewhere. Reload before continuing.`
+            : t`The change was not confirmed. Reload your saved choices before trying again.`}
         </Words>
       ) : null}
-      {profiles ? (
-        <SoftCard>
-          <Eyebrow>
-            <Trans>Your private choices</Trans>
-          </Eyebrow>
-          <Words variant="caption" tone="ink2">
-            <Trans>Only you can see these choices. They expire 30 days after saving.</Trans>
-          </Words>
-          {profileView.profile ? (
+      {changed && profiles ? (
+        <SecondaryButton
+          label={t`Reload saved choices`}
+          disabled={busy}
+          onPress={() => void changeProfile("reload")}
+        />
+      ) : null}
+      {step === 1 || result?.state === "review" ? <QuestionProgress step={step} /> : null}
+      {step === 1 ? (
+        <>
+          <View style={{ gap: space.s }}>
             <Words
-              variant="caption"
-              tone="ink2"
-            >{t`Saved until ${expiresOn}. Opening or using it does not extend this date.`}</Words>
-          ) : null}
-          <SecondaryButton
-            label={profileDetails ? t`Hide details` : t`About saved choices`}
-            onPress={() => setProfileDetails(!profileDetails)}
+              variant="title"
+              accessibilityRole="header"
+            >{t`What would you like to ask ${name}?`}</Words>
+            <Words tone="ink2">
+              <Trans>One ordinary thing you would love to hear about.</Trans>
+            </Words>
+          </View>
+          <TextField
+            label={t`Your starting point`}
+            value={intent}
+            onChangeText={setIntent}
+            placeholder={t`Something from their day, or a little thing on your mind…`}
+            multiline
+            editorial
+            maxLength={120}
+            disabled={busy}
           />
-          {profileDetails ? (
-            <>
-              <Words variant="caption" tone="ink2">
-                <Trans>
-                  Only you can see this setup for this parent. Saving keeps your wording examples,
-                  comfort level, usual contact, and boundaries for 30 days. The question you want to
-                  ask is not saved here.
-                </Trans>
-              </Words>
-              <Words variant="caption" tone="ink2">
-                <Trans>
-                  Forgetting clears these choices. Questions you already approved stay in your
-                  schedule.
-                </Trans>
-              </Words>
-            </>
-          ) : null}
-          {profileNotice ? (
-            <Words tone="action">
-              {profileNotice === "saved"
-                ? t`Your choices are saved.`
-                : profileNotice === "forgotten"
-                  ? t`Your saved choices were forgotten.`
-                  : t`Your saved choices expired. Start fresh or reload.`}
-            </Words>
-          ) : null}
-          {profileError ? (
-            <Words tone="error">
-              {questionProfileChanged(profileError)
-                ? t`Your saved choices changed elsewhere. Reload before continuing.`
-                : t`The change was not confirmed. Reload your saved choices before trying again.`}
-            </Words>
-          ) : null}
-          {profileDetails ||
-          profileError ||
-          questionProfileChanged(generate.error) ||
-          questionProfileChanged(save.error) ? (
-            <>
-              <SecondaryButton
-                label={t`Reload saved choices`}
-                disabled={profileBusy || generate.isPending || save.isPending}
-                onPress={() => void changeProfile("reload")}
+          <QuestionDisclosure
+            title={t`Make it sound like you`}
+            detail={
+              connection === "quiet"
+                ? t`Some space for now`
+                : profileBasis
+                  ? t`Your saved choices are loaded. Change them anytime.`
+                  : t`Optional · your tone, usual wording, and topics to leave out`
+            }
+            expanded={preferencesOpen}
+            disabled={profileBusy || save.isPending}
+            onPress={() => setPreferencesOpen(!preferencesOpen)}
+          />
+          {preferencesOpen ? (
+            <View style={{ gap: space.l }}>
+              <TextField
+                label={t`What do you call ${name}?`}
+                value={address}
+                onChangeText={setAddress}
+                maxLength={40}
+                disabled={busy}
               />
-              {profileView.profile || profileBasis ? (
-                <SecondaryButton
-                  label={t`Forget saved choices`}
-                  disabled={profileBusy || save.isPending}
-                  onPress={() => void changeProfile("forget")}
+              <Words variant="bodyMedium">
+                <Trans>What feels comfortable between you?</Trans>
+              </Words>
+              <Options<QuestionPersonalization["connection"]>
+                value={connection}
+                onChange={setConnection}
+                disabled={busy}
+                options={[
+                  ["everyday", t`Everyday conversation`],
+                  ["practical", t`Keep it practical`],
+                  ["reconnecting", t`Ease back into talking`],
+                  ["unsure", t`Not sure yet`],
+                  ["quiet", t`Some space for now`],
+                ]}
+              />
+              <Words variant="bodyMedium">
+                <Trans>How often do you usually talk?</Trans>
+              </Words>
+              <Options<QuestionPersonalization["talking_rhythm"]>
+                value={contact}
+                onChange={setContact}
+                disabled={busy}
+                options={[
+                  ["often", t`Often`],
+                  ["sometimes", t`Sometimes`],
+                  ["rarely", t`Rarely`],
+                  ["unsure", t`Not sure yet`],
+                ]}
+              />
+              <TextField
+                label={t`A message you would write to ${name} (optional)`}
+                value={example1}
+                onChangeText={setExample1}
+                maxLength={180}
+                multiline
+                disabled={busy}
+                helper={t`Use only your own words to this person. Leave out private details and other people's messages.`}
+              />
+              {secondExample || example2 ? (
+                <TextField
+                  label={t`Another example (optional)`}
+                  value={example2}
+                  onChangeText={setExample2}
+                  maxLength={180}
+                  multiline
+                  disabled={busy}
                 />
-              ) : null}
-            </>
+              ) : (
+                <SecondaryButton
+                  label={t`Add another example`}
+                  disabled={busy}
+                  onPress={() => setSecondExample(true)}
+                />
+              )}
+              <TextField
+                label={t`A topic to leave out (optional)`}
+                value={avoid}
+                onChangeText={setAvoid}
+                maxLength={204}
+                multiline
+                disabled={busy}
+                helper={t`One topic per line, up to 5 topics of 40 characters each.`}
+              />
+              <TextField
+                label={t`Words you would never use (optional)`}
+                value={never}
+                onChangeText={setNever}
+                maxLength={182}
+                multiline
+                disabled={busy}
+                helper={t`One phrase per line, up to 3 phrases of 60 characters each.`}
+              />
+              <Words variant="bodyMedium">
+                <Trans>Language of this question</Trans>
+              </Words>
+              <Options<"en" | "zh-TW">
+                value={language}
+                onChange={setLanguage}
+                disabled={busy}
+                options={[
+                  ["en", "English"],
+                  ["zh-TW", "繁體中文"],
+                ]}
+              />
+              <Words variant="caption" tone="ink2">
+                <Trans>
+                  These choices shape this draft only. They do not change automatic questions or
+                  morning check-ins.
+                </Trans>
+              </Words>
+              {profiles ? (
+                <>
+                  <Words variant="caption" tone="ink2">
+                    <Trans>
+                      Only you can see this setup for this parent. Saving keeps your wording
+                      examples, comfort level, usual contact, and boundaries for 30 days. The
+                      question you want to ask is not saved here.
+                    </Trans>
+                  </Words>
+                  {profileView.profile ? (
+                    <Words
+                      variant="caption"
+                      tone="ink2"
+                    >{t`Saved until ${expiresOn}. Opening or using it does not extend this date.`}</Words>
+                  ) : null}
+                  {profileView.saving_available ? (
+                    <SecondaryButton
+                      label={profileBusy ? t`Saving choices…` : t`Save these choices for 30 days`}
+                      disabled={busy || !settings.success || blockedParent}
+                      onPress={() => void changeProfile("save")}
+                    />
+                  ) : (
+                    <Words variant="caption" tone="ink2">
+                      <Trans>
+                        Saving new choices is off. You can still view or forget your saved choices.
+                      </Trans>
+                    </Words>
+                  )}
+                  <QuestionDisclosure
+                    title={t`Manage saved choices`}
+                    expanded={profileDetails}
+                    icon="privacy"
+                    disabled={profileBusy || save.isPending}
+                    onPress={() => setProfileDetails(!profileDetails)}
+                  />
+                  {profileDetails ? (
+                    <>
+                      <Words variant="caption" tone="ink2">
+                        <Trans>
+                          Forgetting clears these choices. Questions you already approved stay in
+                          your schedule.
+                        </Trans>
+                      </Words>
+                      <SecondaryButton
+                        label={t`Reload saved choices`}
+                        disabled={busy}
+                        onPress={() => void changeProfile("reload")}
+                      />
+                      {profileView.profile || profileBasis ? (
+                        <SecondaryButton
+                          label={t`Forget saved choices`}
+                          disabled={profileBusy || save.isPending}
+                          onPress={() => void changeProfile("forget")}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <Words variant="caption" tone="ink2">
+                  <Trans>
+                    Vela uses these notes to prepare a draft. They are kept for later only if you
+                    choose to save them.
+                  </Trans>
+                </Words>
+              )}
+            </View>
           ) : null}
-          {!profileView.saving_available ? (
-            <Words variant="caption" tone="ink2">
+          {connection === "quiet" ? (
+            <Words tone="ink2">
               <Trans>
-                Saving new choices is off. You can still view or forget your saved choices.
+                No question is needed right now. Your existing morning settings stay as they are.
               </Trans>
             </Words>
           ) : null}
-        </SoftCard>
-      ) : null}
-      {!drafting ? (
-        <Words tone="ink2">
-          <Trans>Drafting is off here. Your saved choices are still yours to view or forget.</Trans>
-        </Words>
-      ) : null}
-      <Eyebrow>{t`Step ${step} of 3`}</Eyebrow>
-      {step === 1 ? (
-        <>
-          <TextField
-            label={t`What do you call ${name}?`}
-            value={address}
-            onChangeText={setAddress}
-            maxLength={40}
-          />
-          <Words variant="bodyMedium">
-            <Trans>What feels comfortable between you?</Trans>
-          </Words>
-          <Options<QuestionPersonalization["connection"]>
-            value={connection}
-            onChange={setConnection}
-            options={[
-              ["everyday", t`Everyday conversation`],
-              ["practical", t`Keep it practical`],
-              ["reconnecting", t`Ease back into talking`],
-              ["unsure", t`Not sure yet`],
-              ["quiet", t`Some space for now`],
-            ]}
-          />
-          <Words variant="bodyMedium">
-            <Trans>How often do you usually talk?</Trans>
-          </Words>
-          <Options<QuestionPersonalization["talking_rhythm"]>
-            value={contact}
-            onChange={setContact}
-            options={[
-              ["often", t`Often`],
-              ["sometimes", t`Sometimes`],
-              ["rarely", t`Rarely`],
-              ["unsure", t`Not sure yet`],
-            ]}
-          />
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              Occasional contact is okay. More personal questions are always your choice.
-            </Trans>
-          </Words>
-          {profiles && profileView.saving_available && connection === "quiet" ? (
-            <SecondaryButton
-              label={t`Save these choices for 30 days`}
-              disabled={profileBusy || !settings.success || blockedParent}
-              onPress={() => void changeProfile("save")}
-            />
-          ) : null}
-          <PrimaryButton
-            label={connection === "quiet" ? t`Leave room for now` : t`Next: your words`}
-            disabled={!address.trim() || profileBusy || !drafting}
-            onPress={() => (connection === "quiet" ? generate.mutate() : setStep(2))}
-          />
-        </>
-      ) : step === 2 ? (
-        <>
-          <TextField
-            label={t`What would you like to ask?`}
-            value={intent}
-            onChangeText={setIntent}
-            helper={t`One ordinary thing you actually want to hear about.`}
-            multiline
-            maxLength={120}
-            disabled={generate.isPending}
-          />
-          <TextField
-            label={t`A message you would write to ${name} (optional)`}
-            value={example1}
-            onChangeText={setExample1}
-            maxLength={180}
-            multiline
-            disabled={generate.isPending}
-            helper={t`Use only your own words to this person. Leave out private details and other people's messages.`}
-          />
-          <TextField
-            label={t`Another example (optional)`}
-            value={example2}
-            onChangeText={setExample2}
-            maxLength={180}
-            multiline
-            disabled={generate.isPending}
-          />
-          <TextField
-            label={t`A topic to leave out (optional)`}
-            value={avoid}
-            onChangeText={setAvoid}
-            maxLength={204}
-            multiline
-            helper={t`One topic per line, up to 5 topics of 40 characters each.`}
-            disabled={generate.isPending}
-          />
-          <TextField
-            label={t`Words you would never use (optional)`}
-            value={never}
-            onChangeText={setNever}
-            maxLength={182}
-            multiline
-            helper={t`One phrase per line, up to 3 phrases of 60 characters each.`}
-            disabled={generate.isPending}
-          />
-          <Words variant="bodyMedium">
-            <Trans>Language of this question</Trans>
-          </Words>
-          <Options<"en" | "zh-TW">
-            value={language}
-            onChange={setLanguage}
-            disabled={generate.isPending}
-            options={[
-              ["en", "English"],
-              ["zh-TW", "繁體中文"],
-            ]}
-          />
-          <Words variant="caption" tone="ink2">
-            <Trans>
-              Vela uses these notes to prepare a draft. They are kept for later only if you choose
-              to save them.
-            </Trans>
-          </Words>
-          {profiles && profileView.saving_available ? (
-            <SecondaryButton
-              label={profileBusy ? t`Saving choices…` : t`Save these choices for 30 days`}
-              disabled={profileBusy || generate.isPending || !settings.success || blockedParent}
-              onPress={() => void changeProfile("save")}
-            />
+          {generate.isError ? (
+            <Words tone="error">
+              {changed
+                ? t`Your saved choices changed or expired. Reload before preparing another draft.`
+                : t`The draft could not be prepared. Your words are still here.`}
+            </Words>
           ) : null}
           {!settings.success ? (
             <Words tone="error">
               <Trans>Check the length and number of topics or phrases before continuing.</Trans>
             </Words>
           ) : null}
-          {generate.isError ? (
-            <Words tone="error">
-              {questionProfileChanged(generate.error)
-                ? t`Your saved choices changed or expired. Reload before preparing another draft.`
-                : t`The draft could not be prepared. Your words are still here.`}
-            </Words>
-          ) : null}
           <PrimaryButton
-            label={generate.isPending ? t`Preparing your draft…` : t`Prepare a draft`}
+            label={
+              generate.isPending
+                ? t`Preparing your draft…`
+                : connection === "quiet"
+                  ? t`Leave room for now`
+                  : t`Prepare a draft`
+            }
             disabled={
-              generate.isPending ||
-              profileBusy ||
+              busy ||
               !drafting ||
               !settings.success ||
-              !intent.trim() ||
-              blockedParent
+              (connection !== "quiet" && !intent.trim()) ||
+              (blockedParent && connection !== "quiet")
             }
             onPress={() => generate.mutate()}
           />
-          {blockedParent ? (
+          {blockedParent && connection !== "quiet" ? (
             <Words tone="ink2">
               <Trans>Drafting can begin once this person has agreed and their light is on.</Trans>
             </Words>
           ) : null}
-          <SecondaryButton
-            label={t`Back`}
-            disabled={generate.isPending}
-            onPress={() => setStep(1)}
-          />
+          <Words variant="caption" tone="ink2">
+            <Trans>You review every word before choosing a morning.</Trans>
+          </Words>
         </>
       ) : result?.state === "review" ? (
-        <>
-          <SoftCard>
-            <Eyebrow>
-              <Trans>A draft for your review</Trans>
-            </Eyebrow>
-            <TextField
-              label={t`Your question`}
-              value={words}
-              onChangeText={(next) => {
-                setWords(next);
-                setConfirmed(false);
-              }}
-              multiline
-              maxLength={200}
-              disabled={save.isPending}
-            />
-            <Words variant="caption" tone="ink2">
-              <Trans>Check the facts, tone, and topic. Vela can get these wrong.</Trans>
-            </Words>
+        step === 2 ? (
+          <>
+            <View style={{ gap: space.s }}>
+              <Words variant="title" accessibilityRole="header">
+                <Trans>Make it yours.</Trans>
+              </Words>
+              <Words tone="ink2">
+                <Trans>Check the facts, tone, and topic. Vela can get these wrong.</Trans>
+              </Words>
+            </View>
+            <QuestionPaper>
+              <TextField
+                label={t`Your question`}
+                value={words}
+                onChangeText={(next) => {
+                  setWords(next);
+                  setConfirmed(false);
+                }}
+                editorial
+                multiline
+                maxLength={200}
+                minHeight={128}
+                disabled={busy}
+              />
+            </QuestionPaper>
             <Chip
               label={t`These words feel like me, and I want to ask this.`}
               selected={confirmed}
-              disabled={save.isPending}
+              disabled={busy}
               onPress={() => setConfirmed(!confirmed)}
             />
-          </SoftCard>
-          <Words variant="bodyMedium">
-            <Trans>Choose a morning</Trans>
-          </Words>
-          <MorningCalendar
-            dates={dates}
-            selected={date}
-            marks={marks}
-            tomorrow={tomorrow}
-            disabled={save.isPending || (!demo && schedule.data === undefined)}
-            onSelect={setDate}
-          />
-          {schedule.isError ? (
-            <SecondaryButton label={t`Reload schedule`} onPress={() => void schedule.refetch()} />
-          ) : null}
-          {save.isError ? (
-            <Words tone="error">
-              {questionProfileChanged(save.error)
-                ? t`Your saved choices changed or expired. Reload before saving this question.`
-                : askConflict(save.error) !== null
-                  ? t`That morning already has a question. Choose another morning.`
-                  : t`Saving was not confirmed. Keep this screen open and try again.`}
-            </Words>
-          ) : null}
-          <PrimaryButton
-            label={save.isPending ? t`Saving…` : demo ? t`Finish example` : t`Save this question`}
-            disabled={
-              !confirmed || !date || !words.trim() || save.isPending || profileBusy || !drafting
-            }
-            onPress={() => save.mutate()}
-          />
-          <SecondaryButton
-            label={t`Change starting points`}
-            disabled={save.isPending}
-            onPress={() => {
-              setResult(null);
-              setStep(2);
-            }}
-          />
-        </>
+            <PrimaryButton
+              label={t`Next: choose a morning`}
+              disabled={!confirmed || !words.trim() || busy}
+              onPress={() => setStep(3)}
+            />
+            <SecondaryButton
+              label={t`Change starting points`}
+              disabled={busy}
+              onPress={() => {
+                setResult(null);
+                setStep(1);
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <View style={{ gap: space.s }}>
+              <Words variant="title" accessibilityRole="header">
+                <Trans>Choose a morning.</Trans>
+              </Words>
+              <Words tone="ink2">
+                <Trans>Your question will arrive with their morning message.</Trans>
+              </Words>
+            </View>
+            <QuestionPaper>
+              <Words variant="preview">{words}</Words>
+            </QuestionPaper>
+            <MorningCalendar
+              dates={dates}
+              selected={date}
+              marks={marks}
+              tomorrow={tomorrow}
+              disabled={busy || (!demo && schedule.data === undefined)}
+              onSelect={setDate}
+            />
+            {schedule.isError ? (
+              <SecondaryButton label={t`Reload schedule`} onPress={() => void schedule.refetch()} />
+            ) : null}
+            {save.isError ? (
+              <Words tone="error">
+                {changed
+                  ? t`Your saved choices changed or expired. Reload before saving this question.`
+                  : askConflict(save.error) !== null
+                    ? t`That morning already has a question. Choose another morning.`
+                    : t`Saving was not confirmed. Keep this screen open and try again.`}
+              </Words>
+            ) : null}
+            <PrimaryButton
+              label={save.isPending ? t`Saving…` : demo ? t`Finish example` : t`Save this question`}
+              disabled={!confirmed || !date || !words.trim() || busy}
+              onPress={() => save.mutate()}
+            />
+            <SecondaryButton
+              label={t`Edit your question`}
+              disabled={busy}
+              onPress={() => setStep(2)}
+            />
+          </>
+        )
       ) : (
         <>
-          <Words>
+          <Words variant="title" accessibilityRole="header">
+            {exampleFinished ? t`A little conversation, ready to begin.` : t`Leave a little room.`}
+          </Words>
+          <Words tone="ink2">
             {exampleFinished
               ? t`Example complete. Nothing was saved or sent.`
               : result?.state === "not_drafted" && result.reason === "quiet"
                 ? t`No question is needed right now. Your existing morning settings stay as they are.`
                 : t`No draft was kept. Try a different topic or write your own question.`}
           </Words>
-          <SecondaryButton label={t`Change starting points`} onPress={() => setStep(1)} />
+          <PrimaryButton
+            label={t`Change starting points`}
+            disabled={busy}
+            onPress={() => setStep(1)}
+          />
         </>
       )}
-    </>
+      {!drafting ? (
+        <Words tone="ink2">
+          <Trans>Drafting is off here. Your saved choices are still yours to view or forget.</Trans>
+        </Words>
+      ) : null}
+      {demo ? (
+        <Words variant="caption" tone="ink2">
+          <Trans>Example only. No AI or messages. Saved choices stay in this open example.</Trans>
+        </Words>
+      ) : null}
+    </QuestionPage>
   );
 }
 

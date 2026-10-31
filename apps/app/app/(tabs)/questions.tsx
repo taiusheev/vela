@@ -11,6 +11,7 @@ import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { LoadingLight } from "../../src/components/loading-light.tsx";
 import { MorningCalendar } from "../../src/components/morning-calendar.tsx";
 import { ParentChooser } from "../../src/components/parent-chooser.tsx";
+import { QuestionDisclosure } from "../../src/components/questions/flow.tsx";
 import { SoftCard } from "../../src/components/today-hero.tsx";
 import {
   ActionGroup,
@@ -93,8 +94,10 @@ export default function QuestionsScreen() {
             }
           />
           {personalDrafts ? (
-            <SecondaryButton
-              label={t`Find your words`}
+            <QuestionDisclosure
+              title={t`Find your words`}
+              detail={t`Have an idea? Turn it into a question that sounds like you.`}
+              icon="questions"
               onPress={() =>
                 router.push({
                   pathname: "/personal-question",

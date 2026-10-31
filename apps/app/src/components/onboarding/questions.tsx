@@ -37,6 +37,7 @@ import {
 } from "../../data/onboarding-portrait.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
+import { QuestionPaper } from "../questions/flow.tsx";
 import { Text } from "../scaled-text.tsx";
 import { Chip, PrimaryButton, TextField, Words } from "../ui.tsx";
 import { NightScene, night, useRise } from "./night-scene.tsx";
@@ -673,10 +674,9 @@ function Replies({ draft, name }: { draft: OnboardingDraft; name: string }) {
 
 function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const { t } = useLingui();
-  const palette = usePalette();
   const [help, setHelp] = useState(false);
   const choices = firstQuestionChoices(draft.interests, draft.language);
-  const shown = firstQuestion(draft) || t`Your words appear here.`;
+  const shown = firstQuestion(draft);
   const you = draft.you.trim();
   const time = clock(arrivalAfter(draft.wake));
   return (
@@ -684,10 +684,12 @@ function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
       <Title
         why={t`Start with your own words, the way you normally message ${name}. You can use an idea if you get stuck.`}
       >
-        {t`${name}’s first question`}
+        {t`Start a conversation with ${name}.`}
       </Title>
       <View style={{ gap: space.s }}>
         <TextField
+          label={t`Your first question`}
+          editorial
           value={draft.own || draft.firstPick || ""}
           onChangeText={(own) => updateDraft({ own, firstPick: null })}
           placeholder={t`What would you like to ask ${name}?`}
@@ -715,32 +717,19 @@ function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
             ))
           : null}
       </View>
-      <View
-        style={{
-          alignSelf: "flex-start",
-          maxWidth: 320,
-          padding: space.l,
-          paddingBottom: space.m,
-          borderRadius: 20,
-          borderBottomLeftRadius: 6,
-          backgroundColor: palette.surface,
-          borderWidth: 1,
-          borderColor: palette.rule,
-          gap: 4,
-        }}
-        accessibilityLabel={t`How it reaches ${name}`}
-      >
-        <Text style={[type.label, { color: palette.ink3, marginBottom: 4 }]}>
-          {t`First morning · ${time}`}
-        </Text>
-        <Text style={[type.preview, { color: palette.ink }]}>
-          {herWords(draft.language, "arrival.greeting", { address: name })}
-        </Text>
-        <Text style={[type.preview, { color: palette.ink }]}>{shown}</Text>
-        <Text style={[type.preview, { color: palette.ink2, fontStyle: "italic" }]}>
-          {`— ${you.length > 0 ? you : t`you`}`}
-        </Text>
-      </View>
+      {shown ? (
+        <View style={{ gap: space.m }}>
+          <Words variant="bodyMedium">{t`A preview for ${name}`}</Words>
+          <QuestionPaper>
+            <Words variant="caption" tone="ink2">{t`First morning · ${time}`}</Words>
+            <Words variant="preview">
+              {herWords(draft.language, "arrival.greeting", { address: name })}
+            </Words>
+            <Words variant="preview">{shown}</Words>
+            <Words variant="caption" tone="ink2">{`— ${you.length > 0 ? you : t`you`}`}</Words>
+          </QuestionPaper>
+        </View>
+      ) : null}
     </>
   );
 }

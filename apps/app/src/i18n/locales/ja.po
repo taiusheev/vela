@@ -346,10 +346,6 @@ msgstr ""
 msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr ""
 
-#: src/components/onboarding/questions.tsx
-msgid "{name}’s first question"
-msgstr ""
-
 #: app/(tabs)/sunday.tsx
 msgid "{name}'s first weekly read comes on a Sunday, after a week of their mornings."
 msgstr ""
@@ -557,10 +553,6 @@ msgstr ""
 msgid "A dot means that morning already has a question."
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "A draft for your review"
-msgstr ""
-
 #: app/weekly-report.tsx
 msgid "A family organiser selected these words as an interest to ask about."
 msgstr ""
@@ -605,6 +597,10 @@ msgstr ""
 msgid "A little closer to your family. Use your email to get started or sign in."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "A little conversation, ready to begin."
+msgstr ""
+
 #: src/components/today-hero.tsx
 msgid "A little light from home."
 msgstr ""
@@ -619,6 +615,10 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "A message you would write to {name} (optional)"
+msgstr ""
+
+#: src/components/questions/flow.tsx
+msgid "A morning"
 msgstr ""
 
 #: app/help.tsx
@@ -650,16 +650,16 @@ msgstr ""
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
 msgstr ""
 
+#: src/components/onboarding/questions.tsx
+msgid "A preview for {name}"
+msgstr ""
+
 #: src/data/ask.ts
 msgid "A question"
 msgstr ""
 
 #: app/conversation.tsx
 msgid "A question for her morning"
-msgstr ""
-
-#: app/personal-question.tsx
-msgid "A question in your words"
 msgstr ""
 
 #: src/data/onboarding.ts
@@ -747,10 +747,6 @@ msgstr ""
 msgid "About a quiet notice"
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "About saved choices"
-msgstr ""
-
 #: src/components/keepsake.tsx
 msgid "About someone"
 msgstr ""
@@ -799,6 +795,10 @@ msgstr ""
 
 #: src/components/vote-options.tsx
 msgid "Add an option"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Add another example"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -1083,7 +1083,6 @@ msgid "away · {day}"
 msgstr ""
 
 #: app/my-memories.tsx
-#: app/personal-question.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Back"
@@ -1237,7 +1236,7 @@ msgid "Checking…"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Choose a morning"
+msgid "Choose a morning."
 msgstr ""
 
 #: app/away.tsx
@@ -1579,6 +1578,10 @@ msgstr ""
 msgid "Edit question or day"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Edit your question"
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Email"
 msgstr ""
@@ -1639,12 +1642,12 @@ msgstr ""
 msgid "Example controls"
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "Example mode: choices are remembered only while this example screen stays open. The preview uses your own words. No AI is called or question sent."
-msgstr ""
-
 #: src/components/onboarding/story.tsx
 msgid "Example morning"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Example only. No AI or messages. Saved choices stay in this open example."
 msgstr ""
 
 #: app/conversation.tsx
@@ -1865,6 +1868,10 @@ msgstr ""
 msgid "Has not said yes yet"
 msgstr ""
 
+#: app/(tabs)/questions.tsx
+msgid "Have an idea? Turn it into a question that sounds like you."
+msgstr ""
+
 #: src/data/onboarding.ts
 msgid "Hawaii"
 msgstr ""
@@ -1946,10 +1953,6 @@ msgstr ""
 msgid "Hi {who}! If I can’t reach {name}, could I ask you to look in? You can say yes here:"
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "Hide details"
-msgstr ""
-
 #: app/ask.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Hide ideas"
@@ -1985,10 +1988,6 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "How does {name} like to reply?"
-msgstr ""
-
-#: src/components/onboarding/questions.tsx
-msgid "How it reaches {name}"
 msgstr ""
 
 #: app/weekly-report.tsx
@@ -2398,6 +2397,10 @@ msgstr ""
 msgid "Leave {familyName}?"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Leave a little room."
+msgstr ""
+
 #: app/my-memories.tsx
 msgid "Leave out"
 msgstr ""
@@ -2567,6 +2570,14 @@ msgstr ""
 msgid "Make it mine"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Make it sound like you"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Make it yours."
+msgstr ""
+
 #: app/weekly-report.tsx
 msgid "Make time for an interest"
 msgstr ""
@@ -2581,6 +2592,10 @@ msgstr ""
 
 #: src/auth/phone.ts
 msgid "Malaysia"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Manage saved choices"
 msgstr ""
 
 #: src/components/photo-box.tsx
@@ -2791,7 +2806,7 @@ msgid "Next free morning"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Next: your words"
+msgid "Next: choose a morning"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -2996,10 +3011,6 @@ msgstr ""
 msgid "Notifications, something new"
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "Occasional contact is okay. More personal questions are always your choice."
-msgstr ""
-
 #: src/data/notifications.ts
 msgid "Off: nothing when {her} answers or when your turn comes."
 msgstr ""
@@ -3090,7 +3101,7 @@ msgid "One moment…"
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "One ordinary thing you actually want to hear about."
+msgid "One ordinary thing you would love to hear about."
 msgstr ""
 
 #: app/personal-question.tsx
@@ -3107,10 +3118,6 @@ msgstr ""
 
 #: src/components/parent-photo-settings.tsx
 msgid "Only on this device. Removed when you sign out."
-msgstr ""
-
-#: app/personal-question.tsx
-msgid "Only you can see these choices. They expire 30 days after saving."
 msgstr ""
 
 #: app/personal-question.tsx
@@ -3202,6 +3209,10 @@ msgstr ""
 
 #: src/components/vote-options.tsx
 msgid "Option {number}"
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Optional · your tone, usual wording, and topics to leave out"
 msgstr ""
 
 #: src/components/calling-number-editor.tsx
@@ -4172,6 +4183,10 @@ msgstr ""
 msgid "Something for her morning"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Something from their day, or a little thing on your mind…"
+msgstr ""
+
 #: src/data/precision.ts
 msgid "Something was wrong"
 msgstr ""
@@ -4200,12 +4215,12 @@ msgstr ""
 msgid "Start 30 free days"
 msgstr ""
 
-#: app/(tabs)/index.tsx
-msgid "Start with one question in your own words. Choose a morning that suits them."
+#: src/components/onboarding/questions.tsx
+msgid "Start a conversation with {name}."
 msgstr ""
 
-#: app/personal-question.tsx
-msgid "Start with something you genuinely want to ask. You choose the final words and the day."
+#: app/(tabs)/index.tsx
+msgid "Start with one question in your own words. Choose a morning that suits them."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -4224,7 +4239,7 @@ msgstr ""
 msgid "Stay"
 msgstr ""
 
-#: app/personal-question.tsx
+#: src/components/questions/flow.tsx
 msgid "Step {step} of 3"
 msgstr ""
 
@@ -5529,12 +5544,9 @@ msgstr ""
 msgid "What would help this week?"
 msgstr ""
 
+#: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
 msgid "What would you like to ask {name}?"
-msgstr ""
-
-#: app/personal-question.tsx
-msgid "What would you like to ask?"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5810,6 +5822,10 @@ msgstr ""
 msgid "You need"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "You review every word before choosing a morning."
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "You said {name} is fine. Nothing else was sent."
 msgstr ""
@@ -5935,7 +5951,12 @@ msgid "Your first days"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx
+#: src/components/onboarding/questions.tsx
 msgid "Your first question"
+msgstr ""
+
+#: src/components/questions/flow.tsx
+msgid "Your idea"
 msgstr ""
 
 #: app/settings.tsx
@@ -6008,10 +6029,6 @@ msgid "Your pilot is free. Quiet notices and important updates arrive in the org
 msgstr ""
 
 #: app/personal-question.tsx
-msgid "Your private choices"
-msgstr ""
-
-#: app/personal-question.tsx
 msgid "Your question"
 msgstr ""
 
@@ -6019,8 +6036,16 @@ msgstr ""
 msgid "Your question for {name}"
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Your question will arrive with their morning message."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "Your questions are signed with it."
+msgstr ""
+
+#: app/personal-question.tsx
+msgid "Your saved choices are loaded. Change them anytime."
 msgstr ""
 
 #: app/personal-question.tsx
@@ -6059,12 +6084,16 @@ msgstr ""
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr ""
 
+#: app/personal-question.tsx
+msgid "Your starting point"
+msgstr ""
+
 #: app/settings.tsx
 msgid "Your turns"
 msgstr ""
 
-#: src/components/onboarding/questions.tsx
-msgid "Your words appear here."
+#: src/components/questions/flow.tsx
+msgid "Your words"
 msgstr ""
 
 #: app/conversation.tsx

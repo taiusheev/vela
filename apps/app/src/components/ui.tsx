@@ -1,5 +1,5 @@
 import { type ReactNode, type Ref, useState } from "react";
-import { Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
 import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
@@ -376,6 +376,7 @@ export function TextField({
   autoCorrect,
   autoFocus = false,
   maxLength,
+  minHeight,
   disabled = false,
   onSubmit,
   inputRef,
@@ -398,6 +399,8 @@ export function TextField({
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
   autoFocus?: boolean;
   maxLength?: number;
+  /** Compact review fields can leave room for approval without changing ordinary composers. */
+  minHeight?: number;
   disabled?: boolean;
   /** Enter, or the keyboard's own go key, rather than reaching for the button. */
   onSubmit?: () => void;
@@ -440,8 +443,9 @@ export function TextField({
             borderColor: focused ? palette.action : palette.control,
             paddingHorizontal: editorial ? 0 : space.l,
             paddingVertical: editorial ? space.xl : space.m,
-            minHeight: editorial ? 200 : multiline ? 112 : 56,
+            minHeight: minHeight ?? (editorial ? 200 : multiline ? 112 : 56),
             textAlignVertical: multiline ? "top" : "center",
+            ...(Platform.OS === "web" ? { outlineColor: palette.action } : {}),
           },
         ]}
       />

@@ -107,3 +107,38 @@ ON. Migration 0032 adds only this private setup and lifecycle guards. The new no
 question-profile.1 is **draft and unserved**. No nightly selection, check-in behavior or signer
 setting is altered. Independent parent input, automatic-policy integration and first-month review
 windows remain later approved implementation work; real-family activation is a separate gate.
+
+## Consumer question flow and onboarding (31 October 2026)
+
+The question itself now comes first. A person can type one intent and prepare a draft with unknown
+comfort/contact choices; calibration is optional under **Make it sound like you**. A loaded quiet
+choice remains visible and offers no draft. Address, comfort/contact, selected own-writing examples,
+excluded topics/phrases and language remain editable there. Saving for 30 days is still explicit;
+private data management and forget remain available inside the expanded preferences. Forget can
+invalidate a pending provider result. No new collection, inferred defaults or automatic send is added.
+
+The three stages now match the task: **Your idea → Your words → A morning**. Editing and explicit
+approval occur before the calendar; editing the wording clears approval. The chosen date survives a
+return to editing, but saving still requires current approval. The server remains authoritative for
+eligibility, calendar conflicts, profile revisions and lifecycle. Stage changes return the scroll
+position to the top. Phone-sized writing/review surfaces retain the existing Kept Light fonts and
+palette, with a single primary action, named progress, keyboard insets and accessible disclosures.
+
+**Onboarding decision:** keep the existing first question in onboarding; do not add another
+relationship questionnaire before value. Its first-question screen now uses the same writing style,
+a clear field label and a live delivery preview only after actual wording exists. It still uses the
+existing manual first-question contract and privacy/save boundaries; no pre-consent AI call or
+private-profile persistence is introduced. Detailed voice choices are offered contextually in the
+reviewed-draft flow. Existing onboarding's other steps are unchanged by this scoped redesign.
+
+Design basis: [Apple HIG: Onboarding](https://developer.apple.com/design/human-interface-guidelines/onboarding)
+recommends brief, interactive and contextual onboarding;
+[NN/G: Progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+supports deferring secondary controls. These are design guidelines, not evidence that this flow has
+improved conversion or family naturalness; participant usability observation remains outstanding.
+
+`personal-draft.yaml` walks the new idea/review/calendar path and optional quiet setting in the
+synthetic web demo. Manual review covers 320/390 px layouts, English/Traditional Chinese, edited
+approval, occupied dates, demo completion, profile management and onboarding. Native keyboard,
+VoiceOver and participant behavior must still be checked on a signed phone; a browser capture is not
+that evidence. Both backend processing/storage switches remain OFF; no release or family activation.
