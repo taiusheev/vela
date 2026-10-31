@@ -556,7 +556,9 @@
         // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
         // book comes later in the pilot, so no story is kept before a notice describes it.
         "BOOK": "off",
-        "PHOTO_BOX": "off",
+        // ADR-58: on since privacy-notice.v13 and consent-script.v8 describe the photo box (founder's
+        // approval of 31 October 2026), released after the families were told.
+        "PHOTO_BOX": "on",
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",

@@ -19,15 +19,26 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the approved v12 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v12");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v12");
+  it("serves the approved v13 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v13");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v13");
     expect(PRIVACY_NOTICES.en.html).toContain("Notification choices:");
     expect(PRIVACY_NOTICES.en.html).toContain(
       "They are not shown to other family members or sent to an AI provider.",
     );
     expect(PRIVACY_NOTICES["zh-TW"].html).toContain("通知偏好：");
     expect(PRIVACY_NOTICES["zh-TW"].html).toContain("刪除帳號時，Vela 會清除這些通知偏好。");
+  });
+});
+
+describe("the photo box in the notice (ADR-58)", () => {
+  it("says, in both languages, what the box keeps, for how long, and that no AI sees it", () => {
+    expect(PRIVACY_NOTICES.en.html).toContain("<h2>The photo box</h2>");
+    expect(PRIVACY_NOTICES.en.html).toContain(
+      "Photos in the box are not sent to an AI provider, and neither is the line about them.",
+    );
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("<h2>相片盒</h2>");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("相片盒裡的照片和那句話都不會傳給 AI 服務。");
   });
 });
 
