@@ -211,7 +211,10 @@ export function ChatBubble({
         alignSelf: mine ? "flex-end" : "flex-start",
         alignItems: mine ? "flex-end" : "flex-start",
         maxWidth: fontScale > 1.3 ? "100%" : "84%",
-        marginTop: first ? space.m : 2,
+        // A new speaker starts well clear of the last message's time, so each time reads as the
+        // message above it and never floats between two (Refactoring UI: more space around a group
+        // than inside it).
+        marginTop: first ? space.xl : 2,
         gap: space.xs,
       }}
     >
