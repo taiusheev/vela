@@ -351,6 +351,7 @@ function CodeSignIn() {
     try {
       // The two halves answer with different shapes, so each is asked on its own terms.
       let session: string | null;
+      let attemptStatus: string | null;
       if (joining) {
         const attempt = await within(
           strategy === "email_code"
@@ -363,23 +364,31 @@ function CodeSignIn() {
           setTrouble({ kind: "needs_more" });
           return;
         }
+        attemptStatus = attempt.status;
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       } else {
         const attempt = await within(signIn.attemptFirstFactor({ strategy, code: code.trim() }));
+        attemptStatus = attempt.status;
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       }
       if (session === null) {
-        setTrouble({ kind: "wrong_code" });
+        // Not a wrong code: Clerk took it but did not finish, so say which state it stopped in.
+        setTrouble({ kind: "wrong_code", codes: `status_${attemptStatus}` });
         return;
       }
       await within(setActive({ session }));
       router.replace(readDraft().step === "save" ? "/onboarding" : "/");
     } catch (error: unknown) {
       logClerkCodes("verify", error);
+      // "That code did not work" covers every refusal Clerk does not name more exactly, so its
+      // codes go under it: a mistyped code and a setting look the same otherwise.
+      const codes = codesOf(error).join(", ");
       setTrouble(
         error instanceof TookTooLong
           ? { kind: "code_took_too_long" }
-          : { kind: verificationFailure(error) },
+          : codes.length === 0
+            ? { kind: verificationFailure(error) }
+            : { kind: verificationFailure(error), codes },
       );
     } finally {
       inFlight.current = false;
