@@ -121,6 +121,33 @@ async function open() {
 }
 
 describe("privacy gate with shared account readers", () => {
+  it("keeps a confirmed new-account setup mounted during its background account refresh", async () => {
+    mocks.read.mockRejectedValueOnce(new ApiError(404, "not_found"));
+    let finish: (value: unknown) => void = () => {};
+    mocks.read.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    updateDraft({ privacyAccepted: true });
+    await open();
+    expect(nodes("navigator")).toHaveLength(1);
+    let refresh: Promise<void> | undefined;
+    await act(async () => {
+      refresh = queries.invalidateQueries({ queryKey: ["me"] });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(nodes("navigator")).toHaveLength(1);
+    expect(unmounts).toBe(0);
+    await act(async () => {
+      finish({ user: { id: "synthetic-user" }, memberships: [], privacy_accepted: true });
+      await refresh;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(mounts).toBe(1);
+  });
+
   it("shows only the account screen while waiting, then replaces a stuck first read on retry", async () => {
     vi.useFakeTimers();
     let finishOld: (value: unknown) => void = () => {};

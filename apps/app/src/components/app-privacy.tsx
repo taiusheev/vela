@@ -126,6 +126,9 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     retry: false,
   });
   const missing = me.error instanceof ApiError && me.error.status === 404;
+  const knownMissing = useRef(false);
+  if (missing) knownMissing.current = true;
+  else if (me.data !== undefined || me.isError) knownMissing.current = false;
   const decision = privacyGateDecision({
     enabled,
     accepted: me.data?.privacy_accepted,
@@ -133,6 +136,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     missing,
     failed: me.isError,
     localAccepted: draft.privacyAccepted,
+    knownMissing: knownMissing.current,
   });
   const save = useMutation({
     mutationFn: async () => {
