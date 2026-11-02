@@ -48,8 +48,9 @@ import {
   turns,
   users,
   type VelaTransaction,
+  weeklyReads,
 } from "@vela/db";
-import { and, asc, eq, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne } from "drizzle-orm";
 import { pushMisconfiguredAlert } from "./admin-alerts.ts";
 import {
   type Deps,
@@ -475,6 +476,17 @@ async function pushDataOf(
         member_id: exchange.recipientId,
         exchange_id: exchange.id,
       };
+      break;
+    }
+    case "weekly_read": {
+      // Her newest sent read in the family: the one this push announced, sent in the same week.
+      const [read] = await db
+        .select({ memberId: weeklyReads.memberId })
+        .from(weeklyReads)
+        .where(and(eq(weeklyReads.familyId, family.id), isNotNull(weeklyReads.sentAt)))
+        .orderBy(desc(weeklyReads.sentAt))
+        .limit(1);
+      data = read && { kind, family_id: family.id, member_id: read.memberId };
       break;
     }
     case "turn_prompt": {

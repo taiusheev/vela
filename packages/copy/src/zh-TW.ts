@@ -194,6 +194,7 @@ export const zhTW: Record<keyof typeof en, string> = {
     "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
   "push.answer_receipt": "{name}回覆了您。",
   "push.turn_prompt": "明天早上輪到您了：問問{name}一件事吧。",
+  "push.weekly_read": "{name}這週的每週小記到了。",
   "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
   "away.confirmed_open": "好的，知道了。祝您過得愉快。",
   "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",

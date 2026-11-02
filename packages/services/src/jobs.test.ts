@@ -24,6 +24,7 @@ import {
   nearbyContacts,
   onboardingSessions,
   outbound,
+  pushDevices,
   quietEvents,
   replies,
   suggestions,
@@ -617,11 +618,25 @@ describe("draftWeeklyRead", () => {
         .set({ userId: user?.id ?? null })
         .where(eq(members.id, seed.organiser.id));
 
+      await h.db.insert(pushDevices).values({
+        userId: user?.id ?? "",
+        installationId: "11111111-2222-7333-8444-555555555555",
+        token: "ExponentPushToken[weekly-read-test]",
+        platform: "ios",
+        permission: "granted",
+      });
+
       await draftWeeklyRead(autoSend(), seed.member.id, "2026-09-20");
 
       const [read] = await h.db.select().from(weeklyReads);
       expect(read?.sentAt).toEqual(h.clock.now());
-      expect((await h.db.select().from(outbound)).map((row) => row.kind)).toEqual(["system"]);
+      // Her phone hears the read is there (ADR-59): words of its own, never a line of the read.
+      const rows = await h.db.select().from(outbound).orderBy(asc(outbound.kind));
+      expect(rows.map((row) => [row.kind, row.channel])).toEqual([
+        ["system", "telegram"],
+        ["weekly_read", "app"],
+      ]);
+      expect(rows[1]?.payload).toMatchObject({ message: { text: "Mom's weekly read is here." } });
       const [event] = (await eventRows()).filter((row) => row.name === "weekly_read_sent");
       expect(event?.props).toMatchObject({ organisers: 0, app_organisers: 1, auto: true });
     });
