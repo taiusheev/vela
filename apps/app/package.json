@@ -71,8 +71,10 @@
     "@lingui/format-po": "catalog:",
     "@lingui/metro-transformer": "catalog:",
     "@types/node": "catalog:",
+    "@types/react-test-renderer": "19.1.0",
     "@vela/copy": "workspace:*",
     "pofile-ts": "catalog:",
+    "react-test-renderer": "19.2.3",
     "vitest": "catalog:"
   }
 }
