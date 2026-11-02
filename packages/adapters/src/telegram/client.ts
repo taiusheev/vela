@@ -9,8 +9,12 @@
  * description) is redacted before it reaches an error.
  */
 import { ChannelSendError, type ChannelSendErrorCode } from "@vela/contracts";
+import { readBoundedBody } from "../bounded-body.ts";
 
 export const TELEGRAM_API_BASE_URL = "https://api.telegram.org";
+
+/** A file download carries up to 20 MB, and is counted as failed if it has not arrived in 30 s. */
+const DOWNLOAD_TIMEOUT_MS = 30_000;
 
 // Tokens are `<bot id>:<secret>`; checking the shape also keeps a stray `/` or `?` out of the URL.
 const BOT_TOKEN_PATTERN = /^\d+:[A-Za-z0-9_-]+$/;
@@ -236,7 +240,9 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
   const networkError = (what: string, error: unknown): ChannelSendError =>
     new ChannelSendError(
       "unavailable",
-      `telegram ${what} failed: network error (${redact(describe(error))})`,
+      isTimeout(error)
+        ? `telegram ${what} failed: no answer within ${DOWNLOAD_TIMEOUT_MS / 1000} s`
+        : `telegram ${what} failed: network error (${redact(describe(error))})`,
     );
 
   async function post(
@@ -421,7 +427,10 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
       const path = filePath.split("/").map(encodeURIComponent).join("/");
       let response: Response;
       try {
-        response = await fetchImpl(`${baseUrl}/file/bot${token}/${path}`, { method: "GET" });
+        response = await fetchImpl(`${baseUrl}/file/bot${token}/${path}`, {
+          method: "GET",
+          signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+        });
       } catch (error) {
         throw networkError("file download", error);
       }
@@ -431,15 +440,13 @@ export function createTelegramClient(options: TelegramApiOptions): TelegramClien
           `telegram file download failed: ${response.status}`,
         );
       }
-      const declaredBytes = Number(response.headers.get("content-length") ?? "0");
-      if (declaredBytes > maxBytes) throw tooLarge(maxBytes);
-      let body: ArrayBuffer;
+      let body: ArrayBuffer | null;
       try {
-        body = await response.arrayBuffer();
+        body = await readBoundedBody(response, maxBytes);
       } catch (error) {
         throw networkError("file download", error);
       }
-      if (body.byteLength > maxBytes) throw tooLarge(maxBytes);
+      if (body === null) throw tooLarge(maxBytes);
       return { body, contentType: response.headers.get("content-type") };
     },
   };
@@ -467,6 +474,13 @@ function readSentMessage(method: string, value: unknown): TelegramSentMessage {
 // A 2xx without the documented result may still have been acted on, so it is not retryable.
 function unexpectedResult(method: string): ChannelSendError {
   return new ChannelSendError("unknown", `telegram ${method} returned an unexpected result`);
+}
+
+/** `AbortSignal.timeout` rejects the fetch, or a read of its body, with a `TimeoutError`. */
+function isTimeout(error: unknown): boolean {
+  return (
+    typeof error === "object" && error !== null && "name" in error && error.name === "TimeoutError"
+  );
 }
 
 function describe(error: unknown): string {

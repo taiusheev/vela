@@ -1,5 +1,6 @@
 import { ChannelSendError } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
+import { chunkedBody } from "../testing.ts";
 import {
   createLineClient,
   type LineClient,
@@ -381,5 +382,78 @@ describe("LINE lookups", () => {
       });
       expect(requests).toHaveLength(0);
     });
+  });
+});
+
+// The isolate has 128 MB and content can be 20 MB, so a download is read piece by piece and dropped
+// as soon as it passes its limit, whether or not LINE declared its length.
+describe("LINE content downloads", () => {
+  const MESSAGE = "508667044176309088";
+  const downloads: [string, (client: LineClient) => Promise<unknown>][] = [
+    ["content", (client) => client.content(MESSAGE, 1024)],
+    ["content preview", (client) => client.preview(MESSAGE, 1024)],
+  ];
+
+  it.each(downloads)(
+    "stops reading %s with no declared length as soon as it passes the limit",
+    async (name, download) => {
+      const body = chunkedBody(256, 1024);
+
+      const error = await failureOf(download, () => new Response(body.stream));
+
+      expect(error.code).toBe("invalid_request");
+      expect(error.retryable).toBe(false);
+      expect(error.message).toBe(`line ${name} exceeds the 1024-byte download limit`);
+      // Four pieces are exactly the limit; the fifth passes it, and nothing after it is read.
+      expect(body.progress.read).toBe(5);
+      expect(body.progress.cancelled).toBe(true);
+    },
+  );
+
+  it("returns content with no declared length that fits, byte for byte", async () => {
+    const body = chunkedBody(256, 4);
+    const { client } = clientWith(
+      () => new Response(body.stream, { headers: { "content-type": "audio/x-m4a" } }),
+    );
+
+    const download = await client.content(MESSAGE, 1024);
+
+    expect(download.ready).toBe(true);
+    if (!download.ready) return;
+    expect(new Uint8Array(download.body)).toStrictEqual(body.bytes);
+    expect(download.contentType).toBe("audio/x-m4a");
+  });
+
+  it("refuses a declared length over the limit without reading the body, and lets it go", async () => {
+    const body = chunkedBody(256, 8);
+
+    const error = await failureOf(
+      (client) => client.content(MESSAGE, 1024),
+      () => new Response(body.stream, { headers: { "content-length": "2048" } }),
+    );
+
+    expect(error.code).toBe("invalid_request");
+    expect(body.progress.read).toBe(0);
+    expect(body.progress.cancelled).toBe(true);
+  });
+
+  it("maps a body that stops arriving within the timeout to unavailable", async () => {
+    // The fetch's timeout covers its body: a piece arrives, then the signal ends the rest.
+    let pulls = 0;
+    const stalled = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        if (pulls === 1) controller.enqueue(new Uint8Array(256));
+        else controller.error(new DOMException("The operation timed out.", "TimeoutError"));
+      },
+    });
+
+    const error = await failureOf(
+      (client) => client.content(MESSAGE, 1024),
+      () => new Response(stalled),
+    );
+
+    expect(error.code).toBe("unavailable");
+    expect(error.message).toBe("line content failed: no answer within 30 s");
   });
 });
