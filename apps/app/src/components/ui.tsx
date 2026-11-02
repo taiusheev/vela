@@ -379,7 +379,6 @@ export function TextField({
   autoComplete,
   autoCapitalize,
   autoCorrect,
-  secureTextEntry = false,
   autoFocus = false,
   maxLength,
   minHeight,
@@ -388,6 +387,7 @@ export function TextField({
   onSubmit,
   inputRef,
   onContentSizeChange,
+  secret = false,
 }: {
   label?: string;
   /** When the heading above already asks the question, the label is only read aloud, not shown. */
@@ -403,7 +403,8 @@ export function TextField({
   keyboardType?: "phone-pad" | "number-pad" | "email-address";
   /** Lets the phone offer her own number, and fill a code from the message that carries it. */
   autoComplete?: "tel" | "tel-national" | "one-time-code" | "email" | "current-password";
-  secureTextEntry?: boolean;
+  /** Hides what is typed, for a password. */
+  secret?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: boolean;
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
@@ -433,9 +434,9 @@ export function TextField({
         placeholder={placeholder}
         placeholderTextColor={palette.ink3}
         multiline={multiline}
-        secureTextEntry={secureTextEntry}
         {...(keyboardType === undefined ? {} : { keyboardType })}
         {...(autoComplete === undefined ? {} : { autoComplete })}
+        {...(secret ? { secureTextEntry: true } : {})}
         {...(autoCapitalize === undefined ? {} : { autoCapitalize })}
         {...(autoCorrect === undefined ? {} : { autoCorrect })}
         {...(maxLength === undefined ? {} : { maxLength })}

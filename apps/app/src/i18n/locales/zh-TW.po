@@ -484,6 +484,10 @@ msgstr "{recipient}看過了 · {time}"
 msgid "{relation} · asked after setup"
 msgstr "{relation} · 設定好後再詢問"
 
+#: app/sign-in.tsx
+msgid "{sentTo} signs in with a password."
+msgstr "{sentTo} 用密碼登入。"
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr "{someone}住在附近，安靜的日子可以聯絡"
@@ -1609,6 +1613,10 @@ msgstr "請輸入訊息中的六位數字。"
 #: app/sign-in.tsx
 msgid "Enter your code to continue to your family."
 msgstr "輸入驗證碼，繼續連結你的家人。"
+
+#: app/sign-in.tsx
+msgid "Enter your password"
+msgstr "輸入密碼"
 
 #: app/sign-in.tsx
 msgid "Error code: {code}"
@@ -4130,10 +4138,6 @@ msgstr "登入後即可連結你的家庭。"
 msgid "Sign in to delete your account."
 msgstr "請先登入，再刪除你的帳號。"
 
-#: app/sign-in.tsx
-msgid "Sign in with a password"
-msgstr "使用密碼登入"
-
 #: app/settings.tsx
 msgid "Sign out"
 msgstr "登出"
@@ -4517,6 +4521,10 @@ msgstr "無法拿出這一頁，請再試一次。"
 msgid "That page could not open. Write to Vela support instead."
 msgstr "這個頁面打不開。請改寫信給 Vela 支援。"
 
+#: app/sign-in.tsx
+msgid "That password did not work. Check it and try again."
+msgstr "密碼不正確，請確認後再試一次。"
+
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
 msgstr "這張照片打不開。換一張，或先使用名字縮寫。"
@@ -4827,10 +4835,6 @@ msgstr "這位聯絡人將不再收到探望請求。你可以邀請其他人。
 #: src/components/onboarding/finish.tsx
 msgid "This account already runs a family."
 msgstr "這個帳號已經有一個家庭了。"
-
-#: app/sign-in.tsx
-msgid "This account needs another verification step. Use an email code to sign in."
-msgstr "此帳號需要額外驗證。請改用電子郵件驗證碼登入。"
 
 #: app/delete-account.tsx
 msgid "This cannot be undone."
@@ -5221,17 +5225,9 @@ msgstr "改用連結代碼"
 msgid "Use a different email"
 msgstr "使用其他電子郵件"
 
-#: app/sign-in.tsx
-msgid "Use a password instead"
-msgstr "改用密碼登入"
-
 #: src/components/telegram-family-link.tsx
 msgid "Use a private connection code instead"
 msgstr "改用私人連結碼"
-
-#: app/sign-in.tsx
-msgid "Use an email code instead"
-msgstr "改用電子郵件驗證碼登入"
 
 #: app/sign-in.tsx
 msgid "Use my email instead"
@@ -5240,10 +5236,6 @@ msgstr "改用我的電子郵件"
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
 msgstr "只填你自己會對這個人說的話，請不要加入隱私細節或別人的訊息。"
-
-#: app/sign-in.tsx
-msgid "Use the password already set for your account."
-msgstr "請輸入您為帳號設定的密碼。"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
@@ -5498,10 +5490,6 @@ msgstr "無法確認這位長輩是否有可用的聊天。再次邀請前，請
 #: app/sign-in.tsx
 msgid "We could not connect. Check your internet connection and try again."
 msgstr "無法連線。請檢查網路連線後再試。"
-
-#: app/sign-in.tsx
-msgid "We could not sign you in. Check your email and password, or use an email code."
-msgstr "無法登入。請確認電子郵件地址和密碼，或改用電子郵件驗證碼。"
 
 #: src/components/telegram-family-link.tsx
 msgid "We couldn’t finish connecting. Your family and messages are unchanged. Try again when Vela is available."

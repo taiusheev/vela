@@ -477,6 +477,10 @@ msgstr ""
 msgid "{relation} · asked after setup"
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "{sentTo} signs in with a password."
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr ""
@@ -1601,6 +1605,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Enter your code to continue to your family."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Enter your password"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -4123,10 +4131,6 @@ msgstr ""
 msgid "Sign in to delete your account."
 msgstr ""
 
-#: app/sign-in.tsx
-msgid "Sign in with a password"
-msgstr ""
-
 #: app/settings.tsx
 msgid "Sign out"
 msgstr ""
@@ -4510,6 +4514,10 @@ msgstr ""
 msgid "That page could not open. Write to Vela support instead."
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "That password did not work. Check it and try again."
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."
 msgstr ""
@@ -4819,10 +4827,6 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "This account already runs a family."
-msgstr ""
-
-#: app/sign-in.tsx
-msgid "This account needs another verification step. Use an email code to sign in."
 msgstr ""
 
 #: app/delete-account.tsx
@@ -5214,16 +5218,8 @@ msgstr ""
 msgid "Use a different email"
 msgstr ""
 
-#: app/sign-in.tsx
-msgid "Use a password instead"
-msgstr ""
-
 #: src/components/telegram-family-link.tsx
 msgid "Use a private connection code instead"
-msgstr ""
-
-#: app/sign-in.tsx
-msgid "Use an email code instead"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -5232,10 +5228,6 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
-msgstr ""
-
-#: app/sign-in.tsx
-msgid "Use the password already set for your account."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -5490,10 +5482,6 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "We could not connect. Check your internet connection and try again."
-msgstr ""
-
-#: app/sign-in.tsx
-msgid "We could not sign you in. Check your email and password, or use an email code."
 msgstr ""
 
 #: src/components/telegram-family-link.tsx

@@ -286,6 +286,12 @@ export {
   loadApiReminders,
 } from "./reminders.ts";
 export {
+  APP_REVIEW_FAMILY,
+  APP_REVIEW_SUBJECT,
+  prepareAppReviewFamily,
+  ReviewerFixtureRefused,
+} from "./reviewer-demo.ts";
+export {
   dismissMemoryCandidate,
   loadMemoryCandidates,
   proposeMemoryCandidate,
