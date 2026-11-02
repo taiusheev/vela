@@ -1036,14 +1036,6 @@ msgstr "Ask her which seeds she wants to keep for next spring."
 msgid "Ask it on Sunday"
 msgstr "Ask it on Sunday"
 
-#: src/components/nearby-editor.tsx
-msgid "Ask on LINE"
-msgstr "Ask on LINE"
-
-#: src/components/nearby-editor.tsx
-msgid "Ask on Telegram"
-msgstr "Ask on Telegram"
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr "Ask them to look in"
@@ -2454,6 +2446,10 @@ msgstr "Leaving…"
 msgid "Left out. Your chat has not changed."
 msgstr "Left out. Your chat has not changed."
 
+#: src/data/example-names.ts
+msgid "Lena"
+msgstr "Lena"
+
 #: src/components/telegram-family-link.tsx
 msgid "Let’s find your family."
 msgstr "Let’s find your family."
@@ -3331,6 +3327,10 @@ msgstr "Personal drafts are not available here yet."
 msgid "Perth"
 msgstr "Perth"
 
+#: src/data/example-names.ts
+msgid "Petro"
+msgstr "Petro"
+
 #: src/auth/phone.ts
 msgid "Philippines"
 msgstr "Philippines"
@@ -3939,6 +3939,10 @@ msgstr "Send {name} the invitation."
 #: src/components/telegram-family-link.tsx
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
+
+#: app/nearby.tsx
+msgid "Send each one a link. Vela writes to them only once they open it, in your name."
+msgstr "Send each one a link. Vela writes to them only once they open it, in your name."
 
 #: src/components/onboarding/story.tsx
 msgid "Send her a morning question"
@@ -5221,8 +5225,8 @@ msgid "Until she's back"
 msgstr "Until she's back"
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link on LINE or Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
-msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link on LINE or Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgid "Up to two people near {name} who could look in if a morning goes quiet."
+msgstr "Up to two people near {name} who could look in if a morning goes quiet."
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -5240,6 +5244,10 @@ msgstr "Use a different email"
 msgid "Use a private connection code instead"
 msgstr "Use a private connection code instead"
 
+#: src/components/nearby-editor.tsx
+msgid "Use LINE instead"
+msgstr "Use LINE instead"
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "Use my email instead"
@@ -5247,6 +5255,10 @@ msgstr "Use my email instead"
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
 msgstr "Use only your own words to this person. Leave out private details and other people's messages."
+
+#: src/components/nearby-editor.tsx
+msgid "Use Telegram instead"
+msgstr "Use Telegram instead"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
@@ -5314,8 +5326,8 @@ msgid "Vela gathered these words because they are about the same thing. Every wo
 msgstr "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 
 #: src/components/nearby-editor.tsx
-msgid "Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted."
-msgstr "Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted."
+msgid "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
+msgstr "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
 
 #: src/data/family.ts
 msgid "Vela Light · payment due"

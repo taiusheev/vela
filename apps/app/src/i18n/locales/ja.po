@@ -1030,14 +1030,6 @@ msgstr ""
 msgid "Ask it on Sunday"
 msgstr ""
 
-#: src/components/nearby-editor.tsx
-msgid "Ask on LINE"
-msgstr ""
-
-#: src/components/nearby-editor.tsx
-msgid "Ask on Telegram"
-msgstr ""
-
 #: src/components/quiet-notice.tsx
 msgid "Ask them to look in"
 msgstr ""
@@ -2448,6 +2440,10 @@ msgstr ""
 msgid "Left out. Your chat has not changed."
 msgstr ""
 
+#: src/data/example-names.ts
+msgid "Lena"
+msgstr ""
+
 #: src/components/telegram-family-link.tsx
 msgid "Let’s find your family."
 msgstr ""
@@ -3325,6 +3321,10 @@ msgstr ""
 msgid "Perth"
 msgstr ""
 
+#: src/data/example-names.ts
+msgid "Petro"
+msgstr ""
+
 #: src/auth/phone.ts
 msgid "Philippines"
 msgstr ""
@@ -3932,6 +3932,10 @@ msgstr ""
 
 #: src/components/telegram-family-link.tsx
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
+msgstr ""
+
+#: app/nearby.tsx
+msgid "Send each one a link. Vela writes to them only once they open it, in your name."
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -5215,7 +5219,7 @@ msgid "Until she's back"
 msgstr ""
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link on LINE or Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgid "Up to two people near {name} who could look in if a morning goes quiet."
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -5234,12 +5238,20 @@ msgstr ""
 msgid "Use a private connection code instead"
 msgstr ""
 
+#: src/components/nearby-editor.tsx
+msgid "Use LINE instead"
+msgstr ""
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr ""
 
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Use Telegram instead"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -5308,7 +5320,7 @@ msgid "Vela gathered these words because they are about the same thing. Every wo
 msgstr ""
 
 #: src/components/nearby-editor.tsx
-msgid "Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted."
+msgid "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
 msgstr ""
 
 #: src/data/family.ts

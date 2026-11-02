@@ -13,6 +13,7 @@ import {
 } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
+import { exampleNames } from "./example-names.ts";
 
 /** The most people nearby one kept-light member has (spec §17). */
 import { demoDataAllowed } from "./live-state.ts";
@@ -92,14 +93,14 @@ function examplePeople(): NearbyPerson[] {
   return [
     {
       id: "c1",
-      name: "Lena",
+      name: exampleNames().lena,
       relation: t({ comment: "who a nearby contact is to her", message: "neighbour" }),
       consent: consentOf("yes"),
       saidYes: true,
     },
     {
       id: "c2",
-      name: "Petro",
+      name: exampleNames().petro,
       relation: t({ comment: "who a nearby contact is to her", message: "downstairs" }),
       consent: consentOf("waiting"),
       saidYes: false,

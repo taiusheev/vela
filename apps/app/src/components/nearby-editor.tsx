@@ -11,14 +11,16 @@ type Messenger = "line" | "telegram";
 
 /**
  * The people nearby one kept-light member (spec A3): who is there, where each one's yes stands,
- * Ask on LINE or Ask on Telegram for anyone who has not said yes, Remove, and a name and relation
- * to add someone while there is room. Never a number: nobody hears from Vela by being added here,
- * only once they open the link the organiser sends them (ADR-36). LINE comes first in Chinese,
- * where neighbours are on LINE, and is offered only where Vela has LINE.
+ * one clear Ask on LINE (or Telegram) for anyone who has not said yes, the other messenger as a
+ * quiet link (Refactoring UI: one primary action), Remove, and a name and relation to add someone
+ * while there is room. Never a number: nobody hears from Vela by being added here, only once they
+ * open the link the organiser sends them (ADR-36). LINE comes first in Chinese, where neighbours
+ * are on LINE, and is offered only where Vela has LINE.
  */
 export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyView }) {
   const { t, i18n } = useLingui();
-  const messengers: Messenger[] =
+  // One clear way to ask (the messenger their friends use here), and the other as a quiet link.
+  const [first, other]: Messenger[] =
     i18n.locale === "zh-TW" ? ["line", "telegram"] : ["telegram", "line"];
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const whoToRemove = removing?.name ?? "";
@@ -95,30 +97,38 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                     </Words>
                   </View>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: space.xl }}>
-                    {contact.saidYes
-                      ? null
-                      : messengers.map((via) => (
-                          <Pressable
-                            key={via}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                              via === "line" ? t`Ask ${who} on LINE` : t`Ask ${who} on Telegram`
-                            }
-                            hitSlop={hitSlop}
-                            disabled={nearby.changing || sharing}
-                            accessibilityState={{ disabled: nearby.changing || sharing }}
-                            style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
-                            onPress={() => void ask(contact.id, who, via)}
-                          >
-                            <Words variant="button" tone="action">
-                              {via === "line" ? (
-                                <Trans>Ask on LINE</Trans>
-                              ) : (
-                                <Trans>Ask on Telegram</Trans>
-                              )}
-                            </Words>
-                          </Pressable>
-                        ))}
+                    {contact.saidYes || first === undefined ? null : (
+                      <View style={{ flexBasis: "100%" }}>
+                        <SecondaryButton
+                          label={
+                            first === "line" ? t`Ask ${who} on LINE` : t`Ask ${who} on Telegram`
+                          }
+                          disabled={nearby.changing || sharing}
+                          onPress={() => void ask(contact.id, who, first)}
+                        />
+                      </View>
+                    )}
+                    {contact.saidYes || other === undefined ? null : (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          other === "line" ? t`Ask ${who} on LINE` : t`Ask ${who} on Telegram`
+                        }
+                        hitSlop={hitSlop}
+                        disabled={nearby.changing || sharing}
+                        accessibilityState={{ disabled: nearby.changing || sharing }}
+                        style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
+                        onPress={() => void ask(contact.id, who, other)}
+                      >
+                        <Words variant="button" tone="action">
+                          {other === "line" ? (
+                            <Trans>Use LINE instead</Trans>
+                          ) : (
+                            <Trans>Use Telegram instead</Trans>
+                          )}
+                        </Words>
+                      </Pressable>
+                    )}
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={t`Remove ${who}`}
@@ -212,7 +222,7 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
       {lineOff ? (
         <Words variant="body" tone="ink2">
           <Trans>
-            Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted.
+            Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted.
           </Trans>
         </Words>
       ) : null}
