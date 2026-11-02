@@ -30,4 +30,15 @@ describe("one app permission decision", () => {
     expect(privacyGateDecision(known)).toBe("ask");
     expect(privacyGateDecision({ ...known, enabled: false })).toBe("pass");
   });
+  it("keeps only an explicitly accepted, previously confirmed new-account setup open during refresh", () => {
+    expect(
+      privacyGateDecision({ ...known, loading: true, knownMissing: true, localAccepted: true }),
+    ).toBe("pass");
+    expect(privacyGateDecision({ ...known, loading: true, knownMissing: true })).toBe("loading");
+    expect(privacyGateDecision({ ...known, loading: true, localAccepted: true })).toBe("loading");
+    expect(
+      privacyGateDecision({ ...known, failed: true, knownMissing: true, localAccepted: true }),
+    ).toBe("unavailable");
+    expect(privacyGateDecision({ ...known, knownMissing: true, localAccepted: true })).toBe("save");
+  });
 });

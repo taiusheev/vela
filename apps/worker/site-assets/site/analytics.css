@@ -1,0 +1,44 @@
+.analytics-choice {
+  position: fixed;
+  bottom: 4rem;
+  left: 1rem;
+  right: 1rem;
+  max-width: 35rem;
+  padding: 1rem;
+  background: #fbf7f0;
+  color: #1e1a16;
+  border: 1px solid #1e1a16;
+  border-radius: 12px;
+  z-index: 30;
+  box-shadow: 0 4px 24px #0002;
+}
+.analytics-choice[hidden] {
+  display: none;
+}
+.analytics-choice p {
+  margin: 0 0 1rem;
+}
+.analytics-choice button,
+.analytics-settings {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid currentColor;
+  background: #fbf7f0;
+  color: #1e1a16;
+  border-radius: 6px;
+  margin: 0.25rem;
+}
+.analytics-choice a {
+  color: #1f5c66;
+  display: inline-block;
+  padding: 0.75rem;
+}
+.analytics-settings {
+  position: fixed;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  z-index: 29;
+  font-size: 0.8rem;
+}

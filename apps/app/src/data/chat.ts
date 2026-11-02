@@ -1,6 +1,7 @@
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { ApiExchangeAudio, ApiExchangeSummary, ApiTodayAnswer } from "@vela/contracts";
+import { exampleNames } from "./example-names.ts";
 import { clockTime, timeOfDay } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
@@ -23,8 +24,11 @@ export interface ChatReaction {
   mine: boolean;
 }
 
-/** How far a message the reader sent has gone. "Seen" only when her messenger said so. */
-export type ChatStatus = "sending" | "delivered" | "seen" | "failed";
+/**
+ * How far a message the reader sent has gone: "sending" until Vela has it, "sent" once Vela has it
+ * and is passing it on, then "delivered", and "seen" only when her messenger said so.
+ */
+export type ChatStatus = "sending" | "sent" | "delivered" | "seen" | "failed";
 
 export interface ChatMessage {
   key: string;
@@ -60,7 +64,7 @@ export interface ChatMessage {
 
 const REACTIONS: readonly string[] = ["heart", "laugh", "hug"];
 /** Taps she sends with no words of their own. */
-const TAPS: readonly string[] = ["heart", "fine", "sticker"];
+const TAPS: readonly string[] = ["heart", "fine", "not_okay", "sticker"];
 
 function parsed(instant: string | null | undefined): number | null {
   if (instant === null || instant === undefined) return null;
@@ -91,6 +95,8 @@ function wordless(answer: ApiTodayAnswer): string {
       return "❤️";
     case "fine":
       return t`I'm fine`;
+    case "not_okay":
+      return t`Not okay`;
     case "photo":
       return t`A photo`;
     case "photo_pick": {
@@ -115,7 +121,8 @@ function wordlessReply(kind: string): string {
 
 function statusOf(summary: ApiExchangeSummary): ChatStatus {
   if (summary.delivery_status === "failed") return "failed";
-  if (summary.delivery_status === "pending" || summary.delivered_at === null) return "sending";
+  // Vela already has it: what is left is passing it on, which the reader need not wait for.
+  if (summary.delivery_status === "pending" || summary.delivered_at === null) return "sent";
   return summary.seen_at === null ? "delivered" : "seen";
 }
 
@@ -264,6 +271,31 @@ export function startsGroup(previous: ChatMessage | undefined, message: ChatMess
 }
 
 /**
+ * A time shows only where the conversation pauses, as messengers do: after the last message, at a
+ * new day, and after half an hour of quiet. Every bubble still says its time to VoiceOver.
+ */
+export const GAP_MS = 30 * 60_000;
+
+export function showsTime(message: ChatMessage, next: ChatMessage | undefined): boolean {
+  return next === undefined || next.day !== message.day || next.at - message.at >= GAP_MS;
+}
+
+/** The reader's newest message, the one place "Seen" or "Delivered" is said. */
+export function newestMine(messages: readonly ChatMessage[]): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.side === "me") return message.key;
+  }
+  return undefined;
+}
+
+/** "Sending…" and "Not delivered" always show; "Sent", "Delivered" and "Seen" only at the newest. */
+export function showsStatus(message: ChatMessage, newest: string | undefined): boolean {
+  if (message.status === "sending" || message.status === "failed") return true;
+  return message.status !== undefined && message.key === newest;
+}
+
+/**
  * The example conversation for the demo, in the language active when called: yesterday's morning
  * and its replies, today's morning, and a message Mia sent afterwards that Mom answered.
  */
@@ -297,7 +329,7 @@ export function chatFixture(name: string): ChatMessage[] {
       ...base(
         "x2:ask",
         "family",
-        "Anna",
+        exampleNames().anna,
         yesterday,
         8,
         0,
@@ -315,11 +347,27 @@ export function chatFixture(name: string): ChatMessage[] {
         5,
         t`Both of you, but only Mia listened about the butter.`,
       ),
-      reactions: [{ kind: "laugh", from: "Mia", mine: true }],
+      reactions: [{ kind: "laugh", from: exampleNames().mia, mine: true }],
     },
-    base("x2:reply:0", "family", "Anna", yesterday, 9, 20, t`She is never letting that go`),
+    base(
+      "x2:reply:0",
+      "family",
+      exampleNames().anna,
+      yesterday,
+      9,
+      20,
+      t`She is never letting that go`,
+    ),
     {
-      ...base("x1:ask", "me", "Mia", today, 8, 0, t`What did the garden look like this morning?`),
+      ...base(
+        "x1:ask",
+        "me",
+        exampleNames().mia,
+        today,
+        8,
+        0,
+        t`What did the garden look like this morning?`,
+      ),
       morning: true,
       status: "seen",
     },
@@ -333,19 +381,46 @@ export function chatFixture(name: string): ChatMessage[] {
         12,
         t`The tomatoes finally turned. I picked three before breakfast and left them on the sill.`,
       ),
-      reactions: [{ kind: "heart", from: "Mia", mine: true }],
+      reactions: [{ kind: "heart", from: exampleNames().mia, mine: true }],
     },
     base(
       "x1:reply:0",
       "family",
-      "Anna",
+      exampleNames().anna,
       today,
       8,
       30,
       t`Those are the ones from the seeds you saved`,
     ),
-    { ...base("x4:ask", "me", "Mia", today, 9, 2, t`Save me two for Sunday?`), status: "seen" },
+    {
+      ...base("x4:ask", "me", exampleNames().mia, today, 9, 2, t`Save me two for Sunday?`),
+      status: "seen",
+    },
     base("x4:answer:0", "her", name, today, 9, 14, t`Already in a bag by the door.`),
     base("x4:answer:1", "her", name, today, 9, 15, t`And a jar of the plum jam.`),
   ];
+}
+
+/** A local send remains visible until its exact server exchange arrives. */
+export interface PendingChatMessage {
+  localId: string;
+  text: string;
+  status: "sending" | "sent";
+  since: number;
+  existingIds: string[];
+  exchangeId?: string;
+}
+export function pendingHasArrived(
+  pending: PendingChatMessage,
+  messages: readonly ChatMessage[],
+): boolean {
+  return messages.some(
+    (message) =>
+      message.side === "me" &&
+      (pending.exchangeId !== undefined
+        ? message.exchangeId === pending.exchangeId
+        : !pending.existingIds.includes(message.exchangeId) &&
+          message.text === pending.text &&
+          message.at >= pending.since - 60_000),
+  );
 }

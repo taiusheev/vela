@@ -247,6 +247,15 @@ describe("loadApiLights", () => {
     });
   });
 
+  it("carries the topics chosen for her at setup, for the app's question ideas", async () => {
+    await h.db
+      .update(members)
+      .set({ interests: ["cooking", "old_days"] })
+      .where(eq(members.id, seed.member.id));
+    const row = MemberLight.parse((await lights())?.[0]);
+    expect(row.interests).toEqual(["cooking", "old_days"]);
+  });
+
   it("says which messenger she can no longer be reached on, and nothing once she is back", async () => {
     await h.db
       .update(channelLinks)

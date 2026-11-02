@@ -14,11 +14,15 @@ export function trialCapabilities(
   return { ...declared, memory: false, book: false, parent_app: false, billing: false };
 }
 
-/** A live connection starts in English until its server explicitly permits another language. */
+/**
+ * A live connection starts in English until its server explicitly permits another language, the
+ * trial build included: the closed test's server says Chinese is allowed once its notice does
+ * (ADR-52, `PILOT_LANGUAGES`), with no new build. Without a server, the trial build stays English.
+ */
 export function requiresEnglish(
   api: boolean,
   declared: boolean | undefined,
   trial = englishTrialBuild,
 ): boolean {
-  return trial || (api && declared !== false);
+  return api ? declared !== false : trial;
 }

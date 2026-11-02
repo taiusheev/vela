@@ -7,8 +7,9 @@ tags:
 ---
 - launchApp
 - tapOn: "You"
-- tapOn: "Settings"
-- tapOn: "Change"
+- tapOn:
+    id: "you-parent-.*"
+- tapOn: "People near Mom"
 - assertVisible: "People nearby"
 - assertVisible: "Lena · neighbour"
 - assertVisible: "Said yes"

@@ -21,7 +21,7 @@ import {
   translations,
   turns,
 } from "@vela/db";
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { answerMessageTime, compareAnswerMessages } from "./answer-message-time.ts";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
@@ -439,30 +439,13 @@ export async function loadApiToday(
   const since = new Date(now.getTime() - 8 * 86_400_000);
   // Read each source once for the family; received times retain the connection-window semantics.
   const received = await db
-    .select({ memberId: answers.memberId, at: answers.receivedAt })
+    .select({ memberId: answers.memberId, at: answers.receivedAt, kind: answers.kind })
     .from(answers)
-    .where(and(inArray(answers.memberId, memberIds), gte(answers.receivedAt, since)));
-  const sent = await db
-    .select({ memberId: exchangeRows.recipientId, at: exchangeRows.deliveredAt })
-    .from(exchangeRows)
     .where(
       and(
-        eq(exchangeRows.familyId, familyId),
-        inArray(exchangeRows.recipientId, memberIds),
-        isNotNull(exchangeRows.askerId),
-        gte(exchangeRows.deliveredAt, since),
-        ne(exchangeRows.state, "withdrawn"),
-      ),
-    );
-  const deliveredReplies = await db
-    .select({ memberId: exchangeRows.recipientId, at: replies.readBackAt })
-    .from(replies)
-    .innerJoin(exchangeRows, eq(replies.exchangeId, exchangeRows.id))
-    .where(
-      and(
-        eq(exchangeRows.familyId, familyId),
-        inArray(exchangeRows.recipientId, memberIds),
-        gte(replies.readBackAt, since),
+        inArray(answers.memberId, memberIds),
+        gte(answers.receivedAt, since),
+        lte(answers.receivedAt, now),
       ),
     );
   const unattached = await db
@@ -473,9 +456,10 @@ export async function loadApiToday(
         inArray(events.memberId, memberIds),
         eq(events.name, "answer_recorded"),
         gte(events.at, since),
+        lte(events.at, now),
       ),
     );
-  const messages = [...received, ...sent, ...deliveredReplies, ...unattached];
+  const messages = [...received, ...unattached];
   const connectionDays: NonNullable<ApiToday["connection_days"]> = parents.map(
     ({ member, today }) => {
       const dates = new Set(
@@ -492,6 +476,20 @@ export async function loadApiToday(
       };
     },
   );
+  // The explicit check-in tap remains visible for her whole local day, including a tap on an
+  // earlier ask or one followed by more words. Neither a lit window nor another message means
+  // the family has checked on her. No diagnosis or resolution is inferred here.
+  const notOkay = parents.flatMap(({ member, today }) => {
+    const latest = received
+      .filter(
+        (row) =>
+          row.memberId === member.id &&
+          row.kind === "not_okay" &&
+          localDateOf(row.at, member.tz) === today,
+      )
+      .sort((a, b) => b.at.getTime() - a.at.getTime())[0];
+    return latest === undefined ? [] : [{ member_id: member.id, at: latest.at.toISOString() }];
+  });
   // Exact recipient/date pairs avoid using the caller's zone or another parent's date.
   const mornings = await db
     .select()
@@ -518,5 +516,11 @@ export async function loadApiToday(
   });
   const exchanges = await renderExchangeRows(db, cards, now);
   const tomorrow = await turnsOfTomorrow(db, familyId, parents, mornings, viewer, familyEnded);
-  return { lights, exchanges, tomorrow, connection_days: connectionDays };
+  return {
+    lights,
+    exchanges,
+    tomorrow,
+    connection_days: connectionDays,
+    ...(notOkay.length === 0 ? {} : { not_okay: notOkay }),
+  };
 }

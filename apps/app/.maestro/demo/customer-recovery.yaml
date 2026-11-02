@@ -26,7 +26,7 @@ tags:
 - assertVisible: "Choose a parent in Settings before changing away dates."
 - assertNotVisible: "Mom is away"
 - tapOn: "Go to Settings"
-- assertVisible: "Anna"
+- assertVisible: "Parents"
 - openLink: ${APP_URL}/nearby?member=unknown
 - assertVisible: "Choose a parent in Settings before changing the people nearby."
 - assertNotVisible: "Add them"

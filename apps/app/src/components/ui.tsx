@@ -1,10 +1,12 @@
 import { type ReactNode, type Ref, useState } from "react";
-import { Pressable, type StyleProp, Text, TextInput, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, type StyleProp, TextInput, View, type ViewStyle } from "react-native";
 import { usePalette } from "../theme/theme.tsx";
-import { hitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
+import { hitSlop, linkHitSlop, radius, space, type TextStyle, type } from "../theme/tokens.ts";
+import { BrandIcon, type BrandIconName } from "./brand/icon.tsx";
+import { Text } from "./scaled-text.tsx";
 
 type Role = keyof typeof type;
-type Tone = "ink" | "ink2" | "ink3" | "action";
+type Tone = "ink" | "ink2" | "ink3" | "action" | "error";
 
 export function Words({
   variant = "body",
@@ -32,7 +34,9 @@ export function Words({
         ? palette.ink3
         : tone === "action"
           ? palette.action
-          : palette.ink;
+          : tone === "error"
+            ? palette.error
+            : palette.ink;
   return (
     <Text
       numberOfLines={numberOfLines}
@@ -66,38 +70,148 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   );
 }
 
-/** At most one primary per screen; 56 pt tall in the app. */
+/**
+ * At most one primary per screen; 56 pt tall in the app. With an icon, the label sits left beside a
+ * tile, as every action in the app reads (button option 5, founder's choice, 21 Oct 2026).
+ */
 export function PrimaryButton({
   label,
   onPress,
   disabled = false,
+  hint,
+  icon,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** Read by VoiceOver: why the button is waiting, when it is. */
+  hint?: string;
+  icon?: BrandIconName;
 }) {
   const palette = usePalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
+      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       hitSlop={hitSlop}
       disabled={disabled}
       onPress={onPress}
+      // Waiting reads as "not yet", a calm paper button, never as a faded dark one that looks broken.
       style={({ pressed }) => ({
-        backgroundColor: palette.action,
-        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
-        borderRadius: 14,
-        minHeight: 54,
-        paddingVertical: space.m,
+        backgroundColor: disabled ? palette.surface2 : palette.action,
+        opacity: pressed && !disabled ? 0.82 : 1,
+        borderRadius: 12,
+        minHeight: 46,
+        paddingVertical: icon === undefined ? space.m : space.s,
         paddingHorizontal: space.l,
+        flexDirection: "row",
+        gap: space.m,
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: icon === undefined ? "center" : "flex-start",
       })}
     >
-      <Text style={[type.button, { color: palette.onAction, textAlign: "center", flexShrink: 1 }]}>
+      {icon === undefined ? null : <IconTile name={icon} tone={disabled ? "quiet" : "onAction"} />}
+      <Text
+        style={[
+          type.button,
+          {
+            color: disabled ? palette.ink3 : palette.onAction,
+            textAlign: icon === undefined ? "center" : "left",
+            flexShrink: 1,
+          },
+        ]}
+      >
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/** An action's icon, drawn plain beside its label (no tile behind it, founder 21 Oct 2026). */
+export function IconTile({
+  name,
+  tone = "soft",
+}: {
+  name: BrandIconName;
+  tone?: "onAction" | "soft" | "error" | "quiet";
+}) {
+  const palette = usePalette();
+  const ink =
+    tone === "onAction"
+      ? palette.onAction
+      : tone === "error"
+        ? palette.error
+        : tone === "quiet"
+          ? palette.ink2
+          : palette.action;
+  return <BrandIcon name={name} color={ink} size={20} strokeWidth={2} />;
+}
+
+/** Actions that sit together (Story day's choices, Pause and Leave): rows in one card. */
+export function ActionGroup({ children }: { children: ReactNode }) {
+  const palette = usePalette();
+  return (
+    <View
+      style={{
+        backgroundColor: palette.surface,
+        borderWidth: 1,
+        borderColor: palette.rule,
+        borderRadius: radius.card + 6,
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** One row of an ActionGroup: icon tile, label, chevron; `first` leaves out the dividing rule. */
+export function ActionRow({
+  icon,
+  label,
+  onPress,
+  first = false,
+  careful = false,
+  disabled = false,
+  testID,
+}: {
+  icon: BrandIconName;
+  label: string;
+  onPress?: () => void;
+  first?: boolean;
+  /** Leaving and other steps that are hard to undo: red label and tile. */
+  careful?: boolean;
+  disabled?: boolean;
+  testID?: string;
+}) {
+  const palette = usePalette();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      {...(testID === undefined ? {} : { testID })}
+      style={({ pressed }) => ({
+        minHeight: 52,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.m,
+        paddingHorizontal: space.l,
+        paddingVertical: space.s,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: palette.rule,
+        backgroundColor: pressed ? palette.surface2 : "transparent",
+        opacity: disabled ? 0.45 : 1,
+      })}
+    >
+      <IconTile name={icon} tone={careful ? "error" : "soft"} />
+      <Text style={[type.button, { color: careful ? palette.error : palette.ink, flex: 1 }]}>
+        {label}
+      </Text>
+      {/* A step that is hard to undo asks first rather than opening a page: no chevron. */}
+      {careful ? null : <BrandIcon name="chevron" color={palette.ink3} size={16} strokeWidth={2} />}
     </Pressable>
   );
 }
@@ -170,11 +284,14 @@ export function Chip({
   selected = false,
   disabled = false,
   onPress,
+  initials,
 }: {
   label: string;
   selected?: boolean;
   disabled?: boolean;
   onPress?: () => void;
+  /** A person's chip shows their initial, as a messenger shows a face; "Both" shows two. */
+  initials?: readonly { key: string; initial: string }[];
 }) {
   const palette = usePalette();
   return (
@@ -186,22 +303,58 @@ export function Chip({
       onPress={onPress}
       style={({ pressed }) => ({
         borderRadius: radius.chip,
-        minHeight: 48,
+        minHeight: 44,
         maxWidth: "100%",
         flexShrink: 1,
         justifyContent: "center",
+        // The chosen one is filled dark and ticked, not just a shade darker: it must read as "on"
+        // in sunlight and to older eyes, without relying on colour (Refactoring UI).
         borderWidth: 1,
         borderColor: selected ? palette.action : palette.control,
-        backgroundColor: selected ? palette.actionSoft : palette.surface,
-        paddingVertical: space.m,
-        paddingHorizontal: space.l,
+        backgroundColor: selected ? palette.action : palette.surface,
+        paddingVertical: initials === undefined ? space.m : space.xs,
+        paddingLeft: initials === undefined ? space.l : space.xs + 2,
+        paddingRight: space.l,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.s,
         opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
       })}
     >
+      {initials === undefined ? null : (
+        <View style={{ flexDirection: "row" }}>
+          {initials.map(({ key, initial }, index) => (
+            <View
+              key={key}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                marginLeft: index === 0 ? 0 : -10,
+                borderWidth: 2,
+                borderColor: selected ? palette.action : palette.surface,
+                backgroundColor: palette.surface2,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                maxFontSizeMultiplier={1}
+                style={[type.bodyMedium, { fontFamily: type.title.fontFamily, color: palette.ink }]}
+              >
+                {initial}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {selected && initials === undefined ? (
+        <BrandIcon name="check" color={palette.onAction} size={16} strokeWidth={2.5} />
+      ) : null}
       <Text
         style={[
           type.bodyMedium,
-          { color: selected ? palette.action : palette.ink, textAlign: "center" },
+          { color: selected ? palette.onAction : palette.ink, textAlign: "center" },
         ]}
       >
         {label}
@@ -228,12 +381,16 @@ export function TextField({
   autoCorrect,
   autoFocus = false,
   maxLength,
+  minHeight,
+  labelHidden = false,
   disabled = false,
   onSubmit,
   inputRef,
   onContentSizeChange,
 }: {
   label?: string;
+  /** When the heading above already asks the question, the label is only read aloud, not shown. */
+  labelHidden?: boolean;
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
@@ -250,6 +407,8 @@ export function TextField({
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
   autoFocus?: boolean;
   maxLength?: number;
+  /** Compact review fields can leave room for approval without changing ordinary composers. */
+  minHeight?: number;
   disabled?: boolean;
   /** Enter, or the keyboard's own go key, rather than reaching for the button. */
   onSubmit?: () => void;
@@ -260,7 +419,7 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: space.s }}>
-      {label === undefined ? null : <Words variant="bodyMedium">{label}</Words>}
+      {label === undefined || labelHidden ? null : <Words variant="bodyMedium">{label}</Words>}
       <TextInput
         ref={inputRef}
         editable={!disabled}
@@ -292,8 +451,9 @@ export function TextField({
             borderColor: focused ? palette.action : palette.control,
             paddingHorizontal: editorial ? 0 : space.l,
             paddingVertical: editorial ? space.xl : space.m,
-            minHeight: editorial ? 200 : multiline ? 112 : 56,
+            minHeight: minHeight ?? (editorial ? 200 : multiline ? 112 : 56),
             textAlignVertical: multiline ? "top" : "center",
+            ...(Platform.OS === "web" ? { outlineColor: palette.action } : {}),
           },
         ]}
       />
@@ -306,39 +466,113 @@ export function TextField({
   );
 }
 
-export function SecondaryButton({
+/**
+ * The third level: plain words, for the choice that should not compete with the button beside it
+ * ("Not now", "Remove"). Grey by default; `careful` draws a step that is hard to undo in red, quiet
+ * here, loud only in the confirmation that follows.
+ */
+export function TextButton({
   label,
   onPress,
   disabled = false,
+  careful = false,
+  icon,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  careful?: boolean;
+  icon?: BrandIconName;
 }) {
   const palette = usePalette();
+  const ink = careful ? palette.error : palette.ink2;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      hitSlop={linkHitSlop}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: space.s,
+        paddingHorizontal: space.s,
+        opacity: disabled ? 0.45 : pressed ? 0.6 : 1,
+      })}
+    >
+      {icon === undefined ? null : <BrandIcon name={icon} color={ink} size={18} strokeWidth={2} />}
+      <Text style={[type.button, { color: ink }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export function SecondaryButton({
+  label,
+  onPress,
+  disabled = false,
+  hint,
+  icon,
+  waiting,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  /** Read by VoiceOver: why the button is waiting, when it is. */
+  hint?: string;
+  icon?: BrandIconName;
+  /**
+   * Said under the label while the button waits ("Waiting for Mom to say yes"): drawn calm and
+   * dashed with a clock, never as a faded button nobody can explain.
+   */
+  waiting?: string;
+}) {
+  const palette = usePalette();
+  const held = disabled && waiting !== undefined;
+  const tile = held ? "time" : icon;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       hitSlop={hitSlop}
       disabled={disabled}
       accessibilityState={{ disabled }}
       onPress={onPress}
+      // The second level is a soft filled button with no outline: outlines belong to choices (chips),
+      // so a button and a choice never look alike. Three levels in all: filled, soft, plain text.
       style={({ pressed }) => ({
-        backgroundColor: palette.bg,
+        backgroundColor: held ? palette.surface2 : palette.actionSoft,
         borderColor: palette.control,
-        borderWidth: 1,
-        opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
-        borderRadius: 14,
-        minHeight: 54,
-        paddingVertical: space.m,
+        borderWidth: held ? 1 : 0,
+        borderStyle: "dashed",
+        opacity: disabled && !held ? 0.45 : pressed ? 0.82 : 1,
+        borderRadius: 12,
+        minHeight: 46,
+        paddingVertical: tile === undefined ? space.m : space.s,
         paddingHorizontal: space.l,
+        flexDirection: "row",
+        gap: space.m,
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: tile === undefined ? "center" : "flex-start",
       })}
     >
-      <Text style={[type.button, { color: palette.ink, textAlign: "center", flexShrink: 1 }]}>
-        {label}
-      </Text>
+      {tile === undefined ? null : <IconTile name={tile} tone={held ? "quiet" : "soft"} />}
+      <View style={{ flexShrink: 1, gap: 2 }}>
+        <Text
+          style={[
+            type.button,
+            {
+              color: held ? palette.ink2 : palette.ink,
+              textAlign: tile === undefined ? "center" : "left",
+            },
+          ]}
+        >
+          {label}
+        </Text>
+        {held ? <Text style={[type.caption, { color: palette.ink2 }]}>{waiting}</Text> : null}
+      </View>
     </Pressable>
   );
 }

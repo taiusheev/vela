@@ -11,6 +11,7 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  FAMILY_MEMORY_KINDS,
   INTEREST_TOPICS,
   KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
@@ -59,12 +60,20 @@ import {
   flags,
   INVITE_CHANNELS,
   invites,
+  keepSuggestions,
   MEMORY_FACT_KINDS,
   MESSAGE_REF_PURPOSES,
   type Member,
   media,
   members,
+  memoryCandidates,
   memoryFacts,
+  memoryKeeps,
+  memoryPermissionPresentations,
+  memoryShares,
+  memorySharingPresentations,
+  memoryStories,
+  memoryStoryMoments,
   messageRefs,
   metricsDaily,
   NEARBY_CONTACT_CHANNELS,
@@ -81,10 +90,15 @@ import {
   nearbyContacts,
   onboardingSessions,
   outbound,
+  PHOTO_BOX_ERAS,
   PLAN_INTERVALS,
+  photoBox,
+  photoBoxUses,
+  pilotFamilies,
   pilotRoster,
   pushDevices,
   pushTickets,
+  questionProfiles,
   quietEvents,
   RECIPE_STATUSES,
   recipes,
@@ -103,6 +117,9 @@ import {
   type WeeklyRead,
   waitlistSignups,
   weeklyReads,
+  weeklySupportPermissions,
+  weeklySupportPresentations,
+  weeklySupportSelections,
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
@@ -315,6 +332,17 @@ async function seedEveryTable(): Promise<void> {
   const seed = await seedFamily();
   const familyId = seed.family.id;
   const user = only(await db.insert(users).values({ displayName: "Mia" }).returning());
+  await db.update(members).set({ userId: user.id }).where(eq(members.id, seed.organiser.id));
+  await db.insert(questionProfiles).values({
+    familyId,
+    authorId: seed.organiser.id,
+    recipientId: seed.parent.id,
+    ownerUserId: user.id,
+    data: null,
+    noticeVersion: "question-profile.1",
+    changedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-15T00:00:00Z"),
+  });
   await db.insert(accountLinkChallenges).values(challengeValues(user.id));
   await db
     .insert(channelLinks)
@@ -357,6 +385,24 @@ async function seedEveryTable(): Promise<void> {
     .insert(media)
     .values({ familyId, kind: "audio", storageKey: "apac/a.ogg", mime: "audio/ogg", bytes: 1 });
   const exchange = only(await db.insert(exchanges).values(exchangeFor(seed)).returning());
+  const boxPhoto = only(
+    await db
+      .insert(media)
+      .values({ familyId, kind: "image", storageKey: "book/box.jpg", mime: "image/jpeg" })
+      .returning(),
+  );
+  const boxed = only(
+    await db
+      .insert(photoBox)
+      .values({ familyId, mediaId: boxPhoto.id, era: "old", caption: "Our first flat" })
+      .returning(),
+  );
+  await db.insert(photoBoxUses).values({
+    exchangeId: exchange.id,
+    memberId: seed.parent.id,
+    boxId: boxed.id,
+    localDay: "2026-09-15",
+  });
   await db.insert(bookEntries).values({
     familyId,
     memberId: seed.parent.id,
@@ -381,6 +427,29 @@ async function seedEveryTable(): Promise<void> {
       })
       .returning(),
   );
+  await db.insert(keepSuggestions).values({
+    familyId,
+    memberId: seed.parent.id,
+    exchangeId: exchange.id,
+    answerId: answer.id,
+    start: 0,
+    end: 4,
+    kind: "moment",
+    expiresAt: new Date(Date.now() + 86_400_000),
+  });
+  const story = only(
+    await db
+      .insert(memoryStories)
+      .values({
+        familyId,
+        memberId: seed.parent.id,
+        titleAnswerId: answer.id,
+        titleStart: 0,
+        titleEnd: 4,
+      })
+      .returning(),
+  );
+  await db.insert(memoryStoryMoments).values({ storyId: story.id, exchangeId: exchange.id });
   await db.insert(replies).values({
     exchangeId: exchange.id,
     memberId: seed.organiser.id,
@@ -502,6 +571,139 @@ async function seedEveryTable(): Promise<void> {
   await db.insert(metricsDaily).values({ day: "2026-09-13", familyId, memberId: seed.parent.id });
   await db.insert(waitlistSignups).values({ email: "mia@example.com", language: "en" });
   await db.insert(pilotRoster).values({ telegramUserId: "2001" });
+  await db.insert(pilotFamilies).values({ familyId });
+  const memoryConsent = only(
+    await db
+      .insert(consents)
+      .values(
+        consentAbout(
+          { memberId: seed.parent.id },
+          { kind: "rich_memories", textVersion: "consent.rich_memories@1" },
+        ),
+      )
+      .returning(),
+  );
+  const memoryCandidate = only(
+    await db
+      .insert(memoryCandidates)
+      .values({
+        familyId,
+        memberId: seed.parent.id,
+        sourceAnswerId: answer.id,
+        consentId: memoryConsent.id,
+        kind: "preference",
+        start: 0,
+        end: 2,
+        sourceDigest: "a".repeat(64),
+        createdAt: new Date("2026-09-14T00:00:00Z"),
+        expiresAt: new Date("2026-10-14T00:00:00Z"),
+      })
+      .returning(),
+  );
+  const keepProof = only(
+    await db
+      .insert(consents)
+      .values(
+        consentAbout(
+          { memberId: seed.parent.id },
+          { kind: "memory_keep", textVersion: "memory.keep@1" },
+        ),
+      )
+      .returning(),
+  );
+  const [keptMemory] = await db
+    .insert(memoryKeeps)
+    .values({
+      familyId,
+      memberId: seed.parent.id,
+      candidateId: memoryCandidate.id,
+      sourceAnswerId: answer.id,
+      discoveryConsentId: memoryConsent.id,
+      keepConsentId: keepProof.id,
+      kind: "preference",
+      start: 0,
+      end: 2,
+      quote: "Hi",
+      sourceDigest: "a".repeat(64),
+      lang: "en",
+      occurredAt: new Date("2026-09-14T00:00:00Z"),
+      keptAt: new Date("2026-09-14T00:00:00Z"),
+    })
+    .returning();
+  if (!keptMemory) throw new Error("Missing synthetic kept memory");
+  const [presentation] = await db
+    .insert(memorySharingPresentations)
+    .values({
+      keepId: keptMemory.id,
+      ownerUserId: user.id,
+      ownerMembershipRevision: seed.parent.memoryMembershipRevision,
+      recipientIds: [seed.organiser.id],
+      fingerprint: "a".repeat(64),
+      issuedAt: new Date("2026-09-14T00:00:00Z"),
+      expiresAt: new Date("2026-09-14T00:05:00Z"),
+    })
+    .returning();
+  if (!presentation) throw new Error("Missing synthetic presentation");
+  await db.insert(memoryPermissionPresentations).values({
+    memberId: seed.parent.id,
+    userId: user.id,
+    membershipRevision: seed.parent.memoryMembershipRevision,
+    textVersion: "consent.rich_memories@2",
+    noticeVersion: "privacy-notice.v7",
+    lang: "en",
+    textSha256: "a".repeat(64),
+    issuedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-14T00:05:00Z"),
+  });
+  await db.insert(memoryShares).values({
+    keepId: keptMemory.id,
+    recipientMemberId: seed.organiser.id,
+    recipientUserId: user.id,
+    recipientMembershipRevision: seed.organiser.memoryMembershipRevision,
+    sharingRevision: keptMemory.sharingRevision,
+    presentationId: presentation.id,
+    confirmationVersion: "memory.share@1",
+    fingerprint: "a".repeat(64),
+    grantedAt: new Date("2026-09-14T00:00:00Z"),
+  });
+  const reportRevision = crypto.randomUUID();
+  await db.insert(weeklySupportPermissions).values({
+    memberId: seed.parent.id,
+    familyId,
+    userId: user.id,
+    revision: reportRevision,
+    ownerRevision: seed.parent.memoryMembershipRevision,
+    version: "weekly.support.review@1",
+    noticeVersion: "weekly-support-private-test@1",
+    textSha256: "a".repeat(64),
+    state: "yes",
+    audience: [],
+    givenAt: new Date("2026-09-14T00:00:00Z"),
+  });
+  await db.insert(weeklySupportPresentations).values({
+    memberId: seed.parent.id,
+    familyId,
+    userId: user.id,
+    ownerRevision: seed.parent.memoryMembershipRevision,
+    textSha256: "a".repeat(64),
+    permissionRevision: reportRevision,
+    audience: [],
+    issuedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-14T00:05:00Z"),
+  });
+  await db.insert(weeklySupportSelections).values({
+    memberId: seed.parent.id,
+    familyId,
+    answerId: answer.id,
+    permissionRevision: reportRevision,
+    sourceDigest: "a".repeat(64),
+    templateVersion: "weekly.support.templates@1",
+    kind: "practical_help",
+    reviewerId: seed.organiser.id,
+    reviewerRevision: seed.organiser.memoryMembershipRevision,
+    reviewedAt: new Date("2026-09-14T00:00:00Z"),
+    expiresAt: new Date("2026-09-15T00:00:00Z"),
+  });
   await db.insert(deadLetters).values({
     messageId: "dead-1",
     jobType: "deliver",
@@ -2048,6 +2250,12 @@ describe("deletion proofs", () => {
 
 describe("CHECK constraints on enumerated columns", () => {
   const enumerated: { table: string; column: string; values: readonly string[] }[] = [
+    { table: "weekly_support_permissions", column: "state", values: ["yes", "no", "withdrawn"] },
+    {
+      table: "weekly_support_selections",
+      column: "kind",
+      values: ["shared_interest", "company", "practical_help"],
+    },
     { table: "users", column: "language", values: LANGS },
     { table: "waitlist_signups", column: "language", values: ["en", "zh-TW"] },
     { table: "waitlist_signups", column: "role", values: ["organiser", "parent", "other"] },
@@ -2068,6 +2276,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "onboarding_sessions", column: "channel", values: CHANNELS },
     { table: "nearby_contacts", column: "channel", values: NEARBY_CONTACT_CHANNELS },
     { table: "media", column: "kind", values: MEDIA_KINDS },
+    { table: "photo_box", column: "era", values: PHOTO_BOX_ERAS },
     { table: "media", column: "channel", values: CHANNELS },
     { table: "exchanges", column: "type", values: EXCHANGE_TYPES },
     { table: "exchanges", column: "state", values: EXCHANGE_STATES },
@@ -2081,6 +2290,9 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "replies", column: "channel", values: CHANNELS },
     { table: "recipes", column: "status", values: RECIPE_STATUSES },
     { table: "memory_facts", column: "kind", values: MEMORY_FACT_KINDS },
+    { table: "memory_candidates", column: "kind", values: FAMILY_MEMORY_KINDS },
+    { table: "memory_keeps", column: "kind", values: FAMILY_MEMORY_KINDS },
+    { table: "keep_suggestions", column: "kind", values: FAMILY_MEMORY_KINDS },
     { table: "quiet_events", column: "outcome", values: QUIET_OUTCOMES },
     { table: "away_periods", column: "source", values: AWAY_SOURCES },
     { table: "outbound", column: "kind", values: OUTBOUND_KINDS },
@@ -2149,6 +2361,86 @@ describe("CHECK constraints on enumerated columns", () => {
     expect(error).toEqual({ code: CHECK_VIOLATION, constraint: "families_story_day_check" });
   });
 
+  it("rejects invalid memory spans and candidates that outlive no source window", async () => {
+    await seedEveryTable();
+    for (const offsets of [{ start: -1 }, { end: 0 }, { end: 2001 }]) {
+      expect(await rejection(db.update(memoryCandidates).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_candidates_offsets_check",
+      });
+      expect(await rejection(db.update(memoryKeeps).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_keeps_offsets_check",
+      });
+      expect(await rejection(db.update(keepSuggestions).set(offsets))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "keep_suggestions_offsets_check",
+      });
+    }
+    for (const title of [{ titleStart: -1 }, { titleEnd: 0 }, { titleEnd: 201 }]) {
+      expect(await rejection(db.update(memoryStories).set(title))).toEqual({
+        code: CHECK_VIOLATION,
+        constraint: "memory_stories_title_check",
+      });
+    }
+    expect(
+      await rejection(
+        db.update(memoryCandidates).set({
+          expiresAt: new Date("2026-09-14T00:00:00Z"),
+        }),
+      ),
+    ).toEqual({ code: CHECK_VIOLATION, constraint: "memory_candidates_expiry_check" });
+  });
+
+  it("enforces bounded content-free sharing evidence", async () => {
+    await seedEveryTable();
+    expect(await rejection(db.update(memoryShares).set({ fingerprint: "words" }))).toMatchObject({
+      constraint: "memory_shares_fingerprint_check",
+    });
+    expect(
+      await rejection(db.update(memorySharingPresentations).set({ fingerprint: "words" })),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_fingerprint_check" });
+    for (const recipientIds of [
+      [],
+      Array.from({ length: 51 }, () => "00000000-0000-4000-8000-000000000001"),
+    ]) {
+      expect(
+        await rejection(db.update(memorySharingPresentations).set({ recipientIds })),
+      ).toMatchObject({ constraint: "memory_sharing_presentations_audience_check" });
+    }
+    expect(
+      await rejection(
+        db.update(memorySharingPresentations).set({ expiresAt: new Date("2026-09-14T00:06:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_timing_check" });
+    expect(
+      await rejection(
+        db.update(memorySharingPresentations).set({ consumedAt: new Date("2026-09-14T00:05:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_sharing_presentations_timing_check" });
+  });
+
+  it("keeps the memory question's evidence to a hash and a five-minute one-use window", async () => {
+    await seedEveryTable();
+    expect(
+      await rejection(db.update(memoryPermissionPresentations).set({ textSha256: "words" })),
+    ).toMatchObject({ constraint: "memory_permission_presentations_sha_check" });
+    expect(
+      await rejection(
+        db
+          .update(memoryPermissionPresentations)
+          .set({ expiresAt: new Date("2026-09-14T00:06:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_permission_presentations_timing_check" });
+    expect(
+      await rejection(
+        db
+          .update(memoryPermissionPresentations)
+          .set({ consumedAt: new Date("2026-09-14T00:05:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "memory_permission_presentations_timing_check" });
+  });
+
   it("keeps a waitlist address lowercased and no longer than an address can be", async () => {
     await seedEveryTable();
 
@@ -2170,6 +2462,41 @@ describe("CHECK constraints on enumerated columns", () => {
     }
   });
 
+  it("keeps private question profile retention bounded, people distinct and data structured", async () => {
+    await seedEveryTable();
+    expect(
+      await rejection(
+        db.update(questionProfiles).set({ expiresAt: new Date("2026-10-15T00:00:00Z") }),
+      ),
+    ).toMatchObject({ constraint: "question_profiles_bounded_retention" });
+    expect(
+      await rejection(db.execute(sql`update question_profiles set recipient_id = author_id`)),
+    ).toMatchObject({ constraint: "question_profiles_distinct_people" });
+    // Enable the existing recipient so the scope guard allows the CHECK to evaluate the shape.
+    const [profile] = await db.select().from(questionProfiles);
+    if (!profile) throw new Error("Missing profile");
+    await db
+      .update(members)
+      .set({ lightOn: true, lightConsentedAt: new Date("2026-09-14T00:00:00Z") })
+      .where(eq(members.id, profile.recipientId));
+    // Consent changes erase profiles; seed another null-content revision after that cleanup.
+    await db.insert(questionProfiles).values(profile);
+    expect(
+      await rejection(db.execute(sql`update question_profiles set data = '[]'::jsonb`)),
+    ).toMatchObject({ constraint: "question_profiles_data_object" });
+  });
+
+  it("keeps the 30-day profile lifetime exact across a database daylight-saving change", async () => {
+    await seedEveryTable();
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local time zone 'America/New_York'`);
+      await tx.update(questionProfiles).set({
+        changedAt: new Date("2026-02-15T00:00:00Z"),
+        expiresAt: new Date("2026-03-17T00:00:00Z"),
+      });
+    });
+  });
+
   it("covers every CHECK constraint in the database", async () => {
     const result = await db.execute<{ conname: string }>(
       sql`select conname from pg_constraint
@@ -2179,6 +2506,17 @@ describe("CHECK constraints on enumerated columns", () => {
     const tested = [
       ...enumerated.map(({ table, column }) => `${table}_${column}_check`),
       "families_story_day_check",
+      "memory_candidates_offsets_check",
+      "memory_candidates_expiry_check",
+      "memory_keeps_offsets_check",
+      "keep_suggestions_offsets_check",
+      "memory_stories_title_check",
+      "memory_shares_fingerprint_check",
+      "memory_sharing_presentations_fingerprint_check",
+      "memory_sharing_presentations_audience_check",
+      "memory_sharing_presentations_timing_check",
+      "memory_permission_presentations_sha_check",
+      "memory_permission_presentations_timing_check",
       "members_interests_check",
       "members_reply_ways_check",
       "outbound_nearby_ask_actor_check",
@@ -2203,6 +2541,9 @@ describe("CHECK constraints on enumerated columns", () => {
       "push_tickets_token_sha256_check",
       "waitlist_signups_email_check",
       "pilot_roster_telegram_user_id_check",
+      "question_profiles_bounded_retention",
+      "question_profiles_data_object",
+      "question_profiles_distinct_people",
     ];
 
     expect(result.rows.map((row) => row.conname).sort()).toEqual(tested.sort());

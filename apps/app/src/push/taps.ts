@@ -9,8 +9,10 @@ import { PushData, type PushKind } from "@vela/contracts";
 export type TapTarget =
   /** Today, and for a quiet notice the sheet for that event, which says calmly if it is settled. */
   | { screen: "today"; quietEventId?: string }
-  | { screen: "exchange"; exchangeId: string }
-  | { screen: "ask"; recipientId: string; suggestionId?: string };
+  | { screen: "chat"; recipientId: string }
+  | { screen: "ask"; recipientId: string; suggestionId?: string }
+  /** The Week tab, on her newest weekly read. */
+  | { screen: "week"; memberId?: string };
 
 const DATA_KEYS = [
   "kind",
@@ -50,23 +52,29 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
         : { screen: "today", quietEventId: data.quiet_event_id };
     case "quiet_resolved":
       return { screen: "today" };
+    // Her "Not okay" (ADR-57): where the family talks with her, so the next step is a call or a word.
+    case "flag":
+      return shown ? { screen: "chat", recipientId: data.member_id } : { screen: "today" };
     case "answer_receipt":
-      return shown && data.exchange_id !== undefined
-        ? { screen: "exchange", exchangeId: data.exchange_id }
-        : { screen: "today" };
+      // Her answer is read where the family talks with her: the chat, at its newest message.
+      return shown ? { screen: "chat", recipientId: data.member_id } : { screen: "today" };
     case "turn_prompt":
       if (!shown) return { screen: "today" };
       return data.suggestion_id === undefined
         ? { screen: "ask", recipientId: data.member_id }
         : { screen: "ask", recipientId: data.member_id, suggestionId: data.suggestion_id };
+    // The weekly read (ADR-59): the Week tab, on her read when the family is the one shown.
+    case "weekly_read":
+      return shown ? { screen: "week", memberId: data.member_id } : { screen: "week" };
   }
 }
 
 /** The route a target opens, as expo-router takes it. */
 export type TapHref =
   | { pathname: "/"; params: { quiet?: string } }
-  | { pathname: "/exchange/[id]"; params: { id: string } }
-  | { pathname: "/ask"; params: { recipient: string; suggestion?: string } };
+  | { pathname: "/conversation"; params: { recipient: string } }
+  | { pathname: "/ask"; params: { recipient: string; suggestion?: string } }
+  | { pathname: "/sunday"; params: { member?: string } };
 
 export function hrefOf(target: TapTarget): TapHref {
   switch (target.screen) {
@@ -75,8 +83,8 @@ export function hrefOf(target: TapTarget): TapHref {
         pathname: "/",
         params: target.quietEventId === undefined ? {} : { quiet: target.quietEventId },
       };
-    case "exchange":
-      return { pathname: "/exchange/[id]", params: { id: target.exchangeId } };
+    case "chat":
+      return { pathname: "/conversation", params: { recipient: target.recipientId } };
     case "ask":
       return {
         pathname: "/ask",
@@ -84,6 +92,11 @@ export function hrefOf(target: TapTarget): TapHref {
           target.suggestionId === undefined
             ? { recipient: target.recipientId }
             : { recipient: target.recipientId, suggestion: target.suggestionId },
+      };
+    case "week":
+      return {
+        pathname: "/sunday",
+        params: target.memberId === undefined ? {} : { member: target.memberId },
       };
   }
 }
@@ -96,7 +109,16 @@ export interface ForegroundBehaviour {
   shouldSetBadge: false;
 }
 
-const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>(["quiet_notice", "quiet_resolved"]);
+const QUIET_KINDS: ReadonlySet<PushKind> = new Set<PushKind>([
+  "quiet_notice",
+  "quiet_resolved",
+  "flag",
+]);
+
+/** The quiet notice and its close, which are settled on Today rather than read in a chat. */
+export function isQuietKind(kind: PushKind): boolean {
+  return QUIET_KINDS.has(kind);
+}
 
 /**
  * A quiet notice and its close, and her own morning on her phone, show as a banner with their sound

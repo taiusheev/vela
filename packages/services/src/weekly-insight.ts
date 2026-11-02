@@ -98,6 +98,8 @@ function answerMessage(answer: {
     }
     case "fine":
       return { form: "tap", text: "I'm fine" };
+    case "not_okay":
+      return { form: "tap", text: "Not okay" };
     case "heart":
       return { form: "reaction", text: "heart" };
     case "sticker":

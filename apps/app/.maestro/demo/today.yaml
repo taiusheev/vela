@@ -10,8 +10,9 @@ tags:
 - assertVisible: "answered 8:12"
 - assertVisible: "What did the garden look like this morning?"
 - assertVisible: "Mom saw it · 8:12"
-- assertVisible: "Anna: Those are the ones from the seeds you saved"
+- assertVisible: "Those are the ones from the seeds you saved"
+- assertVisible: "Waiting for Dad"
 - assertVisible: "TOMORROW · ANNA'S TURN TO ASK MOM"
 - scrollUntilVisible:
-    element: "Ask Mom something"
+    element: "Ask Mom"
     direction: DOWN

@@ -257,6 +257,25 @@ describe("a morning with two parents", () => {
       },
     ]);
   });
+  it("knows the reader's own heart on her answer, and no one else's", () => {
+    const heart = (from_id: string, kind: "heart" | "laugh" = "heart") => ({
+      from: "Anna",
+      from_id,
+      kind,
+      text: null,
+      photo: null,
+      audio: null,
+    });
+    const read = (replies: ReturnType<typeof heart>[], viewer?: string) =>
+      toToday(
+        ApiToday.parse({ lights: [light()], exchanges: [exchange({ replies })], tomorrow: [] }),
+        viewer,
+      ).exchanges[0]?.heartedByMe;
+    expect(read([heart(ANNA)], ANNA)).toBe(true);
+    expect(read([heart(DAD)], ANNA)).toBeUndefined();
+    expect(read([heart(ANNA, "laugh")], ANNA)).toBeUndefined();
+    expect(read([heart(ANNA)])).toBeUndefined();
+  });
   it("has no invented exchange when the API has no delivered day", () => {
     expect(
       toToday(ApiToday.parse({ lights: [light()], exchanges: [], tomorrow: [] })).exchanges,
@@ -532,4 +551,42 @@ describe("answer window while participation is paused or away", () => {
       expect(toTodayLight({ ...row, answered_at: null }).answerReceived).toBeUndefined();
     });
   }
+});
+
+describe("explicit Not okay follow-up", () => {
+  it("carries a tap on an earlier ask independently of today's displayed answer", () => {
+    const day = ApiToday.parse({
+      lights: [light(), light({ member_id: DAD })],
+      exchanges: [],
+      tomorrow: [],
+      not_okay: [{ member_id: MOM, at: "2026-10-12T02:12:00Z" }],
+    });
+    const mapped = toToday(day);
+    expect(mapped.lights[0]?.notOkayAt).toBe("10:12");
+    expect(mapped.lights[1]?.notOkayAt).toBeUndefined();
+  });
+
+  it("recognises an older server's explicit tap but never guesses from text or a lit window", () => {
+    for (const kind of ["not_okay", "fine", "text"] as const) {
+      const row = exchange();
+      const day = ApiToday.parse({
+        lights: [light({ state: "lit" })],
+        tomorrow: [],
+        exchanges: [
+          {
+            ...row,
+            answer: {
+              kind,
+              at: "2026-10-12T02:12:00Z",
+              text: "Not okay",
+              picked_media_id: null,
+              picked_number: null,
+              translation: null,
+            },
+          },
+        ],
+      });
+      expect(toToday(day).lights[0]?.notOkayAt).toBe(kind === "not_okay" ? "10:12" : undefined);
+    }
+  });
 });

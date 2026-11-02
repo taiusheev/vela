@@ -45,12 +45,15 @@ import {
   media,
   members,
   memoryFacts,
+  memoryKeeps,
+  memorySharingPresentations,
   messageRefs,
   metricsDaily,
   nearbyContacts,
   onboardingSessions,
   outbound,
   pushTickets,
+  questionProfiles,
   quietEvents,
   recipes,
   reminders,
@@ -60,6 +63,8 @@ import {
   type Translation,
   translations,
   weeklyReads,
+  weeklySupportPresentations,
+  weeklySupportSelections,
 } from "@vela/db";
 import {
   and,
@@ -76,7 +81,15 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
+import {
+  ADMIN_CHANNEL,
+  ADMIN_LANG,
+  adminLink,
+  type DeliveredWeeklyRead,
+  deliverWeeklyRead,
+  translateForHer,
+  weeklyReadSentEvent,
+} from "./admin.ts";
 import { deleteOldDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
@@ -85,9 +98,11 @@ import { enqueueOutbound } from "./gateway.ts";
 import { INVITE_DAYS } from "./invites.ts";
 import { sweepInboundMediaOrphans } from "./media-orphans.ts";
 import { deleteContact } from "./nearby-consent.ts";
+import { keepBoxPhotosStored, releaseBoxPhotosOfLeavers } from "./photo-box.ts";
 import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
+  activeAppOrganiserIds,
   activeOrganisersWithLinks,
   dayAnsweredAt,
   familyById,
@@ -97,6 +112,7 @@ import {
   type Queryable,
   recentAnsweredDays,
 } from "./repo.ts";
+import { deleteExpiredMemoryCandidates } from "./rich-memories.ts";
 import { keptInsight, loadInsightWeek } from "./weekly-insight.ts";
 
 const DAYS_IN_WEEK = 7;
@@ -511,10 +527,14 @@ function weeklyDayOf(day: WeekDay, answeredAt: Date, timeZone: string): WeeklyDa
 /** Sunday, as `weekdayOf` numbers the days. */
 const SUNDAY = 0;
 
+/** How far back her weekday rhythm looks: about eight weeks of answered days. */
+const WEEKDAY_HISTORY_DAYS = 56;
+
 /**
  * T_quiet from her own rhythm (spec §8): the later of the median answer latency of her last 14
  * answered days plus two hours and her late-day (90th percentile) latency plus one hour, floored at
- * 4 h and capped at 10 h, recomputed once a week with her read, so
+ * 4 h and capped at 10 h, recomputed every night when her next morning is prepared and with her
+ * weekly read (ADR-56), so
  * silence is measured against the person rather than against the six-hour default she starts on.
  * Below 14 answered days `quietAfterMinutes` keeps that default. A day's latency runs from its
  * delivery to the answer the day counts (`recentAnsweredDays`), which is negative for a message
@@ -524,9 +544,17 @@ const SUNDAY = 0;
  * schedule holds one threshold for every day, so the Sunday median is stored rather than applied:
  * spec §8's Sunday and holiday branch needs `ScheduleInput` to carry both, which is core's to give.
  */
-async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
-  const days = await recentAnsweredDays(deps.db, member, TUNING.minSamples);
+export async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
+  const history = await recentAnsweredDays(deps.db, member, WEEKDAY_HISTORY_DAYS);
+  const days = history.slice(0, TUNING.minSamples);
   const latencies = days.map((day) => minutesBetween(day.deliveredAt, day.answeredAt));
+  // Her rhythm on each weekday over about eight weeks (ADR-56), so the check-in ladder can follow a
+  // day that runs differently from the rest, such as a market morning or a Sunday at church.
+  const byWeekday: Record<string, number[]> = {};
+  for (const day of history) {
+    const key = String(weekdayOf(day.date));
+    byWeekday[key] = [...(byWeekday[key] ?? []), minutesBetween(day.deliveredAt, day.answeredAt)];
+  }
   const sundays = days.flatMap((day) =>
     weekdayOf(day.date) === SUNDAY ? [minutesBetween(day.deliveredAt, day.answeredAt)] : [],
   );
@@ -540,6 +568,16 @@ async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> {
         late_latency_min: lateLatencyMinutes(latencies),
         sunday_median_min: median(sundays),
         n_days: latencies.length,
+        by_weekday: Object.fromEntries(
+          Object.entries(byWeekday).map(([weekday, values]) => [
+            weekday,
+            {
+              median_latency_min: median(values),
+              late_latency_min: lateLatencyMinutes(values),
+              n_days: values.length,
+            },
+          ]),
+        ),
         updated_at: deps.clock.now().toISOString(),
       },
     })
@@ -669,11 +707,13 @@ export async function draftWeeklyRead(
           family,
           weekStart,
           weekEnd,
-          new Set(
-            (await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
+          // Organisers the read reaches: on their messenger, or in the app.
+          new Set([
+            ...(await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
               (organiser) => organiser.member.id,
             ),
-          ),
+            ...(await activeAppOrganiserIds(deps.db, family.id)),
+          ]),
         )
       : null;
   const insightOutcome =
@@ -703,7 +743,7 @@ export async function draftWeeklyRead(
     patterns: patterns.notes,
     family_patterns: patterns.family,
   };
-  await deps.db.transaction(async (tx) => {
+  const delivered = await deps.db.transaction(async (tx): Promise<DeliveredWeeklyRead | null> => {
     const [currentFamily] = await tx
       .select()
       .from(families)
@@ -722,7 +762,7 @@ export async function draftWeeklyRead(
       currentMember.leftAt !== null ||
       !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id))
     )
-      return;
+      return null;
     const withdrewHealth = healthAtStart && !(await hasHealthWordsConsent(tx, member.id, now));
     const value = withdrewHealth ? SAFE_DEFAULTS.weekly_read(weeklyInput) : outcome.value;
     if (!isAiOff(outcome)) {
@@ -768,15 +808,24 @@ export async function draftWeeklyRead(
               ...stats,
               topics: [],
               patterns: stats.patterns.filter((pattern) => pattern.kind !== "came_back_to"),
+              suggestion_day: null,
             }
-          : { ...stats, ...insightStats },
+          : {
+              ...stats,
+              ...insightStats,
+              // The day the suggestion grows from, kept only when it is a day she answered this
+              // week: the app shows that day's ask and summary beside the suggestion as its reason.
+              suggestion_day: weeklyInput.days.some((day) => day.date === value.suggestionDay)
+                ? value.suggestionDay
+                : null,
+            },
         promptVersion: isAiOff(outcome) ? DRAFTED_WITH_AI_OFF : outcome.record.promptVersion,
         createdAt: now,
       })
       .onConflictDoNothing()
-      .returning({ id: weeklyReads.id });
+      .returning();
     if (read === undefined) {
-      return;
+      return null;
     }
     await recordEvent(
       tx,
@@ -798,26 +847,69 @@ export async function draftWeeklyRead(
       },
       now,
     );
-    const admin = deps.config.adminConversationId;
-    if (admin === null) {
-      return;
+    // Sent as drafted, without waiting for the founder, where switched on. Her health words go in
+    // only under her current yes (`weeklyHealthMentions`), and each organiser's feedback only in
+    // their own copy; a read nobody can receive stays a draft for the founder to send.
+    const sent =
+      deps.config.weeklyReadAutoSend === true
+        ? await deliverWeeklyRead(
+            deps,
+            tx,
+            read,
+            {
+              lines: value.lines,
+              suggestion: value.suggestion,
+              includeHealth: true,
+              feedback:
+                insight === null || withdrewHealth
+                  ? {}
+                  : Object.fromEntries(
+                      insight.kept.feedback.map((entry) => [
+                        entry.member_id,
+                        `${entry.landed}\n${entry.try_next}`,
+                      ]),
+                    ),
+            },
+            now,
+          )
+        : null;
+    const delivered = sent !== null && typeof sent !== "string" ? sent : null;
+    if (delivered !== null) {
+      await recordEvent(tx, weeklyReadSentEvent(delivered, true), now);
+    } else if (sent !== null) {
+      deps.logger.warn("weekly_read_auto_send_refused", {
+        memberId,
+        weekEnd,
+        result: sent,
+      });
     }
-    await enqueueOutbound(deps, tx, {
-      kind: "system",
-      idempotencyKey: outboundKey("system", {
+    const admin = deps.config.adminConversationId;
+    if (admin !== null) {
+      await enqueueOutbound(deps, tx, {
+        kind: "system",
+        idempotencyKey: outboundKey("system", {
+          conversationId: admin,
+          suffix: `weekly_read_draft:${read.id}`,
+        }),
+        memberId: member.id,
+        channel: ADMIN_CHANNEL,
         conversationId: admin,
-        suffix: `weekly_read_draft:${read.id}`,
-      }),
-      memberId: member.id,
-      channel: ADMIN_CHANNEL,
-      conversationId: admin,
-      lang: ADMIN_LANG,
-      text: t(ADMIN_LANG, "admin.weekly_read_draft", {
-        family: family.name,
-        link: adminLink(deps.config, family.id),
-      }),
-    });
+        lang: ADMIN_LANG,
+        text: t(
+          ADMIN_LANG,
+          delivered === null ? "admin.weekly_read_draft" : "admin.weekly_read_sent",
+          {
+            family: family.name,
+            link: adminLink(deps.config, family.id),
+          },
+        ),
+      });
+    }
+    return delivered;
   });
+  if (delivered !== null) {
+    await translateForHer(deps, delivered);
+  }
 }
 
 // metrics ----------------------------------------------------------------------------------------
@@ -1092,6 +1184,26 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   const counts: Record<string, number> = {};
   const db = deps.db;
 
+  counts.question_profiles_deleted = (
+    await db
+      .delete(questionProfiles)
+      .where(lte(questionProfiles.expiresAt, now))
+      .returning({ id: questionProfiles.authorId })
+  ).length;
+
+  counts.weekly_support_presentations_deleted = (
+    await db
+      .delete(weeklySupportPresentations)
+      .where(lte(weeklySupportPresentations.expiresAt, now))
+      .returning({ id: weeklySupportPresentations.id })
+  ).length;
+  counts.weekly_support_selections_deleted = (
+    await db
+      .delete(weeklySupportSelections)
+      .where(lte(weeklySupportSelections.expiresAt, now))
+      .returning({ id: weeklySupportSelections.id })
+  ).length;
+
   // Dead jobs, which may hold a family's words, are kept 14 days at most (technical plan 2.7).
   counts.dead_letters_deleted = await deleteOldDeadLetters(deps);
 
@@ -1186,6 +1298,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   counts.family_media_deleted = familyMedia;
   counts.family_translations_deleted = familyTranslationsDeleted;
   counts.family_ai_call_outputs_cleared = familyAiOutputsCleared;
+
+  // The photo box (ADR-58): photos whose adder left go now, and the rest leave `asks/`.
+  counts.photo_box_released = await releaseBoxPhotosOfLeavers(deps, now);
+  counts.photo_box_moved = await keepBoxPhotosStored(deps);
 
   const expired = await db
     .select()
@@ -1332,6 +1448,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .set({
         payload: sql`${answers.payload} - array['text', 'choice']`,
         transcript: null,
+        wordsExpiredAt: sql`coalesce(${answers.wordsExpiredAt}, ${now})`,
         mentions: {},
         moodWords: [],
         flagReason: null,
@@ -1372,6 +1489,34 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .delete(memoryFacts)
       .where(or(lte(memoryFacts.expiresAt, now), lt(memoryFacts.createdAt, cutoff30)))
       .returning({ id: memoryFacts.id })
+  ).length;
+  counts.memory_candidates_deleted = await deleteExpiredMemoryCandidates(db, now);
+  counts.memory_sharing_presentations_deleted = (
+    await db
+      .delete(memorySharingPresentations)
+      .where(lte(memorySharingPresentations.expiresAt, now))
+      .returning({ id: memorySharingPresentations.id })
+  ).length;
+  counts.memory_keep_tombstones_deleted = (
+    await db
+      .delete(memoryKeeps)
+      .where(lt(memoryKeeps.removedAt, cutoff30))
+      .returning({ id: memoryKeeps.id })
+  ).length;
+  // A source/permission guard may delete its last copy before retention. Close the content-free
+  // proof so it follows the existing five-year withdrawn-consent rule, not indefinite retention.
+  counts.memory_keep_proofs_closed = (
+    await db
+      .update(consents)
+      .set({ withdrawnAt: now })
+      .where(
+        and(
+          eq(consents.kind, "memory_keep"),
+          isNull(consents.withdrawnAt),
+          sql`not exists (select 1 from ${memoryKeeps} where ${memoryKeeps.keepConsentId} = ${consents.id} and ${memoryKeeps.removedAt} is null)`,
+        ),
+      )
+      .returning({ id: consents.id })
   ).length;
   counts.reminders_deleted = (
     await db
@@ -1519,11 +1664,18 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
         .for("update");
       if (
         read === undefined ||
-        (!Object.hasOwn(read.stats, "insight") && !Object.hasOwn(read.stats, "feedback"))
+        (!Object.hasOwn(read.stats, "insight") &&
+          !Object.hasOwn(read.stats, "feedback") &&
+          !Object.hasOwn(read.stats, "sent_feedback"))
       ) {
         return false;
       }
-      const { insight: _insight, feedback: _feedback, ...kept } = read.stats;
+      const {
+        insight: _insight,
+        feedback: _feedback,
+        sent_feedback: _sentFeedback,
+        ...kept
+      } = read.stats;
       await tx.update(weeklyReads).set({ stats: kept }).where(eq(weeklyReads.id, id));
       return true;
     });

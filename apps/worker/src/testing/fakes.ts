@@ -557,9 +557,9 @@ export function createFakePilotRuntime(options: FakePilotRuntimeOptions = {}): F
       };
     },
     notices: options.notices ?? noticesFixture(),
-    api: async (request, env) => {
+    api: async (request, env, context) => {
       apiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
-      return api === undefined ? new Response(null, { status: 204 }) : api(request, env);
+      return api === undefined ? new Response(null, { status: 204 }) : api(request, env, context);
     },
     clerk: async () => Response.json({ ok: true }),
     probeHealthz: async (url) => {
@@ -676,6 +676,22 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
       return given.removeFromRoster === undefined
         ? "removed"
         : given.removeFromRoster(deps, ctx, id);
+    },
+    async loadPilotFamilies(deps) {
+      note("loadPilotFamilies");
+      return given.loadPilotFamilies === undefined ? [] : given.loadPilotFamilies(deps);
+    },
+    async approveFamily(deps, ctx, familyId) {
+      note("approveFamily", ctx, familyId);
+      return given.approveFamily === undefined
+        ? "approved"
+        : given.approveFamily(deps, ctx, familyId);
+    },
+    async unapproveFamily(deps, ctx, familyId) {
+      note("unapproveFamily", ctx, familyId);
+      return given.unapproveFamily === undefined
+        ? "unapproved"
+        : given.unapproveFamily(deps, ctx, familyId);
     },
     async loadWaitlist(deps) {
       note("loadWaitlist");
@@ -834,6 +850,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       id: "22222222-2222-7222-8222-222222222222",
       familyId: FAMILY_ID,
       userId: null,
+      memoryMembershipRevision: "33333333-3333-7333-8333-333333333333",
       role: "member",
       billing: false,
       displayName: "Mom",
@@ -861,6 +878,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       learningUntil: null,
       suggestionsSignedBy: null,
       answerStats: {},
+      memoriesOffAt: null,
       createdAt: new Date("2026-09-01T00:00:00.000Z"),
       leftAt: null,
       ...overrides,

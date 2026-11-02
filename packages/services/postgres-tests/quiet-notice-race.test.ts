@@ -302,4 +302,40 @@ describe("the quiet notice closing on independent PostgreSQL connections", () =>
       scope.annaConversation,
     ]);
   });
+
+  // The check-in ladder's reminder (ADR-55): two ticks find the first notice unacted on at once.
+  // The notice's row lock and its `last_notified_at` let one of them send the round, never both.
+  it("sends the reminder round once when two ticks reach it together", async () => {
+    await seeder.db
+      .update(quietEvents)
+      .set({ lastNotifiedAt: new Date(NOW.getTime() - 121 * 60_000) })
+      .where(eq(quietEvents.id, scope.quietId));
+    const [first, second, holder] = await pg.clientPool("quiet", 3);
+    if (first === undefined || second === undefined || holder === undefined) {
+      throw new Error("expected three race connections");
+    }
+
+    const queued = await pg.queueBehindRowLock(holder, onTheNotice, [
+      {
+        client: first,
+        start: () => notifyQuiet(pg.jobDeps(first), scope.her.id, scope.date, true),
+      },
+      {
+        client: second,
+        start: () => notifyQuiet(pg.jobDeps(second), scope.her.id, scope.date, true),
+      },
+    ]);
+    expect(outcomes(await pg.settle("both reminders", queued))).toEqual(["fulfilled", "fulfilled"]);
+
+    const notices = await seeder.db
+      .select()
+      .from(outbound)
+      .where(eq(outbound.kind, "quiet_notice"));
+    // One round: Mia's and Anna's notices, each once, and no founder alert (none is configured).
+    const conversations = notices.map((row) => row.conversationId);
+    expect(conversations).toHaveLength(2);
+    expect(new Set(conversations).size).toBe(2);
+    expect(conversations).toContain(scope.annaConversation);
+    expect((await theNotice())?.lastNotifiedAt).toEqual(NOW);
+  });
 });

@@ -1,5 +1,6 @@
 import { i18n, type Messages } from "@lingui/core";
 import { Platform } from "react-native";
+import { setChineseBookFace } from "../theme/tokens.ts";
 import type { AppLocale } from "./locale.ts";
 import { messages as en } from "./locales/en.po";
 import { messages as zhTW } from "./locales/zh-TW.po";
@@ -24,6 +25,7 @@ if (__DEV__) {
 /** Switches every word on screen at once; `I18nProvider` re-renders what reads it. */
 export function activate(locale: AppLocale): void {
   if (i18n.locale === locale) return;
+  setChineseBookFace(locale === "zh-TW");
   i18n.activate(locale);
   if (Platform.OS === "web" && typeof document !== "undefined") {
     // The page's language picks the Traditional glyphs and tells a screen reader what it reads.

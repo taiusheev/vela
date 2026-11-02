@@ -237,6 +237,27 @@ export async function activeOrganisersWithLinks(
 }
 
 /**
+ * The ids of the family's active organisers with an app account, who read the weekly read in the
+ * app whether or not they also have a messenger link.
+ */
+export async function activeAppOrganiserIds(db: Queryable, familyId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(
+      and(
+        eq(members.familyId, familyId),
+        eq(members.role, "organiser"),
+        eq(members.status, "active"),
+        isNull(members.leftAt),
+        isNotNull(members.userId),
+      ),
+    )
+    .orderBy(members.createdAt, members.id);
+  return rows.map((row) => row.id);
+}
+
+/**
  * The family's kept-light members: those whose light is on, or was consented to once (the light is
  * switched off again when she is marked deceased, and consent is never cleared).
  */

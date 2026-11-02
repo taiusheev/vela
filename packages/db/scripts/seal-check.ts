@@ -27,6 +27,7 @@ async function main(): Promise<void> {
       "answers.summary",
       "answers.flag_reason",
       "replies.text",
+      "photo_box.caption",
       "exchanges.text",
       "translations.text",
       "suggestions.text",
@@ -34,6 +35,10 @@ async function main(): Promise<void> {
       "stories.transcript",
       "recipes.title",
       "memory_facts.text",
+      "memory_candidates.source_digest",
+      "memory_keeps.source_digest",
+      "weekly_support_selections.source_digest",
+      "memory_keeps.quote",
       "reminders.text",
       "weekly_reads.suggestion",
       "weekly_reads.sent_suggestion",
@@ -72,6 +77,23 @@ async function main(): Promise<void> {
     }
 
     const jsonCandidates = [
+      {
+        query: "select data as value from question_profiles where data is not null limit 1",
+        column: "question_profiles.data",
+        policy: undefined,
+      },
+      {
+        query:
+          "select audience as value from weekly_support_permissions where jsonb_array_length(audience)>0 limit 1",
+        column: "weekly_support_permissions.audience",
+        policy: undefined,
+      },
+      {
+        query:
+          "select audience as value from weekly_support_presentations where jsonb_array_length(audience)>0 limit 1",
+        column: "weekly_support_presentations.audience",
+        policy: undefined,
+      },
       {
         query:
           "select payload as value from answers where jsonb_typeof(payload -> 'text') = 'string' or jsonb_typeof(payload -> 'choice') = 'string' limit 1",

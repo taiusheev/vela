@@ -87,6 +87,12 @@ export interface PushMessage {
   readonly sound?: "default" | null;
   /** Seconds Apple or Google keep trying to deliver it. */
   readonly ttl?: number;
+  /** iOS: notifications with one thread stack together in the notification list. */
+  readonly threadId?: string;
+  /** iOS: a later push with the same id replaces the one already shown. */
+  readonly collapseId?: string;
+  /** Android: a later push with the same tag replaces the one already shown. */
+  readonly tag?: string;
 }
 
 /**
@@ -193,10 +199,26 @@ export interface Config {
    */
   weeklyInsight?: boolean;
   /**
+   * Whether the weekly read goes to the organisers as soon as it is drafted, without waiting for
+   * the founder's send (`WEEKLY_READ_AUTO_SEND`). Absent means it waits. Off in production until
+   * the privacy notice stops promising that the founder checks each read first.
+   */
+  weeklyReadAutoSend?: boolean;
+  /**
    * Whether an organiser who chose it has Vela's suggestion, drafted in their own style, sent in
    * their name on a morning nobody in the family wrote for (`SEND_AS_ME`). Absent means not.
    */
   sendAsMe?: boolean;
+  /**
+   * Whether Vela turns photos from the family's photo box into her free mornings (ADR-58,
+   * `PHOTO_BOX`). Absent means not; off in production until the privacy notice describes the box.
+   */
+  photoBox?: boolean;
+  /**
+   * Whether her morning carries no buttons and an unanswered morning gets the check-in, whose "Not
+   * okay" tells her organisers at once (ADR-54, `CHECK_IN`). Absent means not.
+   */
+  checkIn?: boolean;
   /**
    * Suggestions are written where the app's API is served (ADR-29, ADR-44): nightly, and on the
    * spot for an evening prompt or a morning that has none yet. Absent means not.
@@ -226,6 +248,21 @@ export interface Config {
    * words (data map row 29); a plan is then not kept at all.
    */
   memory: boolean;
+  /** Author memories (`RICH_MEMORIES`, privacy-notice v7); absent means off. On in development and
+   * staging only; pinned off in production by apps/worker/src/wrangler-config.test.ts. */
+  richMemories?: boolean;
+  /**
+   * Memory suggestions from her ordinary answers (`MEMORY_DISCOVERY`, memory-discovery.ts): only with
+   * `richMemories` too. Absent means off; on in development and staging (founder, 23 Oct 2026), off in
+   * production, pinned by apps/worker/src/wrangler-config.test.ts.
+   */
+  memoryDiscovery?: boolean;
+  /**
+   * Stories gathered from her memories (`MEMORY_STORIES`, stories.ts, ADR-51): only with
+   * `memoryDiscovery` and the book. Absent means off; off in production until the notice describes
+   * it, pinned by apps/worker/src/wrangler-config.test.ts.
+   */
+  memoryStories?: boolean;
   /**
    * Whether her answers to a story ask are kept in the family book beyond 30 days (ADR-39, `BOOK`).
    * Off in production until the privacy notice describes the book: version 1 says it comes later.

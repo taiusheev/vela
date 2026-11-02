@@ -1,3 +1,14 @@
+import { SUPPORT_NOTICE_VERSION } from "@vela/contracts";
+import {
+  answerWeeklySupportPermission,
+  loadWeeklySupportPresentation,
+  loadWeeklySupportReport,
+  prepareWeeklySupportPermission,
+  removeWeeklySupportReview,
+  reviewWeeklySupport,
+  stopWeeklySupport,
+  type WeeklySupportConfig,
+} from "@vela/services";
 /**
  * The API under /v1 on the pilot Worker (ADR-29): the handler `createWorker` hands `/v1` and every
  * path under it to, before the pilot's own routes. It checks its own configuration
@@ -20,27 +31,40 @@
  * `api_rate_limit_failed`, and `api_request_failed`. A 4xx is never logged, and neither is a token,
  * an address, a body, a key, or any configured value.
  */
+
 import type { ApiErrorBody } from "@vela/contracts";
 import { connectDatabase } from "@vela/db";
 import {
   ApiIdempotencyError,
   type ApiNudges,
   addApiNearby,
+  addToApiPhotoBox,
   admissionWithRoster,
+  answerMemoryPermission,
   askApiToLookIn,
   authorizeFamilyAccess,
   cancelAccountLink,
+  changeApiPhotoBoxPhoto,
   completeAccountLink,
   composeApiAsk,
   createApiFamily,
   createApiReminder,
   disableApiAccount,
+  dismissApiSuggestion,
+  dismissMemoryCandidate,
+  draftApiPersonalQuestion,
+  editApiAsk,
   endApiAway,
   errorLabel,
   finishApiReminder,
+  forgetApiQuestionProfile,
   inviteApiNearby,
+  keepApiAnswer,
+  keepBoxPhotoStored,
+  keepMemoryCandidate,
   type Logger,
   leaveApiFamily,
+  listApiWeeklyReads,
   loadAccountLinkStatus,
   loadApiBook,
   loadApiExchange,
@@ -51,18 +75,28 @@ import {
   loadApiMe,
   loadApiMorningPreferences,
   loadApiParentConnection,
+  loadApiPhotoBox,
+  loadApiPlannedQuestions,
   loadApiPrecision,
+  loadApiQuestionProfile,
   loadApiQuiet,
   loadApiReminders,
   loadApiToday,
   loadApiWeeklyRead,
   loadDeviceMessages,
+  loadKeptMemories,
+  loadMemoryCandidates,
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
+  loadSharedKeptMemories,
   markApiDeceased,
   markApiQuietUseful,
   memberOfDeviceToken,
   openApiWeeklyRead,
   pauseApiMember,
   pilotApiAccountAllowed,
+  pilotSpeaks,
+  prepareMemoryPermission,
   provisionApiAccount,
   readApiMedia,
   readDeviceMedia,
@@ -71,8 +105,11 @@ import {
   removeApiDevice,
   removeApiNearby,
   removeApiPushDevice,
+  removeFromApiPhotoBox,
+  removeKeptMemory,
   replyToApiExchange,
   resolveApiQuiet,
+  saveApiQuestionProfile,
   setApiAway,
   setApiMorningPreferences,
   setUpApiDevice,
@@ -83,15 +120,25 @@ import {
   uploadApiMedia,
   uploadApiVoice,
   withdrawApiAsk,
+  withdrawOwnMemoryConsent,
 } from "@vela/services";
+import type { ExecutionContext as ApiExecutionContext } from "hono";
 import {
   type ApiReadServices,
   type ApiRuntime,
   type ApiWriteServices,
   createApiApp,
 } from "./api-app.ts";
-import { type ApiConfig, readApiConfig, secret } from "./config.ts";
-import { createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
+import {
+  type ApiConfig,
+  readApiConfig,
+  readPersonalQuestionDrafts,
+  readPersonalQuestionProfiles,
+  readPhotoBox,
+  readRichMemories,
+  secret,
+} from "./config.ts";
+import { createAiPort, createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
 import { createRandom } from "./random.ts";
 import {
@@ -104,11 +151,19 @@ import {
 import { type AccountWriteLimiter, writeLimiterOf } from "./write-limit.ts";
 
 /** What `PilotRuntime.api` is: one request under /v1 in, its answer out. */
-export type ApiHandler = (request: Request, env: PilotEnv) => Promise<Response>;
+export type ApiHandler = (
+  request: Request,
+  env: PilotEnv,
+  context?: ExecutionContext,
+) => Promise<Response>;
 
 /** The API app as the handler uses it; `createApiApp` returns one. */
 export interface ApiApp {
-  fetch(request: Request): Response | Promise<Response>;
+  fetch(
+    request: Request,
+    env?: unknown,
+    context?: ApiExecutionContext,
+  ): Response | Promise<Response>;
 }
 
 /**
@@ -124,10 +179,13 @@ export const API_READ_SERVICES: ApiReadServices = {
   loadApiFamily,
   loadApiBook,
   loadApiReminders,
+  loadApiPhotoBox,
   loadApiExchange,
+  loadApiPlannedQuestions,
   loadApiExchanges,
   loadApiQuiet,
   loadApiWeeklyRead,
+  listApiWeeklyReads,
   loadApiPrecision,
   memberOfDeviceToken,
   loadDeviceMessages,
@@ -140,6 +198,21 @@ export const API_READ_SERVICES: ApiReadServices = {
  * The writes the API serves: the same list `scripts/api-dev.ts` serves on a laptop. A service
  * added to `ApiWriteServices` fails `tsc` here until it is added to this list as well.
  */
+/** The author's own memory routes, offered only where RICH_MEMORIES is on. */
+export const MEMORY_SERVICES: NonNullable<ApiRuntime["memories"]>["services"] = {
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
+  prepareMemoryPermission,
+  answerMemoryPermission,
+  withdrawOwnMemoryConsent,
+  loadMemoryCandidates,
+  dismissMemoryCandidate,
+  keepMemoryCandidate,
+  loadKeptMemories,
+  removeKeptMemory,
+  loadSharedKeptMemories,
+};
+
 export const API_WRITE_SERVICES: ApiWriteServices = {
   provisionApiAccount,
   updateApiAccount,
@@ -152,6 +225,7 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   setApiMorningPreferences,
   leaveApiFamily,
   setApiAway,
+  editApiAsk,
   withdrawApiAsk,
   markApiDeceased,
   endApiAway,
@@ -165,8 +239,14 @@ export const API_WRITE_SERVICES: ApiWriteServices = {
   uploadApiVoice,
   askApiToLookIn,
   removeApiBookEntry,
+  keepApiAnswer,
+  dismissApiSuggestion,
   createApiReminder,
   finishApiReminder,
+  addToApiPhotoBox,
+  changeApiPhotoBoxPhoto,
+  removeFromApiPhotoBox,
+  keepBoxPhotoStored,
   markApiQuietUseful,
   inviteApiNearby,
   registerApiPushDevice,
@@ -334,14 +414,40 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const { secretKey } = config;
   const photos = apiMediaFor(env, config, logger);
   return {
+    weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
+    questionProfiles: {
+      saving:
+        readPersonalQuestionProfiles(env, config.environment) &&
+        readPersonalQuestionDrafts(env, config.environment),
+      config: { pilotAdmission: config.pilotAdmission },
+      load: loadApiQuestionProfile,
+      save: saveApiQuestionProfile,
+      forget: forgetApiQuestionProfile,
+    },
+    ...(readPersonalQuestionDrafts(env, config.environment)
+      ? {
+          personalQuestions: {
+            draft: draftApiPersonalQuestion,
+            ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
+            config: { pilotAdmission: config.pilotAdmission },
+          },
+        }
+      : {}),
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
+    // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development
+    // and staging, never production (pinned in src/wrangler-config.test.ts). Sharing stays absent.
+    ...(readRichMemories(env)
+      ? { memories: { config: { richMemories: true }, services: MEMORY_SERVICES } }
+      : {}),
     capabilities: {
       pilot: config.pilotAdmission != null,
       telegram_first: config.pilotAdmission != null,
-      english_only: config.pilotAdmission != null,
+      // English alone until the test's languages include Chinese (ADR-52, PILOT_LANGUAGES).
+      english_only: config.pilotAdmission != null && !pilotSpeaks(config.pilotAdmission, "zh-TW"),
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
+      photo_box: readPhotoBox(env),
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
     },
@@ -363,6 +469,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }),
     push: config.pushSend === "expo",
+    notificationControls: config.notificationControls === true,
     parentConnection: loadApiParentConnection,
     verifySession: createClerkSessionVerifier({
       issuer: config.issuer,
@@ -378,8 +485,9 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
         ? API_READ_SERVICES
         : {
             ...API_READ_SERVICES,
-            loadApiWeeklyRead: (db, identity, familyId, memberId, now) =>
+            loadApiWeeklyRead: (db, identity, familyId, memberId, now, options) =>
               loadApiWeeklyRead(db, identity, familyId, memberId, now, {
+                ...options,
                 pilotFree: config.pilotAdmission != null,
               }),
           },
@@ -395,6 +503,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
               cancel: cancelAccountLink,
               requesterLabel: createClerkLinkRequester({ secretKey }),
               telegramBotUsername: config.telegramBotUsername,
+              lineBasicId: config.lineBasicId,
             },
             verifyActiveSession: limitWrites(
               env.ACCOUNT_WRITE_LIMITER,
@@ -502,7 +611,7 @@ export function createApiHandler(
     return kept.app;
   }
 
-  return async (request, env) => {
+  return async (request, env, context) => {
     const logger = createLogger(env);
     let config: ApiConfig | null;
     try {
@@ -526,10 +635,39 @@ export function createApiHandler(
       return answer(UNAVAILABLE, 503);
     }
     try {
-      return await app.fetch(request);
+      return await (context === undefined
+        ? app.fetch(request)
+        : app.fetch(request, undefined, context));
     } catch (error) {
       logger.error("api_request_failed", { error: errorLabel(error) });
       return answer(INTERNAL, 500);
     }
+  };
+}
+
+export const WEEKLY_SUPPORT_SERVICES = {
+  loadWeeklySupportReport,
+  loadWeeklySupportPresentation,
+  prepareWeeklySupportPermission,
+  answerWeeklySupportPermission,
+  stopWeeklySupport,
+  reviewWeeklySupport,
+  removeWeeklySupportReview,
+};
+export function weeklySupportConfig(
+  env: Pick<PilotEnv, "WEEKLY_SUPPORT" | "WEEKLY_SUPPORT_NOTICE" | "WEEKLY_SUPPORT_FAMILIES">,
+): WeeklySupportConfig {
+  const raw = (env.WEEKLY_SUPPORT_FAMILIES ?? "")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+  const valid =
+    raw.length <= 50 &&
+    raw.every((v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v));
+  return {
+    enabled:
+      valid && env.WEEKLY_SUPPORT === "on" && env.WEEKLY_SUPPORT_NOTICE === SUPPORT_NOTICE_VERSION,
+    noticeVersion: env.WEEKLY_SUPPORT_NOTICE ?? "",
+    familyIds: valid ? [...new Set(raw)] : [],
   };
 }

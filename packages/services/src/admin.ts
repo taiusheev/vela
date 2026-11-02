@@ -93,8 +93,10 @@ import {
   NAME_MAX_LENGTH,
 } from "./invites.ts";
 import { forgetConsentSubjects, recordDeletion, subjectRef } from "./proofs.ts";
+import { ordinaryPushReader, weeklyReadPush } from "./push-messages.ts";
 import { type ChannelQuotaSnapshot, loadChannelQuota } from "./quota.ts";
 import {
+  activeAppOrganiserIds,
   activeOrganisersWithLinks,
   channelLinkOfMember,
   exchangeForLocalDate,
@@ -1232,7 +1234,7 @@ function organiserText(
   return text;
 }
 
-interface SentWeeklyRead {
+export interface SentWeeklyRead {
   read: WeeklyRead;
   member: Member;
   family: Family;
@@ -1244,7 +1246,7 @@ interface SentWeeklyRead {
  * family writes in another. The suggestion is never translated, since she never sees it. A failed
  * translation stores nothing, and she reads the lines as sent.
  */
-async function translateForHer(deps: Deps, sent: SentWeeklyRead): Promise<void> {
+export async function translateForHer(deps: Deps, sent: SentWeeklyRead): Promise<void> {
   const { read, member, family, lines } = sent;
   if (lines.length === 0 || family.language === member.language) {
     return;
@@ -1307,14 +1309,166 @@ async function translateForHer(deps: Deps, sent: SentWeeklyRead): Promise<void> 
   }
 }
 
+/** What goes out in a weekly read: the lines and suggestion, her health words, and each feedback. */
+export interface WeeklyReadContent {
+  lines: string[];
+  suggestion: string;
+  includeHealth: boolean;
+  /** ADR-48: each organiser's own feedback by member id, only in that organiser's copy. */
+  feedback: Readonly<Record<string, string>>;
+}
+
+/** A read delivered in a transaction, with what its `weekly_read_sent` event counts. */
+export interface DeliveredWeeklyRead extends SentWeeklyRead {
+  suggestion: string;
+  organisers: number;
+  appOrganisers: number;
+  healthLines: number;
+  feedbackSent: number;
+}
+
 /**
- * Sends the read the founder edited to each active organiser with a Telegram link, as one budgeted
- * `weekly_read` each, keyed by the kept-light member, the week's last date, and the organiser's
- * conversation. `sent_lines`, `sent_suggestion`, and `sent_at` are written together, only when at
- * least one organiser's row was inserted, so a read recorded as sent always reached someone; `lines`
- * and `suggestion` keep the draft. A read already sent is not sent again. When no organiser can
- * receive it, or each already got a weekly read that local day, the send is refused and nothing is
- * stored, logged, or sent, so the founder can send it the next day (flows §3.17).
+ * Delivers `content` for `read` in `tx`: one budgeted `weekly_read` to each active organiser with a
+ * messenger link, keyed by the kept-light member, the week's last date, and the organiser's
+ * conversation. An active organiser with an app account sees the read in the app once `sent_at` is
+ * written, so the read counts as delivered when it reached one messenger or one such organiser.
+ * `sent_lines`, `sent_suggestion`, and `sent_at` are written together, only then, so a read recorded
+ * as sent always reached someone; `lines` and `suggestion` keep the draft. When nobody can receive
+ * it nothing is stored: "no_organiser" when no organiser has a messenger link or an account,
+ * "budget" when each messenger organiser already got a weekly read that local day.
+ */
+export async function deliverWeeklyRead(
+  deps: Deps,
+  tx: VelaTransaction,
+  read: WeeklyRead,
+  content: WeeklyReadContent,
+  at: Date,
+): Promise<DeliveredWeeklyRead | "already_sent" | "no_organiser" | "budget"> {
+  if (read.sentAt !== null) {
+    return "already_sent";
+  }
+  const member = await memberById(tx, read.memberId);
+  const family = await familyById(tx, read.familyId);
+  if (member === null || family === null) {
+    throw new VelaError("not_found", "send_weekly_read: the read's member or family is gone");
+  }
+  const stats = parseStats(read);
+  const organisers = await activeOrganisersWithLinks(tx, family.id, ORGANISER_CHANNEL);
+  const appIds = await activeAppOrganiserIds(tx, family.id);
+  const appOrganisers = appIds.length;
+  if (organisers.length === 0 && appOrganisers === 0) {
+    return "no_organiser";
+  }
+  const health = content.includeHealth
+    ? await weeklyHealthMentions(tx, member, read.weekStart, at)
+    : [];
+  const text = organiserText(family, member, stats, content.lines, content.suggestion, health);
+  const weekEnd = weekEndOf(read);
+  let sentTo = 0;
+  // Each organiser's own feedback as it reached them, for their copy in the app; kept 30 days.
+  const reached = new Set(appIds);
+  for (const organiser of organisers) {
+    // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them.
+    const own = content.feedback[organiser.member.id]?.trim() ?? "";
+    const copy =
+      own === ""
+        ? text
+        : `${text}\n\n${t(family.language, "weekly_read.feedback_heading", { name: organiser.member.displayName })}\n${own}`;
+    const result = await enqueueOutbound(deps, tx, {
+      kind: "weekly_read",
+      idempotencyKey: outboundKey("weekly_read", {
+        memberId: member.id,
+        date: weekEnd,
+        conversationId: organiser.link.externalId,
+      }),
+      memberId: organiser.member.id,
+      channel: organiser.link.channel,
+      conversationId: organiser.link.externalId,
+      lang: family.language,
+      text: copy,
+    });
+    if ("outboundId" in result) {
+      sentTo += 1;
+      reached.add(organiser.member.id);
+    }
+  }
+  // An organiser who reads it in the app alone hears it is there (ADR-59); one reached on their
+  // messenger already has it in their chat, and that copy holds the day's budget for weekly reads.
+  const messengerReached = new Set(
+    organisers.filter((organiser) => reached.has(organiser.member.id)).map((o) => o.member.id),
+  );
+  for (const memberId of appIds) {
+    if (messengerReached.has(memberId)) continue;
+    const reader = await ordinaryPushReader(tx, memberId, "weekly_read");
+    if (reader !== null) {
+      await enqueueOutbound(
+        deps,
+        tx,
+        weeklyReadPush({ reader, herId: member.id, weekEnd, herName: member.displayName }),
+      );
+    }
+  }
+  const sentFeedback = [...reached].flatMap((memberId) => {
+    const text = content.feedback[memberId]?.trim() ?? "";
+    return text === "" ? [] : [{ member_id: memberId, text }];
+  });
+  const feedbackSent = sentFeedback.length;
+  if (sentTo === 0 && appOrganisers === 0) {
+    return "budget";
+  }
+  await tx
+    .update(weeklyReads)
+    .set({
+      sentLines: content.lines,
+      sentSuggestion: content.suggestion,
+      sentAt: at,
+      // Her health words are never stored here: only that the read went out with them. Each
+      // organiser's feedback is kept for their own copy in the app until retention clears it.
+      stats: {
+        ...read.stats,
+        health_sent: health.length > 0,
+        feedback_sent: feedbackSent,
+        ...(feedbackSent > 0 ? { sent_feedback: sentFeedback } : {}),
+      },
+    })
+    .where(eq(weeklyReads.id, read.id));
+  return {
+    read,
+    member,
+    family,
+    lines: content.lines,
+    suggestion: content.suggestion,
+    organisers: sentTo,
+    appOrganisers,
+    healthLines: health.length,
+    feedbackSent,
+  };
+}
+
+/** The `weekly_read_sent` event for a delivered read; `auto` when no one pressed send. */
+export function weeklyReadSentEvent(sent: DeliveredWeeklyRead, auto: boolean): DomainEvent {
+  return {
+    name: "weekly_read_sent",
+    familyId: sent.family.id,
+    memberId: sent.member.id,
+    props: {
+      weekly_read_id: sent.read.id,
+      week_start: sent.read.weekStart,
+      organisers: sent.organisers,
+      app_organisers: sent.appOrganisers,
+      lines: sent.lines.length,
+      suggestion: sent.suggestion.length > 0,
+      health_lines: sent.healthLines,
+      feedback: sent.feedbackSent,
+      auto,
+    },
+  };
+}
+
+/**
+ * Sends the read the founder edited (`deliverWeeklyRead`). A read already sent is not sent again.
+ * When no organiser can receive it the send is refused and nothing is stored, logged, or sent, so
+ * the founder can send it the next day (flows §3.17).
  */
 export async function sendWeeklyRead(
   deps: Deps,
@@ -1325,7 +1479,7 @@ export async function sendWeeklyRead(
   const input = parse(SendWeeklyReadSchema, rawInput, "send_weekly_read");
   const at = deps.clock.now();
   const outcome = await deps.db.transaction(
-    async (tx): Promise<SendWeeklyReadResult | SentWeeklyRead> => {
+    async (tx): Promise<SendWeeklyReadResult | DeliveredWeeklyRead> => {
       const [read] = await tx
         .select()
         .from(weeklyReads)
@@ -1335,86 +1489,18 @@ export async function sendWeeklyRead(
         throw new VelaError("not_found", "send_weekly_read: weekly read does not exist");
       }
       assertInScope(admin, read.familyId, "send_weekly_read");
-      if (read.sentAt !== null) {
-        return "already_sent";
+      const sent = await deliverWeeklyRead(deps, tx, read, input, at);
+      if (typeof sent === "string") {
+        return sent;
       }
-      const member = await memberById(tx, read.memberId);
-      const family = await familyById(tx, read.familyId);
-      if (member === null || family === null) {
-        throw new VelaError("not_found", "send_weekly_read: the read's member or family is gone");
-      }
-      const stats = parseStats(read);
-      const organisers = await activeOrganisersWithLinks(tx, family.id, ORGANISER_CHANNEL);
-      if (organisers.length === 0) {
-        return "no_organiser";
-      }
-      const health = input.includeHealth
-        ? await weeklyHealthMentions(tx, member, read.weekStart, at)
-        : [];
-      const text = organiserText(family, member, stats, input.lines, input.suggestion, health);
-      const weekEnd = weekEndOf(read);
-      let sentTo = 0;
-      let feedbackSent = 0;
-      for (const organiser of organisers) {
-        // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them.
-        const own = input.feedback[organiser.member.id] ?? "";
-        const copy =
-          own === ""
-            ? text
-            : `${text}\n\n${t(family.language, "weekly_read.feedback_heading", { name: organiser.member.displayName })}\n${own}`;
-        const result = await enqueueOutbound(deps, tx, {
-          kind: "weekly_read",
-          idempotencyKey: outboundKey("weekly_read", {
-            memberId: member.id,
-            date: weekEnd,
-            conversationId: organiser.link.externalId,
-          }),
-          memberId: organiser.member.id,
-          channel: organiser.link.channel,
-          conversationId: organiser.link.externalId,
-          lang: family.language,
-          text: copy,
-        });
-        if ("outboundId" in result) {
-          sentTo += 1;
-          if (own !== "") feedbackSent += 1;
-        }
-      }
-      if (sentTo === 0) {
-        return "budget";
-      }
-      await tx
-        .update(weeklyReads)
-        .set({
-          sentLines: input.lines,
-          sentSuggestion: input.suggestion,
-          sentAt: at,
-          // Her health words are never stored here: only that the read went out with them. The
-          // feedback itself is in each organiser's sent message, so only its count is kept.
-          stats: { ...read.stats, health_sent: health.length > 0, feedback_sent: feedbackSent },
-        })
-        .where(eq(weeklyReads.id, read.id));
       await logChange(tx, admin, at, {
         action: "send_weekly_read",
-        familyId: family.id,
-        memberId: member.id,
-        what: `weekly_read=${read.id} week=${read.weekStart} organisers=${sentTo}`,
-        event: {
-          name: "weekly_read_sent",
-          familyId: family.id,
-          memberId: member.id,
-          props: {
-            weekly_read_id: read.id,
-            week_start: read.weekStart,
-            organisers: sentTo,
-            lines: input.lines.length,
-            suggestion: input.suggestion.length > 0,
-            health_lines: health.length,
-            feedback: feedbackSent,
-          },
-        },
+        familyId: sent.family.id,
+        memberId: sent.member.id,
+        what: `weekly_read=${read.id} week=${read.weekStart} organisers=${sent.organisers}`,
+        event: weeklyReadSentEvent(sent, false),
       });
-      return { read, member, family, lines: input.lines };
+      return sent;
     },
   );
   if (typeof outcome === "string") {

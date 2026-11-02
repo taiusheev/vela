@@ -264,7 +264,7 @@ describe("every inbound path processed twice", () => {
       await h.db.select().from(channelLinks).where(eq(channelLinks.externalId, STRANGER)),
     ).toHaveLength(1);
 
-    // And the Yes on that request, twice.
+    // And "Yes to both" on that request, twice: her light and her health words, each once.
     const request = h.telegram.sentTo(STRANGER).at(-1);
     const button = request?.message.buttons?.[0]?.[0];
     await unchangedOnReplay([
@@ -275,7 +275,7 @@ describe("every inbound path processed twice", () => {
         messageId: request?.result.primaryMessageId,
       }),
     ]);
-    expect(await h.db.select().from(consents)).toHaveLength(2);
+    expect(await h.db.select().from(consents)).toHaveLength(3);
   });
 
   it("lights her message once", async () => {

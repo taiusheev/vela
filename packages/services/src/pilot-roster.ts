@@ -7,8 +7,15 @@
  * Each change is one row in `admin_access_log` (`roster_add`, `roster_remove`), naming the id and
  * the Access identity that made it. Ids only: never a name or a phone number.
  */
-import { adminAccessLog, pilotRoster } from "@vela/db";
-import { asc, eq } from "drizzle-orm";
+import {
+  adminAccessLog,
+  channelLinks,
+  families,
+  members,
+  pilotFamilies,
+  pilotRoster,
+} from "@vela/db";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { AdminContext } from "./admin.ts";
 import type { Deps } from "./deps.ts";
@@ -35,8 +42,9 @@ export async function rosterIds(db: Queryable): Promise<string[]> {
 }
 
 /**
- * Admission with the roster added to the Worker's allowlist; null (admission off) stays null, so an
- * environment without a closed pilot never reads the table.
+ * Admission with the roster added to the Worker's allowlist, and with family approval on (ADR-52)
+ * the approved families; null (admission off) stays null, so an environment without a closed
+ * pilot never reads the tables.
  */
 export async function admissionWithRoster(
   db: Queryable,
@@ -44,7 +52,13 @@ export async function admissionWithRoster(
 ): Promise<PilotAdmission | null> {
   if (base == null) return null;
   const ids = await rosterIds(db);
-  return { telegramUserIds: [...new Set([...base.telegramUserIds, ...ids])] };
+  const withIds = { ...base, telegramUserIds: [...new Set([...base.telegramUserIds, ...ids])] };
+  if (base.familyIds === undefined) return withIds;
+  const approved = await db.select({ id: pilotFamilies.familyId }).from(pilotFamilies);
+  return {
+    ...withIds,
+    familyIds: [...new Set([...base.familyIds, ...approved.map((row) => row.id)])],
+  };
 }
 
 export interface RosterEntry {
@@ -122,5 +136,138 @@ export async function removeFromRoster(
       at,
     });
     return "removed";
+  });
+}
+
+// ADR-52: the closed test's families -----------------------------------------------------------
+
+const FamilyId = z.string().uuid();
+
+export interface PilotFamilyEntry {
+  familyId: string;
+  createdAt: Date;
+  language: string;
+  /** People in the family who have not left. */
+  members: number;
+  /** The messengers its people linked, as `telegram` or `line`; none before anyone has. */
+  messengers: string[];
+  approvedAt: Date | null;
+}
+
+/**
+ * Every family not deleted, newest first, with whether the founder approved it. Ids, counts and
+ * dates only, never a name: the family's own page, which logs its view, shows who it is.
+ */
+export async function loadPilotFamilies(deps: Pick<Deps, "db">): Promise<PilotFamilyEntry[]> {
+  const rows = await deps.db
+    .select({
+      familyId: families.id,
+      createdAt: families.createdAt,
+      language: families.language,
+      approvedAt: pilotFamilies.approvedAt,
+      memberId: members.id,
+      channel: channelLinks.channel,
+    })
+    .from(families)
+    .leftJoin(pilotFamilies, eq(pilotFamilies.familyId, families.id))
+    .leftJoin(members, and(eq(members.familyId, families.id), isNull(members.leftAt)))
+    .leftJoin(channelLinks, eq(channelLinks.memberId, members.id))
+    .where(isNull(families.deletedAt))
+    .orderBy(desc(families.createdAt), asc(families.id));
+  const entries = new Map<string, PilotFamilyEntry & { people: Set<string> }>();
+  for (const row of rows) {
+    const entry = entries.get(row.familyId) ?? {
+      familyId: row.familyId,
+      createdAt: row.createdAt,
+      language: row.language,
+      members: 0,
+      messengers: [],
+      approvedAt: row.approvedAt,
+      people: new Set<string>(),
+    };
+    if (row.memberId !== null) entry.people.add(row.memberId);
+    if (row.channel !== null && !entry.messengers.includes(row.channel)) {
+      entry.messengers.push(row.channel);
+    }
+    entries.set(row.familyId, entry);
+  }
+  return [...entries.values()].map(({ people, ...entry }) => ({
+    ...entry,
+    members: people.size,
+    messengers: entry.messengers.sort(),
+  }));
+}
+
+function familyChange(ctx: AdminContext, familyId: string): { admin: string; familyId: string } {
+  const admin = Admin.safeParse(ctx.admin);
+  const id = FamilyId.safeParse(familyId);
+  if (!admin.success || !id.success) {
+    throw new VelaError("invalid_payload", "A family approval needs an admin and a family id");
+  }
+  return { admin: admin.data, familyId: id.data.toLowerCase() };
+}
+
+/**
+ * Approves a family for the closed test: it takes part from its next message, on any messenger,
+ * with everyone who joins it. Approving one already approved changes nothing and logs nothing.
+ */
+export async function approveFamily(
+  deps: Pick<Deps, "db" | "clock">,
+  ctx: AdminContext,
+  familyId: string,
+): Promise<"approved" | "already"> {
+  const change = familyChange(ctx, familyId);
+  const at = deps.clock.now();
+  return deps.db.transaction(async (tx) => {
+    const [family] = await tx
+      .select({ id: families.id })
+      .from(families)
+      .where(and(eq(families.id, change.familyId), isNull(families.deletedAt)))
+      .for("update");
+    if (family === undefined) throw new VelaError("not_found", "Family not found");
+    const [row] = await tx
+      .insert(pilotFamilies)
+      .values({ familyId: change.familyId, approvedAt: at })
+      .onConflictDoNothing()
+      .returning({ id: pilotFamilies.familyId });
+    if (row === undefined) return "already";
+    await tx.insert(adminAccessLog).values({
+      admin: change.admin,
+      familyId: change.familyId,
+      memberId: null,
+      action: "family_approve",
+      what: "closed test",
+      at,
+    });
+    return "approved";
+  });
+}
+
+/**
+ * Withdraws a family's approval. Its automatic work pauses at once (`pilotFamilyAllowed`); stop,
+ * privacy and deletion still answer its people.
+ */
+export async function unapproveFamily(
+  deps: Pick<Deps, "db" | "clock">,
+  ctx: AdminContext,
+  familyId: string,
+): Promise<"unapproved" | "absent"> {
+  const change = familyChange(ctx, familyId);
+  const at = deps.clock.now();
+  return deps.db.transaction(async (tx) => {
+    const [row] = await tx
+      .delete(pilotFamilies)
+      .where(eq(pilotFamilies.familyId, change.familyId))
+      .returning({ id: pilotFamilies.familyId });
+    if (row === undefined) return "absent";
+    await tx.insert(adminAccessLog).values({
+      admin: change.admin,
+      familyId: change.familyId,
+      memberId: null,
+      action: "family_unapprove",
+      what: "closed test",
+      at,
+    });
+    return "unapproved";
   });
 }

@@ -1,8 +1,9 @@
 import { Trans } from "@lingui/react/macro";
 import { useKeepAwake } from "expo-keep-awake";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text } from "../components/scaled-text.tsx";
 import { lightPalette as light } from "../theme/tokens.ts";
 import { photoAt, tableClock, tableDate } from "./kitchen.ts";
 import type { ParentView } from "./useParent.ts";

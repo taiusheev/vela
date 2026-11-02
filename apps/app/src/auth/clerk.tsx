@@ -4,8 +4,10 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { RequestInterrupted, sessionRequests } from "../api/request-session.ts";
 import { clearAudioCache } from "../audio/cache.ts";
 import { clearPhotoCache } from "../data/photos.ts";
+import { writeWidget } from "../device/widget.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
 import { activatePortraitSession, clearPortraitSession } from "../storage/portraits.ts";
+import { signedInToken } from "./session.ts";
 
 /**
  * Sign-in is Clerk's (build plan 3.1). The key is public by design and arrives through the
@@ -58,13 +60,15 @@ function ClerkAccount({ children }: { children: ReactNode }) {
       sessionId: sessionId ?? null,
       token: (options) =>
         sessionRequests.credential(scope, () =>
-          getToken(options?.fresh === true ? { skipCache: true } : undefined),
+          signedInToken(getToken, isSignedIn === true, options?.fresh === true),
         ),
       signOut: async () => {
         sessionRequests.assertScope(scope);
         if (sessionId == null) throw new RequestInterrupted("session");
         sessionRequests.end(scope);
         clearPhotoCache();
+        // The home screen widget shows this family's lights: it goes dark with the account.
+        writeWidget(null);
         void clearAudioCache().catch(() => {});
         try {
           clearPortraitSession(scope);

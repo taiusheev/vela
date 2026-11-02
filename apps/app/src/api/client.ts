@@ -1,10 +1,12 @@
 import type {
+  AddToPhotoBox,
   ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAskConflict,
   ApiAway,
   ApiBook,
+  ApiBookKept,
   ApiBookRemoved,
   ApiComposedAsk,
   ApiCreatedFamily,
@@ -14,6 +16,7 @@ import type {
   ApiExchangePage,
   ApiExchangeSummary,
   ApiFamily,
+  ApiKeepSuggestionDismissed,
   ApiLeft,
   ApiLinkStatus,
   ApiLookInAsk,
@@ -24,9 +27,16 @@ import type {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPersonalQuestionDraft,
+  ApiPhotoBox,
+  ApiPhotoBoxPhoto,
+  ApiPhotoBoxRemoved,
+  ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
+  ApiQuestionProfile,
+  ApiQuestionProfileSaved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReminder,
@@ -37,13 +47,35 @@ import type {
   ApiTrial,
   ApiUser,
   ApiWeeklyRead,
+  ApiWeeklyReadList,
   ApiWeeklyReadOpened,
   ApiWithdrawn,
+  ChangePhotoBoxPhoto,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
+  DraftPersonalQuestion,
+  EditAsk,
+  KeptMemoryPage,
+  MemoryCandidatePage,
+  MemoryKept,
+  MemoryPermissionAnswered,
+  MemoryPermissionPrepared,
+  MemoryPermissionPreview,
+  MemoryPermissionState,
+  PhotoBoxRefusal,
   RegisterPushDevice,
+  SaveQuestionProfile,
   SetAway,
+} from "@vela/contracts";
+import {
+  MEMORY_KEEP_EXPLANATION_SHA256,
+  MEMORY_KEEP_VERSION,
+  MEMORY_PERMISSION_VERSION,
+  SupportPrepared,
+  SupportPresentation,
+  SupportReport,
+  SupportWriteResult,
 } from "@vela/contracts";
 
 import { sessionRequests } from "./request-session.ts";
@@ -143,11 +175,15 @@ export function fetchMe(token: string | null): Promise<ApiMe> {
 }
 
 export interface ApiCapabilities {
+  personal_question_profiles?: boolean;
+  personal_questions?: boolean;
   pilot: boolean;
   telegram_first: boolean;
   english_only: boolean;
   memory: boolean;
   book: boolean;
+  /** The family's photo box (ADR-58); absent from a server that has none. */
+  photo_box?: boolean;
   parent_app: boolean;
   billing: boolean;
 }
@@ -159,6 +195,8 @@ export function fetchCapabilities(): Promise<ApiCapabilities> {
 export interface LinkChallenge {
   challenge_id: string;
   telegram_url: string;
+  /** The same request through Vela's LINE account, where the server offers LINE (ADR-52). */
+  line_url?: string;
   expires_at: string;
   confirmation?: "telegram";
   requester_label?: string;
@@ -206,6 +244,69 @@ export function composeAsk(
   });
 }
 
+/** A request-only draft: no schedule, signature setting or relationship record is changed. */
+export function draftPersonalQuestion(
+  familyId: string,
+  key: string,
+  input: DraftPersonalQuestion,
+  token: string | null,
+): Promise<ApiPersonalQuestionDraft> {
+  return call<ApiPersonalQuestionDraft>({
+    path: `/v1/families/${familyId}/personal-question-drafts`,
+    token,
+    key,
+    body: input,
+  });
+}
+
+export function fetchQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  token: string | null,
+): Promise<ApiQuestionProfile> {
+  return read<ApiQuestionProfile>(
+    `/v1/families/${familyId}/members/${recipientId}/question-profile`,
+    token,
+  );
+}
+export function saveQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  key: string,
+  input: SaveQuestionProfile,
+  token: string | null,
+): Promise<ApiQuestionProfileSaved> {
+  return call<ApiQuestionProfileSaved>({
+    path: `/v1/families/${familyId}/members/${recipientId}/question-profile/save`,
+    token,
+    key,
+    body: input,
+  });
+}
+export function forgetQuestionProfile(
+  familyId: string,
+  recipientId: string,
+  key: string,
+  token: string | null,
+): Promise<{ forgotten: true }> {
+  return call({
+    path: `/v1/families/${familyId}/members/${recipientId}/question-profile/forget`,
+    token,
+    key,
+    body: {},
+  });
+}
+export function questionProfileChanged(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 409 &&
+    typeof error.details === "object" &&
+    error.details !== null &&
+    "reason" in error.details &&
+    error.details.reason === "question_profile_changed"
+  );
+}
+
 /** The family book (`GET /v1/families/:familyId/book`, ADR-39): every kept story, newest first. */
 export function fetchBook(familyId: string, token: string | null): Promise<ApiBook> {
   return read<ApiBook>(`/v1/families/${familyId}/book`, token);
@@ -218,6 +319,29 @@ export function removeBookEntry(
   token: string | null,
 ): Promise<ApiBookRemoved> {
   return call<ApiBookRemoved>({ path: `/v1/book/${exchangeId}/remove`, token, key, body: {} });
+}
+
+/** An organiser keeps one of her answers in the family book (ADR-50), or hears why not. */
+export function keepBookEntry(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiBookKept> {
+  return call<ApiBookKept>({ path: `/v1/book/${exchangeId}/keep`, token, key, body: {} });
+}
+
+/** "Not this one" on a suggestion to keep (ADR-50). */
+export function dismissKeepSuggestion(
+  exchangeId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiKeepSuggestionDismissed> {
+  return call<ApiKeepSuggestionDismissed>({
+    path: `/v1/book/${exchangeId}/dismiss`,
+    token,
+    key,
+    body: {},
+  });
 }
 
 /** The caller's reminders and the family's coming plans (`GET /v1/families/:familyId/reminders`, spec §12). */
@@ -238,6 +362,51 @@ export function createReminder(
     key,
     body: { fact_id: factId },
   });
+}
+
+/** The family's photo box (ADR-58), where it is on. */
+export function fetchPhotoBox(familyId: string, token: string | null): Promise<ApiPhotoBox> {
+  return read<ApiPhotoBox>(`/v1/families/${familyId}/photo-box`, token);
+}
+
+/** Puts a photo the caller uploaded into the box, marked new or old, with an optional line. */
+export function addToPhotoBox(
+  familyId: string,
+  add: AddToPhotoBox,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxPhoto> {
+  return call<ApiPhotoBoxPhoto>({
+    path: `/v1/families/${familyId}/photo-box`,
+    token,
+    key,
+    body: add,
+  });
+}
+
+/** Changes a box photo's era or line; a null caption clears the line. */
+export function changePhotoBoxPhoto(
+  boxId: string,
+  change: ChangePhotoBoxPhoto,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxPhoto> {
+  return call<ApiPhotoBoxPhoto>({ path: `/v1/photo-box/${boxId}`, token, key, body: change });
+}
+
+/** Takes a photo out of the box; the server deletes it within a day. */
+export function removeFromPhotoBox(
+  boxId: string,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoBoxRemoved> {
+  return call<ApiPhotoBoxRemoved>({ path: `/v1/photo-box/${boxId}/remove`, token, key, body: {} });
+}
+
+/** Why a photo did not go into the box, as the API names it. */
+export function photoBoxRefusal(error: unknown): PhotoBoxRefusal | null {
+  const reason = refusalReason(error);
+  return reason === "photo_missing" || reason === "in_box" || reason === "box_full" ? reason : null;
 }
 
 /** Takes an ask back before her morning is prepared (spec §19); only its asker may. */
@@ -503,13 +672,28 @@ export function createFamily(
   return call<ApiCreatedFamily>({ path: "/v1/families", token, key, body: family });
 }
 
+/** Her latest sent read, or with `readId` one of her earlier weeks. */
 export function fetchWeeklyRead(
   familyId: string,
   memberId: string,
   token: string | null,
+  readId?: string,
 ): Promise<ApiWeeklyRead> {
+  const earlier = readId === undefined ? "" : `&read=${encodeURIComponent(readId)}`;
   return read<ApiWeeklyRead>(
-    `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}`,
+    `/v1/families/${familyId}/weekly-read?member=${encodeURIComponent(memberId)}${earlier}`,
+    token,
+  );
+}
+
+/** Her sent weeks, newest first: ids and dates for the Sunday tab's earlier weeks. */
+export function fetchWeeklyReadList(
+  familyId: string,
+  memberId: string,
+  token: string | null,
+): Promise<ApiWeeklyReadList> {
+  return read<ApiWeeklyReadList>(
+    `/v1/families/${familyId}/weekly-reads?member=${encodeURIComponent(memberId)}`,
     token,
   );
 }
@@ -684,4 +868,172 @@ export function fetchParentConnection(
   signal?: AbortSignal,
 ): Promise<ApiParentConnection> {
   return call({ path: `/v1/families/${familyId}/members/${memberId}/connection`, token, signal });
+}
+
+/**
+ * The signed-in person's own memories (privacy-notice v7, consent.rich_memories@2). The server
+ * offers these routes only where Memories is switched on; elsewhere every one answers 404.
+ */
+export function fetchMemoryPermission(
+  familyId: string,
+  token: string | null,
+): Promise<MemoryPermissionState> {
+  return read<MemoryPermissionState>(`/v1/families/${familyId}/memory-permission`, token);
+}
+
+/** Asks the server for a fresh five-minute copy of the question, then reads its exact words. */
+export async function openMemoryPermission(
+  familyId: string,
+  key: string,
+  token: string | null,
+): Promise<MemoryPermissionPreview> {
+  const prepared = await call<MemoryPermissionPrepared>({
+    path: `/v1/families/${familyId}/memory-permission/presentations`,
+    token,
+    key,
+    body: { lang: "en" },
+  });
+  return read<MemoryPermissionPreview>(
+    `/v1/families/${familyId}/memory-permission-presentations/${prepared.id}`,
+    token,
+  );
+}
+
+/** Their own yes or no to the words they were shown, echoing that copy's fingerprint. */
+export function answerMemoryPermission(
+  familyId: string,
+  shown: MemoryPermissionPreview,
+  answer: "yes" | "no",
+  key: string,
+  token: string | null,
+): Promise<MemoryPermissionAnswered> {
+  return call<MemoryPermissionAnswered>({
+    path: `/v1/families/${familyId}/memory-permission/answer`,
+    token,
+    key,
+    body: {
+      presentation_id: shown.presentation_id,
+      answer,
+      text_version: MEMORY_PERMISSION_VERSION,
+      text_sha256: shown.text_sha256,
+    },
+  });
+}
+
+/** "Turn off and clear": stops suggestions and deletes their suggestions and kept memories. */
+export function withdrawMemories(
+  familyId: string,
+  key: string,
+  token: string | null,
+): Promise<{ withdrawn: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memory-permission/withdraw`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+export function fetchMemorySuggestions(
+  familyId: string,
+  token: string | null,
+): Promise<MemoryCandidatePage> {
+  return read<MemoryCandidatePage>(`/v1/families/${familyId}/memory-suggestions`, token);
+}
+
+export function dismissMemorySuggestion(
+  familyId: string,
+  candidateId: string,
+  key: string,
+  token: string | null,
+): Promise<{ dismissed: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memory-suggestions/${candidateId}/dismiss`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+/** Keeps one suggestion's exact words privately, after the person read the keep explanation. */
+export function keepMemory(
+  familyId: string,
+  candidateId: string,
+  key: string,
+  token: string | null,
+): Promise<MemoryKept> {
+  return call<MemoryKept>({
+    path: `/v1/families/${familyId}/memories/keep`,
+    token,
+    key,
+    body: {
+      candidate_id: candidateId,
+      confirmation_version: MEMORY_KEEP_VERSION,
+      confirmation_sha256: MEMORY_KEEP_EXPLANATION_SHA256,
+    },
+  });
+}
+
+export function fetchKeptMemories(familyId: string, token: string | null): Promise<KeptMemoryPage> {
+  return read<KeptMemoryPage>(`/v1/families/${familyId}/memories`, token);
+}
+
+export function removeKeptMemory(
+  familyId: string,
+  memoryId: string,
+  key: string,
+  token: string | null,
+): Promise<{ removed: true }> {
+  return call({
+    path: `/v1/families/${familyId}/memories/${memoryId}/remove`,
+    token,
+    key,
+    body: {},
+  });
+}
+
+export function fetchPlannedQuestions(
+  familyId: string,
+  token: string | null,
+): Promise<ApiPlannedQuestions> {
+  return read<ApiPlannedQuestions>(`/v1/families/${familyId}/questions`, token);
+}
+export function editQuestion(
+  id: string,
+  key: string,
+  body: EditAsk,
+  token: string | null,
+): Promise<{ id: string; state: "composed" }> {
+  return call({ path: `/v1/exchanges/${id}/edit`, token, key, body });
+}
+
+const reportPath = (familyId: string, memberId: string) =>
+  `/v1/families/${encodeURIComponent(familyId)}/weekly-support/${encodeURIComponent(memberId)}`;
+export async function fetchWeeklySupport(familyId: string, memberId: string, token: string | null) {
+  return SupportReport.parse(await read(reportPath(familyId, memberId), token));
+}
+export async function prepareWeeklySupport(
+  familyId: string,
+  memberId: string,
+  key: string,
+  token: string | null,
+) {
+  const prepared = SupportPrepared.parse(
+    await call({ path: `${reportPath(familyId, memberId)}/presentations`, token, key, body: {} }),
+  );
+  return SupportPresentation.parse(
+    await read(`${reportPath(familyId, memberId)}/presentations/${prepared.id}`, token),
+  );
+}
+export async function writeWeeklySupport(
+  familyId: string,
+  memberId: string,
+  action: "permission" | "review" | "remove" | "stop",
+  body: unknown,
+  key: string,
+  token: string | null,
+) {
+  return SupportWriteResult.parse(
+    await call({ path: `${reportPath(familyId, memberId)}/${action}`, body, key, token }),
+  );
 }

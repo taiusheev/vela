@@ -1,193 +1,104 @@
-import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Link, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { VoicePlayback } from "../../src/audio/VoicePlayback.tsx";
+import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
-import { FamilyBook } from "../../src/components/family-book.tsx";
-import { ExchangePhotos, ReplyPhoto } from "../../src/components/family-photo.tsx";
-import { Light } from "../../src/components/light.tsx";
-import { ParentChooser } from "../../src/components/parent-chooser.tsx";
-import { StoryDay } from "../../src/components/story-day.tsx";
+import {
+  BookCover,
+  type KeepState,
+  MemoryCard,
+  StoryCard,
+} from "../../src/components/keepsake.tsx";
+import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
+import { initialOf } from "../../src/components/parent-chooser.tsx";
+import { Text } from "../../src/components/scaled-text.tsx";
+import { SectionTitle } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
-import { dayLabel, localDateIn } from "../../src/data/chat.ts";
-import type { Exchange } from "../../src/data/exchanges.ts";
-import { localDayMonth } from "../../src/data/format.ts";
-import { useBook } from "../../src/data/useBook.ts";
+import { WarmPage } from "../../src/components/warm.tsx";
+import { localDateIn } from "../../src/data/chat.ts";
+import { listOf, localDayMonth } from "../../src/data/format.ts";
+import {
+  byWeek,
+  filterCounts,
+  type MemoryFilter,
+  memoriesOf,
+  mondayOf,
+  narrowMemories,
+} from "../../src/data/memories.ts";
+import { type KeepRefusal, useBook } from "../../src/data/useBook.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
+import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
-import { hitSlop, radius, space, type } from "../../src/theme/tokens.ts";
-
-type Filter = "all" | "photos" | "voice" | "stories";
+import { hitSlop, radius, softShadow, space, type } from "../../src/theme/tokens.ts";
 
 function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 }
 
-/** The Monday of a date's week, on the calendar: Memories groups her words by week. */
-function mondayOf(date: string): string {
-  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
-  return addDays(date, -((weekday + 6) % 7));
-}
-
-function matches(exchange: Exchange, filter: Filter, query: string): boolean {
-  const answer = exchange.answer;
-  if (answer === undefined) return false;
-  if (filter === "photos" && answer.photo === undefined) return false;
-  if (filter === "voice" && answer.audio === undefined && answer.transcript !== true) return false;
-  if (filter === "stories" && exchange.type !== "story" && exchange.type !== "recipe") return false;
-  const words = query.trim().toLocaleLowerCase();
-  return (
-    words.length === 0 ||
-    [exchange.ask, answer.text, answer.original ?? ""].some((text) =>
-      text.toLocaleLowerCase().includes(words),
-    )
-  );
-}
-
-/** One thing she said, set as a keepsake: when, what she was asked, her words, her photo or voice. */
-function MemoryCard({
-  exchange,
-  originals,
-  today,
-}: {
-  exchange: Exchange;
-  originals: boolean;
-  today: string;
-}) {
-  const palette = usePalette();
-  const { t } = useLingui();
-  const { familyId } = useToday();
-  const answer = exchange.answer;
-  if (answer === undefined) return null;
-  const shown = originals ? (answer.original ?? answer.text) : answer.text;
-  const recipient = exchange.recipient;
-  const asker = exchange.asker;
-  const when = exchange.date === undefined ? exchange.day : dayLabel(exchange.date, today);
-  const kept = exchange.type === "story" || exchange.type === "recipe";
-  const time = answer.at;
-  const replies = exchange.replies.length;
-  return (
-    <Link href={{ pathname: "/exchange/[id]", params: { id: exchange.id } }} asChild>
-      <Pressable accessibilityRole="button" hitSlop={hitSlop}>
-        <View
-          style={{
-            backgroundColor: palette.surface,
-            borderRadius: radius.card + 6,
-            borderWidth: 1,
-            borderColor: palette.rule,
-            padding: space.l,
-            gap: space.m,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-            <Light state="lit" height={16} />
-            <Text
-              style={[type.label, { color: palette.ink3, textTransform: "uppercase", flex: 1 }]}
-            >{`${recipient} · ${when}`}</Text>
-            {kept ? (
-              <View
-                style={{
-                  borderRadius: radius.chip,
-                  backgroundColor: palette.lightSoft,
-                  paddingHorizontal: space.s,
-                  paddingVertical: 2,
-                }}
-              >
-                <Text style={[type.label, { color: palette.ink2 }]}>
-                  {exchange.type === "recipe" ? t`Recipe` : t`Story`}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={{ gap: 2 }}>
-            <Text style={[type.caption, { color: palette.ink3 }]}>
-              {exchange.draftedByVela === true
-                ? t`${asker} asked · written by Vela`
-                : t`${asker} asked`}
-            </Text>
-            <Text numberOfLines={2} style={[type.body, { color: palette.ink2 }]}>
-              {exchange.ask}
-            </Text>
-          </View>
-          <ExchangePhotos photos={exchange.photos} picked={exchange.picked} size={56} />
-          <Text numberOfLines={8} style={[type.preview, { color: palette.ink }]}>
-            {shown}
-          </Text>
-          {answer.photo === undefined ? null : <ReplyPhoto photo={answer.photo} size="full" />}
-          {answer.audio === undefined || familyId === undefined ? null : (
-            <VoicePlayback
-              familyId={familyId}
-              mediaId={answer.audio.id}
-              durationMs={answer.audio.duration_ms}
-              expiresAt={answer.audio.expires_at}
-              state={answer.audio.state}
-              ready={answer.audio.state === "ready"}
-            />
-          )}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
-            <Text style={[type.caption, { color: palette.ink3, flex: 1 }]}>
-              {[
-                answer.transcript === true
-                  ? t`${recipient} answered at ${time} · from her voice note`
-                  : t`${recipient} answered at ${time}`,
-                replies === 0 ? undefined : plural(replies, { one: "# reply", other: "# replies" }),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </Text>
-            <BrandIcon name="chevron" color={palette.action} size={18} />
-          </View>
-        </View>
-      </Pressable>
-    </Link>
-  );
-}
-
 /**
- * Memories (consumer flow rows 26–37, 83–92): what she said in the last thirty days, a week at a
- * time, which a reader can search and narrow to her photos, her voice or her stories; and, where it
- * is on, the family book that keeps her stories and recipes for good. The day-by-day conversation is
- * the chat's, opened from Today.
+ * Memories (ADR-51): not every message, which the chat already holds, but the things she said that
+ * the family will want to remember, a week at a time, each with a heart to keep it in the family
+ * book; and the stories Vela gathered from them in her own words. Kept memories are lit, as her
+ * window is on Today. The book itself opens from its cover at the top.
  */
 export default function MemoriesScreen() {
   const palette = usePalette();
-  const insets = useSafeAreaInsets();
   const { t } = useLingui();
-  const [originals, setOriginals] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<MemoryFilter>("all");
   const [query, setQuery] = useState("");
-  const [section, setSection] = useState<"words" | "book">("words");
+  const [searching, setSearching] = useState(false);
+  const [section, setSection] = useState<"moments" | "stories">("moments");
   const [parent, setParent] = useState<string | undefined>();
   const { capabilities } = useCapabilities();
   const day = useToday();
   const book = useBook(day.familyId);
-  const { exchanges, live, loading, refreshing, refresh, trouble, more, loadMore } = useExchanges();
+  const { exchanges, live, loading, refresh, trouble, more, loadMore } = useExchanges();
+  const refreshPage = useCallback(async () => {
+    await Promise.all([day.refresh(), refresh(), book.refresh()]);
+  }, [day.refresh, refresh, book.refresh]);
+  const pull = usePullRefresh(refreshPage);
   useFocusEffect(
     useCallback(() => {
       refresh();
       book.refresh();
     }, [refresh, book.refresh]),
   );
-  const bookOn = capabilities?.book === true;
-  const showing = bookOn ? section : "words";
+  const bookOn = capabilities?.book === true || book.demo;
+  // An organiser keeps her memories for good (ADR-50); everyone sees what was kept.
+  const canKeep = bookOn && day.organiser;
+  const refusalText: Record<KeepRefusal, string> = {
+    memories_off: t`Memories are turned off in the chat, so this is not kept.`,
+    sensitive: t`This one mentions health or something private, so it is not kept.`,
+    not_kept: t`This one was taken out of the book, so it is not kept again.`,
+    no_answer: t`There is nothing to keep here yet.`,
+  };
+  const { memories, stories } = memoriesOf(book, exchanges);
+  const stateOf = (id: string, kept: boolean): KeepState =>
+    kept || book.keptIds.has(id) ? "kept" : book.keepingIds.has(id) ? "keeping" : "open";
+  const names = day.today.lights.map((light) => light.displayName);
+  // "Mom and Dad", never "Mom, Dad": the names sit inside a sentence, not in a list.
+  const head = listOf(names.slice(0, -1));
+  const last = names.at(-1);
+  const who =
+    last === undefined
+      ? t`your parent`
+      : names.length === 1
+        ? last
+        : t({ comment: "names inside a sentence: Mom and Dad", message: `${head} and ${last}` });
+  const several = names.length > 1;
+  const mine = memories.filter((memory) => parent === undefined || memory.memberId === parent);
+  // A card names its parent only when the list shown holds more than one: her words already say
+  // who is speaking, so a label repeated on every card is noise (Refactoring UI: labels last).
+  const mixed = new Set(mine.map((memory) => memory.memberId)).size > 1;
+  const counts = filterCounts(mine);
+  const shown = narrowMemories(memories, { filter, query, parent });
+  const storiesShown = stories.filter((story) => parent === undefined || story.memberId === parent);
   const today = localDateIn(Date.now());
-  const answered = exchanges.filter(
-    (exchange) =>
-      exchange.answer !== undefined && (parent === undefined || exchange.recipientId === parent),
-  );
-  const shown = answered.filter((exchange) => matches(exchange, filter, query));
-  // The switch is offered when something listed was translated for this reader (spec A8).
-  const canShowOriginals = answered.some((exchange) => exchange.answer?.original !== undefined);
   const thisWeek = mondayOf(today);
-  const weeks: { key: string; label: string; items: Exchange[] }[] = [];
-  for (const exchange of shown) {
-    const monday = exchange.date === undefined ? thisWeek : mondayOf(exchange.date);
+  const weeks = byWeek(shown, (at) => localDateIn(Date.parse(at))).map(({ monday, items }) => {
     const date = localDayMonth(monday);
     const label =
       monday === thisWeek
@@ -195,35 +106,118 @@ export default function MemoriesScreen() {
         : monday === addDays(thisWeek, -7)
           ? t`Last week`
           : t`Week of ${date}`;
-    const group = weeks.at(-1);
-    if (group?.key === monday) group.items.push(exchange);
-    else weeks.push({ key: monday, label, items: [exchange] });
-  }
-  const filters: { key: Filter; label: string }[] = [
-    { key: "all", label: t`All` },
-    { key: "photos", label: t`Photos` },
-    { key: "voice", label: t`Voice` },
-    { key: "stories", label: t`Stories` },
-  ];
+    return { monday, label, items };
+  });
+  const keptCount = new Set([...book.entries.map((entry) => entry.exchange_id), ...book.keptIds])
+    .size;
+  const filters = (
+    [
+      { key: "open", label: t`To keep` },
+      { key: "kept", label: t`Kept` },
+      { key: "photos", label: t`Photos` },
+      { key: "voice", label: t`Voice` },
+    ] as const
+  ).filter((option) => option.key === filter || counts[option.key] > 0);
+  // One row of filters above the memories, as a phone's own photo library has: All, each parent,
+  // then what kind of memory, with search at the end. Tapping a chosen chip again lets it go.
+  const filterRow =
+    several || filters.length > 0 || counts.all > 0 ? (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.s }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", gap: space.s }}>
+            <Chip
+              label={t`All`}
+              selected={parent === undefined && (section === "stories" || filter === "all")}
+              onPress={() => {
+                setParent(undefined);
+                setFilter("all");
+              }}
+            />
+            {several
+              ? day.today.lights.map((light) => (
+                  <Chip
+                    key={light.memberId}
+                    label={light.displayName}
+                    initials={[{ key: light.memberId, initial: initialOf(light.displayName) }]}
+                    selected={parent === light.memberId}
+                    onPress={() =>
+                      setParent((current) =>
+                        current === light.memberId ? undefined : light.memberId,
+                      )
+                    }
+                  />
+                ))
+              : null}
+            {section === "moments"
+              ? filters.map((option) => (
+                  <Chip
+                    key={option.key}
+                    label={`${option.label} ${counts[option.key]}`}
+                    selected={filter === option.key}
+                    onPress={() =>
+                      setFilter((current) => (current === option.key ? "all" : option.key))
+                    }
+                  />
+                ))
+              : null}
+          </View>
+        </ScrollView>
+        {section === "moments" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t`Search memories`}
+            accessibilityState={{ expanded: searching }}
+            hitSlop={hitSlop}
+            onPress={() => {
+              setSearching((now) => !now);
+              setQuery("");
+            }}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <BrandIcon
+              name={searching ? "close" : "search"}
+              color={searching ? palette.action : palette.ink2}
+              size={22}
+            />
+          </Pressable>
+        ) : null}
+      </View>
+    ) : null;
+  const waiting = trouble ? (
+    <View style={{ gap: space.m }}>
+      <Words variant="body" tone="ink2">
+        <Trans>The memories could not be reached just now.</Trans>
+      </Words>
+      <SecondaryButton label={t`Try again`} onPress={refreshPage} />
+    </View>
+  ) : loading || book.loading ? (
+    <LoadingShapes label={t`Opening the memories`} shape="list" />
+  ) : null;
 
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.l,
-      }}
+    <WarmPage
+      gap={space.l}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
     >
       <ScreenHeading
         title={<Trans context="tab">Memories</Trans>}
         subtitle={
-          <Trans>What she told you this month, and the stories the family keeps for good.</Trans>
+          canKeep ? (
+            <Trans>Little things worth remembering, from {who}. Keep the ones you love.</Trans>
+          ) : (
+            <Trans>Little things worth remembering, from {who}.</Trans>
+          )
         }
       />
+      {bookOn ? (
+        <BookCover kept={keptCount} stories={stories.filter((s) => s.kept).length} />
+      ) : null}
       {bookOn ? (
         <View
           accessibilityRole="tablist"
@@ -232,156 +226,177 @@ export default function MemoriesScreen() {
             backgroundColor: palette.surface2,
             borderRadius: radius.chip,
             padding: 4,
+            borderWidth: 1,
+            borderColor: palette.rule,
           }}
         >
           {(
             [
-              { key: "words", label: t`Her words` },
-              { key: "book", label: t`Family book` },
+              { key: "moments", label: t`Moments`, count: mine.length },
+              { key: "stories", label: t`Stories`, count: storiesShown.length },
             ] as const
           ).map((tab) => (
             <Pressable
               key={tab.key}
               accessibilityRole="tab"
-              accessibilityState={{ selected: showing === tab.key }}
+              accessibilityState={{ selected: section === tab.key }}
               onPress={() => setSection(tab.key)}
-              style={{
-                flex: 1,
-                minHeight: 40,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: radius.chip,
-                backgroundColor: showing === tab.key ? palette.surface : "transparent",
-              }}
+              style={[
+                {
+                  flex: 1,
+                  minHeight: 40,
+                  flexDirection: "row",
+                  gap: space.xs,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: radius.chip,
+                  backgroundColor: section === tab.key ? palette.surface : "transparent",
+                },
+                section === tab.key ? softShadow : null,
+              ]}
             >
               <Text
-                style={[type.button, { color: showing === tab.key ? palette.ink : palette.ink2 }]}
+                style={[type.button, { color: section === tab.key ? palette.ink : palette.ink2 }]}
               >
                 {tab.label}
               </Text>
+              {tab.count === 0 ? null : (
+                <Text style={[type.caption, { fontSize: 13, color: palette.ink3 }]}>
+                  {tab.count}
+                </Text>
+              )}
             </Pressable>
           ))}
         </View>
       ) : null}
+      {filterRow}
 
-      {showing === "book" ? (
-        <View style={{ gap: space.xl }}>
-          <FamilyBook book={book} organiser={day.organiser} bookOn={bookOn} />
-          <StoryDay key={`${day.familyId}:book`} inBook />
+      {section === "stories" && bookOn ? (
+        <View style={{ gap: space.m }}>
+          <Words variant="caption" tone="ink3">
+            <Trans>
+              When a few mornings come back to the same thing, Vela gathers those words into a
+              story. Every word is exactly as it was said; nothing is added.
+            </Trans>
+          </Words>
+          {waiting}
+          {waiting === null && storiesShown.length === 0 ? (
+            <Words variant="body" tone="ink2">
+              <Trans>No stories yet. The first one appears when a subject comes up again.</Trans>
+            </Words>
+          ) : null}
+          {storiesShown.map((story) => {
+            const open = story.memories.filter(
+              (memory) => stateOf(memory.id, memory.kept) === "open",
+            );
+            const keeping = story.memories.some((memory) => book.keepingIds.has(memory.id));
+            const state: KeepState = open.length === 0 ? "kept" : keeping ? "keeping" : "open";
+            return (
+              <StoryCard
+                key={story.id}
+                story={story}
+                keepState={state}
+                {...(canKeep
+                  ? { onKeep: () => book.keepAll(open.map((memory) => memory.id)) }
+                  : {})}
+              />
+            );
+          })}
         </View>
       ) : (
         <>
-          <ParentChooser
-            lights={day.today.lights}
-            selected={parent}
-            onSelect={(id) => setParent((current) => (current === id ? undefined : id))}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.s,
-              minHeight: 44,
-              borderRadius: 22,
-              borderWidth: 1,
-              borderColor: palette.rule,
-              backgroundColor: palette.surface,
-              paddingHorizontal: space.l,
-            }}
-          >
-            <BrandIcon name="search" color={palette.ink3} size={18} />
-            <TextInput
-              accessibilityLabel={t`Search her words`}
-              value={query}
-              onChangeText={setQuery}
-              placeholder={t`Search her words`}
-              placeholderTextColor={palette.ink3}
-              returnKeyType="search"
-              style={[
-                type.body,
-                {
-                  flex: 1,
-                  color: palette.ink,
-                  paddingVertical: 10,
-                  outlineStyle: "none",
-                } as object,
-              ]}
-            />
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: "row", gap: space.s }}>
-              {filters.map((option) => (
-                <Chip
-                  key={option.key}
-                  label={option.label}
-                  selected={filter === option.key}
-                  onPress={() => setFilter(option.key)}
-                />
-              ))}
-            </View>
-          </ScrollView>
-          {canShowOriginals ? (
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={hitSlop}
-              accessibilityState={{ selected: originals }}
-              style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}
-              onPress={() => setOriginals((on) => !on)}
+          {searching ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.s,
+                minHeight: 46,
+                borderRadius: 23,
+                borderWidth: 1,
+                borderColor: palette.rule,
+                backgroundColor: palette.surface,
+                paddingHorizontal: space.l,
+              }}
             >
-              <Words variant="button" tone="action">
-                {originals ? <Trans>Show translations</Trans> : <Trans>Show originals</Trans>}
-              </Words>
-            </Pressable>
+              <BrandIcon name="search" color={palette.ink3} size={18} />
+              <TextInput
+                autoFocus
+                accessibilityLabel={t`Search memories`}
+                value={query}
+                onChangeText={setQuery}
+                placeholder={t`Search memories`}
+                placeholderTextColor={palette.ink3}
+                returnKeyType="search"
+                style={[
+                  type.body,
+                  {
+                    flex: 1,
+                    color: palette.ink,
+                    paddingVertical: 10,
+                    outlineStyle: "none",
+                  } as object,
+                ]}
+              />
+            </View>
           ) : null}
-          {trouble ? (
+          {waiting}
+          {waiting === null && live && mine.length === 0 ? (
             <Words variant="body" tone="ink2">
-              <Trans>The exchanges could not be reached just now.</Trans>
+              <Trans>
+                No memories yet. When {who} tells you something worth remembering, it appears here.
+              </Trans>
             </Words>
-          ) : loading ? (
-            <Words variant="body" tone="ink2">
-              <Trans>Looking for your family's days…</Trans>
-            </Words>
-          ) : live && answered.length === 0 ? (
-            <Words variant="body" tone="ink2">
-              <Trans>Nothing has happened yet. Her first morning will be here.</Trans>
-            </Words>
-          ) : answered.length > 0 && shown.length === 0 ? (
+          ) : waiting === null && mine.length > 0 && shown.length === 0 ? (
             <Words variant="body" tone="ink2">
               <Trans>Nothing here matches. Try another word, or All.</Trans>
             </Words>
           ) : null}
-          {trouble ? <SecondaryButton label={t`Try again`} onPress={refresh} /> : null}
           {weeks.map((week) => (
-            <View key={week.key} style={{ gap: space.m }}>
-              <Text
-                accessibilityRole="header"
-                style={[type.heading, { color: palette.ink, paddingTop: space.s }]}
-              >
-                {week.label}
-              </Text>
-              {week.items.map((exchange) => (
-                <MemoryCard
-                  key={exchange.id}
-                  exchange={exchange}
-                  originals={originals}
-                  today={today}
-                />
-              ))}
+            <View key={week.monday} style={{ gap: space.m, paddingTop: space.xs }}>
+              <SectionTitle title={week.label} />
+              {week.items.map((memory) => {
+                const refused =
+                  book.refused?.exchangeId === memory.id ? book.refused.reason : undefined;
+                const failed = book.failedId === memory.id;
+                return (
+                  <MemoryCard
+                    key={memory.id}
+                    memory={memory}
+                    familyId={day.familyId}
+                    showName={mixed}
+                    keepState={
+                      refused === undefined && !failed ? stateOf(memory.id, memory.kept) : "open"
+                    }
+                    {...(canKeep ? { onKeep: () => book.keep(memory.id) } : {})}
+                    {...(refused !== undefined
+                      ? { refusal: refusalText[refused] }
+                      : failed
+                        ? { refusal: t`That could not be kept just now. Try again.` }
+                        : {})}
+                  />
+                );
+              })}
             </View>
           ))}
-          {more ? <SecondaryButton label={t`Earlier this month`} onPress={loadMore} /> : null}
+          {book.moments === undefined && more ? (
+            <SecondaryButton label={t`Earlier this month`} onPress={loadMore} />
+          ) : null}
           <Words variant="caption" tone="ink3">
-            {bookOn ? (
+            {canKeep ? (
               <Trans>
-                Her words stay here for thirty days. The stories she tells are kept in the family
-                book.
+                Memories you do not keep fade after 30 days, like everything else in the chat.
+                Anything about health or private matters is never offered as a memory.
               </Trans>
             ) : (
-              <Trans>Her words stay here for thirty days.</Trans>
+              <Trans>
+                Memories fade after 30 days unless the family keeps them. Anything about health or
+                private matters is never shown as a memory.
+              </Trans>
             )}
           </Words>
         </>
       )}
-    </ScrollView>
+    </WarmPage>
   );
 }

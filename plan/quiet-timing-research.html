@@ -1,0 +1,258 @@
+<title>Quiet Notice Timing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: one reading column, a clock-face timeline as the hero, then evidence, then the decision. Lamp-at-night palette: ink blue ground notes, amber for Vela's light, a calm red only for "act now". */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #18202e;
+  --muted: #5a6475;
+  --line: #dfe3ea;
+  --lamp: #c7840f;
+  --lamp-soft: #fbf0d9;
+  --night: #24324d;
+  --night-soft: #e7ebf3;
+  --alert: #b23a2b;
+  --alert-soft: #f8e4e0;
+  --ok: #2e7d5b;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151d; --surface: #181e29; --ink: #e8ebf1; --muted: #9aa4b5; --line: #2a3242;
+    --lamp: #f0b54a; --lamp-soft: #3a2e17; --night: #a9bbe0; --night-soft: #1f2838;
+    --alert: #f08a7b; --alert-soft: #3a1f1c; --ok: #6cc59b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151d; --surface: #181e29; --ink: #e8ebf1; --muted: #9aa4b5; --line: #2a3242;
+  --lamp: #f0b54a; --lamp-soft: #3a2e17; --night: #a9bbe0; --night-soft: #1f2838;
+  --alert: #f08a7b; --alert-soft: #3a1f1c; --ok: #6cc59b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 760px; margin: 0 auto; padding-block: 40px 72px; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 700; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 18px; font-weight: 500; }
+p { margin: 0; max-width: 66ch; }
+section { display: grid; gap: 14px; }
+.eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.lede { font-size: 20px; color: var(--ink); }
+.muted { color: var(--muted); }
+.answer { background: var(--lamp-soft); border-radius: 14px; padding: 18px 20px; display: grid; gap: 8px; }
+.answer strong { font-family: var(--display); font-size: 19px; }
+.timeline { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 8px; overflow-x: auto; }
+.timeline svg { display: block; width: 100%; min-width: 600px; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); padding: 6px 2px 10px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+td.t { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; }
+tr.vela td { background: var(--lamp-soft); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0; }
+.fact b { font-family: var(--display); font-size: 28px; font-variant-numeric: tabular-nums; color: var(--night); }
+.fact span { font-size: 15px; color: var(--muted); }
+ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: s; }
+ol.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 14px 56px; position: relative; }
+ol.steps li::before { content: counter(s); position: absolute; left: 16px; top: 13px; width: 28px; height: 28px; border-radius: 50%; background: var(--night-soft); color: var(--night); font-family: var(--display); font-weight: 700; display: grid; place-items: center; font-size: 15px; }
+ol.steps li.now::before { background: var(--alert-soft); color: var(--alert); }
+ol.steps li b { display: block; }
+.choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.choice div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; }
+.choice div.pick { border: 2px solid var(--lamp); }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--lamp); }
+.conf { display: grid; gap: 10px; }
+.conf p { padding-left: 14px; border-left: 3px solid var(--line); }
+.conf p.high { border-left-color: var(--ok); }
+.conf p.med { border-left-color: var(--lamp); }
+.ask { background: var(--night-soft); border-radius: 14px; padding: 18px 20px; display: grid; gap: 10px; }
+.ask ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.sources { font-size: 14px; color: var(--muted); }
+.sources ol { padding-left: 20px; margin: 0; display: grid; gap: 4px; }
+a { color: var(--night); }
+@media (max-width: 520px) { body { font-size: 16px; } .lede { font-size: 18px; } }
+</style>
+
+<main>
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">Vela Light · research · 27 October 2026</div>
+    <h1>When should Vela check in, and when should it tell the family?</h1>
+    <p class="lede">The family should hear about a silent morning before lunch, not in the afternoon. Each step should wait for Mom's own rhythm, so it doesn't cry wolf.</p>
+  </header>
+
+  <div class="answer">
+    <strong>The short answer</strong>
+    <p>Check in 1 hour after her usual answer time. Tell the organisers 90 minutes after that, if she's still silent. In her first 2 weeks, use 2 hours and 4 hours. "Not okay" goes out at once. Today, a silent morning in her first 2 weeks reaches the family only after 8 hours.</p>
+  </div>
+
+  <section>
+    <h2>One morning, today and proposed</h2>
+    <p class="muted">Example: Mom's message arrives at 08:00. She usually answers around 08:40, and on her late days around 10:00.</p>
+    <div class="timeline" role="img" aria-label="Timeline from 08:00 to 16:30. Today: check-in 10:30, notice 12:00 once her rhythm is learned, 16:00 in her first two weeks. Proposed: check-in 09:40, notice 11:10, a second notice 13:10 if nobody acts; first two weeks check-in 10:00 and notice 12:00.">
+      <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg">
+        <g font-family="Atkinson Hyperlegible, system-ui, sans-serif" font-size="12">
+          <!-- scale: 08:00 at x=60, 16:30 at x=620, 1 h = 65.9 px -->
+          <g stroke="var(--line)" stroke-width="1">
+            <line x1="60" y1="30" x2="60" y2="225"/><line x1="125.9" y1="30" x2="125.9" y2="225"/><line x1="191.8" y1="30" x2="191.8" y2="225"/><line x1="257.6" y1="30" x2="257.6" y2="225"/><line x1="323.5" y1="30" x2="323.5" y2="225"/><line x1="389.4" y1="30" x2="389.4" y2="225"/><line x1="455.3" y1="30" x2="455.3" y2="225"/><line x1="521.2" y1="30" x2="521.2" y2="225"/><line x1="587.1" y1="30" x2="587.1" y2="225"/>
+          </g>
+          <g fill="var(--muted)" text-anchor="middle">
+            <text x="60" y="244">08:00</text><text x="125.9" y="244">09:00</text><text x="191.8" y="244">10:00</text><text x="257.6" y="244">11:00</text><text x="323.5" y="244">12:00</text><text x="389.4" y="244">13:00</text><text x="455.3" y="244">14:00</text><text x="521.2" y="244">15:00</text><text x="587.1" y="244">16:00</text>
+          </g>
+          <!-- usual and late answer band -->
+          <rect x="103.9" y="30" width="87.9" height="195" fill="var(--lamp-soft)"/>
+          <text x="147.8" y="22" text-anchor="middle" fill="var(--lamp)" font-weight="700">her usual answers</text>
+
+          <g fill="var(--ink)" font-weight="700"><text x="0" y="62">Today</text><text x="0" y="78" fill="var(--muted)" font-weight="400">learned</text></g>
+          <line x1="60" y1="66" x2="323.5" y2="66" stroke="var(--night)" stroke-width="3"/>
+          <circle cx="224.7" cy="66" r="7" fill="var(--night)"/><text x="224.7" y="52" text-anchor="middle" fill="var(--night)">check-in 10:30</text>
+          <circle cx="323.5" cy="66" r="7" fill="var(--alert)"/><text x="323.5" y="88" text-anchor="middle" fill="var(--alert)">notice 12:00</text>
+
+          <g font-weight="700"><text x="0" y="112" fill="var(--ink)">Today</text><text x="0" y="128" fill="var(--muted)" font-weight="400">first 2 wks</text></g>
+          <line x1="60" y1="116" x2="587.1" y2="116" stroke="var(--night)" stroke-width="3" stroke-dasharray="2 5"/>
+          <circle cx="224.7" cy="116" r="7" fill="var(--night)"/>
+          <circle cx="587.1" cy="116" r="7" fill="var(--alert)"/><text x="575" y="138" text-anchor="end" fill="var(--alert)">notice 16:00 (8 hours)</text>
+
+          <g font-weight="700"><text x="0" y="168" fill="var(--ink)">Proposed</text><text x="0" y="184" fill="var(--muted)" font-weight="400">learned</text></g>
+          <line x1="60" y1="172" x2="400.5" y2="172" stroke="var(--lamp)" stroke-width="3"/>
+          <circle cx="169.8" cy="172" r="7" fill="var(--lamp)"/><text x="169.8" y="158" text-anchor="middle" fill="var(--lamp)">check-in 09:40</text>
+          <circle cx="268.6" cy="172" r="7" fill="var(--alert)"/><text x="268.6" y="194" text-anchor="middle" fill="var(--alert)">notice 11:10</text>
+          <circle cx="400.5" cy="172" r="6" fill="none" stroke="var(--alert)" stroke-width="2.5"/><text x="400.5" y="158" text-anchor="middle" fill="var(--alert)">again 13:10</text>
+
+          <g font-weight="700"><text x="0" y="212" fill="var(--ink)">Proposed</text><text x="0" y="228" fill="var(--muted)" font-weight="400">first 2 wks</text></g>
+          <line x1="60" y1="216" x2="323.5" y2="216" stroke="var(--lamp)" stroke-width="3" stroke-dasharray="2 5"/>
+          <circle cx="191.8" cy="216" r="7" fill="var(--lamp)"/>
+          <circle cx="323.5" cy="216" r="7" fill="var(--alert)"/><text x="335" y="220" fill="var(--alert)">notice 12:00</text>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--night)"></i>Vela today</span>
+      <span><i class="dot" style="background:var(--lamp)"></i>Proposed</span>
+      <span><i class="dot" style="background:var(--alert)"></i>Organisers are told</span>
+      <span>Dashed: her first 2 weeks, before Vela knows her rhythm</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>What Vela can promise, and what it can't</h2>
+    <p>Vela is a <b>same-morning safety net</b>, not a fall alarm. A fall alarm acts in minutes. Vela can only notice that a morning went quiet. The evidence says that still matters: help after a fall is often slow, and the alarm button usually isn't pressed.</p>
+    <div class="facts">
+      <div class="fact"><b>82%</b><span>of falls among people over 90 happened when they were alone</span></div>
+      <div class="fact"><b>80%</b><span>of those falls happened while an alarm was available, but nobody pressed it</span></div>
+      <div class="fact"><b>15%</b><span>of falls ended with 1 hour or more on the floor, 10% with more than 2 hours</span></div>
+      <div class="fact"><b>60%</b><span>of people who lay 1 hour or more were admitted to hospital</span></div>
+    </div>
+    <p class="muted">All four numbers come from one study (Fleming and Brayne, BMJ 2008, 110 people over 90). Doctors call 1 hour on the floor a "long lie". A UK research team (NIHR, 2026) says there is still too little evidence to tell which hour makes the difference. So, sooner is better, but no study names a safe deadline.</p>
+    <p>This sets the honest promise for our website and onboarding: <b>"If Mom's morning goes quiet, you'll know before lunch."</b> If a parent has fallen before, families should also get a fall-detection watch or pendant. Vela doesn't replace that.</p>
+  </section>
+
+  <section>
+    <h2>What other services do</h2>
+    <p class="muted">Two groups. Phone-call services act within an hour, because an unanswered phone means nobody is there. Message and sensor services wait 4 to 48 hours, because people read messages late.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>How it checks</th><th>Family told after</th></tr></thead>
+        <tbody>
+          <tr><td>Snug Safety (US)</td><td>App check-in by a time the person picks; reminders at the deadline and 2 min after</td><td class="t">10 min</td></tr>
+          <tr><td>Sheriff "Are you OK?" calls (US)</td><td>Daily phone call, 2 to 3 retries every 10 to 15 min, then contacts or a deputy visits</td><td class="t">30–45 min</td></tr>
+          <tr><td>Iamfine (US)</td><td>Daily call, 5 more calls over the next hour</td><td class="t">~1 hour</td></tr>
+          <tr><td>Gyeonggi-do AI calls (Korea)</td><td>AI phone call, up to 3 more calls when unanswered</td><td class="t">same day</td></tr>
+          <tr class="vela"><td><b>Vela, proposed</b></td><td>Message, then a check-in with 2 buttons</td><td class="t">~3 hours</td></tr>
+          <tr><td>まいほっと LINE watch (Japan)</td><td>LINE message, no reply</td><td class="t">4 hours</td></tr>
+          <tr class="vela"><td><b>Vela today</b></td><td>Message, then the same message again</td><td class="t">4–10 h (8 h in first 2 wks)</td></tr>
+          <tr><td>Chichibu city LINE check (Japan)</td><td>LINE safety report</td><td class="t">1 day</td></tr>
+          <tr><td>Hello Light, Yamato (Japan)</td><td>A light bulb that didn't switch on or off</td><td class="t">24 h, email next day 10:00</td></tr>
+          <tr><td>Enrich LINE 見守り (Japan)</td><td>LINE "OK" tap, resent after 24 h, then 3 h more, then a phone call</td><td class="t">27 h +</td></tr>
+          <tr><td>Demumu, "Are You Dead?" (China)</td><td>Daily tap in the app</td><td class="t">~2 days</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every service that lasted uses the same ladder: <b>ask, ask once more, then tell a person</b>. Nobody tells the family on the first silence. Vela already has this ladder. The check-in we just built is the "ask once more", and now it can ask a real question: is she okay?</p>
+  </section>
+
+  <section>
+    <h2>Why not tell the family sooner?</h2>
+    <p><b>Silence is normal.</b> Our earlier research found that even willing, healthy parents leave about 1 morning in 4 or 5 unanswered. With a notice on every silent morning, a family would get 5 to 7 notices a month. After a few false alarms, people stop reacting. Then the one real notice gets ignored too.</p>
+    <p><b>False alarms also change the parent.</b> In a University of Washington study, older adults changed their habits to avoid setting off alerts to their children. Some rushed in the bathroom, which itself risks a fall. A notice should feel rare and worth acting on.</p>
+    <p><b>Nobody publishes their false-alarm rate.</b> No service above says how often its alerts turn out to be nothing. So the exact minutes below are our best estimate. We will set them from our own families' numbers after 4 weeks.</p>
+  </section>
+
+  <section>
+    <h2>Proposed rules</h2>
+    <ol class="steps">
+      <li><b>Morning, at her chosen time.</b> No buttons. She answers in her own words. Built (behind a switch).</li>
+      <li><b>Check-in: her usual answer time + 1 hour.</b> Never sooner than 1 hour after the morning, never later than 2.5 hours. First 2 weeks: 2 hours. Today it is a fixed 2.5 hours for everyone.</li>
+      <li class="now"><b>"Not okay" tapped: at once.</b> Every organiser and the founder are messaged. Built. Next step: a phone notification from the Vela app as well.</li>
+      <li><b>Quiet notice: 90 minutes after the check-in, with message and phone notification.</b> Never earlier than 1 hour after her late days, and never later than 5 hours after the morning. First 2 weeks: 4 hours, both message and phone. Today the latest is 10 hours, and in her first 2 weeks only the app shows it until 8 hours.</li>
+      <li><b>Nobody acts on the notice: tell them again after 2 hours, and tell the founder.</b> Today a notice comes back only if someone taps "Wait 2 hours". If nobody taps anything, nothing more happens.</li>
+      <li><b>Still silent at the next morning:</b> the founder phones the organiser. A person checks that the family knows.</li>
+    </ol>
+    <p class="muted">These rules leave a few things as they are: away mode, the quiet notice wording, nearby contacts, and the rule that a notice never counts time before her message was delivered.</p>
+  </section>
+
+  <section>
+    <h2>Let the family choose how careful</h2>
+    <p>Families differ. A parent who fell last month needs a faster notice than one who goes to the market every morning. The organiser picks one setting per parent in the app:</p>
+    <div class="choice">
+      <div><span class="tag">Sooner</span><b>Check-in after 45 min, notice after about 2 hours</b><span class="muted">For a parent who has fallen or is unwell. More notices.</span></div>
+      <div class="pick"><span class="tag">Default · balanced</span><b>The proposed rules above</b><span class="muted">Notice before lunch. Fits most families.</span></div>
+      <div><span class="tag">Fewer notices</span><b>Today's learned rules, up to 10 hours</b><span class="muted">For a parent with a loose daily routine.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How we'll know it works</h2>
+    <p>We'll turn this on in our test copy first, then measure it for the first 4 weeks with real families:</p>
+    <ol class="steps">
+      <li><b>How long each parent takes to answer.</b> Typical days and late days, per parent.</li>
+      <li><b>How many answers come only after the check-in.</b> This shows whether the check-in is too early or too late.</li>
+      <li><b>How many notices end with an answer within 1 hour.</b> These are false alarms. Target: notices per parent fewer than 4 a month, as the spec already says.</li>
+      <li><b>How fast an organiser acts after a notice.</b> If organisers wait hours, a faster notice doesn't help, and the second notice and founder call matter more.</li>
+    </ol>
+  </section>
+
+  <section class="conf">
+    <h2>How sure are we</h2>
+    <p class="high"><b>Sure:</b> a two-step ladder (check in, then tell a person), a notice the same morning instead of the afternoon, "Not okay" at once, and a second notice when nobody acts. Every lasting service and the falls evidence point this way.</p>
+    <p class="med"><b>Less sure:</b> the exact minutes (1 hour, 90 minutes, 5 hours). No service publishes false-alarm data, and we don't have our own numbers yet. Treat these as starting values, then adjust them after 4 weeks.</p>
+  </section>
+
+  <div class="ask">
+    <h2>What needs your yes</h2>
+    <ol>
+      <li>Approve the proposed timings for the test copy of Vela, so we can try them before real families.</li>
+      <li>Choose whether families get the Sooner / Balanced / Fewer setting now, or later.</li>
+      <li>Approve the promise wording: "If Mom's morning goes quiet, you'll know before lunch."</li>
+    </ol>
+  </div>
+
+  <footer class="sources">
+    <h3 style="margin-bottom:8px">Sources</h3>
+    <ol>
+      <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2590903/">Fleming and Brayne, BMJ 2008: inability to get up after falling, people over 90</a></li>
+      <li><a href="https://openresearch.nihr.ac.uk/articles/6-19">NIHR Open Research 2026: the Long Lies study protocol</a> · <a href="https://www.sheffield.ac.uk/cure/current-trials/long-lies-study">Sheffield Long Lies study</a></li>
+      <li><a href="https://snug.helpscoutdocs.com/article/29-what-to-expect-if-you-miss-a-check-in">Snug Safety: what to expect if you miss a check-in</a></li>
+      <li><a href="https://train.fbctx.gov/government/departments/sheriff-s-office/programs/you-are-not-alone-yana">Fort Bend County Sheriff, YANA</a> · <a href="https://www.sheriff-okaloosa.org/wp-content/pdfs/newsreleases/2008/NR04082008.htm">Okaloosa County CARE</a> · <a href="https://www.yumacountysheriff.org/PDF/AreYouOk-brouchure-032022.pdf">Yuma County "Are You Ok?"</a></li>
+      <li><a href="https://dailycall.iamfine.com/faq/">Iamfine daily call FAQ</a> (as recorded in our research note 08)</li>
+      <li><a href="https://www.mcst.go.kr/english/policy/kocis/newsView.jsp?pSeq=180">Korea Ministry of Culture: AI calls for older residents in Gyeonggi-do</a> · <a href="https://www.bostonglobe.com/2026/04/28/world/they-said-ai-saved-me-how-south-korea-is-checking-its-seniors/">Boston Globe 2026</a></li>
+      <li><a href="https://mimamori-line.onrender.com/guide">まいほっと LINE watch guide</a> · <a href="https://www.city.nishio.aichi.jp/_res/projects/default_project/_page_/001/011/592/mi9.pdf">Nishio city LINE safety notice</a></li>
+      <li><a href="https://www.city.bunkyo.lg.jp/documents/3114/mimamoridennkyu.pdf">Bunkyo city: Hello Light watch bulb</a> · <a href="https://kyodonewsprwire.jp/index.php/release/202301132099">Yamato Hello Light release</a></li>
+      <li><a href="https://www.enrich.tokyo/service.html">Enrich LINE 見守り service</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Are_You_Dead%3F">"Are You Dead?" / Demumu</a> · <a href="https://www.thenewdaily.com.au/news/people/2026/01/21/are-you-dead-app-china">The New Daily, January 2026</a></li>
+      <li><a href="https://leadingage.org/possibilities-and-pitfalls-of-ai-monitoring-technologies/">LeadingAge: possibilities and pitfalls of monitoring (Berridge, University of Washington)</a></li>
+      <li><a href="https://research.usfq.edu.ec/en/publications/dementia-caregivers-experiences-and-reactions-to-remote-activity-/">Zmora et al. 2021: caregivers' reactions to monitoring alerts</a></li>
+      <li>Vela research note 08, "Evidence: the daily answer" (1 in 4 or 5 mornings unanswered), in the repository</li>
+    </ol>
+  </footer>
+</main>

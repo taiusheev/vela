@@ -24,7 +24,6 @@ import {
   type AskBankLang,
   type AskBankType,
   askBankItem,
-  CHIP_QUESTIONS,
 } from "@vela/copy";
 import {
   FORBIDDEN_ZH_TW,
@@ -311,15 +310,14 @@ export function renderSuggestion(
  * her unused suggestion for `date`, as its bank item in her language, never an AI draft, which is
  * written as a family member would send it. Taking it marks it used, so the family is not offered
  * it again and the writer's rules keep it from coming back for twelve weeks. Null when the day has no
- * suggestion, and the morning keeps the plain hello. `takesChips` says whether chips are drafted for
- * it as for a family question (spec §5.3): only for the questions `CHIP_QUESTIONS` names.
+ * suggestion, and the morning keeps the plain hello.
  */
 export async function takeFallbackQuestion(
   tx: VelaTransaction,
   member: Pick<Member, "id" | "language">,
   date: LocalDate,
   now: Date,
-): Promise<{ text: string; takesChips: boolean } | null> {
+): Promise<{ text: string } | null> {
   const [row] = await tx
     .select({ id: suggestions.id, bankId: suggestions.bankId })
     .from(suggestions)
@@ -336,7 +334,7 @@ export async function takeFallbackQuestion(
   const text = item?.text[readerLang(member.language)].trim() ?? "";
   if (row === undefined || item === undefined || text === "") return null;
   await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
-  return { text, takesChips: CHIP_QUESTIONS.has(item.id) };
+  return { text };
 }
 
 /** A suggestion Vela sends in an organiser's name: their voice's draft, and who signs it. */
@@ -344,17 +342,17 @@ export interface SignedSuggestion {
   readonly text: string;
   readonly type: AskBankType;
   readonly askerId: string;
-  /** Chips are drafted for a question, as for any family question (spec §5.3). */
-  readonly takesChips: boolean;
 }
 
 /**
  * The ask Vela sends in an organiser's name on a morning nobody in the family wrote for (first test,
- * 16 Oct 2026): her unused suggestion for `date`, when it is an AI draft written in the voice of the
- * organiser her row names (`suggestions_signed_by`), in her language, and that organiser is still an
- * active organiser of her family. Taking it marks it used. Null otherwise, and the morning falls back
- * to Vela's own question, signed by Vela: a bank item is never sent in a person's name, and neither
- * is a draft written in another organiser's voice.
+ * 16 Oct 2026), while the organiser her row names (`suggestions_signed_by`) is still an active
+ * organiser of her family: her unused suggestion for `date` when it is an AI draft written in that
+ * organiser's voice, in her language; else, since ADR-56 (founder, 27 Oct 2026), the day's bank
+ * item in the family's wording (`child`), as a son or daughter writes, in her language. A draft
+ * written in another organiser's voice is never sent in this one's name; its bank item may be.
+ * Taking it marks it used. Null when the switch is off, the organiser cannot sign, or the day has no
+ * suggestion, and the morning falls back to Vela's own question, signed by Vela.
  *
  * Called with her member row held `for update`, the lock the organiser's own switch is changed
  * under (`setApiMorningPreferences`), so a switch turned off before this runs is seen off.
@@ -392,16 +390,33 @@ export async function takeSignedSuggestion(
     .for("update");
   const text = row?.text.trim() ?? "";
   if (
-    row === undefined ||
-    text === "" ||
-    row.lang !== readerLang(member.language) ||
-    !isAskBankType(row.type) ||
-    DRAFT_GUARDS.some((guard) => guard.test(text))
+    row !== undefined &&
+    text !== "" &&
+    row.lang === readerLang(member.language) &&
+    isAskBankType(row.type) &&
+    !DRAFT_GUARDS.some((guard) => guard.test(text))
   ) {
-    return null;
+    await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
+    return { text, type: row.type, askerId: signer.id };
   }
-  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, row.id));
-  return { text, type: row.type, askerId: signer.id, takesChips: row.type === "question" };
+  // No draft in their voice: the day's bank item, worded as a son or daughter writes (ADR-56).
+  const [banked] = await tx
+    .select({ id: suggestions.id, bankId: suggestions.bankId })
+    .from(suggestions)
+    .where(
+      and(
+        eq(suggestions.aboutMemberId, member.id),
+        eq(suggestions.localDay, date),
+        isNull(suggestions.usedAt),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  const item = banked === undefined ? undefined : askBankItem(banked.bankId);
+  const childText = item?.child[readerLang(member.language)].trim() ?? "";
+  if (banked === undefined || item === undefined || childText === "") return null;
+  await tx.update(suggestions).set({ usedAt: now }).where(eq(suggestions.id, banked.id));
+  return { text: childText, type: item.type, askerId: signer.id };
 }
 
 // the writer --------------------------------------------------------------------------------------
@@ -671,9 +686,16 @@ async function loadContext(
       ),
     )
     .orderBy(desc(exchanges.createdAt), desc(exchanges.id));
+  // Setup queues stock questions too. A chosen stock prompt is not evidence of this person's voice.
+  const stockWording = new Set(
+    ASK_BANK.flatMap((item) =>
+      [...Object.values(item.text), ...Object.values(item.child)].map((text) => text.trim()),
+    ),
+  );
   const writingExamples = new Map<string, string[]>();
   for (const row of authoredRows) {
     if (row.askerId !== holders.get(row.memberId)?.id) continue;
+    if (stockWording.has(row.text?.trim() ?? "")) continue;
     let text = "";
     for (const character of row.text?.trim() ?? "") {
       if (text.length + character.length > 400) break;

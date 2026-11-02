@@ -4,7 +4,7 @@ import { type PortraitFiles, PortraitStore, portraitPath } from "./portrait-stor
 
 const browser = new Map<string, string>();
 const scopeDirectory = (scope: string) =>
-  new Directory(Paths.cache, "vela-portraits", portraitPath(scope));
+  new Directory(Paths.document, "vela-portraits", portraitPath(scope));
 const personDirectory = (scope: string, person: string) =>
   new Directory(scopeDirectory(scope), portraitPath(person));
 const files: PortraitFiles =
@@ -26,7 +26,18 @@ const files: PortraitFiles =
     : {
         read: (scope, person) => {
           const directory = personDirectory(scope, person);
-          if (!directory.exists) return null;
+          if (!directory.exists) {
+            // Upgrade an already chosen portrait out of purgeable cache storage.
+            const legacy = new Directory(
+              Paths.cache,
+              "vela-portraits",
+              portraitPath(scope),
+              portraitPath(person),
+            );
+            if (!legacy.exists) return null;
+            directory.parentDirectory.create({ intermediates: true, idempotent: true });
+            legacy.move(directory);
+          }
           const photos = directory
             .list()
             .filter(
@@ -66,6 +77,8 @@ const files: PortraitFiles =
         clear: (scope) => {
           const directory = scopeDirectory(scope);
           if (directory.exists) directory.delete();
+          const legacy = new Directory(Paths.cache, "vela-portraits", portraitPath(scope));
+          if (legacy.exists) legacy.delete();
         },
       };
 export const portraits = new PortraitStore(files);
@@ -74,4 +87,8 @@ export function activatePortraitSession(scope: string): void {
 }
 export function clearPortraitSession(scope: string): void {
   portraits.clear(scope);
+}
+
+export function closePortraitSession(scope: string): void {
+  portraits.close(scope);
 }

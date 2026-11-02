@@ -5,15 +5,21 @@ import {
   checkAdminConfig,
   readAiProvider,
   readApiConfig,
+  readCheckIn,
   readClerkWebhookSigningSecret,
   readConfig,
   readLineConfig,
+  readNotificationControls,
   readPeerHealthz,
+  readPersonalQuestionDrafts,
+  readPersonalQuestionProfiles,
   readPilotAdmission,
   readPushConfig,
   readPushSend,
+  readRichMemories,
   readSendAsMe,
   readWeeklyInsight,
+  readWeeklyReadAutoSend,
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
@@ -380,6 +386,7 @@ describe("the API's configuration", () => {
       lineBasicId: null,
       regions: ["apac"],
       pushSend: "off",
+      notificationControls: true,
       pilotAdmission: null,
       privacyNoticeUrls: {
         en: "https://vela.vela.example/privacy",
@@ -541,7 +548,41 @@ describe("closed pilot admission", () => {
     ).toBeNull();
     expect(
       readPilotAdmission({ PILOT_ADMISSION: " on ", PILOT_TELEGRAM_ALLOWLIST: "1001, 2001,1001" }),
-    ).toEqual({ telegramUserIds: ["1001", "2001"] });
+    ).toEqual({ telegramUserIds: ["1001", "2001"], languages: ["en"] });
+  });
+
+  // ADR-52: families the founder approves, on any messenger, in the languages the notice allows.
+  it("reads family approval and the test's languages, English alone and off by default", () => {
+    expect(
+      readPilotAdmission({
+        PILOT_ADMISSION: "on",
+        PILOT_FAMILY_APPROVAL: " on ",
+        PILOT_LANGUAGES: "en, zh-TW",
+      }),
+    ).toEqual({ telegramUserIds: [], familyIds: [], languages: ["en", "zh-TW"] });
+    expect(
+      readPilotAdmission({
+        PILOT_ADMISSION: "on",
+        PILOT_FAMILY_APPROVAL: "off",
+        PILOT_LANGUAGES: "",
+      }),
+    ).toEqual({ telegramUserIds: [], languages: ["en"] });
+    expect(readPilotAdmission({ PILOT_ADMISSION: "off", PILOT_FAMILY_APPROVAL: "on" })).toBeNull();
+  });
+
+  it.each(["fr", "en,en", "zh", "en,", "EN"])("fails closed for languages %j", (languages) => {
+    expect(
+      configErrorOf(() => readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_LANGUAGES: languages }))
+        .code,
+    ).toBe("PILOT_LANGUAGES");
+  });
+
+  it("rejects a misspelled family approval switch", () => {
+    expect(
+      configErrorOf(() =>
+        readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_FAMILY_APPROVAL: "yes" }),
+      ).code,
+    ).toBe("PILOT_FAMILY_APPROVAL");
   });
 
   // ADR-45: the founder approves ids on the admin page too, so an empty private allowlist is a
@@ -551,7 +592,7 @@ describe("closed pilot admission", () => {
     (roster) => {
       expect(
         readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_TELEGRAM_ALLOWLIST: roster }),
-      ).toEqual({ telegramUserIds: [] });
+      ).toEqual({ telegramUserIds: [], languages: ["en"] });
     },
   );
 
@@ -590,11 +631,15 @@ describe("closed pilot admission", () => {
     };
     expect(readApiConfig(configured)?.pilotAdmission).toEqual({
       telegramUserIds: ["1001", "2001"],
+      languages: ["en"],
     });
     expect(readConfig(configured, filled).pilotAdmission).toEqual({
       telegramUserIds: ["1001", "2001"],
+      languages: ["en"],
     });
     expect(readConfig({ ...configured, MEMORY: "on" }, filled).memory).toBe(false);
+    // Memories stay off unless RICH_MEMORIES says on.
+    expect(readConfig({ ...configured, RICH_MEMORIES: "off" }, filled).richMemories).toBe(false);
   });
 });
 
@@ -891,6 +936,26 @@ describe("a secret", () => {
   });
 });
 
+describe("the memories switch", () => {
+  it("is off unless RICH_MEMORIES says on, and refuses anything else by name", () => {
+    expect(readRichMemories({})).toBe(false);
+    expect(readRichMemories({ RICH_MEMORIES: "off" })).toBe(false);
+    expect(readConfig({ ...chosenStaging, RICH_MEMORIES: "on" }, filled).richMemories).toBe(true);
+    const error = configErrorOf(() => readRichMemories({ RICH_MEMORIES: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:RICH_MEMORIES");
+  });
+});
+
+describe("the check-in switch", () => {
+  it("is off unless CHECK_IN says on, and refuses anything else by name", () => {
+    expect(readCheckIn({})).toBe(false);
+    expect(readCheckIn({ CHECK_IN: "off" })).toBe(false);
+    expect(readConfig({ ...chosenStaging, CHECK_IN: "on" }, filled).checkIn).toBe(true);
+    const error = configErrorOf(() => readCheckIn({ CHECK_IN: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:CHECK_IN");
+  });
+});
+
 // ADR-48: absent is off, so an environment that never names it drafts the read as before.
 describe("the weekly insight switch", () => {
   it("is off unless SEND_AS_ME says on, and refuses anything else by name", () => {
@@ -901,6 +966,17 @@ describe("the weekly insight switch", () => {
     expect(errorLabel(error)).toBe("ConfigError:SEND_AS_ME");
   });
 
+  it("waits for the founder unless WEEKLY_READ_AUTO_SEND says on, and refuses anything else", () => {
+    expect(readWeeklyReadAutoSend({})).toBe(false);
+    expect(readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "off" })).toBe(false);
+    expect(readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "on" })).toBe(true);
+    expect(
+      readConfig({ ...chosenStaging, WEEKLY_READ_AUTO_SEND: "on" }, filled).weeklyReadAutoSend,
+    ).toBe(true);
+    const error = configErrorOf(() => readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:WEEKLY_READ_AUTO_SEND");
+  });
+
   it("is off unless WEEKLY_INSIGHT says on, and refuses anything else by name", () => {
     expect(readWeeklyInsight({})).toBe(false);
     expect(readWeeklyInsight({ WEEKLY_INSIGHT: "off" })).toBe(false);
@@ -909,4 +985,30 @@ describe("the weekly insight switch", () => {
     const error = configErrorOf(() => readWeeklyInsight({ WEEKLY_INSIGHT: "yes" }));
     expect(errorLabel(error)).toBe("ConfigError:WEEKLY_INSIGHT");
   });
+});
+
+describe("individual notification controls switch", () => {
+  it("defaults off and refuses unrecognised values", () => {
+    expect(readNotificationControls({})).toBe(false);
+    expect(readNotificationControls({ NOTIFICATION_CONTROLS: "off" })).toBe(false);
+    expect(readNotificationControls({ NOTIFICATION_CONTROLS: "on" })).toBe(true);
+    expect(() => readNotificationControls({ NOTIFICATION_CONTROLS: "yes" })).toThrow();
+  });
+});
+
+describe("personalization collection switches", () => {
+  it.each([readPersonalQuestionProfiles, readPersonalQuestionDrafts])(
+    "defaults off and refuses production activation",
+    (read) => {
+      expect(read({}, "development")).toBe(false);
+      const key =
+        read === readPersonalQuestionProfiles
+          ? "PERSONAL_QUESTION_PROFILES"
+          : "PERSONAL_QUESTION_DRAFTS";
+      expect(read({ [key]: "off" }, "production")).toBe(false);
+      expect(read({ [key]: "on" }, "staging")).toBe(true);
+      expect(() => read({ [key]: "yes" }, "staging")).toThrow();
+      expect(() => read({ [key]: "on" }, "production")).toThrow();
+    },
+  );
 });

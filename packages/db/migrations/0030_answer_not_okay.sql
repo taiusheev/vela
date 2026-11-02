@@ -1,0 +1,2 @@
+ALTER TABLE "answers" DROP CONSTRAINT "answers_kind_check";--> statement-breakpoint
+ALTER TABLE "answers" ADD CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'not_okay', 'sticker', 'other'));

@@ -5,6 +5,7 @@ import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
   useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
@@ -40,6 +41,13 @@ export interface Recorded {
   uri: string;
   key: string;
   durationMs: number;
+  /** Its level at each reading while it recorded, 0 to 1: the voice's own bars. */
+  levels?: number[];
+}
+
+/** Metering is in decibels, -160 for silence up to 0; speech sits around -40 to -10. */
+export function levelOf(metering: number | undefined): number {
+  return Math.min(Math.max(((metering ?? -160) + 60) / 60, 0.04), 1);
 }
 
 export interface Recording {
@@ -48,14 +56,24 @@ export interface Recording {
   elapsedMs: number;
   /** The level now, from 0 to 1, for a meter that moves with the voice. */
   level: number;
+  /** Every level read so far in this recording, oldest first. */
+  levels: readonly number[];
+  /** The finished recording is playing back, and how far it has played. */
+  playing: boolean;
+  playedMs: number;
   recorded: Recorded | null;
   /** The microphone was refused. */
   refused: boolean;
   /** The last recording could not be kept; recording again is the way on. */
   failed: boolean;
   start(): Promise<void>;
-  stop(): Promise<void>;
+  /** Stops and keeps the recording; resolves with it, or null when it could not be kept. */
+  stop(): Promise<Recorded | null>;
+  /** Stops and throws the recording away. */
+  cancel(): Promise<void>;
+  /** Plays the finished recording, or pauses it while it plays. */
   listen(): Promise<void>;
+  seek(fraction: number): void;
   /** Lets the finished recording go, after it was sent. */
   clear(): void;
 }
@@ -74,25 +92,38 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
   const [refused, setRefused] = useState(false);
   const [failed, setFailed] = useState(false);
   const player = useAudioPlayer(recorded?.uri ?? null);
+  const played = useAudioPlayerStatus(player);
   const stopping = useRef(false);
+  const levels = useRef<number[]>([]);
+  const level = levelOf(state.metering);
 
-  const stop = async () => {
-    if (stopping.current) return;
+  // One reading a tick while it records (the state above is read every 200 ms).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: A reading is taken as the time moves.
+  useEffect(() => {
+    if (state.isRecording) levels.current.push(level);
+  }, [state.isRecording, state.durationMillis]);
+
+  const stop = async (keep = true): Promise<Recorded | null> => {
+    if (stopping.current) return null;
     stopping.current = true;
     const durationMs = state.durationMillis;
     try {
       await recorder.stop();
       const uri = recorder.uri;
+      if (!keep) return null;
       if (uri !== null) {
-        setRecorded({ uri, key: recordingKey(), durationMs });
-      } else {
-        setFailed(true);
+        const done = { uri, key: recordingKey(), durationMs, levels: [...levels.current] };
+        setRecorded(done);
+        return done;
       }
+      setFailed(true);
+      return null;
     } catch (error) {
       // The recorder can be let go under a stop (the screen closing, a reload while developing):
       // the recording is lost, which she is told, and nothing is thrown at the screen.
       console.warn("[recording] stop failed", (error as Error)?.name);
-      setFailed(true);
+      if (keep) setFailed(true);
+      return null;
     } finally {
       stopping.current = false;
     }
@@ -102,11 +133,17 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
     if (state.isRecording && state.durationMillis >= longest) void stop();
   });
 
+  const durationS = played.duration > 0 ? played.duration : (recorded?.durationMs ?? 0) / 1_000;
   return {
     recording: state.isRecording,
     elapsedMs: state.durationMillis,
-    // Metering is in decibels, -160 for silence up to 0; speech sits around -40 to -10.
-    level: Math.min(Math.max(((state.metering ?? -160) + 60) / 60, 0.04), 1),
+    level,
+    levels: levels.current,
+    playing: played.playing,
+    playedMs:
+      durationS > 0 && played.currentTime >= durationS - 0.05
+        ? 0
+        : Math.round(played.currentTime * 1_000),
     recorded,
     refused,
     failed,
@@ -120,6 +157,8 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
         setRefused(false);
         setFailed(false);
         setRecorded(null);
+        levels.current = [];
+        player.pause();
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         await recorder.prepareToRecordAsync();
         recorder.record();
@@ -128,17 +167,30 @@ export function useRecording(options: { maxMs?: number } = {}): Recording {
         setFailed(true);
       }
     },
-    stop,
+    stop: () => stop(true),
+    async cancel() {
+      await stop(false);
+      levels.current = [];
+      setRecorded(null);
+    },
     async listen() {
+      if (played.playing) {
+        player.pause();
+        return;
+      }
       try {
         await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-        await player.seekTo(0);
+        if (durationS > 0 && played.currentTime >= durationS - 0.05) await player.seekTo(0);
         player.play();
       } catch {
         setFailed(true);
       }
     },
+    seek(fraction) {
+      if (durationS > 0) void player.seekTo(fraction * durationS);
+    },
     clear() {
+      player.pause();
       setRecorded(null);
     },
   };

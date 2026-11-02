@@ -28,7 +28,7 @@ describe("reading a notification's data", () => {
       undefined,
       "quiet_notice",
       {},
-      { kind: "flag", family_id: FAMILY, member_id: HER },
+      { kind: "weekly_note", family_id: FAMILY, member_id: HER },
       { kind: "quiet_notice", family_id: "not-a-uuid", member_id: HER },
       { kind: "answer_receipt", member_id: HER },
       { ...data({ kind: "quiet_notice" }), quiet_event_id: "../../settings" },
@@ -51,17 +51,24 @@ describe("where a tap goes (A4)", () => {
     expect(tapTargetOf(data({ kind: "quiet_notice" }), FAMILY)).toEqual({ screen: "today" });
   });
 
+  it("opens the chat with her for her Not okay, in her family, and Today otherwise (ADR-57)", () => {
+    expect(tapTargetOf(data({ kind: "flag", exchange_id: EXCHANGE }), FAMILY)).toEqual({
+      screen: "chat",
+      recipientId: HER,
+    });
+    expect(tapTargetOf(data({ kind: "flag" }), "another-family")).toEqual({ screen: "today" });
+  });
+
   it("opens Today alone for a quiet morning that is settled", () => {
     const target = tapTargetOf(data({ kind: "quiet_resolved", quiet_event_id: EVENT }), FAMILY);
     expect(target).toEqual({ screen: "today" });
     expect(hrefOf(target)).toEqual({ pathname: "/", params: {} });
   });
 
-  it("opens the exchange she answered", () => {
+  it("opens the chat with the parent who answered", () => {
     const target = tapTargetOf(data({ kind: "answer_receipt", exchange_id: EXCHANGE }), FAMILY);
-    expect(target).toEqual({ screen: "exchange", exchangeId: EXCHANGE });
-    expect(hrefOf(target)).toEqual({ pathname: "/exchange/[id]", params: { id: EXCHANGE } });
-    expect(tapTargetOf(data({ kind: "answer_receipt" }), FAMILY)).toEqual({ screen: "today" });
+    expect(target).toEqual({ screen: "chat", recipientId: HER });
+    expect(hrefOf(target)).toEqual({ pathname: "/conversation", params: { recipient: HER } });
   });
 
   it("opens Ask for her, with the turn's suggestion when it has one", () => {
@@ -87,8 +94,8 @@ describe("where a tap goes (A4)", () => {
 });
 
 describe("a notification arriving while the app is open", () => {
-  it("shows a quiet notice and its close as a banner with their sound", () => {
-    for (const kind of ["quiet_notice", "quiet_resolved"] as const) {
+  it("shows a quiet notice, its close and a Not okay as a banner with their sound", () => {
+    for (const kind of ["quiet_notice", "quiet_resolved", "flag"] as const) {
       expect(foregroundBehaviour(data({ kind }))).toEqual({
         shouldShowBanner: true,
         shouldShowList: true,
@@ -107,5 +114,17 @@ describe("a notification arriving while the app is open", () => {
         shouldSetBadge: false,
       });
     }
+  });
+
+  it("opens the Week tab on her weekly read, and on the newest one for another family", () => {
+    expect(tapTargetOf(data({ kind: "weekly_read" }), FAMILY)).toEqual({
+      screen: "week",
+      memberId: data({ kind: "weekly_read" }).member_id,
+    });
+    expect(tapTargetOf(data({ kind: "weekly_read" }), undefined)).toEqual({ screen: "week" });
+    expect(hrefOf({ screen: "week", memberId: "m" })).toEqual({
+      pathname: "/sunday",
+      params: { member: "m" },
+    });
   });
 });

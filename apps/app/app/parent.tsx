@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   useWindowDimensions,
   View,
@@ -18,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { BrandIcon } from "../src/components/brand/icon.tsx";
+import { Text } from "../src/components/scaled-text.tsx";
 import { KitchenTable } from "../src/device/KitchenTable.tsx";
 import { IDLE_MS, isKitchenTable } from "../src/device/kitchen.ts";
 import { useParent } from "../src/device/useParent.ts";
@@ -139,7 +139,7 @@ export default function ParentScreen() {
                 ))}
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
+              style={({ pressed }) => [styles.readAloud, pressed ? styles.pressed : null]}
               onPress={() => readAloud(view.message?.text ?? "", view.language)}
             >
               <BrandIcon name="play" color={light.action} size={24} />
@@ -331,14 +331,14 @@ const styles = StyleSheet.create({
   message: { fontFamily: "Literata_400Regular", fontSize: 28, lineHeight: 40, color: light.ink },
   body: { fontFamily: "Inter_400Regular", fontSize: 22, lineHeight: 32, color: light.ink },
   buttons: { gap: 16 },
+  // Her answers are filled warm and the helpers around them are not, so the choices read as
+  // choices before she has read every label (Refactoring UI: hierarchy, not semantics).
   primary: {
     minHeight: 72,
     flexDirection: "row",
     gap: 12,
     borderRadius: 10,
-    backgroundColor: light.surface,
-    borderWidth: 2,
-    borderColor: light.control,
+    backgroundColor: light.lightSoft,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
@@ -358,6 +358,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secondaryLabel: { fontFamily: "Inter_600SemiBold", fontSize: 22, color: light.action },
+  /** A helper for the message above it: its own size, beside the words, never an answer's width. */
+  readAloud: {
+    alignSelf: "flex-start",
+    minHeight: 64,
+    flexDirection: "row",
+    gap: 12,
+    borderRadius: 32,
+    backgroundColor: light.actionSoft,
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
   send: {
     minHeight: 72,
     borderRadius: 10,

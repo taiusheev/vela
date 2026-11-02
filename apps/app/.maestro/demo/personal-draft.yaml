@@ -1,0 +1,34 @@
+url: ${APP_URL}
+name: A personal draft starts with an idea and is reviewed before scheduling
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/personal-question?recipient=m1
+- assertVisible: 'What would you like to ask Mom\?'
+- assertNotVisible: "How often do you usually talk?"
+- tapOn:
+    id: "Your starting point"
+- inputText: "how are the tomatoes growing"
+- tapOn: "Prepare a draft"
+- assertVisible: "Make it yours."
+- assertNotVisible: "Choose a morning."
+- tapOn: "These words feel like me, and I want to ask this."
+- tapOn: "Next: choose a morning"
+- assertVisible: "Choose a morning."
+- tapOn: "Edit your question"
+- assertVisible: "Make it yours."
+- tapOn: "Change starting points"
+- tapOn: "Make it sound like you"
+- assertVisible: "How often do you usually talk?"
+- tapOn: "Some space for now"
+# Return to the primary task before continuing; preferences scroll inside the app on phones.
+- tapOn: "Make it sound like you"
+- tapOn: "Leave room for now"
+- assertVisible: "Leave a little room."
+- assertVisible: "No question is needed right now. Your existing morning settings stay as they are."
+
+# Leaving a draft returns to the same parent, including a parent who is not yet asking-ready.
+- openLink: ${APP_URL}/personal-question?recipient=m2
+- tapOn: "Back to questions"
+- assertVisible: "Write a question for Dad"

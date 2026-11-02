@@ -178,12 +178,14 @@
       { "binding": "INBOUND_QUEUE", "queue": "vela-inbound" }
     ],
     // A message is retried until the send or the AI call stops failing, then parked in the
-    // dead-letter queue, where the founder can see it rather than lose it.
+    // dead-letter queue, where the founder can see it rather than lose it. Each batch waits at most a
+    // second: a family is a handful of messages, so a longer wait only delays her voice, its words
+    // and a chat message, and never fills a batch.
     "consumers": [
       {
         "queue": "vela-outbound",
         "max_batch_size": 10,
-        "max_batch_timeout": 5,
+        "max_batch_timeout": 1,
         "max_retries": 5,
         "retry_delay": 30,
         "dead_letter_queue": "vela-dead-letter"
@@ -191,7 +193,7 @@
       {
         "queue": "vela-media",
         "max_batch_size": 5,
-        "max_batch_timeout": 10,
+        "max_batch_timeout": 1,
         "max_retries": 3,
         "retry_delay": 60,
         "dead_letter_queue": "vela-dead-letter"
@@ -199,7 +201,7 @@
       {
         "queue": "vela-understand",
         "max_batch_size": 5,
-        "max_batch_timeout": 10,
+        "max_batch_timeout": 1,
         "max_retries": 3,
         "retry_delay": 60,
         "dead_letter_queue": "vela-dead-letter"
@@ -274,14 +276,30 @@
     "PILOT_PUBLIC_URL": "http://localhost:8787",
     // Off: no laptop reaches Expo; push is proven against a fake Expo endpoint (ADR-34).
     "PUSH_SEND": "off",
+    "NOTIFICATION_CONTROLS": "on",
     // On: her dated plans are kept for reminders (spec §12).
     "MEMORY": "on",
     // On: her stories are kept in the family book (ADR-39).
     "BOOK": "on",
+    "PHOTO_BOX": "on",
+    "PERSONAL_QUESTION_DRAFTS": "off",
+    "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
     "WEEKLY_INSIGHT": "on",
+    "WEEKLY_READ_AUTO_SEND": "on",
+    "WEEKLY_SUPPORT": "off",
+    "WEEKLY_SUPPORT_NOTICE": "",
+    "WEEKLY_SUPPORT_FAMILIES": "",
     // On: an organiser may have Vela's suggestion sent in their name (first test, 16 Oct 2026).
-    "SEND_AS_ME": "on"
+    "SEND_AS_ME": "on",
+    // On: no buttons on her morning; an unanswered morning gets the check-in (ADR-54).
+    "CHECK_IN": "on",
+    // On: each person's own memories in the app (privacy-notice v7 wording, 22 Oct 2026).
+    "RICH_MEMORIES": "on",
+    // On: screened, ordinary answers may become private memory suggestions (founder, 23 Oct 2026).
+    "MEMORY_DISCOVERY": "on",
+    // On: stories gathered from her memories, in her own words (ADR-51, notice v9 draft).
+    "MEMORY_STORIES": "on"
   },
 
   "env": {
@@ -309,7 +327,7 @@
           {
             "queue": "vela-outbound-staging",
             "max_batch_size": 10,
-            "max_batch_timeout": 5,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -317,7 +335,7 @@
           {
             "queue": "vela-media-staging",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -325,7 +343,7 @@
           {
             "queue": "vela-understand-staging",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-staging"
@@ -368,7 +386,8 @@
       ],
       "vars": {
         "ENVIRONMENT": "staging",
-        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
+        // Keep accepting the existing bridge until production is deployed and its target moved.
+        // Remove only after a public signup is verified in production's protected waitlist.
         "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightstagingbot",
         // The admin Worker's origin: links in the founder's admin messages open it.
@@ -393,16 +412,36 @@
         "LINE_BOT_BASIC_ID": "@661oqjkt",
         // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
         "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
-        // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
-        "PUSH_SEND": "off",
+        // On since the founder enabled Expo's enhanced push security and put EXPO_ACCESS_TOKEN on
+        // this Worker (ADR-34, 2 November 2026).
+        "PUSH_SEND": "expo",
+        "NOTIFICATION_CONTROLS": "on",
         // On: staging holds test families only (spec §12).
         "MEMORY": "on",
         // On: staging holds test families only (ADR-39).
         "BOOK": "on",
+        "PHOTO_BOX": "on",
+        "PERSONAL_QUESTION_DRAFTS": "on",
+        "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
+        "WEEKLY_READ_AUTO_SEND": "on",
+        "WEEKLY_SUPPORT": "off",
+        "WEEKLY_SUPPORT_NOTICE": "",
+        "WEEKLY_SUPPORT_FAMILIES": "",
         // On: staging holds test families only (first test, 16 Oct 2026).
         "SEND_AS_ME": "on",
+        // On: staging holds test families only (ADR-54, founder, 27 Oct 2026).
+        "CHECK_IN": "on",
+        // On: staging holds test families only; the founder asked to try Memories on iPhone there
+        // (22 Oct 2026). Its notice wording (v7) is approved but not yet the live notice.
+        "RICH_MEMORIES": "on",
+        // On: staging holds test families only; the founder approved the screening after the live
+        // eval run of 23 Oct 2026 and asked for it in the test version only.
+        "MEMORY_DISCOVERY": "on",
+        // On: staging holds test families only. Stories gathered from memories (ADR-51); the
+        // notice v9 wording awaits the founder.
+        "MEMORY_STORIES": "on",
         // Technical plan 2.3: each reconcile reads production's health check from this account
         // and tells staging's admin chat when it stays down (src/peer-health.ts).
         "PEER_HEALTHZ_URL": "https://vela.vela-light.workers.dev/healthz"
@@ -425,13 +464,15 @@
         "producers": [
           { "binding": "OUTBOUND_QUEUE", "queue": "vela-outbound-production" },
           { "binding": "MEDIA_QUEUE", "queue": "vela-media-production" },
-          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" }
+          { "binding": "UNDERSTAND_QUEUE", "queue": "vela-understand-production" },
+          // LINE on for the Taiwan test (ADR-52): the founder created vela-inbound-production first.
+          { "binding": "INBOUND_QUEUE", "queue": "vela-inbound-production" }
         ],
         "consumers": [
           {
             "queue": "vela-outbound-production",
             "max_batch_size": 10,
-            "max_batch_timeout": 5,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-production"
@@ -439,7 +480,7 @@
           {
             "queue": "vela-media-production",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
             "dead_letter_queue": "vela-dead-letter-production"
@@ -447,9 +488,18 @@
           {
             "queue": "vela-understand-production",
             "max_batch_size": 5,
-            "max_batch_timeout": 10,
+            "max_batch_timeout": 1,
             "max_retries": 3,
             "retry_delay": 60,
+            "dead_letter_queue": "vela-dead-letter-production"
+          },
+          // As vela-inbound in development: LINE's answers retried up to T_quiet's cap (05 §5.10).
+          {
+            "queue": "vela-inbound-production",
+            "max_batch_size": 10,
+            "max_batch_timeout": 1,
+            "max_retries": 64,
+            "retry_delay": 30,
             "dead_letter_queue": "vela-dead-letter-production"
           },
           // Jobs that failed every retry are kept, sealed, for the founder (technical plan 2.7). Five
@@ -475,6 +525,9 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        // The public website's own address: indexed, website-only, www. redirected (site-host.ts).
+        // Its waitlist then shares production's database with the protected production admin page.
+        "SITE_HOST": "vela-light.com",
         "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "PRIVACY_NOTICE_URL_EN": "https://vela.vela-light.workers.dev/privacy",
@@ -485,31 +538,58 @@
         "MEDIA_STORAGE": "r2",
         // Invitation-only English trial. Missing private roster refuses family work.
         "PILOT_ADMISSION": "on",
+        // ADR-52, on for the Taiwan test (founder, 29 October 2026; privacy-notice v12 names LINE
+        // and Chinese): the founder approves whole families on the admin page, on Telegram or LINE,
+        // in English or Traditional Chinese. The Telegram roster keeps working beside it.
+        "PILOT_FAMILY_APPROVAL": "on",
+        "PILOT_LANGUAGES": "en,zh-TW",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
         // pilot Worker at setup. Privacy notice v3 names Clerk.
         "API_V1": "on",
         "CLERK_ISSUER": "https://clerk.vela-light.com",
-        // Off until the design's last step turns it on (05 §8, step 11), and pinned off by
-        // src/wrangler-config.test.ts: no INBOUND_QUEUE binding and no LINE_BOT_BASIC_ID until then.
-        "LINE_CHANNEL": "off",
+        // On for the Taiwan test (05 §8, step 11): the "Vela Light" Official Account, its channel
+        // secret and access token and MEDIA_URL_SECRET on this Worker, vela-inbound-production created.
+        "LINE_CHANNEL": "on",
+        "LINE_BOT_BASIC_ID": "@675nhrpg",
         "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev",
-        // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
-        // push before a privacy notice names Expo, Apple and Google (ADR-34).
-        "PUSH_SEND": "off",
+        // On since privacy-notice v13 names Expo, Apple and Google for notifications and the founder
+        // put EXPO_ACCESS_TOKEN on this Worker with enhanced push security on (ADR-34, 2 November
+        // 2026). Pinned by src/wrangler-config.test.ts.
+        "PUSH_SEND": "expo",
+        "NOTIFICATION_CONTROLS": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: no family's plans are kept before the
         // privacy notice names memory and counsel has answered on health words (data map row 29).
         "MEMORY": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
         // book comes later in the pilot, so no story is kept before a notice describes it.
         "BOOK": "off",
+        "PHOTO_BOX": "off",
+        "PERSONAL_QUESTION_DRAFTS": "off",
+        "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
+        // ADR-59: the weekly read goes out as drafted since privacy-notice.v13 no longer promises the
+        // founder checks it first (founder: "no need me to check", 2 November 2026).
+        "WEEKLY_READ_AUTO_SEND": "on",
+        "WEEKLY_SUPPORT": "off",
+        "WEEKLY_SUPPORT_NOTICE": "",
+        "WEEKLY_SUPPORT_FAMILIES": "",
         // On since privacy-notice.v5 and consent-script.v4 say an organiser may let Vela send its
         // suggestion in their name (ADR-49, founder's approval of 17 Oct 2026). It does nothing for a
         // family until one of its organisers chooses "Send it as me" in the app.
         "SEND_AS_ME": "on",
+        // On since privacy-notice.v12 and consent-script.v7 describe the check-in and what "Not okay"
+        // tells (ADR-54, ADR-55, founder's approval of 27 Oct 2026).
+        "CHECK_IN": "on",
+        // Off, and pinned off by src/wrangler-config.test.ts, until privacy-notice v7 (Memories) is
+        // the live notice and the families are told.
+        "RICH_MEMORIES": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts, with RICH_MEMORIES.
+        "MEMORY_DISCOVERY": "off",
+        // Off, and pinned off by src/wrangler-config.test.ts, until notice v9 (stories) is live.
+        "MEMORY_STORIES": "off",
         // Technical plan 2.3: each reconcile reads staging's health check from this account, so
         // staging and production watch each other from different Cloudflare accounts.
         "PEER_HEALTHZ_URL": "https://vela.vela-light-staging.workers.dev/healthz"

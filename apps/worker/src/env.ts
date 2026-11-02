@@ -61,11 +61,22 @@ interface SharedEnv {
  * the scheduler, the heartbeat, and the API under /v1.
  */
 export interface PilotEnv extends SharedEnv {
+  /** Reviewed request-only drafting experiment. Absent/off everywhere until evaluated. */
+  readonly PERSONAL_QUESTION_DRAFTS?: string;
+  readonly PERSONAL_QUESTION_PROFILES?: string;
+  /** Optional usage analytics. Absent is off. Public project token, never a personal API key. */
+  readonly SITE_ANALYTICS?: string;
+  readonly POSTHOG_PROJECT_TOKEN?: string;
+  readonly POSTHOG_REGION?: string;
   /** Endpoint-specific Svix signing key for verified Clerk account deletion events. */
   readonly CLERK_WEBHOOK_SIGNING_SECRET?: string;
   /** Opt-in closed trial; absent is off. Participant IDs belong in a private Worker secret. */
   readonly PILOT_ADMISSION?: string;
   readonly PILOT_TELEGRAM_ALLOWLIST?: string;
+  /** ADR-52: `on` admits the families the founder approves on the admin page, on any messenger. */
+  readonly PILOT_FAMILY_APPROVAL?: string;
+  /** The closed test's languages, `en` or `en,zh-TW`; English alone when unset. */
+  readonly PILOT_LANGUAGES?: string;
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
   readonly PRIVACY_NOTICE_URL_EN: string;
@@ -107,6 +118,7 @@ export interface PilotEnv extends SharedEnv {
    * the founder has set up Expo, Firebase and, for iPhones, Apple.
    */
   readonly PUSH_SEND: string;
+  readonly NOTIFICATION_CONTROLS?: string;
   /** "on" or "off": whether her dated plans are kept for reminders (spec §12). Production is "off". */
   readonly MEMORY: string;
   /** "on" or "off": whether stories are kept in the family book (ADR-39). Production is "off". */
@@ -118,10 +130,48 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly WEEKLY_INSIGHT?: string;
   /**
+   * "on" or "off" (absent is "off"): whether the weekly read goes to the organisers as soon as it is
+   * drafted. Production is "off" while the privacy notice promises the founder checks each read.
+   */
+  readonly WEEKLY_READ_AUTO_SEND?: string;
+  /** New report purpose; independent off switch, approved notice and explicit family roster. */
+  readonly WEEKLY_SUPPORT?: string;
+  readonly WEEKLY_SUPPORT_NOTICE?: string;
+  readonly WEEKLY_SUPPORT_FAMILIES?: string;
+  /**
    * "on" or "off" (absent is "off"): whether an organiser may have Vela's suggestion sent in their
    * name on a morning nobody wrote for. "on" everywhere since privacy-notice.v5 describes it.
    */
   readonly SEND_AS_ME?: string;
+  /**
+   * `PHOTO_BOX` (ADR-58): "on" keeps the family's photo box and turns its photos into her free
+   * mornings. Absent or "off" does not. On in development and staging, off in production until the
+   * privacy notice describes the box; pinned in src/wrangler-config.test.ts.
+   */
+  readonly PHOTO_BOX?: string;
+  /**
+   * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
+   * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.
+   */
+  readonly CHECK_IN?: string;
+  /**
+   * `RICH_MEMORIES`: "on" offers each signed-in person their own memories in the app (permission,
+   * suggestions, keeping, removal, turn off and clear; privacy-notice v7 wording). Absent or "off"
+   * leaves those routes absent. Pinned off in production until the notice is live.
+   */
+  readonly RICH_MEMORIES?: string;
+  /**
+   * `MEMORY_DISCOVERY`: "on" lets understood, screened, ordinary answers be sent to `memory_pick` for
+   * the author's private memory suggestions (only with RICH_MEMORIES on). On in development and
+   * staging, off in production; pinned in src/wrangler-config.test.ts.
+   */
+  readonly MEMORY_DISCOVERY?: string;
+  /**
+   * `MEMORY_STORIES`: "on" gathers her memories into stories with `story_weave` (ADR-51; only with
+   * MEMORY_DISCOVERY and BOOK on). On in development and staging, off in production; pinned in
+   * src/wrangler-config.test.ts.
+   */
+  readonly MEMORY_STORIES?: string;
 
   // Secrets (.dev.vars.example lists them all).
   readonly TELEGRAM_BOT_TOKEN?: string;

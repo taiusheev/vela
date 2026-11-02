@@ -9,33 +9,49 @@ import {
   Literata_500Medium,
   Literata_600SemiBold,
 } from "@expo-google-fonts/literata";
-import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import SERIF_TC_FILE from "../assets/fonts/NotoSerifTC-Voice.ttf";
+import { UsageAnalytics } from "../src/analytics/provider.tsx";
+import { apiConfigured, fetchMe } from "../src/api/client.ts";
 import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
 import { AccountProvider, accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
 import { AppPrivacyGate } from "../src/components/app-privacy.tsx";
+import { ReadingColumn } from "../src/components/reading-column.tsx";
+import { followAppFocus } from "../src/data/app-focus.ts";
 import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
 import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
 import { activateOnboardingSession, readDraft } from "../src/data/onboarding-draft.ts";
 import { clearPhotoCache } from "../src/data/photos.ts";
+import { createSessionQueries } from "../src/data/query-client.ts";
 import { readDeviceToken } from "../src/device/token.ts";
 import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { PushProvider } from "../src/push/provider.tsx";
 import { useOpenTapped } from "../src/push/useOpenTapped.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../src/storage/drafts.ts";
-import { activatePortraitSession, clearPortraitSession } from "../src/storage/portraits.ts";
+import {
+  activatePortraitSession,
+  clearPortraitSession,
+  closePortraitSession,
+} from "../src/storage/portraits.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
+import { SERIF_TC } from "../src/theme/tokens.ts";
 
 void SplashScreen.preventAutoHideAsync();
+
+/** Screens that are a short task rather than a place: they open as sheets with Cancel. */
+const SHEET_ROUTES = ["ask", "away", "morning-settings", "profile", "vela-light"] as const;
+// Once for the whole app, never per session: a sign-in must not lose "back in front" (app-focus.ts).
+followAppFocus(AppState);
 
 function SessionQueries({ children, scope }: { children: ReactNode; scope: string }) {
   const [queries] = useState(() => {
@@ -43,24 +59,20 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
     clearPhotoCache();
     activatePrivateSession(scope);
     activatePortraitSession(scope);
-    return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 60_000 } } });
+    return createSessionQueries();
   });
   useEffect(() => {
     sessionRequests.activate(scope);
     activatePrivateSession(scope);
     activatePortraitSession(scope);
-    const subscription = AppState.addEventListener("change", (state) =>
-      focusManager.setFocused(state === "active"),
-    );
     return () => {
       sessionRequests.end(scope);
-      subscription.remove();
       void queries.cancelQueries();
       queries.clear();
       clearPhotoCache();
       void clearAudioCache();
       try {
-        clearPortraitSession(scope);
+        closePortraitSession(scope);
       } catch {
         /* The closed session cannot read or save portraits. */
       }
@@ -69,15 +81,37 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
   }, [queries, scope]);
   return (
     <QueryClientProvider client={queries}>
+      <WarmAccount />
       <FamilySelectionProvider>
         <AskOutcomeProvider>{children}</AskOutcomeProvider>
       </FamilySelectionProvider>
     </QueryClientProvider>
   );
 }
+/** Start the signed-in account read while bundled fonts and language initialise. */
+function WarmAccount() {
+  const account = useAccount();
+  useQuery({
+    queryKey: ["me"],
+    enabled: apiConfigured() && account.ready && account.signedIn,
+    queryFn: async () => fetchMe(await account.token()),
+  });
+  return null;
+}
 function AccountQueries({ children }: { children: ReactNode }) {
   const account = useAccount();
   const scope = sessionScope(account);
+  const previousScope = useRef(scope);
+  useEffect(() => {
+    if (previousScope.current !== scope) {
+      try {
+        clearPortraitSession(previousScope.current);
+      } catch {
+        /* Closed scopes reject reads and late picker results even if file cleanup fails. */
+      }
+      previousScope.current = scope;
+    }
+  }, [scope]);
   activateOnboardingSession(account.signedIn ? scope : "guest");
   return (
     <SessionQueries key={scope} scope={scope}>
@@ -143,6 +177,7 @@ function useSignInGuard(parent: boolean | undefined): void {
 
 function Root() {
   const { settled } = useAppLocale();
+  const { scheme } = useTheme();
   const [ready, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -150,6 +185,7 @@ function Root() {
     Literata_400Regular,
     Literata_500Medium,
     Literata_600SemiBold,
+    [SERIF_TC]: SERIF_TC_FILE,
   });
 
   // Native text can retain its fallback face if mounted before its font is registered. Native
@@ -161,11 +197,20 @@ function Root() {
 
   if (Platform.OS !== "web" && (!settled || (!ready && fontError === null))) return null;
 
-  return <Navigation />;
+  // The account gate settles before navigation mounts, so a new sign-in cannot show questions
+  // behind a loading modal or start navigation transitions beneath a native presentation.
+  return (
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <AppPrivacyGate>
+        <Navigation />
+      </AppPrivacyGate>
+    </>
+  );
 }
 
 function Navigation() {
-  const { palette, scheme } = useTheme();
+  const { palette } = useTheme();
   const parent = useParentMode();
   const segments = useSegments();
   useSignInGuard(parent);
@@ -177,19 +222,31 @@ function Navigation() {
 
   return (
     <>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <AppPrivacyGate>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            headerStyle: { backgroundColor: palette.bg },
-            headerTintColor: palette.ink,
-            headerShadowVisible: false,
-            headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
-            contentStyle: { backgroundColor: palette.bg },
-          }}
-        />
-      </AppPrivacyGate>
+      <UsageAnalytics />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: palette.bg },
+          headerTintColor: palette.ink,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
+          contentStyle: { backgroundColor: palette.bg },
+        }}
+        // The tab group keeps its bar full width and centres each tab page itself.
+        screenLayout={({ route, children }) =>
+          route.name === "(tabs)" ? children : <ReadingColumn>{children}</ReadingColumn>
+        }
+      >
+        {/* Short tasks slide up as sheets: known here, before they open, so the phone animates
+              them as sheets and a swipe down closes them. */}
+        {SHEET_ROUTES.map((name) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            options={{ presentation: "modal", headerShown: true }}
+          />
+        ))}
+      </Stack>
     </>
   );
 }

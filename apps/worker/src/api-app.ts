@@ -1,10 +1,12 @@
 import {
   AddNearby,
+  AddToPhotoBox,
   ApiAccountDeleted,
   ApiAccountPatch,
   ApiAccountProfile,
   ApiAway,
   ApiBook,
+  ApiBookKept,
   ApiBookRemoved,
   ApiCapabilities,
   ApiComposedAsk,
@@ -14,12 +16,14 @@ import {
   ApiDeviceMessages,
   ApiDeviceRemoved,
   ApiDeviceSetUp,
+  ApiEditedAsk,
   type ApiErrorBody,
   ApiExchangePage,
   ApiExchangeSummary,
   ApiFamily,
   ApiFamilyPlan,
   ApiIdempotencyKey,
+  ApiKeepSuggestionDismissed,
   ApiLeft,
   ApiLinkChallenge,
   ApiLinkCompleteInput,
@@ -36,9 +40,17 @@ import {
   ApiNearbyRemoved,
   ApiParentConnection,
   ApiParentLink,
+  ApiPersonalQuestionDraft,
+  ApiPhotoBox,
+  ApiPhotoBoxPhoto,
+  ApiPhotoBoxRemoved,
+  ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
   ApiPushDeviceRemoved,
+  ApiQuestionProfile,
+  ApiQuestionProfileForgotten,
+  ApiQuestionProfileSaved,
   ApiQuietNotice,
   ApiQuietState,
   ApiReminder,
@@ -51,23 +63,52 @@ import {
   ApiUploadedVoice,
   ApiUser,
   ApiWeeklyRead,
+  ApiWeeklyReadList,
   ApiWeeklyReadOpened,
   ApiWithdrawn,
   AskToLookIn,
+  ChangePhotoBoxPhoto,
   ComposeAsk,
   ComposeReply,
   CreateFamily,
   CreateReminder,
   DeleteAccount,
   DeviceWrite,
+  DismissKeepSuggestion,
+  DraftPersonalQuestion,
+  EditAsk,
   EndAway,
   FinishReminder,
+  ForgetQuestionProfile,
   InviteNearby,
+  KeepBookEntry,
+  KeptMemoryPage,
   type Lang,
   LeaveFamily,
   MarkDeceased,
   type MediaUnavailableReason,
   MemberLight,
+  MemoryCandidatePage,
+  MemoryDismissed,
+  MemoryKeepChoice,
+  MemoryKept,
+  MemoryNoInput,
+  MemoryPermissionAnswered,
+  MemoryPermissionChoice,
+  MemoryPermissionPrepare,
+  MemoryPermissionPrepared,
+  MemoryPermissionPreview,
+  MemoryPermissionState,
+  MemoryRemoved,
+  MemoryShareChoice,
+  MemorySharePrepared,
+  MemorySharePreview,
+  MemoryShareRecipients,
+  MemoryShareSaved,
+  MemoryShareStop,
+  MemoryShareStopped,
+  MemorySharingView,
+  MemoryWithdrawn,
   OpenWeeklyRead,
   ParentLinkRequest,
   PauseMember,
@@ -76,10 +117,21 @@ import {
   RegisterPushDevice,
   RemoveBookEntry,
   RemoveNearby,
+  RemovePhotoBoxPhoto,
   RemovePushDevice,
+  SaveQuestionProfile,
   SetAway,
   SetMorningPreferences,
+  SharedKeptMemoryPage,
   StartTrial,
+  SupportNoInput,
+  SupportPermissionChoice,
+  SupportPrepared,
+  SupportPresentation,
+  SupportRemoveChoice,
+  SupportReport,
+  SupportReviewChoice,
+  SupportWriteResult,
   WithdrawAsk,
 } from "@vela/contracts";
 import type { Member, VelaDatabase } from "@vela/db";
@@ -93,24 +145,40 @@ import {
   AskVoiceMissingError,
   AwayRefusedError,
   type addApiNearby,
+  type addToApiPhotoBox,
+  type answerMemoryPermission,
+  type answerWeeklySupportPermission,
   type askApiToLookIn,
   type authorizeFamilyAccess,
   type Clock,
   type cancelAccountLink,
+  type changeApiPhotoBoxPhoto,
   type completeAccountLink,
   type composeApiAsk,
+  type confirmMemorySharing,
   type createApiFamily,
   type createApiReminder,
+  type createMemorySharingPresentation,
   type DeviceAlerts,
   type disableApiAccount,
+  type dismissApiSuggestion,
+  type dismissMemoryCandidate,
+  type draftApiPersonalQuestion,
+  type editApiAsk,
   type endApiAway,
   errorLabel,
   FactMissingError,
   type finishApiReminder,
+  type forgetApiQuestionProfile,
   type inviteApiNearby,
+  type keepApiAnswer,
+  type keepBoxPhotoStored,
+  type keepMemoryCandidate,
   type Logger,
   LookInRefusedError,
   type leaveApiFamily,
+  lineInviteLink,
+  type listApiWeeklyReads,
   type loadAccountLinkStatus,
   type loadApiBook,
   type loadApiExchange,
@@ -121,12 +189,24 @@ import {
   type loadApiMe,
   type loadApiMorningPreferences,
   type loadApiParentConnection,
+  type loadApiPhotoBox,
+  type loadApiPlannedQuestions,
   type loadApiPrecision,
+  type loadApiQuestionProfile,
   type loadApiQuiet,
   type loadApiReminders,
   type loadApiToday,
   type loadApiWeeklyRead,
   type loadDeviceMessages,
+  type loadKeptMemories,
+  type loadMemoryCandidates,
+  type loadMemoryPermission,
+  type loadMemoryPermissionPresentation,
+  type loadMemorySharingPresentation,
+  type loadMemorySharingView,
+  type loadSharedKeptMemories,
+  type loadWeeklySupportPresentation,
+  type loadWeeklySupportReport,
   MAX_VOICE_BYTES,
   MediaRefusedError,
   type MediaStore,
@@ -137,10 +217,15 @@ import {
   NearbyInviteRefusedError,
   NearbyRefusedError,
   type openApiWeeklyRead,
+  PhotoBoxRefusedError,
   type PilotAdmission,
   type pauseApiMember,
   type pilotApiAccountAllowed,
+  pilotSpeaks,
+  type prepareMemoryPermission,
+  type prepareWeeklySupportPermission,
   type provisionApiAccount,
+  QuestionProfileChangedError,
   QuietUsefulRefusedError,
   type Random,
   ReplyRefusedError,
@@ -151,25 +236,35 @@ import {
   type removeApiDevice,
   type removeApiNearby,
   type removeApiPushDevice,
+  type removeFromApiPhotoBox,
+  type removeKeptMemory,
+  type removeWeeklySupportReview,
   type replyToApiExchange,
   type resolveApiQuiet,
+  type reviewWeeklySupport,
   runAfterCommit,
   type SessionIdentity,
+  type saveApiQuestionProfile,
   type setApiAway,
   type setApiMorningPreferences,
   type setUpApiDevice,
   type shareApiParentLink,
   type startAccountLink,
   type startApiTrial,
+  type stopSharingMemory,
+  type stopWeeklySupport,
   TrialRefusedError,
   type updateApiAccount,
   type uploadApiMedia,
   type uploadApiVoice,
   VelaError,
+  type WeeklySupportConfig,
+  WeeklySupportForbiddenError,
   WithdrawTooLateError,
   type withdrawApiAsk,
+  type withdrawOwnMemoryConsent,
 } from "@vela/services";
-import { Hono, type MiddlewareHandler } from "hono";
+import { type Context, Hono, type MiddlewareHandler } from "hono";
 import {
   type ApiSecurityEnv,
   createApiAuthentication,
@@ -200,10 +295,13 @@ export interface ApiReadServices {
   loadApiFamily: typeof loadApiFamily;
   loadApiBook: typeof loadApiBook;
   loadApiReminders: typeof loadApiReminders;
+  loadApiPhotoBox: typeof loadApiPhotoBox;
   loadApiExchange: typeof loadApiExchange;
+  loadApiPlannedQuestions: typeof loadApiPlannedQuestions;
   loadApiExchanges: typeof loadApiExchanges;
   loadApiQuiet: typeof loadApiQuiet;
   loadApiWeeklyRead: typeof loadApiWeeklyRead;
+  listApiWeeklyReads: typeof listApiWeeklyReads;
   loadApiPrecision: typeof loadApiPrecision;
   memberOfDeviceToken: typeof memberOfDeviceToken;
   loadDeviceMessages: typeof loadDeviceMessages;
@@ -224,6 +322,7 @@ export interface ApiWriteServices {
   setApiMorningPreferences: typeof setApiMorningPreferences;
   leaveApiFamily: typeof leaveApiFamily;
   setApiAway: typeof setApiAway;
+  editApiAsk: typeof editApiAsk;
   withdrawApiAsk: typeof withdrawApiAsk;
   markApiDeceased: typeof markApiDeceased;
   endApiAway: typeof endApiAway;
@@ -237,8 +336,14 @@ export interface ApiWriteServices {
   uploadApiVoice: typeof uploadApiVoice;
   askApiToLookIn: typeof askApiToLookIn;
   removeApiBookEntry: typeof removeApiBookEntry;
+  keepApiAnswer: typeof keepApiAnswer;
+  dismissApiSuggestion: typeof dismissApiSuggestion;
   createApiReminder: typeof createApiReminder;
   finishApiReminder: typeof finishApiReminder;
+  addToApiPhotoBox: typeof addToApiPhotoBox;
+  changeApiPhotoBoxPhoto: typeof changeApiPhotoBoxPhoto;
+  removeFromApiPhotoBox: typeof removeFromApiPhotoBox;
+  keepBoxPhotoStored: typeof keepBoxPhotoStored;
   markApiQuietUseful: typeof markApiQuietUseful;
   inviteApiNearby: typeof inviteApiNearby;
   registerApiPushDevice: typeof registerApiPushDevice;
@@ -246,6 +351,63 @@ export interface ApiWriteServices {
 }
 
 export interface ApiRuntime {
+  questionProfiles?: {
+    saving: boolean;
+    config: Parameters<typeof saveApiQuestionProfile>[0]["config"];
+    load: typeof loadApiQuestionProfile;
+    save: typeof saveApiQuestionProfile;
+    forget: typeof forgetApiQuestionProfile;
+  };
+  personalQuestions?: {
+    draft: typeof draftApiPersonalQuestion;
+    ai: Parameters<typeof draftApiPersonalQuestion>[0]["ai"];
+    config: Parameters<typeof draftApiPersonalQuestion>[0]["config"];
+  };
+  weeklySupport?: {
+    config: WeeklySupportConfig;
+    services: {
+      loadWeeklySupportReport: typeof loadWeeklySupportReport;
+      loadWeeklySupportPresentation: typeof loadWeeklySupportPresentation;
+      prepareWeeklySupportPermission: typeof prepareWeeklySupportPermission;
+      answerWeeklySupportPermission: typeof answerWeeklySupportPermission;
+      stopWeeklySupport: typeof stopWeeklySupport;
+      reviewWeeklySupport: typeof reviewWeeklySupport;
+      removeWeeklySupportReview: typeof removeWeeklySupportReview;
+    };
+  };
+  /** Unconfigured in EVERY actual runtime. Future activation needs reviewed notice/fresh consent.
+   * Keep configured for free reads/stop if new processing is later disabled; never a paid gate. */
+  memorySharing?: {
+    config: Parameters<typeof confirmMemorySharing>[0]["config"];
+    services: {
+      loadMemorySharingView: typeof loadMemorySharingView;
+      loadMemorySharingPresentation: typeof loadMemorySharingPresentation;
+      loadSharedKeptMemories: typeof loadSharedKeptMemories;
+      createMemorySharingPresentation: typeof createMemorySharingPresentation;
+      confirmMemorySharing: typeof confirmMemorySharing;
+      stopSharingMemory: typeof stopSharingMemory;
+    };
+  };
+  /** The author's own memories: permission, suggestions, keeping, removal and withdrawal.
+   * Unconfigured in EVERY actual runtime until the notice naming this purpose is approved.
+   * Removal and withdrawal stay available when new processing is off; never a paid gate. */
+  memories?: {
+    config: Parameters<typeof keepMemoryCandidate>[0]["config"];
+    services: {
+      loadMemoryPermission: typeof loadMemoryPermission;
+      loadMemoryPermissionPresentation: typeof loadMemoryPermissionPresentation;
+      prepareMemoryPermission: typeof prepareMemoryPermission;
+      answerMemoryPermission: typeof answerMemoryPermission;
+      withdrawOwnMemoryConsent: typeof withdrawOwnMemoryConsent;
+      loadMemoryCandidates: typeof loadMemoryCandidates;
+      dismissMemoryCandidate: typeof dismissMemoryCandidate;
+      keepMemoryCandidate: typeof keepMemoryCandidate;
+      loadKeptMemories: typeof loadKeptMemories;
+      removeKeptMemory: typeof removeKeptMemory;
+      /** What other members named the reader to read (a parent sharing from her chat included). */
+      loadSharedKeptMemories: typeof loadSharedKeptMemories;
+    };
+  };
   parentConnection?: typeof loadApiParentConnection;
   capabilities?: ApiCapabilities;
   /**
@@ -273,6 +435,8 @@ export interface ApiRuntime {
       cancel?: typeof cancelAccountLink;
       requesterLabel?: (identity: SessionIdentity) => Promise<string>;
       telegramBotUsername: string;
+      /** Vela's LINE account, where LINE is on: the link is offered there too (ADR-52). */
+      lineBasicId?: string | null;
     };
     verifyActiveSession: SessionActivityChecker;
     clock: Clock;
@@ -323,6 +487,7 @@ export interface ApiRuntime {
    * counts toward how an organiser is told only when it is true. Left out, pushes are off.
    */
   push?: boolean;
+  notificationControls?: boolean;
 }
 
 interface RuntimeEnv {
@@ -379,6 +544,12 @@ const PHOTO_REFUSALS = {
   photo_limit: "Too many photos for now.",
   m4a_only: "Only an .m4a recording can be kept.",
   voice_limit: "Too many voices for now.",
+} as const;
+/** What a refused photo box write is told, by `PhotoBoxRefusedError.reason` (ADR-58). */
+const PHOTO_BOX_REFUSALS = {
+  photo_missing: "That photo is no longer here.",
+  in_box: "That photo is already in the photo box.",
+  box_full: "The photo box is full.",
 } as const;
 const MAX_BODY_BYTES = 4096;
 const JSON_CONTENT_TYPE = /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i;
@@ -473,6 +644,19 @@ function validateWrite(
   };
 }
 
+/** The write is already durable. Keep queue delivery alive without delaying acceptance.
+ * Local callers without a Worker lifetime still await it, so work is never fire-and-forget. */
+async function handOffCommittedMessage(c: Context<RuntimeEnv>, work: Promise<void>): Promise<void> {
+  let lifetime: Context<RuntimeEnv>["executionCtx"] | undefined;
+  try {
+    lifetime = c.executionCtx;
+  } catch {
+    // Hono's executionCtx getter throws outside a Worker request.
+  }
+  if (lifetime === undefined) await work;
+  else lifetime.waitUntil(work);
+}
+
 export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
   const app = new Hono<RuntimeEnv>();
   const authenticate = createApiAuthentication<RuntimeEnv>(runtime.verifySession);
@@ -490,7 +674,14 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             : await admission.withRoster(handle.db, admission.config);
       c.set("pilotAdmission", roster);
       const identity = c.get("session");
-      const removal = c.req.path.endsWith("/left") || c.req.path.endsWith("/remove");
+      const removal =
+        c.req.path.endsWith("/left") ||
+        c.req.path.endsWith("/remove") ||
+        c.req.path.endsWith("/question-profile/forget") ||
+        (c.req.method === "GET" &&
+          /^\/v1\/families\/[^/]+\/members\/[^/]+\/question-profile$/.test(c.req.path)) ||
+        c.req.path.endsWith("/sharing/stop") ||
+        c.req.path.endsWith("/stop");
       if (
         admission !== undefined &&
         roster !== undefined &&
@@ -512,8 +703,8 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     c.header("cache-control", "no-store");
     if (c.req.method === "HEAD") return c.json(NOT_FOUND, 404);
     return c.json(
-      ApiCapabilities.parse(
-        runtime.capabilities ?? {
+      ApiCapabilities.parse({
+        ...(runtime.capabilities ?? {
           pilot: false,
           telegram_first: false,
           english_only: false,
@@ -521,14 +712,28 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           book: false,
           parent_app: true,
           billing: true,
-        },
-      ),
+        }),
+        ...(runtime.personalQuestions !== undefined && runtime.writes !== undefined
+          ? { personal_questions: true }
+          : {}),
+        ...(runtime.questionProfiles !== undefined ? { personal_question_profiles: true } : {}),
+      }),
       200,
     );
   });
 
   app.onError(
     withApiErrorNoStore<RuntimeEnv>((error, c) => {
+      if (error instanceof WeeklySupportForbiddenError)
+        return c.json(
+          {
+            error: {
+              code: "forbidden",
+              message: "This report action is not available to this account.",
+            },
+          },
+          403,
+        );
       if (error instanceof ApiIdempotencyError) {
         if (error.code === "invalid") return c.json(INVALID, 400);
         if (error.code === "conflict") return c.json(CONFLICT, 409);
@@ -538,6 +743,17 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           return c.json(UNAVAILABLE, 503);
         }
       }
+      if (error instanceof QuestionProfileChangedError)
+        return c.json(
+          {
+            error: {
+              code: "conflict",
+              message: "Saved question choices changed.",
+              details: { reason: "question_profile_changed" },
+            },
+          },
+          409,
+        );
       if (error instanceof AlreadyOrganiserError) {
         const running: ApiErrorBody = {
           error: {
@@ -693,6 +909,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         };
         return c.json(refused, 400);
       }
+      if (error instanceof PhotoBoxRefusedError) {
+        const refused: ApiErrorBody = {
+          error: {
+            code: error.reason === "photo_missing" ? "not_found" : "conflict",
+            message: PHOTO_BOX_REFUSALS[error.reason],
+            details: { reason: error.reason },
+          },
+        };
+        return c.json(refused, error.reason === "photo_missing" ? 404 : 409);
+      }
       if (error instanceof FactMissingError) {
         // The fact is gone, past, not of the family, or about the caller (spec §12).
         const missing: ApiErrorBody = {
@@ -806,7 +1032,11 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
   });
 
   app.get("/v1/me", authenticate, withDatabase, async (c) => {
-    const me = await runtime.services.loadApiMe(c.get("db"), c.get("session"));
+    const me = await runtime.services.loadApiMe(
+      c.get("db"),
+      c.get("session"),
+      runtime.notificationControls === true,
+    );
     return me === null
       ? c.json(NOT_FOUND, 404)
       : c.json(
@@ -927,6 +1157,16 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return page === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiExchangePage.parse(page));
     },
   );
+  app.get("/v1/families/:familyId/questions", authenticate, withDatabase, async (c) => {
+    const planned = await runtime.services.loadApiPlannedQuestions(
+      c.get("db"),
+      c.get("session"),
+      c.req.param("familyId"),
+    );
+    return planned === null
+      ? c.json(FAMILY_NOT_FOUND, 404)
+      : c.json(ApiPlannedQuestions.parse(planned));
+  });
   // The family book (ADR-39): every live member reads it; reading never needs Vela Light.
   app.get(
     "/v1/families/:familyId/book",
@@ -941,6 +1181,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
+        runtime.now(),
       );
       return book === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiBook.parse(book));
     },
@@ -965,6 +1206,29 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       return found === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiReminders.parse(found));
     },
   );
+  // The family's photo box (ADR-58): every live member reads it, where the box is on.
+  app.get(
+    "/v1/families/:familyId/photo-box",
+    authenticate,
+    async (c, next) => {
+      if (runtime.capabilities?.photo_box !== true) return c.json(NOT_FOUND, 404);
+      await next();
+      return c.res;
+    },
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>((identity, familyId, requiredRole) =>
+        runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+      )(c, next),
+    async (c) => {
+      const box = await runtime.services.loadApiPhotoBox(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+      );
+      return box === null ? c.json(FAMILY_NOT_FOUND, 404) : c.json(ApiPhotoBox.parse(box));
+    },
+  );
   // One exchange, for a link or a tapped notice: the service reads its family and answers null for
   // anything the caller may not see, which is 404 without saying whether it exists.
   app.get("/v1/exchanges/:exchangeId", authenticate, withDatabase, async (c) => {
@@ -976,6 +1240,40 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
     return exchange === null ? c.json(NOT_FOUND, 404) : c.json(ApiExchangeSummary.parse(exchange));
   });
+  const support = runtime.weeklySupport;
+  const supportBase = "/v1/families/:familyId/weekly-support/:memberId";
+  const supportDeps = (db: VelaDatabase) => ({
+    db,
+    clock: { now: runtime.now },
+    config: support?.config ?? { enabled: false, noticeVersion: "", familyIds: [] },
+  });
+  if (support) {
+    app.get(supportBase, authenticate, withDatabase, async (c) =>
+      c.json(
+        SupportReport.parse(
+          await support.services.loadWeeklySupportReport(
+            supportDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            c.req.param("memberId").toLowerCase(),
+          ),
+        ),
+      ),
+    );
+    app.get(`${supportBase}/presentations/:presentationId`, authenticate, withDatabase, async (c) =>
+      c.json(
+        SupportPresentation.parse(
+          await support.services.loadWeeklySupportPresentation(
+            supportDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            c.req.param("memberId").toLowerCase(),
+            c.req.param("presentationId").toLowerCase(),
+          ),
+        ),
+      ),
+    );
+  }
   // Organisers only: the read carries her week's counts, which she is never shown (spec §8). A
   // `member` that is not her, or no `member`, is 404.
   app.get(
@@ -989,14 +1287,38 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         "organiser",
       )(c, next),
     async (c) => {
+      // `read` opens one of her earlier weeks; without it, her latest.
+      const readId = c.req.query("read");
       const read = await runtime.services.loadApiWeeklyRead(
         c.get("db"),
         c.get("session"),
         c.req.param("familyId"),
         c.req.query("member"),
         runtime.now(),
+        readId === undefined ? {} : { readId },
       );
       return read === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyRead.parse(read));
+    },
+  );
+  // Her earlier weeks: dates and ids of her sent reads, newest first. Organisers only, as above.
+  app.get(
+    "/v1/families/:familyId/weekly-reads",
+    authenticate,
+    withDatabase,
+    (c, next) =>
+      createFamilyAuthorization<RuntimeEnv>(
+        (identity, familyId, requiredRole) =>
+          runtime.services.authorizeFamilyAccess(c.get("db"), identity, familyId, requiredRole),
+        "organiser",
+      )(c, next),
+    async (c) => {
+      const list = await runtime.services.listApiWeeklyReads(
+        c.get("db"),
+        c.get("session"),
+        c.req.param("familyId"),
+        c.req.query("member"),
+      );
+      return list === null ? c.json(NOT_FOUND, 404) : c.json(ApiWeeklyReadList.parse(list));
     },
   );
   // Organisers only: the family's own quiet notices are hers (spec §8). Vela's months are the
@@ -1087,6 +1409,200 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     );
   }
   const writes = runtime.writes;
+  const questionProfiles = runtime.questionProfiles;
+  if (questionProfiles !== undefined) {
+    app.get(
+      "/v1/families/:familyId/members/:memberId/question-profile",
+      authenticate,
+      withDatabase,
+      async (c) => {
+        const result = await questionProfiles.load(
+          {
+            db: c.get("db"),
+            clock: { now: () => runtime.now() },
+            savingEnabled: questionProfiles.saving && runtime.writes !== undefined,
+          },
+          c.get("session"),
+          c.req.param("familyId"),
+          c.req.param("memberId"),
+        );
+        c.header("Cache-Control", "no-store");
+        return c.json(ApiQuestionProfile.parse(result), 200);
+      },
+    );
+  }
+  const sharing = runtime.memorySharing;
+  const sharingIds: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+    if (Object.values(c.req.param()).some((id) => typeof id !== "string" || !MEDIA_ID.test(id)))
+      return c.json(INVALID, 400);
+    await next();
+    return c.res;
+  };
+  if (sharing) {
+    const readDeps = (db: VelaDatabase) => ({
+      db,
+      clock: { now: () => runtime.now() },
+      config: sharing.config,
+    });
+    app.get(
+      "/v1/families/:familyId/memories/:memoryId/sharing",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const view = await sharing.services.loadMemorySharingView(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("memoryId").toLowerCase(),
+        );
+        return view === null ? c.json(NOT_FOUND, 404) : c.json(MemorySharingView.parse(view), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-sharing-presentations/:presentationId",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const preview = await sharing.services.loadMemorySharingPresentation(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("presentationId").toLowerCase(),
+        );
+        return preview === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemorySharePreview.parse(preview), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/shared-memories",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursors = c.req.queries("cursor") ?? [];
+        if (cursors.length > 1 || (cursors.length === 1 && !MEDIA_ID.test(cursors[0] ?? "")))
+          return c.json(INVALID, 400);
+        const page = await sharing.services.loadSharedKeptMemories(
+          readDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursors[0]?.toLowerCase() ?? null,
+        );
+        return page === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(SharedKeptMemoryPage.parse(page), 200);
+      },
+    );
+  }
+  const memories = runtime.memories;
+  if (memories) {
+    const memoryReadDeps = (db: VelaDatabase) => ({
+      db,
+      clock: { now: () => runtime.now() },
+      config: memories.config,
+    });
+    const cursorOf = (c: Context<RuntimeEnv>): string | null | undefined => {
+      const cursors = c.req.queries("cursor") ?? [];
+      if (cursors.length > 1 || (cursors.length === 1 && !MEDIA_ID.test(cursors[0] ?? "")))
+        return undefined;
+      return cursors[0]?.toLowerCase() ?? null;
+    };
+    app.get(
+      "/v1/families/:familyId/memory-permission",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const state = await memories.services.loadMemoryPermission(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+        );
+        return state === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryPermissionState.parse(state), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-permission-presentations/:presentationId",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const preview = await memories.services.loadMemoryPermissionPresentation(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          c.req.param("presentationId").toLowerCase(),
+        );
+        return preview === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryPermissionPreview.parse(preview), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memory-suggestions",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursor = cursorOf(c);
+        if (cursor === undefined) return c.json(INVALID, 400);
+        const page = await memories.services.loadMemoryCandidates(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursor,
+        );
+        return page === null
+          ? c.json(NOT_FOUND, 404)
+          : c.json(MemoryCandidatePage.parse(page), 200);
+      },
+    );
+    app.get(
+      "/v1/families/:familyId/memories",
+      authenticate,
+      sharingIds,
+      withDatabase,
+      async (c) => {
+        const cursor = cursorOf(c);
+        if (cursor === undefined) return c.json(INVALID, 400);
+        const page = await memories.services.loadKeptMemories(
+          memoryReadDeps(c.get("db")),
+          c.get("session"),
+          c.req.param("familyId").toLowerCase(),
+          cursor,
+        );
+        return page === null ? c.json(NOT_FOUND, 404) : c.json(KeptMemoryPage.parse(page), 200);
+      },
+    );
+    // The sharing group serves the same read once it is configured; until then the memories group
+    // does, so what a parent shared from her chat reaches the people she named.
+    if (sharing === undefined) {
+      app.get(
+        "/v1/families/:familyId/shared-memories",
+        authenticate,
+        sharingIds,
+        withDatabase,
+        async (c) => {
+          const cursor = cursorOf(c);
+          if (cursor === undefined) return c.json(INVALID, 400);
+          const page = await memories.services.loadSharedKeptMemories(
+            memoryReadDeps(c.get("db")),
+            c.get("session"),
+            c.req.param("familyId").toLowerCase(),
+            cursor,
+          );
+          return page === null
+            ? c.json(NOT_FOUND, 404)
+            : c.json(SharedKeptMemoryPage.parse(page), 200);
+        },
+      );
+    }
+  }
   if (writes) {
     const checkActivity: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
       if ((await writes.verifyActiveSession(c.get("session"))) !== true) {
@@ -1095,6 +1611,290 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       await next();
       return c.res;
     };
+    if (support) {
+      const actions = [
+        [
+          "presentations",
+          SupportNoInput,
+          SupportPrepared,
+          support.services.prepareWeeklySupportPermission,
+        ],
+        [
+          "permission",
+          SupportPermissionChoice,
+          SupportWriteResult,
+          support.services.answerWeeklySupportPermission,
+        ],
+        ["stop", SupportNoInput, SupportWriteResult, support.services.stopWeeklySupport],
+        ["review", SupportReviewChoice, SupportWriteResult, support.services.reviewWeeklySupport],
+        [
+          "remove",
+          SupportRemoveChoice,
+          SupportWriteResult,
+          support.services.removeWeeklySupportReview,
+        ],
+      ] as const;
+      for (const [action, input, output, run] of actions) {
+        app.post(
+          `${supportBase}/${action}`,
+          authenticate,
+          validateWrite(input, runtime.logger),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await run(
+              supportDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              c.req.param("memberId").toLowerCase(),
+              c.get("writeInput"),
+            );
+            if (result.response.status !== 200) throw new Error("Invalid support response");
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(output.parse(result.response.body));
+          },
+        );
+      }
+    }
+    if (sharing) {
+      const newSharingEnabled: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+        if (sharing.config.richMemories !== true) return c.json(NOT_FOUND, 404);
+        await next();
+        return c.res;
+      };
+      const sharingDeps = (db: VelaDatabase) => ({
+        db,
+        clock: writes.clock,
+        config: sharing.config,
+      });
+      // Map stale confirmations before the generic handler; never expose a domain message.
+      const sharingWrite = async <T>(run: () => Promise<T>): Promise<T> => {
+        try {
+          return await run();
+        } catch (error) {
+          if (error instanceof VelaError && error.code === "illegal_state")
+            throw new ApiIdempotencyError("conflict");
+          throw error;
+        }
+      };
+      app.post(
+        "/v1/families/:familyId/memories/:memoryId/sharing/presentations",
+        newSharingEnabled,
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareRecipients, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const selected = MemoryShareRecipients.parse(c.get("writeInput"));
+          const result = await sharingWrite(() =>
+            sharing.services.createMemorySharingPresentation(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              {
+                memory_id: c.req.param("memoryId").toLowerCase(),
+                recipient_ids: selected.recipient_ids,
+              },
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemorySharePrepared.parse(result.response.body), 200);
+        },
+      );
+      app.post(
+        "/v1/families/:familyId/memory-sharing/confirm",
+        newSharingEnabled,
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareChoice, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const choice = MemoryShareChoice.parse(c.get("writeInput"));
+          const result = await sharingWrite(() =>
+            sharing.services.confirmMemorySharing(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              { ...choice, presentation_id: choice.presentation_id.toLowerCase() },
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemoryShareSaved.parse(result.response.body), 200);
+        },
+      );
+      app.post(
+        "/v1/families/:familyId/memories/:memoryId/sharing/stop",
+        authenticate,
+        sharingIds,
+        validateWrite(MemoryShareStop, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await sharingWrite(() =>
+            sharing.services.stopSharingMemory(
+              sharingDeps(c.get("db")),
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId").toLowerCase(),
+              c.req.param("memoryId").toLowerCase(),
+            ),
+          );
+          if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+            throw new Error("Invalid sharing response");
+          c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+          return c.json(MemoryShareStopped.parse(result.response.body), 200);
+        },
+      );
+    }
+    if (memories) {
+      const newMemoriesEnabled =
+        (gated: boolean): MiddlewareHandler<RuntimeEnv> =>
+        async (c, next) => {
+          if (gated && memories.config.richMemories !== true) return c.json(NOT_FOUND, 404);
+          await next();
+          return c.res;
+        };
+      const memoryDeps = (db: VelaDatabase) => ({
+        db,
+        clock: writes.clock,
+        config: memories.config,
+      });
+      // Stale choices become 409 without exposing a domain message.
+      const memoryWrite = async <T>(run: () => Promise<T>): Promise<T> => {
+        try {
+          return await run();
+        } catch (error) {
+          if (error instanceof VelaError && error.code === "illegal_state")
+            throw new ApiIdempotencyError("conflict");
+          throw error;
+        }
+      };
+      type MemoryWrite = (
+        deps: ReturnType<typeof memoryDeps>,
+        c: Context<RuntimeEnv>,
+      ) => Promise<{ response: { status: number; body: unknown }; replayed?: boolean }>;
+      const memoryRoute = (
+        path: string,
+        input: WriteSchema,
+        output: { parse: (value: unknown) => unknown },
+        gated: boolean,
+        run: MemoryWrite,
+      ) =>
+        app.post(
+          path,
+          newMemoriesEnabled(gated),
+          authenticate,
+          sharingIds,
+          validateWrite(input, runtime.logger),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await memoryWrite(() => run(memoryDeps(c.get("db")), c));
+            if (result.response.status !== 200 || typeof result.replayed !== "boolean")
+              throw new Error("Invalid memory response");
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(output.parse(result.response.body), 200);
+          },
+        );
+      const family = (c: Context<RuntimeEnv>) => c.req.param("familyId")?.toLowerCase() ?? "";
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/presentations",
+        MemoryPermissionPrepare,
+        MemoryPermissionPrepared,
+        true,
+        (deps, c) =>
+          memories.services.prepareMemoryPermission(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.get("writeInput"),
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/answer",
+        MemoryPermissionChoice,
+        MemoryPermissionAnswered,
+        true,
+        (deps, c) => {
+          const choice = MemoryPermissionChoice.parse(c.get("writeInput"));
+          return memories.services.answerMemoryPermission(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            { ...choice, presentation_id: choice.presentation_id.toLowerCase() },
+          );
+        },
+      );
+      // Turning off and clearing never depends on the switch or a subscription.
+      memoryRoute(
+        "/v1/families/:familyId/memory-permission/withdraw",
+        MemoryNoInput,
+        MemoryWithdrawn,
+        false,
+        (deps, c) =>
+          memories.services.withdrawOwnMemoryConsent(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memory-suggestions/:candidateId/dismiss",
+        MemoryNoInput,
+        MemoryDismissed,
+        false,
+        (deps, c) =>
+          memories.services.dismissMemoryCandidate(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.req.param("candidateId")?.toLowerCase() ?? "",
+          ),
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memories/keep",
+        MemoryKeepChoice,
+        MemoryKept,
+        true,
+        (deps, c) => {
+          const choice = MemoryKeepChoice.parse(c.get("writeInput"));
+          return memories.services.keepMemoryCandidate(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            { ...choice, candidate_id: choice.candidate_id.toLowerCase() },
+          );
+        },
+      );
+      memoryRoute(
+        "/v1/families/:familyId/memories/:memoryId/remove",
+        MemoryNoInput,
+        MemoryRemoved,
+        false,
+        (deps, c) =>
+          memories.services.removeKeptMemory(
+            deps,
+            c.get("session"),
+            c.get("writeKey"),
+            family(c),
+            c.req.param("memoryId")?.toLowerCase() ?? "",
+          ),
+      );
+    }
     const routes = [
       ["POST", "/v1/me/provision", ApiAccountProfile, writes.services.provisionApiAccount],
       ["PATCH", "/v1/me", ApiAccountPatch, writes.services.updateApiAccount],
@@ -1114,7 +1914,8 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
             typeof input === "object" &&
             input !== null &&
             "language" in input &&
-            input.language !== "en"
+            typeof input.language === "string" &&
+            !pilotSpeaks(runtime.admission.config, input.language)
           )
             return c.json(
               {
@@ -1126,8 +1927,13 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
               },
               400,
             );
+          const accountDeps = {
+            db: c.get("db"),
+            clock: writes.clock,
+            ...(runtime.notificationControls === true ? { notificationControls: true } : {}),
+          };
           const result = await service(
-            { db: c.get("db"), clock: writes.clock },
+            accountDeps,
             c.get("session"),
             c.get("writeKey"),
             c.get("writeInput"),
@@ -1209,7 +2015,15 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           telegramUrl.searchParams.set("start", `link_${challenge.challenge_id}`);
           c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
           return c.json(
-            ApiLinkChallenge.parse({ ...challenge, telegram_url: telegramUrl.toString() }),
+            ApiLinkChallenge.parse({
+              ...challenge,
+              telegram_url: telegramUrl.toString(),
+              ...(links.lineBasicId == null
+                ? {}
+                : {
+                    line_url: lineInviteLink(links.lineBasicId, `link_${challenge.challenge_id}`),
+                  }),
+            }),
             201,
           );
         },
@@ -1299,6 +2113,79 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         },
       );
     }
+    if (questionProfiles !== undefined) {
+      for (const operation of ["save", "forget"] as const) {
+        app.post(
+          `/v1/families/:familyId/members/:memberId/question-profile/${operation}`,
+          authenticate,
+          validateWrite(
+            operation === "save" ? SaveQuestionProfile : ForgetQuestionProfile,
+            runtime.logger,
+          ),
+          checkActivity,
+          withDatabase,
+          async (c) => {
+            const result = await questionProfiles[operation](
+              {
+                db: c.get("db"),
+                clock: writes.clock,
+                savingEnabled: questionProfiles.saving,
+                config: {
+                  ...questionProfiles.config,
+                  ...(runtime.admission === undefined
+                    ? {}
+                    : { pilotAdmission: c.get("pilotAdmission") ?? runtime.admission.config }),
+                },
+              },
+              c.get("session"),
+              c.get("writeKey"),
+              c.req.param("familyId"),
+              c.req.param("memberId"),
+              c.get("writeInput"),
+            );
+            c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+            return c.json(
+              operation === "save"
+                ? ApiQuestionProfileSaved.parse(result.response.body)
+                : ApiQuestionProfileForgotten.parse(result.response.body),
+              200,
+            );
+          },
+        );
+      }
+    }
+    if (runtime.personalQuestions !== undefined) {
+      const personal = runtime.personalQuestions;
+      app.post(
+        "/v1/families/:familyId/personal-question-drafts",
+        authenticate,
+        validateWrite(DraftPersonalQuestion, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await personal.draft(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              ai: personal.ai,
+              config: {
+                ...personal.config,
+                ...(runtime.admission === undefined
+                  ? {}
+                  : {
+                      pilotAdmission: c.get("pilotAdmission") ?? runtime.admission.config,
+                    }),
+              },
+            },
+            c.get("session"),
+            c.req.param("familyId"),
+            c.get("writeInput"),
+          );
+          c.header("Cache-Control", "no-store");
+          return c.json(ApiPersonalQuestionDraft.parse(result), 200);
+        },
+      );
+    }
     app.post(
       "/v1/families/:familyId/exchanges",
       authenticate,
@@ -1321,9 +2208,12 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           throw new Error("Invalid API mutation response");
         }
         const ask = ApiComposedAsk.parse(result.response.body);
-        // Committed: now the line that tells the family group tomorrow's morning is taken.
-        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
-          runtime.logger.error(event, fields),
+        // Only committed outbound IDs are handed off; reconcile still retries queued work.
+        await handOffCommittedMessage(
+          c,
+          runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+            runtime.logger.error(event, fields),
+          ),
         );
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
         return c.json(ask, 201);
@@ -1613,6 +2503,27 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(ApiAway.parse(result.response.body), 201);
       },
     );
+    app.post(
+      "/v1/exchanges/:exchangeId/edit",
+      authenticate,
+      validateWrite(EditAsk, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.editApiAsk(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiEditedAsk.parse(result.response.body), 200);
+      },
+    );
     // The asker takes an ask back before her morning is prepared (spec §19).
     app.post(
       "/v1/exchanges/:exchangeId/withdraw",
@@ -1808,6 +2719,150 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(ApiBookRemoved.parse(result.response.body), 200);
       },
     );
+    // An organiser keeps one of her answers in the family book (ADR-50). The first keep of hers
+    // also leaves the note that tells her, handed to the queue after the commit.
+    app.post(
+      "/v1/book/:exchangeId/keep",
+      authenticate,
+      validateWrite(KeepBookEntry, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.keepApiAnswer(
+          {
+            db: c.get("db"),
+            clock: writes.clock,
+            config: { book: runtime.capabilities?.book === true },
+          },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const kept = ApiBookKept.parse(result.response.body);
+        await runAfterCommit(writes.nudges, result.after, writes.clock.now(), (event, fields) =>
+          runtime.logger.error(event, fields),
+        );
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(kept, 200);
+      },
+    );
+    // "Not this one" on a suggestion to keep (ADR-50).
+    app.post(
+      "/v1/book/:exchangeId/dismiss",
+      authenticate,
+      validateWrite(DismissKeepSuggestion, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.dismissApiSuggestion(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("exchangeId"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiKeepSuggestionDismissed.parse(result.response.body), 200);
+      },
+    );
+    // The photo box (ADR-58), where it is on: a photo the caller uploaded goes in, and its object is
+    // moved out of the prefix the bucket clears after the commit (retention moves any this misses).
+    const photoBoxOn: MiddlewareHandler<RuntimeEnv> = async (c, next) => {
+      if (runtime.capabilities?.photo_box !== true) return c.json(NOT_FOUND, 404);
+      await next();
+      return c.res;
+    };
+    app.post(
+      "/v1/families/:familyId/photo-box",
+      authenticate,
+      photoBoxOn,
+      validateWrite(AddToPhotoBox, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.addToApiPhotoBox(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("familyId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        const added = ApiPhotoBoxPhoto.parse(result.response.body);
+        const media = runtime.media;
+        if (media !== undefined) {
+          try {
+            await writes.services.keepBoxPhotoStored(
+              {
+                db: c.get("db"),
+                clock: writes.clock,
+                media: media.store,
+                logger: { warn: (event, fields) => runtime.logger.error(event, fields) },
+                random: media.random,
+              },
+              added.media_id,
+            );
+          } catch (error) {
+            runtime.logger.error("photo_box_keep_after_commit_failed", {
+              error: errorLabel(error),
+            });
+          }
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(added, 201);
+      },
+    );
+    app.post(
+      "/v1/photo-box/:boxId",
+      authenticate,
+      photoBoxOn,
+      validateWrite(ChangePhotoBoxPhoto, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.changeApiPhotoBoxPhoto(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("boxId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiPhotoBoxPhoto.parse(result.response.body), 200);
+      },
+    );
+    app.post(
+      "/v1/photo-box/:boxId/remove",
+      authenticate,
+      photoBoxOn,
+      validateWrite(RemovePhotoBoxPhoto, runtime.logger),
+      checkActivity,
+      withDatabase,
+      async (c) => {
+        const result = await writes.services.removeFromApiPhotoBox(
+          { db: c.get("db"), clock: writes.clock },
+          c.get("session"),
+          c.get("writeKey"),
+          c.req.param("boxId"),
+          c.get("writeInput"),
+        );
+        if (result.response.status !== 200 || typeof result.replayed !== "boolean") {
+          throw new Error("Invalid API mutation response");
+        }
+        c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
+        return c.json(ApiPhotoBoxRemoved.parse(result.response.body), 200);
+      },
+    );
     // "Remind me to ask" (spec §12): a reminder exists only after this tap.
     app.post(
       "/v1/families/:familyId/reminders",
@@ -1921,12 +2976,14 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           c.req.param("exchangeId"),
           c.get("writeInput"),
         );
-        if (result.response.status !== 201 || typeof result.replayed !== "boolean") {
+        // 200 is a reaction the member already gave (API contract: "a second … answers 200").
+        const status = result.response.status;
+        if ((status !== 201 && status !== 200) || typeof result.replayed !== "boolean") {
           throw new Error("Invalid API mutation response");
         }
         const reply = ApiReply.parse(result.response.body);
         c.header("Idempotency-Replayed", result.replayed ? "true" : "false");
-        return c.json(reply, 201);
+        return c.json(reply, status);
       },
     );
     // Push (ADR-34): this installation's phone, registered or refreshed for the signed-in account,

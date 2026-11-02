@@ -46,15 +46,12 @@ export function ChatComposer({
           style={({ pressed }) => ({
             width: 44,
             height: 44,
-            borderRadius: 22,
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1,
-            borderColor: palette.rule,
-            backgroundColor: pressed ? palette.surface2 : palette.surface,
+            opacity: pressed ? 0.6 : 1,
           })}
         >
-          <BrandIcon name="plus" color={palette.action} size={22} strokeWidth={2} />
+          <BrandIcon name="plus" color={palette.action} size={26} strokeWidth={2} />
         </Pressable>
       )}
       <View
@@ -64,7 +61,7 @@ export function ChatComposer({
           justifyContent: "center",
           borderRadius: 22,
           borderWidth: focused ? 2 : 1,
-          borderColor: focused ? palette.action : palette.rule,
+          borderColor: focused ? palette.action : palette.control,
           backgroundColor: palette.surface,
           paddingHorizontal: focused ? space.l - 1 : space.l,
         }}

@@ -45,3 +45,16 @@ export function nextSunday(today: Date, timeZone?: string): string {
   const day = String(sunday.getDate()).padStart(2, "0");
   return `${sunday.getFullYear()}-${month}-${day}`;
 }
+
+/** Tomorrow as a local date where she lives: the morning an ask for "tomorrow" reaches her. */
+export function tomorrowIn(today: Date, timeZone?: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    ...(timeZone === undefined ? {} : { timeZone }),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(today);
+  const part = (name: string) => Number(parts.find((item) => item.type === name)?.value);
+  const local = new Date(Date.UTC(part("year"), part("month") - 1, part("day") + 1));
+  return local.toISOString().slice(0, 10);
+}

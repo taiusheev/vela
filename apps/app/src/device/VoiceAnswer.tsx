@@ -1,8 +1,9 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { clock, type Recorded, useRecording } from "../audio/useRecording.ts";
 import { BrandIcon } from "../components/brand/icon.tsx";
+import { Text } from "../components/scaled-text.tsx";
 import { lightPalette as light } from "../theme/tokens.ts";
 
 /**

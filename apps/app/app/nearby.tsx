@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../src/components/back-button.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { NearbyEditor } from "../src/components/nearby-editor.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { selectedLight } from "../src/data/selected-light.ts";
@@ -50,9 +51,7 @@ export default function NearbyScreen() {
         }}
       >
         {day.loading ? (
-          <Words variant="body">
-            <Trans>Loading your family…</Trans>
-          </Words>
+          <LoadingLight label={t`Loading your family…`} />
         ) : day.trouble ? (
           <SecondaryButton label={t`Try again`} onPress={day.refresh} />
         ) : her === undefined ? (

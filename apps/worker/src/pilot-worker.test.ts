@@ -4,7 +4,7 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { ChannelSendError } from "@vela/contracts";
-import { describe, expect, inject, it } from "vitest";
+import { describe, expect, inject, it, vi } from "vitest";
 import { createApiHandler } from "./api-runtime.ts";
 import { ConfigError } from "./config.ts";
 import type { PilotEnv } from "./env.ts";
@@ -437,20 +437,17 @@ describe("cron", () => {
     expect(fake.closed()).toBe(1);
   });
 
-  // Staging's LINE is on since 6 October 2026, so it reads the quota as lineOnEnv does.
-  it.each(["development", "production"] as const)(
-    "reads no quota in %s, where LINE is off",
-    async (environment) => {
-      const fake = createFakePilotRuntime();
-      const env = environment === "development" ? testEnv : deployedEnv(environment);
+  // Staging's LINE is on since 6 October 2026, and production's for the Taiwan test, so both read
+  // the quota as lineOnEnv does.
+  it("reads no quota in development, where LINE is off", async () => {
+    const fake = createFakePilotRuntime();
 
-      await runCron(createWorker(fake.runtime), RECONCILE_CRON, env);
+    await runCron(createWorker(fake.runtime), RECONCILE_CRON, testEnv);
 
-      expect(env.LINE_CHANNEL).toBe("off");
-      expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
-      expect(fake.quotaReads()).toBe(0);
-    },
-  );
+    expect(testEnv.LINE_CHANNEL).toBe("off");
+    expect(namesOf(fake.calls)).toEqual(["reconcile", "opsAlerts", "claimDeadLetterReplays"]);
+    expect(fake.quotaReads()).toBe(0);
+  });
 
   it("reads no quota nightly, even where LINE is on", async () => {
     const fake = createFakePilotRuntime();
@@ -792,6 +789,18 @@ async function fetchFrom(
 // ADR-29: the API is dispatched on its path before the pilot's Hono app, so it never builds the
 // pilot's deps and the pilot's routes never see it.
 describe("the API under /v1", () => {
+  it("hands the request lifetime through to the API", async () => {
+    const context = createExecutionContext();
+    const api = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const fake = createFakePilotRuntime({ api });
+    const request = new Request("https://vela.worker.test/v1/me");
+    await createWorker(fake.runtime).fetch(request, testEnv, context);
+    expect(api.mock.calls[0]?.[0] === request).toBe(true);
+    expect(api.mock.calls[0]?.[1] === testEnv).toBe(true);
+    expect(api.mock.calls[0]?.[2] === context).toBe(true);
+    await waitOnExecutionContext(context);
+  });
+
   it.each([
     ["GET", "/v1/me"],
     ["POST", "/v1/families"],

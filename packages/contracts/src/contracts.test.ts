@@ -322,6 +322,8 @@ describe("ADMIN_ACTIONS", () => {
       "create_invite",
       "roster_add",
       "roster_remove",
+      "family_approve",
+      "family_unapprove",
     ]);
     expect(AdminAction.safeParse("export_family").success).toBe(false);
   });
@@ -345,6 +347,9 @@ describe("ADMIN_ACTIONS", () => {
       // The roster is about an identity, not a family: the admin log is its whole record.
       roster_add: [],
       roster_remove: [],
+      // Approval is the founder's, about the whole family: the admin log is its whole record.
+      family_approve: [],
+      family_unapprove: [],
     };
     for (const [action, names] of Object.entries(recorded)) {
       for (const name of names) {
@@ -1001,5 +1006,21 @@ describe("ChannelSendError", () => {
     expect(error.sentMediaMessageIds).toEqual(["700", "701"]);
     expect(error.retryable).toBe(true);
     expect(new ChannelSendError("unavailable", "5xx").sentMediaMessageIds).toEqual([]);
+  });
+});
+
+describe("individual routine notification choices", () => {
+  it("accepts independent booleans and rejects ambiguous combined patches", () => {
+    expect(ApiAccountPatch.parse({ reply_notifications: true, turn_reminders: false })).toEqual({
+      reply_notifications: true,
+      turn_reminders: false,
+    });
+    for (const patch of [
+      { turn_reminders: "off" },
+      { reply_notifications: null },
+      { one_moment_a_day: true, turn_reminders: false },
+    ]) {
+      expect(ApiAccountPatch.safeParse(patch).success).toBe(false);
+    }
   });
 });

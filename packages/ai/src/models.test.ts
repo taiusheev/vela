@@ -23,6 +23,8 @@ describe("MODEL_FOR", () => {
       chips: "claude-haiku-4-5",
       suggest: "claude-haiku-4-5",
       hello: "claude-haiku-4-5",
+      memory_pick: "claude-haiku-4-5",
+      story_weave: "claude-haiku-4-5",
     });
   });
 
@@ -47,6 +49,8 @@ describe("EFFORT_FOR", () => {
       chips: null,
       suggest: null,
       hello: null,
+      memory_pick: null,
+      story_weave: null,
     });
   });
 

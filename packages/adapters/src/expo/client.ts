@@ -102,6 +102,12 @@ export interface ExpoPushMessage {
   readonly sound?: "default" | null;
   /** Seconds Apple or Google keep trying to deliver it. */
   readonly ttl?: number;
+  /** iOS: notifications with one thread stack together in the notification list. */
+  readonly threadId?: string;
+  /** iOS: a later push with the same id replaces the one already shown. */
+  readonly collapseId?: string;
+  /** Android: a later push with the same tag replaces the one already shown. */
+  readonly tag?: string;
 }
 
 /** Why Expo, Apple or Google did not take a message, or a whole request failed. */

@@ -181,6 +181,9 @@ export function createFakeTelegram(
       const conversationId = message.to.conversationId;
       const uploads = (message.media ?? []).flatMap((ref) => {
         if (ref.providerFileId !== undefined || ref.url !== undefined) return [];
+        // LINE fetches a stored file by the Worker's signed URL (`mediaByUrl`, ADR-32): the
+        // gateway loads no bytes for it, and the real adapter sends the key's URL instead.
+        if (id === "line" && ref.storageKey !== undefined && files === undefined) return [];
         const file = ref.storageKey === undefined ? undefined : files?.get(ref.storageKey);
         if (ref.storageKey === undefined || file === undefined) {
           throw new ChannelSendError(

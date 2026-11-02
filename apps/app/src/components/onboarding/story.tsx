@@ -2,10 +2,11 @@ import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Animated, Image, Pressable, Text, View } from "react-native";
+import { Animated, Image, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EXAMPLE_PORTRAIT from "../../../assets/onboarding/example-mom.jpg";
 import MORNING_TEA from "../../../assets/onboarding/morning-tea.jpg";
+import { exampleNames } from "../../data/example-names.ts";
 import { clockTime } from "../../data/format.ts";
 import {
   readDraft,
@@ -14,10 +15,10 @@ import {
   updateDraft,
 } from "../../data/onboarding-draft.ts";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
+import { Text } from "../scaled-text.tsx";
 import { NightScene, night, useRise } from "./night-scene.tsx";
 
 /** The example organiser who signs the example question: a name, the same in every language. */
-const EXAMPLE_ORGANISER = "Mia";
 
 /** How dark the room is and how bright her window, scene by scene. */
 const LIGHTING: Record<StoryStep, { dim: number; glow: number }> = {
@@ -209,7 +210,7 @@ export function Story({ step, signedIn }: { step: StoryStep; signedIn: boolean }
                   {t`What did you have for breakfast?`}
                 </Text>
                 <Text style={[type.preview, { color: "#5A534B", fontStyle: "italic" }]}>
-                  {`— ${EXAMPLE_ORGANISER}`}
+                  {`— ${exampleNames().mia}`}
                 </Text>
                 <Text style={[type.caption, { color: "#6D655B", alignSelf: "flex-end" }]}>
                   {t`${time} · in her Telegram`}
@@ -305,7 +306,7 @@ export function Story({ step, signedIn }: { step: StoryStep; signedIn: boolean }
                       flex: 1,
                       minHeight: 46,
                       borderRadius: 13,
-                      backgroundColor: "#1F5C66",
+                      backgroundColor: "#3A2A1F",
                       alignItems: "center",
                       justifyContent: "center",
                     }}

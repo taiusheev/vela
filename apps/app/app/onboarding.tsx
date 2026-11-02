@@ -4,6 +4,7 @@ import { ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiConfigured } from "../src/api/client.ts";
 import { useAccount } from "../src/auth/clerk.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
 import { SeeItFirst } from "../src/components/onboarding/see-it-first.tsx";
 import { TelegramFamilyLink } from "../src/components/telegram-family-link.tsx";
 import { Card, SecondaryButton, Words } from "../src/components/ui.tsx";
@@ -62,17 +63,17 @@ function TelegramFirst({ waiting }: { waiting: boolean }) {
       >
         {waiting ? (
           <>
-            <Words variant="body" tone="ink2">
-              {capabilities.isError
-                ? t`Pilot setup could not be reached just now.`
-                : t`Loading pilot setup…`}
-            </Words>
+            {capabilities.isError ? (
+              <Words variant="body" tone="ink2">
+                {t`Pilot setup could not be reached just now.`}
+              </Words>
+            ) : (
+              <LoadingLight label={t`Loading pilot setup…`} />
+            )}
             <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
           </>
         ) : loading ? (
-          <Words variant="body" tone="ink2">
-            <Trans>Loading your family…</Trans>
-          </Words>
+          <LoadingLight label={t`Loading your family…`} />
         ) : trouble ? (
           <>
             <Words variant="body" tone="ink2">

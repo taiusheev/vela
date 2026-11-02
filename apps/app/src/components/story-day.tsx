@@ -13,7 +13,16 @@ import { useBook } from "../data/useBook.ts";
 import { useCapabilities } from "../data/useCapabilities.ts";
 import { useToday } from "../data/useToday.ts";
 import { space } from "../theme/tokens.ts";
-import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
+import {
+  ActionGroup,
+  ActionRow,
+  Card,
+  Eyebrow,
+  PrimaryButton,
+  SecondaryButton,
+  TextField,
+  Words,
+} from "./ui.tsx";
 
 /**
  * Story day (spec §10, A10) on the Questions tab: a story question from Vela's bank, never one already
@@ -25,10 +34,13 @@ import { Card, Eyebrow, PrimaryButton, SecondaryButton, TextField, Words } from 
 export function StoryDay({
   memberId,
   inBook = false,
+  primary = true,
 }: {
   memberId?: string;
   /** Shown inside the book itself, where a way into the book would lead nowhere new. */
   inBook?: boolean;
+  /** False where the screen already has its one filled button (Questions). */
+  primary?: boolean;
 }) {
   const { t, i18n } = useLingui();
   const account = useAccount();
@@ -70,6 +82,15 @@ export function StoryDay({
     },
   });
   const taken = compose.isError ? askConflict(compose.error) : null;
+  // Why the button waits, said beside it rather than left as a faded button (the reasons Ask gives).
+  const why = !apiConfigured()
+    ? t`You can explore an example family. No messages are sent.`
+    : her?.state === "paused"
+      ? t`${name}'s light is paused just now, so nothing can be sent into her morning.`
+      : her?.invited === true
+        ? t`${name} has not said yes yet. Once she does, her first morning is the next day.`
+        : null;
+  const SendButton = primary ? PrimaryButton : SecondaryButton;
   const holder = taken?.taken_by;
 
   return (
@@ -96,7 +117,7 @@ export function StoryDay({
             <Words variant="voice">{prompt.child[lang]}</Words>
           ) : (
             <TextField
-              placeholder={t`Your question for ${name}`}
+              placeholder={t`A story question for ${name}'s ${day} morning`}
               value={own ?? ""}
               onChangeText={setOwn}
               multiline
@@ -107,9 +128,7 @@ export function StoryDay({
             {capabilities?.book === true ? (
               <Trans>Her answer is kept in the family book, unless she says not to.</Trans>
             ) : (
-              <Trans>
-                Her answer stays with the exchange. Long-term story saving is not switched on here.
-              </Trans>
+              <Trans>Like her other answers, it is kept for 30 days, then deleted.</Trans>
             )}
           </Words>
           {taken === null ? null : (
@@ -123,32 +142,50 @@ export function StoryDay({
             </Words>
           ) : null}
           <View style={{ gap: space.s }}>
-            <PrimaryButton
-              label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
-              disabled={
-                compose.isPending ||
-                !apiConfigured() ||
-                !live ||
-                familyId === undefined ||
-                book.loading ||
-                book.trouble ||
-                her?.invited === true ||
-                her?.state === "paused" ||
-                her === undefined ||
-                question.trim().length === 0
-              }
-              onPress={() => compose.mutate(question.trim())}
-            />
+            {why !== null ? (
+              // Waiting for a reason: said inside a calm dashed button, and read out to VoiceOver.
+              <View accessibilityLiveRegion="polite">
+                <SecondaryButton label={t`Ask it on Sunday`} disabled waiting={why} hint={why} />
+              </View>
+            ) : (
+              <SendButton
+                icon="calendar"
+                label={compose.isPending ? t`Sending…` : t`Ask it on Sunday`}
+                disabled={
+                  compose.isPending ||
+                  !apiConfigured() ||
+                  !live ||
+                  familyId === undefined ||
+                  book.loading ||
+                  book.trouble ||
+                  her?.invited === true ||
+                  her?.state === "paused" ||
+                  her === undefined ||
+                  question.trim().length === 0
+                }
+                onPress={() => compose.mutate(question.trim())}
+              />
+            )}
             {own === null && prompt !== undefined ? (
-              <>
-                <SecondaryButton
+              <ActionGroup>
+                <ActionRow
+                  first
+                  icon="refresh"
                   label={t`Another question`}
                   onPress={() => setSkip((n) => n + 1)}
                 />
-                <SecondaryButton label={t`Write your own question`} onPress={() => setOwn("")} />
-              </>
+                <ActionRow
+                  icon="ask"
+                  label={t`Write your own story question for ${day}`}
+                  onPress={() => setOwn("")}
+                />
+              </ActionGroup>
             ) : prompt !== undefined ? (
-              <SecondaryButton label={t`Choose from the list`} onPress={() => setOwn(null)} />
+              <SecondaryButton
+                icon="check"
+                label={t`Choose from the list`}
+                onPress={() => setOwn(null)}
+              />
             ) : null}
           </View>
         </>

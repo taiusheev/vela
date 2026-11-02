@@ -724,6 +724,11 @@ describe("writeSuggestions with AI on", () => {
       text: "An old question",
       createdAt: addMinutesAgo(60 * 24 * 31),
     });
+    await seedExchange(h.db, seed, {
+      date: addDays(today(), -6),
+      text: ASK_BANK[0]?.child.en ?? "",
+      createdAt: addMinutesAgo(5),
+    });
     const other = await seedFamily(h.db, {
       now: h.clock.now(),
       memberExternalId: "6001",

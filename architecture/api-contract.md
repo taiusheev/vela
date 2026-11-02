@@ -6,6 +6,17 @@ Conventions: JSON over HTTPS; `Authorization: Bearer <session>`; ids are uuids; 
 
 ## 1. Auth and account
 
+### Public website waitlist
+
+`POST /waitlist` accepts same-origin form-urlencoded input, validates the email, and gives the same acknowledgment for new, duplicate and honeypot submissions. It reads at most 2048 UTF-8 bytes within 3 seconds, cancelling oversized or stalled input before opening a database connection. Errors include 400 invalid email, 403 foreign Origin, 408 stalled body, 413 too large, 415 wrong content type and 429 rate limit. A success response is not proof of a new unique signup; the protected waitlist is authoritative.
+
+### Optional public website analytics (usage counts v1)
+
+These routes are outside `/v1`, public-site paths only, and never read or mutate family records. They are disabled by default; the optional client choice is separate from family privacy acceptance. See `infra/runbooks/analytics.md` for the complete event/retention contract.
+
+- `GET /analytics/config`: `{enabled:boolean,region:"eu"|"us"|null,noticeVersion:"website-usage.v2"}`, no-store. Contains no project token.
+- `POST /analytics/event`: same-origin browser JSON; schema in `apps/worker/src/site-analytics.ts`. Required UUID random browser `id`, exact `noticeVersion=website-usage.v2`, fixed `event` enum, language `en` or `zh-TW`; optional fixed section/source enums, bounded integer seconds/step. Unknown fields rejected. Body at most 1024 bytes with a 3-second read bound; IP rate-limited under a separate analytics bucket. No authentication, arbitrary text, family ids, URL, email, or cookies. This is best-effort telemetry, not a domain mutation: no mutation receipt or idempotency cache is created, and no retry is performed. Responses: 204 accepted by downstream, 400 invalid, 403 foreign/missing Origin, 404 disabled, 408 stalled body, 413 too large, 415 wrong content-type, 429 rate-limited, 503 downstream failure. No 409 state exists. The relay forwards approved counts only; no visitor IP/headers or body is logged. Delivery counts can be lost and are not authoritative signup/payment records.
+
 | Method | Path | Purpose | Notes |
 |---|---|---|---|
 | POST | /auth/start | Start sign-in by phone or email | Sends OTP or magic link through the auth provider |
@@ -68,7 +79,7 @@ A pilot invite proves possession of an invitation and is consumed by the Telegra
 - **`issueAccountLinkCode(deps, challengeId, event)`** is the Telegram half and takes no session and no key. It accepts only a private `start` event on Telegram whose sender is the conversation, so the code can reach nobody but the owner of that account. Under the actor's advisory lock it locks the owner, the challenge, then the member, its family and its channel link, refusing a member who is not active or paused, one who has left, a deleted family and a blocked link. It binds the challenge to that family, member, channel link and the hash of the Telegram id, stores the hash of a fresh 22-character code, and returns the code for the bot to show. Reissuing for the same Telegram identity only rotates the code, spending no attempt and never extending the expiry; a different identity is refused, and a member already linked to another account is a conflict.
 - **`completeAccountLink(deps, identity, key, challengeId, code)`** runs as `account.link.complete:v1`, scoped to the bound family and member. It requires the same session that started the challenge and the same account, re-locks the owner, the challenge and the target, checks the bound Telegram identity again, and compares the supplied code with the stored hash in constant time. A wrong code spends one of five attempts and answers `{linked: false}`; the fifth invalidates the challenge. On success it sets `members.user_id` when that member has none, marks the challenge completed, clears the code hash, writes an `account_linked` event, and answers `{linked: true, member_id, family_id}`. Repeating the call replays that answer through the receipt; a member claimed by another account, or a second member of the same family already held by this account, is a conflict.
 
-`POST /v1/me/link` accepts strict `{}` with bearer authentication and `Idempotency-Key`, and returns 201 `{challenge_id, expires_at, telegram_url}`. `/start link_<challenge_id>` is a separate private bot branch, requires the Telegram sender to own that private conversation, and durably queues the code with issuance in one transaction under an event lock. It does not consume a parent invite. `POST /v1/me/link/complete` accepts strict `{challenge_id, code}` with the original session and a mutation key, returning the existing `ApiLinkOutcome`. Both writes use active-session verification and the account limiter. On success the app invalidates account/family queries and opens the existing family.
+`POST /v1/me/link` accepts strict `{}` with bearer authentication and `Idempotency-Key`, and returns 201 `{challenge_id, expires_at, telegram_url}`, and where LINE is on also `line_url`, which opens Vela's LINE chat with `/start link_<challenge_id>` typed (ADR-52, 25 October 2026). `/start link_<challenge_id>` is a separate private bot branch, on Telegram or LINE, requires the sender to own that private conversation and to be linked on that same messenger, and durably queues the code with issuance in one transaction under an event lock. It does not consume a parent invite. `POST /v1/me/link/complete` accepts strict `{challenge_id, code}` with the original session and a mutation key, returning the existing `ApiLinkOutcome`. Both writes use active-session verification and the account limiter. On success the app invalidates account/family queries and opens the existing family.
 
 `GET /v1/capabilities` is public, content-free and database-free after API configuration/address-limit checks. It returns `pilot`, `telegram_first`, `english_only`, `memory`, `book`, `parent_app` and `billing`. In pilot mode app-first family creation, commercial trial activation and parent-device setup are denied. Closed admission is `PILOT_ADMISSION=on` plus a private valid `PILOT_TELEGRAM_ALLOWLIST`; absent/off retains ordinary development behaviour. Activation/resume additionally requires an approved organiser with a successful private notification delivery. Rights/withdrawal paths remain available after roster removal.
 
@@ -90,7 +101,9 @@ An exchange carries the asker’s name (null for Vela’s own hello, and for an 
 
 A stranger, a family that is not the caller’s and an unknown family all answer 404. The route is served by the pilot Worker under `/v1` wherever the API is on (§ "Where the API runs"), and on a developer’s own machine by `apps/worker/scripts/api-dev.ts` for the app to read (infra/README.md, section 9a).
 
-**15 October 2026: message-day windows.** Today optionally includes `connection_days: [{member_id, days: [{date, has_message}]}]`, seven ascending parent-local dates ending today. A real parent contribution, delivered family ask, or delivered read-back reply lights its date. Scheduling, app opens, unattended fallback questions and failed sends do not. Earlier lights remain after quiet days. Pending parents have no interaction history until real messages exist.
+**28 October 2026: answer-day windows.** Today optionally includes `connection_days: [{member_id, days: [{date, has_message}]}]`, seven ascending parent-local dates ending today. A real parent answer lights its received date (including check-in taps and unattached answers). Family asks and replies do not light the window before the parent answers. Scheduling, app opens, unattended fallback questions and failed sends do not. Earlier lights remain after quiet days. Pending parents have no interaction history until real messages exist.
+
+**28 October 2026: explicit check-in follow-up.** Today optionally includes `not_okay: [{member_id, at}]`, the latest explicit `not_okay` answer received on each parent’s current local date. This includes taps on an earlier ask and remains present after later answers. It uses the same family authorization and answer retention as Today; no new stored data or inferred health status. The app shows the fact and time, direct call and conversation actions on Today and in the conversation. This is a daily follow-up, not a persistent incident or a confirmation that anyone has contacted the parent.
 
 ### Composing an ask (23 September 2026)
 
@@ -267,6 +280,12 @@ Built, and switched off in every environment: the pilot Worker's `PUSH_SEND` is 
 
 **The founder's alert.** When a registration or a removal takes away a phone that could be told — removed at sign-out, moved to another account, or registered again without permission or with the quiet channel blocked — and that leaves a family the account actively organises with no organiser who can be told, the write inserts `admin.organisers_unreachable` as a queued outbound row in its transaction and hands it to the queue after the commit (`AfterCommit`, § "The quiet notice"), on the first attempt only. That needs push on and the founder's chat: the pilot Worker gives the two routes `writes.alerts` (`ADMIN_CONVERSATION_ID`, `PUBLIC_BASE_URL`, and whether `PUSH_SEND` is `expo`), and while push is off, as now, no device write raises anything, since a phone counts toward nobody being told. `api-dev.ts` records phones and writes no alert.
 
+**Individual routine notification controls (test version).** The founder approved notice v11 and test-version activation on 26 October 2026. `NOTIFICATION_CONTROLS` defaults off when absent, is on in development/staging and remains pinned off in production. Production activation still requires a separately approved release and affected-family communication. When explicitly on, `GET /v1/me` adds `notification_preferences: {replies, turns}` and `PATCH /v1/me` accepts `reply_notifications` and/or `turn_reminders` booleans. Off refuses those writes with 503 `unavailable` before storing a preference and omits the new read fields. Ordinary delivery always honours saved opt-outs even if the rollout switch is later turned off. Neither field affects quiet notices or their resolution.
+
+The two choices belong to the account, are stored as booleans on `users`, and are cleared on account deletion. Migration 0029 copies the existing combined choice into both fields, preserving opt-outs. Writes use the existing mutation receipt and account locks, so two phones changing different choices preserve both updates. A patch mixing the legacy combined switch and an individual field is 400 `invalid`. An older app's combined switch sets both fields; the returned `one_moment_a_day` is their logical OR. An older server omits the preference object, so the app keeps its combined control.
+
+App turn prompts use an account/local-day idempotency key (prefixed `app:`) rather than a parent/date key: at most one routine turn-reminder attempt across all parents/families each reader day. The unique outbound idempotency constraint resolves concurrent enqueues. Dropped attempts do not allow another parent to claim the same day's key; the morning remains visible in Questions. Existing queued entries with the older key are not rewritten. Answer receipts keep their independent per-member/day budget and are never displaced by a turn reminder.
+
 **One moment a day** is `users.one_moment_a_day` (true unless switched off), read in `GET /v1/me` (`ApiMe.one_moment_a_day`) and written through `PATCH /v1/me` (`ApiAccountPatch`), not through a route of its own. Off stops the account's ordinary pushes, an answer's receipt and the evening's turn prompt, checked when each is written and again when it is sent; it never stops the quiet notice or its close. The hour of the old `/me/notifications` rows (§7) is dropped: an ordinary push goes when there is something to say (spec §5.2, step 6), but never outside 08:00 to 21:00 in the reader's time zone, when it is dropped and what it would have said waits in the app. `GET /v1/me` also says whether this API sends pushes at all (`push`, `PUSH_SEND` `expo`), and `GET /v1/families/:id` tells an organiser how they would be told if her morning went quiet (`told_if_quiet`: `telegram`, an unblocked Telegram link; `app`, push on and a phone of theirs that can be told; null for anyone who is not an organiser), so You can say plainly when nobody would be (principle 7).
 
 **What a push carries.** Its text passes through Expo, Apple and Google and shows on a lock screen, so it holds names and times only — never her words, an answer, a nearby contact, or anything about health — and its data is `PushData`, ids only: `kind`, `family_id`, `member_id` (the kept-light member it is about), and `quiet_event_id`, `exchange_id` or `suggestion_id` where it has one, which the app reads when it is tapped. No title (the app's name shows) and no badge. The pushes built, each made only while push is on (flows §3.4, §3.9, §3.12):
@@ -280,7 +299,7 @@ Built, and switched off in every environment: the pilot Worker's `PUSH_SEND` is 
 
 A phone can be told when it is `granted` and, for the quiet notice and its close, has not blocked the `quiet` channel. Not pushed: flags, the weekly read, the widget's refresh, and `delivery.failed`, her stop and the consent answers, which reach organisers on Telegram alone (ADR-34).
 
-**Sending.** A push is one outbound row per reader, on the channel `app`, addressed to their account, and the gateway sends it to every phone of the account that can be told in one request to Expo. It is sent when at least one phone's message was taken, and those tickets are kept (`push_tickets`) in the transaction that marks it sent; dropped, holding no place in the budget, with push off (`push_off`), "One moment a day" off (`one_moment_off`), outside the hours (`quiet_hours`), or no phone that can be told (`no_push_device`, also when Expo says every phone is gone); and otherwise failed and retried as any send is (flows §3.7). `reconcile` reads Apple's and Google's receipts (flows §3.15, step 8). A phone Expo, Apple or Google say is gone is deleted while it still holds the token that push went to, in the transaction that records the send or its receipt, with the founder's alert its loss calls for; Vela's own credentials refused tell the founder once a day (`admin.push_misconfigured`); a quiet notice that reached no phone tells the founder (`admin.quiet_notice_unheard`) unless another notice of that round reached the reader or is on its way, or the round told nobody at all, which `admin.quiet_nobody_told` says instead (flows §3.12, "On phones").
+**Sending.** A push is one outbound row per reader, on the channel `app`, addressed to their account, and the gateway sends it to every phone of the account that can be told in one request to Expo. It is sent when at least one phone's message was taken, and those tickets are kept (`push_tickets`) in the transaction that marks it sent; dropped, holding no place in the budget, with push off (`push_off`), the combined or relevant individual choice off (`one_moment_off`), outside the hours (`quiet_hours`), an expired routine queue entry (`push_expired`), an obsolete/completed/reassigned turn (`turn_no_longer_needed`), or no phone that can be told (`no_push_device`, also when Expo says every phone is gone); and otherwise failed and retried as any send is (flows §3.7). `reconcile` reads Apple's and Google's receipts (flows §3.15, step 8). A phone Expo, Apple or Google say is gone is deleted while it still holds the token that push went to, in the transaction that records the send or its receipt, with the founder's alert its loss calls for; Vela's own credentials refused tell the founder once a day (`admin.push_misconfigured`); a quiet notice that reached no phone tells the founder (`admin.quiet_notice_unheard`) unless another notice of that round reached the reader or is on its way, or the round told nobody at all, which `admin.quiet_nobody_told` says instead (flows §3.12, "On phones").
 
 **Where phones go.** A phone is never deleted by age, since an Expo push token does not expire: it goes at sign-out (the route above), when Expo, Apple or Google say it is gone, when its account leaves its last active or paused membership (`leaveApiFamily`; a Leave that keeps another family keeps the phones, which that family's notices need), and when the account is deleted (`disableApiAccount`). A ticket goes once its receipt is read, and by the nightly retention job 2 days after its push.
 
@@ -385,10 +404,16 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 | GET | /families/:id/reminders | Built: see "Reminders" below |
 | POST | /families/:id/reminders | Built: create from a suggestion (only after a tap) |
 | POST | /reminders/:id/done | Built: the caller's own reminder, finished |
+| GET | /families/:id/photo-box | Built (30 October 2026): the family's photo box, where `PHOTO_BOX` is on; see "The family's photo box" |
+| POST | /families/:id/photo-box | Built: put a photo the caller uploaded into the box |
+| POST | /photo-box/:id | Built: change a box photo's era or line |
+| POST | /photo-box/:id/remove | Built: take a photo out of the box |
 
 ### The family book (3 October 2026, spec §10, A10, ADR-39)
 
 `GET /v1/families/:familyId/book` answers `ApiBook`: `entries`, newest first. Each `ApiBookEntry` has `exchange_id`, `member_id`, `member_name`, `asked_by` (the asker's name, or null), `question`, `photo_ids` (the old photo of an old-photo ask, where stored) and `kept_at`, plus her `answers` in order. Each answer has `kind`, `text` (her words or the transcript), `media_id` and `media_kind` (`audio` or `image`, or null when nothing is stored), and `at`. Any live member of the family reads it; anyone else gets 404. A stored file is played or shown through `GET /v1/families/:familyId/media/:mediaId`. That route now also serves a stored voice note the family shares, as `audio/mp4`, `audio/ogg` or `audio/mpeg`.
+
+**Her memories and stories (ADR-51).** `ApiBook` also carries `moments` and `stories`, absent from a server before ADR-51. `moments`, newest first, are her answered exchanges from the last 30 days and every one the family kept, that are memories and safe to show as one: never flagged, never naming health, never holding a sensitive word (the "Keep" rule), and kept, or with a phrase the memory model found, or with her stored photo, or saying more than a greeting (12 words, or 20 characters of Chinese). Nothing of a member who said "memories off" is listed, nor an exchange she took out herself. Each `ApiMoment` has `exchange_id`, `member_id`, `member_name`, `asked_by`, `question`, `words` (all she said in answer), `quote` (the phrase, word for word, or null) and its `kind` (`preference`, `story`, `humour`, `person`, `moment` or `follow_up`, or null), `at`, `photo_id`, `voice` (`media_id`, `duration_ms`) or null, `kept`, `kept_by` (who tapped Keep, or null), `story_id`, and `fades_at` (when her words are cleared unless kept; null once kept). `stories`, newest first, are gathered by `story_weave` where `MEMORY_STORIES` is on: each `ApiMemoryStory` has `id`, `member_id`, `member_name`, `title` (a phrase of hers, word for word), `moment_ids` (two or more exchanges in `moments`, oldest first), `kept` (every one kept), `from` and `to`. A story is listed only while two of its memories are. Keeping a story is keeping its memories with `POST /v1/book/:exchangeId/keep`; there is no story route.
 
 `POST /v1/book/:exchangeId/remove` with an `Idempotency-Key` lets an organiser take a story out, through `runApiMutation` (operation `book.remove:v1`). It answers 200 `ApiBookRemoved` (`exchange_id`, `removed: true`), the same again for a story already removed, and 404 for a story that is unknown or not of the caller's family, and for a caller who is not its organiser. She removes her own story from Telegram with "Don't keep this one".
 
@@ -420,11 +445,23 @@ Understanding (`understand.v5`) returns `dated`: up to three things she said wil
 
 `POST /v1/reminders/:reminderId/done` with an `Idempotency-Key` finishes the caller's own reminder (operation `reminder.done:v1`) and answers 200 `ApiReminderDone` (`id`, `done: true`), or 404 for anyone else's. Retention deletes a reminder two days after it was due, and any reminder or fact older than 30 days.
 
+### The family's photo box (30 October 2026, ADR-58)
+
+Served only where the Worker's `PHOTO_BOX` is `on` (development and staging; production is `off`, pinned); elsewhere every route below is 404 before a connection is opened, and `GET /v1/capabilities` says `photo_box: false`.
+
+`GET /v1/families/:familyId/photo-box` answers `ApiPhotoBox`: `photos`, newest first, each `id`, `media_id` (read through `GET /v1/families/:familyId/media/:mediaId`, which serves a box photo to every live member), `era` (`new` or `old`), `caption` or null, `width`, `height`, `added_by_name`, `can_change` (whoever added it, or an organiser) and `last_used_on` (her local day of the last morning that showed it, or null); `limit` (40); and `next`, one entry per parent whose light the family keeps and for whom the box has a picture morning: `member_id`, `name`, `type` (`question`, `memory_photo` or `photo_choice`), `box_ids` (one, or two for a choice, in her order), and `text` and `signature` in her language, planned by the same code that makes her morning, so the page shows what she is sent (31 October 2026). Any live member reads it; anyone else gets 404.
+
+`POST /v1/families/:familyId/photo-box` with `{media_id, era, caption?}` (`AddToPhotoBox`; a caption is trimmed, at most 140 characters, and an empty one is none) and an `Idempotency-Key` puts a photo the caller uploaded into the box, through `runApiMutation` (operation `photo_box.add:v1`). It answers 201 `ApiPhotoBoxPhoto`. The photo then has no deletion date, and its object is moved out of `asks/` after the commit. Refusals, in `details.reason`: 404 `photo_missing` (not an app image the caller uploaded to this family, no longer stored, or past its deletion date), 409 `in_box`, 409 `box_full`. A family not the caller's is 404.
+
+`POST /v1/photo-box/:boxId` with `{era?, caption?}` (`ChangePhotoBoxPhoto`, at least one; a null or empty caption clears it) changes a photo (operation `photo_box.change:v1`) and answers 200 `ApiPhotoBoxPhoto`. `POST /v1/photo-box/:boxId/remove` with an empty body takes it out (operation `photo_box.remove:v1`), gives the photo its deletion date now, and answers 200 `ApiPhotoBoxRemoved` (`id`, `removed: true`). Both are 404 for a photo the caller may not change, or one already gone.
+
 ## 7. Weekly read, settings, billing
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | /families/:id/weekly-read?member= | **Built** (1 October 2026, below): her latest read the founder sent, organisers only; without Vela Light the seven days and `locked` |
+| GET | /families/:id/weekly-read?member=&read= | **Built** (26 October 2026): one of her earlier sent reads by id, same rules; a read that is not hers or not sent is 404 |
+| GET | /families/:id/weekly-reads?member= | **Built** (26 October 2026): her sent reads newest first, ids and dates only, a year at most; organisers only |
 | POST | /weekly-reads/:id/opened | Event only |
 | GET | /me/notifications | Not built, and not to be: "One moment a day" is `one_moment_a_day` in `GET /v1/me` (27 September 2026, § "Push") |
 | PATCH | /me/notifications | Not built, and not to be: `PATCH /v1/me` takes `one_moment_a_day`, which switches the account's ordinary pushes on or off and can never raise how many there are. The `{hour}` is dropped: an ordinary push goes when there is something to say (spec §5.2, step 6), between 08:00 and 21:00 the reader's time (§ "Push") |
@@ -438,6 +475,8 @@ Understanding (`understand.v5`) returns `dated`: up to three things she said wil
 `GET /v1/families/:familyId/weekly-read?member=<her member id>` answers `ApiWeeklyRead` (`api-weekly-read.ts`): her latest read whose `sent_at` is set, since the founder edits every draft before it goes (Appendix A), so the app shows what Telegram's organisers were sent. Organisers only: the family guard asks for one, and anyone else is 403, because the read carries the counts of her days, which she is never shown (§8). A family that is not the caller's is 404 `Family not found.`; a `member` that is missing, not a uuid, not a kept-light member of the family, still invited, or gone is 404 `Not found.`.
 
 - `read` is null until one of hers has been sent. `days` are its seven dates, Monday to Sunday, read again from her answers by the draft's own rule (`loadWeekDays`, flows §3.14): `answered` with her local `answered_at`, `late` when she answered only after that morning's quiet notice opened, `unanswered`, or `not_counted` before her light started. The app draws an answered or late day lit and every other day resting, never quiet.
+- `suggestion_source` (26 October 2026, `weekly_read.v6`): the morning the suggestion grows from, which the model names and code keeps only when she answered that day: its date, exchange id, who asked (null for Vela's hello) and her answer's one-line summary, read as they stand. Null when the suggestion was removed, the read is locked, or that day is gone; absent from older reads.
+- `my_feedback` (2 November 2026, ADR-48): the caller's own feedback on their messages that week, exactly as it reached them, never another organiser's. Null when there is none, the read is locked, or 30 days after the week ends (retention clears it); absent from older reads. An organiser who uses only the app gets feedback written for them as one with a messenger does.
 - `counts` are the numbers in `weekly_reads.stats` when it was drafted (`counted_days`, `answered_days`, `hello_mornings`, `family_asks`); the app words them as `renderWeeklyRead` does for Telegram. `notes` are `sent_lines`; `suggestion` is `sent_suggestion`, null when the founder removed it.
 - `locked` is true unless a subscription covers her: `trial` before `trial_ends_at`, `active` or `grace`. Locked, `counts`, `notes` and `suggestion` are null and the days still show (spec A9: "Free plan shows the seven lights"). The Telegram read is not gated, because the pilot is free; the app's is, and the 30-day trial opens it at no cost.
 - GET is read-only: fetching, prefetching or refreshing a read does not record an opening.
@@ -519,6 +558,8 @@ export const MemberLight = z.object({
   member_id: z.uuid(), display_name: z.string(), state: LightState,
   answered_at: z.iso.datetime({ offset: true }).nullable(), usual_time: LocalTime.nullable(),
   away_until: LocalDate.nullable(), quiet_event_id: z.uuid().nullable(),
+  // Topics chosen for her at setup (22 Oct 2026), for the app's question ideas; absent when none.
+  interests: z.array(InterestTopic).optional(),
 });
 
 export const ComposeExchange = z.object({
@@ -611,3 +652,228 @@ Opening the private Telegram start URL issues a private code with explicit appro
 `GET /v1/families/:familyId/members/:memberId/connection` is organiser-only for that exact live family. It returns only `{ state: waiting | opened | connected | paused | declined | unavailable }`. An invited member with a bound channel has opened an invite, not consented. A decline can be reported from the family's existing content-free `consent_declined` event after the declined profile is deleted. Status is neither a message-delivery receipt nor evidence of an answer. The existing parent-link POST still reuses a valid invitation, renews it after expiry, or returns the connected parent's chat shortcut; it never creates a duplicate parent.
 
 New app clients require migration `0019_telegram_confirmation` and the new server routes before distribution. The Telegram-first private trial and separate parent/health-word permission gates remain enabled.
+
+## Named-memory sharing HTTP boundary (22 October 2026, built but unconfigured)
+
+These routes register ONLY when a trusted server caller explicitly supplies `ApiRuntime.memorySharing`.
+`apiRuntimeFor` supplies no such group in development, staging or production, even with legacy
+`MEMORY=on`; tests pin that absence. No env option activates this group. The live capabilities
+response remains unchanged. Revised notices, fresh purpose/keep consent, translation/safety review
+and a separate reviewed runtime-wiring change are required before real-family use.
+
+| Method | Path under /v1 | Input / response |
+|---|---|---|
+| GET | /families/:familyId/memories/:memoryId/sharing | Author-only `MemorySharingView`, complete audience or404 |
+| POST | /families/:familyId/memories/:memoryId/sharing/presentations | Strict `{recipient_ids}` → `{id}` only |
+| GET | /families/:familyId/memory-sharing-presentations/:presentationId | Author-only ephemeral `MemorySharePreview` |
+| POST | /families/:familyId/memory-sharing/confirm | Strict `MemoryShareChoice` → `{shared:true,id}` |
+| POST | /families/:familyId/memories/:memoryId/sharing/stop | Strict `{}` → `{stopped:true}` |
+| GET | /families/:familyId/shared-memories?cursor=UUID | Explicit recipient's `SharedKeptMemoryPage` (at most50 items) |
+
+All configured routes require a verified bearer session and answer `Cache-Control: no-store`,
+including failures. Writes additionally require active-session verification, a bounded JSON body
+with no content encoding, `Idempotency-Key`, and the existing `runApiMutation` domain services.
+Success carries `Idempotency-Replayed: true|false`; receipts contain IDs/booleans only, never quotes
+or names. Loading a preview is a separate authenticated GET, not receipt replay or a cached quote.
+Every prepare/confirm still loads fresh locked server-owned state and single-use evidence.
+
+Malformed bodies, duplicate recipients (including case variants), malformed UUIDs and ambiguous
+cursors return400; unsupported content types/encoding415; oversized JSON413; missing/invalid session
+or inactive write session401. Unknown/unauthorized family, author, memory or presentation returns404.
+An ownership403 is deliberately NOT emitted: another member cannot distinguish a hidden resource
+from a missing one. Stale/consumed/tampered confirmation or idempotency conflicts return409; existing
+receipt limits429; unavailable verification503. Unexpected results/errors return generic500 and
+log only a safe error label. UUID inputs are canonicalized to lowercase before domain comparisons.
+
+New prepare/confirm require `richMemories===true`, independently rechecked by the domain services.
+Once runtime wiring is eventually approved, keep that group configured for reading/stop if new
+processing is turned off. There is no payment gate on those privacy actions. Authenticated stop is
+also exempt from closed-trial admission, like existing removal: its domain author/membership/source
+checks still apply. No other read or action gains that exemption. Without write-session wiring,
+write routes remain absent, while configured reads can remain available.
+
+Recipient pages never contain original answer IDs or conversation-access hints. They authorize
+the current named account/member generation and sharing revision before pagination. Author views
+fail closed on incomplete/ambiguous audiences. Neither an author-view revision nor a preview hash
+is authority to share without fresh server checks. A client must reload after every write/replay;
+an old stop receipt acknowledges its original action, not necessarily the current audience. Do not
+claim success from a failed reload. A prepared ID whose separate preview read is unavailable must
+lead back to refreshed review, not an endless retry of expired evidence.
+
+HTTP tests inject synthetic domain ports to prove request/response/authentication boundaries;
+separate service tests and real PostgreSQL races prove data authorization/transactions. This is not
+a live app/HTTP/database journey or provider/native proof. The app's sharing port remains synthetic,
+its production preview stays blank, and real-purpose acceptance is still not connected.
+
+## Author memory routes (22 October 2026, built but unconfigured)
+
+These routes register ONLY when `RICH_MEMORIES` is "on": development and staging (test families
+only, founder's request of 22 October 2026), never production, where `wrangler-config.test.ts` pins
+it off until `privacy-notice.v7` (wording approved 22 October) is the live notice and families are
+told. The sharing group stays absent everywhere. All rules of the sharing boundary above apply: verified
+session, `no-store`, idempotent writes, IDs/booleans only in receipts, 404 rather than 403.
+
+| Method | Path under /v1 | Input / response |
+|---|---|---|
+| GET | /families/:familyId/memory-permission | Signed-in person's own `MemoryPermissionState` |
+| POST | /families/:familyId/memory-permission/presentations | Strict `{lang:"en"}` → `{id}` (five-minute, one-use) |
+| GET | /families/:familyId/memory-permission-presentations/:presentationId | `MemoryPermissionPreview`: the exact question text and its SHA-256 |
+| POST | /families/:familyId/memory-permission/answer | `MemoryPermissionChoice` → `{answer}`; records a `consents` row, channel `app` |
+| POST | /families/:familyId/memory-permission/withdraw | Strict `{}` → `{withdrawn:true}`; clears suggestions, kept copies and open questions |
+| GET | /families/:familyId/memory-suggestions?cursor=UUID | Author's own `MemoryCandidatePage` |
+| POST | /families/:familyId/memory-suggestions/:candidateId/dismiss | Strict `{}` → `{dismissed:true}` |
+| POST | /families/:familyId/memories/keep | `MemoryKeepChoice` → `{kept:true,id}` |
+| GET | /families/:familyId/memories?cursor=UUID | Author's own `KeptMemoryPage` |
+| POST | /families/:familyId/memories/:memoryId/remove | Strict `{}` → `{removed:true}` |
+
+Prepare, answer and keep need `richMemories===true` (404 otherwise). Withdraw, dismiss and remove
+stay open when new processing is off: privacy actions are never gated by the switch or payment.
+An answer is refused (409) when its presentation is expired, used, for another account or membership
+revision, for other words, or was issued before a later withdrawal; a current yes changes only
+through withdraw. Only the person answers for themselves: an organiser cannot answer for anyone.
+
+### Memories the family keeps (23 October 2026, ADR-50, staging only)
+
+The founder's decision of 23 October 2026: memories are the family's, for the adult child to
+remember their parent. The parent is told, never asked. This replaces the short-lived chat flow of
+the same day (`m:` and `u:` buttons), whose old buttons now only close and answer `memory.gone`.
+
+`POST /v1/book/:exchangeId/keep` with an empty body and an `Idempotency-Key` lets an organiser keep
+one of her answered exchanges in the family book (`book.keep:v1`, under her member row's lock). It
+answers 200 `ApiBookKept`: `kept: true`, or `kept: false` with `reason` `memories_off` (she wrote
+"memories off"), `sensitive` (an answer of hers is flagged, names a health mention, or holds a
+sensitive word), `no_answer`, or `not_kept` (she took it out herself). 404 for anyone but an
+organiser of her family, and wherever `BOOK` is off. The first keep of hers writes one note to her
+chat (`memory.told`, keyed by her member), handed to the queue after the commit.
+
+`ApiBookEntry.kept_by` names the organiser who kept an ordinary answer; null for a story.
+`ApiBook.suggestions` (organisers only, else empty) lists answers Vela suggests keeping, newest
+first: `exchange_id`, `member_id`, `member_name`, `question`, `quote` (her exact phrase, cut from
+her answer by offsets in `keep_suggestions`, never copied) and `at`. A suggestion is made after an
+answer is understood, only where `BOOK` and `MEMORY_DISCOVERY` are on, only for an ordinary answer
+(the screen in `memory-discovery.ts`), and goes with the answer at 30 days.
+`POST /v1/book/:exchangeId/dismiss` (`book.dismiss:v1`) is "Not this one" and answers 200
+`ApiKeepSuggestionDismissed`.
+
+In her chat, "memories off" (`關閉回憶` / `关闭回忆`) sets `members.memories_off_at`, takes every live
+entry of hers out of the book as removed by her (stories included), and deletes her suggestions;
+"memories on" (`開啟回憶` / `开启回忆`) clears it without bringing anything back.
+
+
+### Planned questions and editing
+
+`GET /v1/families/:familyId/questions` requires an authenticated, current family membership.
+It returns `{ questions: [{ id, recipient_id, recipient_name, asker_name, text, date,
+editable, preparing }] }`, ordered by recipient-local date, with undated waiting questions last.
+It includes composed questions and dated questions already prepared for delivery, independently
+of the delivered-conversation pagination. `editable` is true only for the caller's own composed
+question. Prepared questions remain visible with `preparing: true`. Other families and former
+members receive 404. This projects existing question data; it creates no new retained copy.
+
+`POST /v1/exchanges/:exchangeId/edit` takes an `Idempotency-Key` and strict
+`{ text: string, date: YYYY-MM-DD | null }`. Only the original author, still a current member,
+can edit a composed question. `null` means next free morning and is refused for attached media.
+A dated question must be within the recipient's next 14 local days. The edit keeps its exchange ID,
+author, type, photos, recording, attribution and original retention clock. Media ownership and
+expiry are checked again for the new morning. The recipient row lock serialises edits with
+composition, withdrawal and morning preparation. Words and date commit together; any refusal
+leaves the original intact. An occupied morning returns the usual 409 taken-day details; a
+prepared/sent/withdrawn question returns 409 `too_late`; inaccessible questions return 404;
+invalid input returns 400. Replays return the existing receipt after renewed membership checks.
+Unused future suggestions are invalidated, so fresh drafts can use the updated wording.
+
+The editor stops voice-note questions at 60 seconds. The server accepts up to 65 seconds to
+allow for the native duration poll and device stop delay. A short introductory voice hello on
+other question types retains its existing 15-second server limit. Upload size, ownership,
+expiry and microphone permission rules are unchanged.
+
+
+## Private-test weekly support report (new purpose, off by default)
+
+Authenticated, no-store routes under `/v1/families/:familyId/weekly-support/:memberId`.
+These are separate from `weekly-read` and founder-only insights. Requires explicit environment
+switch, exact approved-purpose version and a bounded family allowlist; all actual configs are off.
+The parent must have their own authenticated linked app membership. Session and normal pilot
+admission apply. Missing/unauthorised scope returns 404 without revealing source existence.
+Parent-only permission attempted by an organiser returns 403. Stale/expired consent or source,
+invalid relevance and full 3-offer capacity return 409. Strict schemas/bodies and missing write
+keys return 400. Writes require `Idempotency-Key`, active session and `runApiMutation`; response
+is `{saved:true}` (prepare: `{id}`). Receipts hold no report words. Stop is not gated by processing,
+notice approval or the cohort list, but always requires the author's current identity/membership.
+
+| Method/suffix | Behaviour |
+| --- | --- |
+| GET base | Support for the current local week, source-backed reviewed draft and current permission; organiser source review list only after the parent's yes and only for named organisers. Parent sees own approved draft without activity counts/private organiser notes. |
+| POST `/presentations` `{}` | Parent only; five-minute, one-use permission screen ID bound to current owner/account/membership, prior consent revision and named organiser list. |
+| GET `/presentations/:id` | Parent only; exact proposed purpose text and current named readers. Stale names/roster/account/consent/version conflict. |
+| POST `/permission` `{presentation_id,answer:"yes"|"no"}` | Parent choice only. Rotates permission revision and clears old review selections. Yes permits only subsequent source messages. |
+| POST `/review` `{source_id,source_digest,kind,ordinary_confirmed:true,valid_until}` | Named organiser only, full-message review; fixed `shared_interest`/`company`/`practical_help` kind; future deadline at most seven days. No authored advice or model output. Source is reloaded/screened; digest binds review to exact words. |
+| POST `/remove` `{source_id}` | Author or currently named organiser removes a contribution. |
+| POST `/stop` `{}` | Author only; rotates/withdraws permission, clears audience and selection/presentation references atomically, including when processing/config/cohort is off. |
+
+Contract schemas are in `packages/contracts/src/weekly-support.ts`. Every read revalidates current
+source revision/digest, expiry, sensitivity, author and recipient membership/account grants,
+permission version/text fingerprint and reviewed template. No rendered quotation is stored. No
+messenger send, AI request, subscription write, share expansion or data export is performed.
+Client reports remain session-memory only; read errors hide prior quotes. Source correction,
+withdrawal/deletion and retention cannot be bypassed through historical rendered reports. Parent
+membership locks serialise mutations; independent PostgreSQL tests cover review vs stop in both
+orders. Full cohort, notice and signed-device gates: `infra/runbooks/weekly-support-private-test.md`.
+
+Approved sources are loaded by exact ID, separately from the bounded current-week discovery list.
+A still-relevant offer survives the Sunday/Monday boundary and newer messages until its own
+deadline. The source's original week/date is revalidated independently; the report range names the
+current support week. Capacity counts all still-valid approvals, not just the discovery page, and
+invalid/expired references are pruned inside the same locked mutation.
+
+The private cohort screens English source text only. A profile/transcript label alone is insufficient:
+compatible script and English phrase evidence are required; unknown voice language, mixed scripts and
+uncertain short fragments fail closed. A report-specific deterministic screen normalises analysis
+variants, rejects additional sensitive wording, and permits narrow ordinary contexts while screening
+all surrounding text. Discovery and saved-report reads use the same rule. Original source words and
+digests are unchanged, as are the stricter shared memory/AI screen and current upstream flag/health
+checks. This bounded safeguard is not exhaustive language or sensitive-content detection.
+
+## Private saved question choices (question-profile.1, gated; 31 October 2026)
+
+`GET /v1/families/:familyId/members/:memberId/question-profile` authenticates the requester,
+derives their author membership, and returns `ApiQuestionProfile`: `{ revision, saving_available,
+profile: null | { settings, saved_at, expires_at, notice_version } }`. It is private to the author's
+account and the one recipient, with `Cache-Control: no-store`. A missing/expired/forgotten profile
+returns null content; a current metadata revision can remain. GET never extends expiry or calls AI.
+`personal_question_profiles` capability advertises access/deletion, **not permission to collect**;
+`saving_available` is authoritative for saving. Reading/forgetting remains available when the
+collection switch or pilot admission is off. Family authorization still applies, with opaque 404.
+
+`POST .../question-profile/save` requires the normal authenticated, active-session write contract,
+`Idempotency-Key`, and strict `SaveQuestionProfile`:
+`{ expected_revision: UUID | null, notice_version: "question-profile.1", settings }`.
+Settings contain en/zh-TW language, address_form, connection/talking_rhythm, avoid_topics, never_say,
+and at most 2 own-writing examples; **no intent, inferred attributes, or another person's messages**.
+Saves replace the current row, rotate its revision and set expiry to 30 days after this explicit save.
+The response is metadata only: `{ saved: true, revision, expires_at }`.
+`POST .../question-profile/forget` requires the same write authentication/key and strict empty `{}`.
+It immediately clears words/selections and rotates a content-free revision for 30 days to reject
+older saves. Returns `{ forgotten: true }`. Retrying a completed save returns only its receipt
+metadata and cannot restore deleted content; clients reload current state after acknowledgment.
+Use a new forget key after a new save. Both POSTs return `Idempotency-Replayed` and use runApiMutation.
+
+Errors: 400 malformed input/notice/key; 401 missing/revoked session; 404 unknown/other-family/self
+recipient or unavailable collection/admission/lifecycle; 409 standard idempotency conflict or
+`{ error: { code: "conflict", details: { reason: "question_profile_changed" }, ... } }` for a stale
+expected revision, expired or forgotten setup. Reload before retrying a version conflict. 429/503
+follow normal write limits/availability. Read and delete authorization failures stay opaque 404,
+rather than distinguishing someone else's private setup with 403.
+
+Reviewed drafting accepts optional `profile_revision`; it validates that own setup before and after
+AI work and echoes the revision on a review. ComposeAsk accepts `personal_profile_revision` and
+revalidates before scheduling, preserving AI-assisted provenance. Locally edited choices can still
+name their saved basis. No endpoint automatically loads choices into nightly generation. Forgetting
+choices does not cancel independently approved scheduled questions.
+
+`PERSONAL_QUESTION_PROFILES` and `PERSONAL_QUESTION_DRAFTS` are pinned OFF in all checked-in
+environments. Both refuse ON in production. Collection needs **both** switches, approved notice
+supplement and family notification; the draft supplement is not served. Encrypted content lives only
+in `question_profiles.data`; mutation receipts hold no notes. Expiry blocks read/use immediately;
+`applyRetention` deletes due rows. Scope/lifecycle database guards erase affected rows on member,
+account and family removal/withdrawal. Revision metadata has the same bounded expiry.

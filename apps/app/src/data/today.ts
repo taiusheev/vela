@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
-import type { ApiExchangeAudio, ExchangeType } from "@vela/contracts";
+import type { ApiExchangeAudio, ExchangeType, InterestTopic } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
+import { exampleNames } from "./example-names.ts";
 import { clockTime } from "./format.ts";
 import { reactionLine, replyLine } from "./lines.ts";
 
@@ -12,10 +13,14 @@ import { reactionLine, replyLine } from "./lines.ts";
  */
 
 export interface TodayLight {
+  /** The time of an explicit Not okay today; a reply, never a diagnosis or a resolved notice. */
+  notOkayAt?: string;
   connectionDays?: { date: string; hasMessage: boolean }[];
   memberId: string;
   displayName: string;
   timeZone?: string;
+  /** Topics she likes talking about, from setup, for the question ideas Ask offers. */
+  interests?: readonly InterestTopic[];
   localDate?: string;
   state: LightState;
   /** An answer arrived on this local day even when away/paused is the primary label. */
@@ -90,6 +95,8 @@ export interface TodayExchange {
    */
   unanswered?: string;
   replies: TodayReply[];
+  /** The reader already gave her answer a heart, here, in the chat or in the group. */
+  heartedByMe?: true;
   /** "Mom saw it · 8:12", shown only once she has. */
   receipt?: string;
   /** The ask's photos, in the order she saw them: a photo choice's first is her "1". */
@@ -163,7 +170,7 @@ export function todayFixture(): Today {
       {
         id: "x1",
         recipientId: "m1",
-        asker: "Mia",
+        asker: exampleNames().mia,
         recipient,
         ask: t`What did the garden look like this morning?`,
         answer: {
@@ -171,10 +178,14 @@ export function todayFixture(): Today {
           at: time,
         },
         replies: [
-          { from: "Mia", text: reactionLine("Mia", "heart") },
+          { from: exampleNames().mia, text: reactionLine(exampleNames().mia, "heart") },
           {
-            from: "Anna",
-            text: replyLine("Anna", "text", t`Those are the ones from the seeds you saved`),
+            from: exampleNames().anna,
+            text: replyLine(
+              exampleNames().anna,
+              "text",
+              t`Those are the ones from the seeds you saved`,
+            ),
           },
         ],
         receipt: t`${recipient} saw it · ${time}`,
@@ -184,7 +195,7 @@ export function todayFixture(): Today {
       {
         recipientId: "m1",
         recipient,
-        name: "Anna",
+        name: exampleNames().anna,
         mine: false,
         pending: false,
         suggestion: {
@@ -222,5 +233,29 @@ export function quietExampleFixture(): Today {
         replies: [],
       },
     ],
+  };
+}
+
+/** Synthetic explicit check-in, available only in the disconnected demo. */
+export function notOkayExampleFixture(): Today {
+  const day = todayFixture();
+  const her = day.lights[0];
+  if (her === undefined) return day;
+  const time = clockTime(10, 12);
+  return {
+    ...day,
+    lights: [
+      { ...her, notOkayAt: time, stateText: t`said she is not okay` },
+      ...day.lights.slice(1),
+    ],
+    exchanges: day.exchanges.map((exchange) =>
+      exchange.recipientId !== her.memberId
+        ? exchange
+        : {
+            ...exchange,
+            answer: { text: t`said she is not okay`, at: time },
+            replies: [],
+          },
+    ),
   };
 }

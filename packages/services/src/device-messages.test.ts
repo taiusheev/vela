@@ -82,14 +82,14 @@ async function send(input: Parameters<typeof deviceInboundEvent>[2]) {
 }
 
 describe("her phone on the parent surface", () => {
-  it("is asked for her yes when set up before it, in her language, with Yes and No", async () => {
+  it("is asked for her yes when set up before it, in her language, with its three choices", async () => {
     await setUpHerPhone();
 
     const [request] = await loadDeviceMessages(h.db, await her());
     expect(request?.kind).toBe("consent");
     // Who asks: the one who invited her, else the family, as on Telegram (no invite is seeded here).
     expect(request?.text).toContain("would like to keep a light on for you");
-    expect(request?.buttons.flat()).toHaveLength(2);
+    expect(request?.buttons.flat()).toHaveLength(3);
   });
 
   it("turns her light on when she taps Yes on her phone, as a Telegram tap would", async () => {

@@ -779,14 +779,6 @@ const PLAIN: readonly PlainItem[] = [
 ];
 
 /**
- * The bank questions Vela may offer chips for when it asks one itself (spec §5.3). A tapped chip is
- * posted to the family as her answer, word for word, so only questions whose answer is a choice
- * among common things she could truthfully pick are here: a season, a school subject, a big city or
- * a small town. A question about a person, a song, a book, a film or a place would need the model
- * to invent a name (tried on 13 October 2026: "Which teacher do you still remember?" drew "Mrs. Lee,
- * kind"), and her advice and know-how are hers to tell, which is why those questions are asked.
- */
-/**
  * Each item as the family writes it, by id: warm, first person, the way a grown child texts a parent
  * ("I realised I don't know what your very first job was"). Never "Mom" or a name, since the parent
  * may be a father or a grandparent and the reader's own word for them goes in front when they want
@@ -1195,21 +1187,6 @@ export const ASK_BANK: readonly AskBankItem[] = PLAIN.map((entry) => {
   }
   return { ...entry, child };
 });
-
-export const CHIP_QUESTIONS: ReadonlySet<string> = new Set([
-  "life.childhood.home",
-  "life.childhood.games",
-  "life.seasons.festival",
-  "life.childhood.toy",
-  "life.school.subject",
-  "life.friends.weekends",
-  "life.place.getting_around",
-  "opinions.change.better",
-  "opinions.taste.season",
-  "opinions.change.letters",
-  "opinions.taste.holiday",
-  "opinions.place.city",
-]);
 
 const BY_ID: ReadonlyMap<string, AskBankItem> = new Map(ASK_BANK.map((entry) => [entry.id, entry]));
 

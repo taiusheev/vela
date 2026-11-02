@@ -38,6 +38,18 @@ describe("private parent portraits", () => {
     expect(restarted.read("session-a", "family-b", "mom")).toBeNull();
     expect(restarted.read("session-a", "family-a", "dad")).toBeNull();
   });
+  it("keeps installed photos across normal teardown while blocking a late picker", () => {
+    const { files } = disk();
+    const first = new PortraitStore(files);
+    first.save("s", "f", "mom", "photo");
+    first.close("s");
+    expect(first.read("s", "f", "mom")).toBeNull();
+    expect(() => first.save("s", "f", "mom", "late")).toThrow("session ended");
+    const reopened = new PortraitStore(files);
+    expect(reopened.read("s", "f", "mom")).toBe("photo");
+    reopened.clear("s");
+    expect(new PortraitStore(files).read("s", "f", "mom")).toBeNull();
+  });
   it("clears unopened photos on sign-out and rejects a picker that returns after sign-out", () => {
     const { files, values } = disk();
     const store = new PortraitStore(files);

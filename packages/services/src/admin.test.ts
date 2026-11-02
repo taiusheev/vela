@@ -1876,10 +1876,12 @@ describe("sendWeeklyRead", () => {
           weekly_read_id: readId,
           week_start: WEEK_START,
           organisers: 2,
+          app_organisers: 0,
           lines: 2,
           suggestion: true,
           health_lines: 0,
           feedback: 0,
+          auto: false,
         },
       },
     ]);

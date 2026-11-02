@@ -16,6 +16,13 @@
  * `consent.no`, because a consent to carry words that may be medical must be given separately
  * (ADR-27); it says a no changes nothing else, so saying no is a free choice.
  *
+ * `consent.request_both` (`consent.request@3`, founder's decision of 22 Oct 2026) asks both in one
+ * message, so one tap answers: the health words are still their own, separate choice, with a yes to
+ * the light alone (`consent.light_only`) offered beside `consent.both` and `consent.no`, and the text
+ * says keeping them private changes nothing else. Its buttons are named in its text and fit LINE's
+ * 20-grapheme quick replies. `consent.request` and `consent.health_words` stay for messages sent
+ * before it, whose buttons still work.
+ *
  * `flag.notice_no_words` is the organisers' flag notice when she has not agreed to health words: her
  * name and nothing she said, no quote and no category, so it carries no health data and still gives
  * the organiser a reason to call.
@@ -56,9 +63,23 @@
  * she gets the lines about her week alone, and the organiser agreement, privacy notice, and consent
  * script tell the family so, so a heading that called them the whole read would be untrue.
  *
- * `arrival.hello_question` heads Vela's question from the question bank on a morning nobody in the
- * family asked (spec §4.5): she shares the answer with the family, and the question, not a person,
- * asks. `group.answer_question` shows the family the question her answer goes with.
+ * `arrival.hello_question` follows Vela's question from the question bank on a morning nobody in the
+ * family asked (spec §4.5), on the same line, as a short text reads: she tells Vela by voice, and
+ * Vela passes it on. The question, not a person, asks. `group.answer_question` shows the family the
+ * question her answer goes with.
+ *
+ * `ack.tap_*` thank her for a heart or "I'm fine" and ask, once, for a few words by voice (founder,
+ * 27 Oct 2026: a tap alone tells the family nothing). `ack.tap_asker` names who asked, so the wish to
+ * hear more is theirs; `ack.tap_question` is for Vela's own question and `ack.tap_hello` for the plain
+ * hello.
+ *
+ * With the check-in on (ADR-54), her morning carries no buttons and ends, on her first mornings, with
+ * `arrival.hint_words`. A morning still unanswered when the repeat is due gets `checkin.text` instead,
+ * with `button.okay` and `button.not_okay`. "Not okay" tells her organisers at once
+ * (`not_okay.notice`), the family's group sees `group.answer_not_okay`, and she is told who was told
+ * (`ack.not_okay`; when no organiser could be told, `ack.not_okay_founder` with the founder told by
+ * `admin.not_okay_nobody_told`, and `ack.not_okay_family`, which promises nothing, when nobody was). None of them
+ * names a feeling or a cause: she said only that she is not okay.
  *
  * A family member's ask reaches her as a note from them: their words exactly, signed below with
  * `arrival.signed`, as a message from her child reads, never under a "From" header or with a bot's
@@ -87,21 +108,21 @@ export const en = {
   "account_link.approve": "Connect my family",
   "account_link.refuse": "This wasn’t me",
   "account_link.approved":
-    "Telegram confirmed. Return to Vela on your iPhone to check your family and finish. No code to copy.",
-  "account_link.cancelled": "Connection cancelled. Your family and Telegram account are unchanged.",
+    "Confirmed. Return to Vela on your iPhone to check your family and finish. No code to copy.",
+  "account_link.cancelled": "Connection cancelled. Your family and this chat are unchanged.",
   "account_link.code":
-    "Enter this code in Vela to connect your Telegram account: {code}\nKeep it private; it expires soon.",
+    "Enter this code in Vela to connect this chat to the app: {code}\nKeep it private; it expires soon.",
   "account_link.unavailable":
-    "This account link could not be opened. Finish setting up your family in Telegram, then start a new link in Vela.",
+    "This account link could not be opened. Finish setting up your family in this chat, then start a new link in Vela.",
   "pilot.activation_wait":
-    "Your light is not on yet. Your family organiser needs an approved Telegram account that can receive messages. Please ask your organiser to finish setup, then try again.",
+    "Your light is not on yet. Your family organiser's setup is not finished: the family needs to be approved, and the organiser needs to be able to receive messages. Please ask your organiser to finish setup, then try again.",
   "pilot.invitation_only":
     "Vela’s English trial is invitation-only. Contact the founder for access. Your Telegram ID: {telegram_id}.",
   "arrival.greeting": "Good morning, {address}.",
   "arrival.greeting_2": "Morning, {address}!",
   "arrival.greeting_3": "Hello {address}, good morning.",
   "arrival.late": "Sorry this is late.",
-  "arrival.repeat": "In case you missed it:",
+  "arrival.repeat": "No rush — here’s the message from this morning.",
   "arrival.readback_heading": "From your family:",
   "arrival.signed": "— {asker}",
   "arrival.signed_on_behalf": "— {asker}, for {child}",
@@ -112,9 +133,20 @@ export const en = {
   "arrival.photo_choice": "Which one? Tap 1 or 2.",
   "arrival.vote": "Tap one.",
   "arrival.hello": "How are you this morning?",
-  "arrival.hello_signature": "— Vela, for your family",
-  "arrival.hello_question": "Something to share with the family today:",
-  "arrival.hint": "Reply with a voice message, or tap a button.",
+  "arrival.hello_signature": "— Vela",
+  "arrival.hello_question": "Tell me in a voice message, and I'll pass it on to the family.",
+  "photo_box.look": "A new photo from your family. What does it make you think of?",
+  "photo_box.look_caption":
+    "A new photo from your family: “{caption}”. What does it make you think of?",
+  "photo_box.story": "An old photo from your family. What do you remember about it?",
+  "photo_box.story_caption":
+    "An old photo from your family: “{caption}”. What do you remember about that time?",
+  "photo_box.choice": "Two new photos from your family. Which one do you like more?",
+  "arrival.hint": "A voice message is the nicest reply. Busy? Tap ❤️.",
+  "arrival.hint_words": "Reply with a voice message, or write a few words.",
+  "checkin.text": "Hi {address}, just checking in. How are you today?",
+  "button.okay": "🙂 I'm okay",
+  "button.not_okay": "Not okay, tell my family",
   "button.fine": "I'm fine",
   "button.heart": "❤️",
   "button.choice": "{n}",
@@ -123,6 +155,18 @@ export const en = {
   "ack.thanks_3": "Thank you, {address}. Your family will have it in a moment.",
   "ack.thanks_4": "Thank you, {address}. Passing it on to the family now.",
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
+  "ack.not_okay":
+    "Thank you for telling me, {address}. I've let {names} know right now. If it's an emergency, call for help directly.",
+  "ack.not_okay_founder":
+    "Thank you for telling me, {address}. I couldn't reach your family through Vela just now, so I've asked Vela's team to contact them. If it's an emergency, call for help directly.",
+  "ack.not_okay_family":
+    "Thank you for telling me, {address}. Please call your family. If it's an emergency, call for help directly.",
+  "ack.tap_asker":
+    "Thank you, {address} ❤️ {asker} would love to hear a bit more. When you have a minute, send a short voice message?",
+  "ack.tap_question":
+    "Thank you, {address} ❤️ When you have a minute, tell the family your answer in a short voice message. They'd love to hear it.",
+  "ack.tap_hello":
+    "Thank you, {address} ❤️ What are you up to today? Send the family a short voice message if you like.",
   "book.dont_keep": "Don't keep this one",
   "book.dropped": "That's fine. This story is no longer in the family book.",
   "recipe.offer":
@@ -140,16 +184,33 @@ export const en = {
   "readback.reactions": "{names} sent {emoji}",
   "consent.invalid_link":
     "This link is no longer valid. Please ask the person who sent it for a new one.",
-  "consent.already_linked": "This Telegram account is already connected to another family on Vela.",
+  "consent.already_linked": "This account is already connected to another family on Vela.",
   "consent.request":
     "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time. Vela is run by Timur Aiusheev. How your information is used: {notice}",
   "consent.health_words":
     "One more question. If you mention your health, for example a fall or pain, may Vela pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once? Vela works the same if you say no.",
+  "consent.request_both":
+    "{organiser} would like to keep a light on for you. Every morning someone in the family will ask you something, and when you answer, they will know you are fine. If a morning goes unanswered, {organiser} will get a quiet note so they can call. You can say stop at any time.\n\nYour health words are a separate choice. If you mention your health, for example a fall or pain, Vela can pass your words on to {organiser} so they can call you, and say in the Sunday read which of them came up more than once. Vela works the same if you keep them private.\n\nTap “Yes to both”, “Yes, health private” to keep your health words to yourself, or “No, thank you”. Vela is run by Timur Aiusheev. How your information is used: {notice}",
+  "consent.both": "Yes to both",
+  "consent.light_only": "Yes, health private",
+  "memory.told":
+    "{organiser} kept one of your answers as a memory, so it won't be deleted after 30 days. Your family can keep the answers they want to remember. To stop this and remove what was kept, write “memories off”.",
+  "memory.off_done":
+    "Done. Your answers will no longer be kept as memories, and what was kept is removed. Your ordinary chats stay the same. To let your family keep answers again, write “memories on”.",
+  "memory.on_done":
+    "Done. Your family can keep your answers as memories again. To stop, write “memories off”.",
+  "memory.gone":
+    "You don't need to do anything here. Your family keeps memories in their app. To stop it, write “memories off”.",
   "consent.yes": "Yes, that's fine",
   "consent.no": "No, thank you",
-  "consent.accepted": "Thank you. Your first morning arrives tomorrow at {time}.",
+  "consent.accepted":
+    "Thank you. {organiser} will be so glad. Your first morning message arrives tomorrow at {time}.",
+  "consent.accepted_first":
+    "Thank you. {organiser} will be so glad. {organiser} has a first message for you, coming now. After that, a message arrives every morning at {time}, starting tomorrow.",
   "consent.declined": "That's fine. Nothing will arrive.",
   "organiser.consent_given": "{name} said yes. The first morning arrives tomorrow at {time}.",
+  "organiser.consent_given_first":
+    "{name} said yes, and your first message is on its way to {name} now. The mornings start tomorrow at {time}.",
   "organiser.consent_declined": "{name} said no for now. Nothing will be sent.",
   "invite.for_her":
     "Hello {name}, it is {organiser}. I would like to keep a light on for you: one small question from the family each morning. Open this to hear about it, and say yes if you would like it: {link} You can say stop at any time.",
@@ -180,6 +241,7 @@ export const en = {
   "group.ask_from_app": "{asker} asked {name} something for tomorrow morning.",
   "group.answer_light": "☀️ {name} answered {asker} · {time}",
   "group.answer_hello": "☀️ {name} is fine · {time}",
+  "group.answer_not_okay": "⚠️ {name} isn't feeling okay · {time}",
   "group.answer_question": "☀️ {name} answered today's question from Vela · {time}\n“{question}”",
   "group.answer_question_tap":
     "Vela asked: “{question}” Reply here to ask it yourself: a reply is the first thing {name} gets tomorrow morning.",
@@ -204,11 +266,15 @@ export const en = {
   "quiet.resolved_away": "{organiser} says {name} is away.",
   "delivery.failed": "We couldn't reach {name} on {channel} today. Nothing else is known.",
   "flag.notice": '{name} said something you may want to hear: "{quote}"',
+  "not_okay.notice":
+    '⚠️ {name} tapped "Not okay" at {time}, on Vela\'s check-in. Please call {name} as soon as you can.',
   "flag.notice_no_words": "{name} said something today that may be worth a call.",
+  "push.not_okay": "{name} asked for the family on Vela. Please call {name} now.",
   "push.quiet_notice":
     "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
   "push.answer_receipt": "{name} answered you.",
   "push.turn_prompt": "Tomorrow morning is yours: ask {name} something.",
+  "push.weekly_read": "{name}'s weekly read is here.",
   "away.confirmed": "Until {date}, then. Have a lovely time.",
   "away.confirmed_open": "Understood. Have a lovely time.",
   "weekly_read.answered": "{name} answered {answered} of {days} days.",
@@ -301,8 +367,16 @@ export const en = {
   "onboarding.done":
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
   "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
+  "admin.weekly_read_sent": "Weekly read for {family} was sent to the family: {link}",
   "admin.flag": "Flag in {family}. Open: {link}",
+  "admin.quiet_reminder":
+    "Nobody has acted on {name}'s quiet notice in {family} for 2 hours. It went to the organisers again. Open: {link}",
+  "admin.not_okay": '"Not okay" tapped in {family}. Open: {link}',
+  "admin.not_okay_nobody_told":
+    'URGENT: "Not okay" tapped in {family}, and no organiser could be told. Please contact the family now. Open: {link}',
   "admin.understand_failed": "Could not read an answer in {family} after three tries. Open: {link}",
+  "admin.family_waiting":
+    "{name} in {family} tapped yes, but the light cannot start yet: approve the family on the trial roster, and check the organiser has had a message from Vela. Then ask {name} to tap yes again. Open: {link}",
   "admin.member_left_group": "{name} left the family group in {family}. Nothing changed for them.",
   "admin.organisers_unreachable":
     "{name} can no longer be told anything in {family}, and no other organiser can: nobody will hear if a light there goes quiet. Open: {link}",

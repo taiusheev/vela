@@ -53,7 +53,13 @@ export const SAFE_DEFAULTS: {
   weekly_read: (input) => ({
     lines: [],
     suggestion: genericWeeklySuggestion(input.lang, input.elderName),
+    // The generic ask grows from no particular day.
+    suggestionDay: null,
   }),
   // No reading and no feedback: the read goes out as it would without ADR-48.
   weekly_insight: () => ({ readings: [], feedback: [] }),
+  // Nothing picked: no suggestion is offered, which is always safe.
+  memory_pick: () => ({ picks: [] }),
+  // No story: her moments stay as they are, which is always safe.
+  story_weave: () => ({ stories: [] }),
 };

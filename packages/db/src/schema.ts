@@ -73,6 +73,7 @@ import {
   EVENT_NAMES,
   EXCHANGE_STATES,
   EXCHANGE_TYPES,
+  FAMILY_MEMORY_KINDS,
   INTEREST_TOPICS,
   KEPT_LIGHT_RELATIONSHIPS,
   LANGS,
@@ -86,6 +87,7 @@ import {
   PUSH_PERMISSIONS,
   PUSH_PLATFORMS,
   QUIET_OUTCOMES,
+  type QuestionProfileSettings,
   REACTION_KINDS,
   REGIONS,
   REPLY_KINDS,
@@ -170,6 +172,8 @@ export const CONSENT_PROOF_KEYS = ["chat_id", "message_id", "text_sha256", "reco
 export const SUBSCRIPTION_PROVIDERS = ["trial", "stripe", "revenuecat", "manual"] as const;
 export { SUBSCRIPTION_STATUSES };
 export const PLAN_INTERVALS = ["month", "year"] as const;
+/** A photo in the family's photo box (ADR-58): one from today, or one from long ago. */
+export const PHOTO_BOX_ERAS = ["new", "old"] as const;
 
 type JsonObject = Record<string, unknown>;
 
@@ -210,9 +214,14 @@ export const users = pgTable(
      * the turn prompt). It never stops the quiet notice or its close.
      */
     oneMomentADay: boolean("one_moment_a_day").notNull().default(true),
+    /** Account-owned routine alert choices, cleared on deletion; never affect Vela Light. */
+    replyNotifications: boolean("reply_notifications").notNull().default(true),
+    turnReminders: boolean("turn_reminders").notNull().default(true),
     /** Current app permission evidence, never a parent’s or health consent. Cleared with account deletion. */
     privacyAcceptance: jsonb("privacy_acceptance").$type<{
       version: string;
+      /** The language the permission was shown in; absent on acceptances before it was recorded. */
+      lang?: string;
       text_sha256: string;
       accepted_at: string;
     }>(),
@@ -259,6 +268,8 @@ export const members = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     /** NULL for members reached only through a channel. */
     userId: uuid("user_id").references(() => users.id),
+    /** Sharing identity epoch, rotated by database guards on departure or account change. */
+    memoryMembershipRevision: uuid("memory_membership_revision").notNull().default(sql`uuidv7()`),
     role: text("role", { enum: ROLES }).notNull().default("member"),
     /** The organiser who pays. */
     billing: boolean("billing").notNull().default(false),
@@ -318,6 +329,11 @@ export const members = pgTable(
     }),
     /** {median_latency_min, late_latency_min, sunday_median_min, n_days, updated_at} */
     answerStats: jsonb("answer_stats").$type<JsonObject>().notNull().default({}),
+    /**
+     * Her "memories off" (ADR-50): nothing of hers is kept past 30 days or suggested for keeping
+     * while it is set; "memories on" clears it.
+     */
+    memoriesOffAt: timestamptz("memories_off_at"),
     createdAt: createdAt(),
     /** Data is deleted 30 days later by the retention job. */
     leftAt: timestamptz("left_at"),
@@ -336,6 +352,48 @@ export const members = pgTable(
     check("members_reply_ways_check", isSubsetOf(t.replyWays, REPLY_WAYS)),
     check("members_status_check", isOneOf(t.status, MEMBER_STATUSES)),
     check("members_primary_surface_check", isOneOf(t.primarySurface, SURFACES)),
+  ],
+);
+
+/** Private, explicitly saved drafting choices. Null data is a content-free deletion revision. */
+export const questionProfiles = pgTable(
+  "question_profiles",
+  {
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: uuid("revision").notNull().default(sql`uuidv7()`),
+    data: sealedJsonb<QuestionProfileSettings>("question_profiles.data"),
+    noticeVersion: text("notice_version").notNull(),
+    changedAt: timestamptz("changed_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (t) => [
+    primaryKey({
+      name: "question_profiles_pkey",
+      columns: [t.familyId, t.authorId, t.recipientId],
+    }),
+    index("question_profiles_expiry_idx").on(t.expiresAt),
+    index("question_profiles_recipient_idx").on(t.recipientId),
+    index("question_profiles_owner_idx").on(t.ownerUserId),
+    check("question_profiles_distinct_people", sql`${t.authorId} <> ${t.recipientId}`),
+    check(
+      "question_profiles_bounded_retention",
+      sql`${t.expiresAt} > ${t.changedAt} and ${t.expiresAt} <= ${t.changedAt} + interval '720 hours'`,
+    ),
+    check(
+      "question_profiles_data_object",
+      sql`${t.data} is null or jsonb_typeof(${t.data}) = 'object'`,
+    ),
   ],
 );
 
@@ -694,6 +752,8 @@ export const answers = pgTable(
      */
     processingAttempts: smallint("processing_attempts").notNull().default(0),
     receivedAt: timestamptz("received_at").notNull().defaultNow(),
+    /** Only ordinary 30-day retention sets this, atomically with clearing the source words. */
+    wordsExpiredAt: timestamptz("words_expired_at"),
   },
   (t) => [
     unique("answers_channel_external_id_key").on(t.channel, t.externalId),
@@ -915,6 +975,211 @@ export const memoryFacts = pgTable(
   ],
 );
 
+/**
+ * Pending conversational selections, not long-term book entries. No quote copy; the sealed digest
+ * binds offsets to a source version. Dismissal remains until expiry to prevent rediscovery.
+ */
+export const memoryCandidates = pgTable(
+  "memory_candidates",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    sourceAnswerId: uuid("source_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    consentId: uuid("consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: FAMILY_MEMORY_KINDS }).notNull(),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    sourceDigest: sealedText("memory_candidates.source_digest").notNull(),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    dismissedAt: timestamptz("dismissed_at"),
+    /** Never rediscover or replay success for a saved quote that a privacy guard removed. */
+    keptAt: timestamptz("kept_at"),
+  },
+  (t) => [
+    unique("memory_candidates_source_span_key").on(t.sourceAnswerId, t.start, t.end),
+    index("memory_candidates_family_page_idx").on(t.familyId, t.id),
+    index("memory_candidates_member_idx").on(t.memberId),
+    index("memory_candidates_consent_idx").on(t.consentId),
+    index("memory_candidates_expiry_idx").on(t.expiresAt),
+    check("memory_candidates_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
+    check(
+      "memory_candidates_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
+    check("memory_candidates_expiry_check", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
+/** Explicitly chosen exact words only. Database guards in sql/memory-keep-guards.sql invalidate
+ * copies on correction/withdrawal; ordinary source expiry is marked on answers separately. */
+export const memoryKeeps = pgTable(
+  "memory_keeps",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    candidateId: uuid("candidate_id").references(() => memoryCandidates.id, {
+      onDelete: "set null",
+    }),
+    sourceAnswerId: uuid("source_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    discoveryConsentId: uuid("discovery_consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    keepConsentId: uuid("keep_consent_id")
+      .notNull()
+      .references(() => consents.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: FAMILY_MEMORY_KINDS }).notNull(),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    quote: sealedText("memory_keeps.quote").notNull(),
+    sourceDigest: sealedText("memory_keeps.source_digest").notNull(),
+    lang: text("lang").notNull(),
+    occurredAt: timestamptz("occurred_at").notNull(),
+    keptAt: timestamptz("kept_at").notNull(),
+    /** Rotated on stop-sharing; old presentations and retries cannot restore permissions. */
+    sharingRevision: uuid("sharing_revision").notNull().default(sql`uuidv7()`),
+    /** ID-only retry tombstone: quote and digest are blanked in the same transaction. */
+    removedAt: timestamptz("removed_at"),
+  },
+  (t) => [
+    unique("memory_keeps_source_span_key").on(t.sourceAnswerId, t.start, t.end),
+    unique("memory_keeps_candidate_key").on(t.candidateId),
+    index("memory_keeps_family_page_idx").on(t.familyId, t.id),
+    index("memory_keeps_member_idx").on(t.memberId),
+    index("memory_keeps_discovery_consent_idx").on(t.discoveryConsentId),
+    index("memory_keeps_keep_consent_idx").on(t.keepConsentId),
+    index("memory_keeps_removed_idx").on(t.removedAt),
+    check("memory_keeps_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
+    check(
+      "memory_keeps_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
+  ],
+);
+
+/** Short-lived, content-free pending choice. Recipient IDs are the explicit selected set,
+ * never a family-wide flag; member guards purge array references on departure/deletion. */
+export const memorySharingPresentations = pgTable(
+  "memory_sharing_presentations",
+  {
+    id: uuidv7Id(),
+    keepId: uuid("keep_id")
+      .notNull()
+      .references(() => memoryKeeps.id, { onDelete: "cascade" }),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerMembershipRevision: uuid("owner_membership_revision").notNull(),
+    recipientIds: uuid("recipient_ids").array().notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    consumedAt: timestamptz("consumed_at"),
+  },
+  (t) => [
+    index("memory_sharing_presentations_keep_idx").on(t.keepId),
+    index("memory_sharing_presentations_owner_idx").on(t.ownerUserId),
+    index("memory_sharing_presentations_recipients_idx").using("gin", t.recipientIds),
+    index("memory_sharing_presentations_expiry_idx").on(t.expiresAt),
+    check(
+      "memory_sharing_presentations_fingerprint_check",
+      sql`${t.fingerprint} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      "memory_sharing_presentations_audience_check",
+      sql`cardinality(${t.recipientIds}) between 1 and 50 and array_position(${t.recipientIds}, null) is null`,
+    ),
+    check(
+      "memory_sharing_presentations_timing_check",
+      sql`${t.expiresAt} = ${t.issuedAt} + interval '5 minutes' and (${t.consumedAt} is null or (${t.consumedAt} >= ${t.issuedAt} and ${t.consumedAt} < ${t.expiresAt}))`,
+    ),
+  ],
+);
+
+/**
+ * The memory-suggestion question as one person was shown it: a one-use, five-minute presentation
+ * bound to their membership revision and the exact text hash. No answer is stored here; the answer
+ * is a `consents` row. Withdrawal and membership changes delete pending presentations.
+ */
+export const memoryPermissionPresentations = pgTable(
+  "memory_permission_presentations",
+  {
+    id: uuidv7Id(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    membershipRevision: uuid("membership_revision").notNull(),
+    textVersion: text("text_version").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    lang: text("lang").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    consumedAt: timestamptz("consumed_at"),
+  },
+  (t) => [
+    index("memory_permission_presentations_member_idx").on(t.memberId),
+    index("memory_permission_presentations_user_idx").on(t.userId),
+    index("memory_permission_presentations_expiry_idx").on(t.expiresAt),
+    check("memory_permission_presentations_sha_check", sql`${t.textSha256} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "memory_permission_presentations_timing_check",
+      sql`${t.expiresAt} = ${t.issuedAt} + interval '5 minutes' and (${t.consumedAt} is null or (${t.consumedAt} >= ${t.issuedAt} and ${t.consumedAt} < ${t.expiresAt}))`,
+    ),
+  ],
+);
+
+/** One named person's permission, with no quote or name copy. Not read by any app/API path yet. */
+export const memoryShares = pgTable(
+  "memory_shares",
+  {
+    id: uuidv7Id(),
+    keepId: uuid("keep_id")
+      .notNull()
+      .references(() => memoryKeeps.id, { onDelete: "cascade" }),
+    recipientMemberId: uuid("recipient_member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    recipientUserId: uuid("recipient_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientMembershipRevision: uuid("recipient_membership_revision").notNull(),
+    sharingRevision: uuid("sharing_revision").notNull(),
+    presentationId: uuid("presentation_id").references(() => memorySharingPresentations.id, {
+      onDelete: "set null",
+    }),
+    confirmationVersion: text("confirmation_version").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    grantedAt: timestamptz("granted_at").notNull(),
+  },
+  (t) => [
+    unique("memory_shares_keep_recipient_key").on(t.keepId, t.recipientMemberId),
+    index("memory_shares_recipient_idx").on(t.recipientMemberId),
+    index("memory_shares_user_idx").on(t.recipientUserId),
+    index("memory_shares_presentation_idx").on(t.presentationId),
+    check("memory_shares_fingerprint_check", sql`${t.fingerprint} ~ '^[0-9a-f]{64}$'`),
+  ],
+);
+
 export const reminders = pgTable(
   "reminders",
   {
@@ -1035,11 +1300,166 @@ export const bookEntries = pgTable(
       .unique("book_entries_exchange_id_key")
       .references(() => exchanges.id, { onDelete: "cascade" }),
     keptAt: timestamptz("kept_at").notNull(),
+    /**
+     * The organiser who tapped "Keep" on an ordinary answer (ADR-50); null for a story the book
+     * keeps by default (ADR-39), or once that organiser's member row is gone.
+     */
+    keptBy: uuid("kept_by").references(() => members.id, { onDelete: "set null" }),
     removedAt: timestamptz("removed_at"),
     /** Who removed it: her own "don't keep that one", or an organiser; null while it is kept. */
     removedBy: uuid("removed_by").references(() => members.id, { onDelete: "set null" }),
   },
   (t) => [index("book_entries_family_idx").on(t.familyId, t.keptAt)],
+);
+
+/**
+ * An answer Vela suggests the organisers keep (ADR-50): one per exchange, pointing at the phrase
+ * the memory model picked by offsets into her answer, with no copy of her words. It goes with the
+ * answer (cascade) and expires with its 30 days; "Not this one" dismisses it for good.
+ */
+export const keepSuggestions = pgTable(
+  "keep_suggestions",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Whose answer: the kept-light member. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .unique("keep_suggestions_exchange_id_key")
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+    answerId: uuid("answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    start: integer("start_offset").notNull(),
+    end: integer("end_offset").notNull(),
+    /** What the memory model saw in the phrase (a story, something she likes…); null before it. */
+    kind: text("kind"),
+    createdAt: createdAt(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    dismissedAt: timestamptz("dismissed_at"),
+    dismissedBy: uuid("dismissed_by").references(() => members.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    index("keep_suggestions_family_idx").on(t.familyId, t.createdAt),
+    index("keep_suggestions_answer_idx").on(t.answerId),
+    index("keep_suggestions_expiry_idx").on(t.expiresAt),
+    check(
+      "keep_suggestions_offsets_check",
+      sql`${t.start} >= 0 and ${t.end} > ${t.start} and ${t.end} - ${t.start} <= 2000`,
+    ),
+    check("keep_suggestions_kind_check", isOneOf(t.kind, FAMILY_MEMORY_KINDS)),
+  ],
+);
+
+/**
+ * A story Vela gathered from her own words (ADR-51): two to five of her memories on one subject,
+ * told across mornings. It holds no words of hers: its title points by offsets at a phrase in one
+ * of its answers, and its moments are those answers' exchanges, so a story fades with them and is
+ * kept when the family keeps them. Gone with her family, her member row or "memories off".
+ */
+export const memoryStories = pgTable(
+  "memory_stories",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** Whose words: the kept-light member. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    /** The answer whose phrase is the story's title. */
+    titleAnswerId: uuid("title_answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    titleStart: integer("title_start").notNull(),
+    titleEnd: integer("title_end").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("memory_stories_family_idx").on(t.familyId, t.createdAt),
+    index("memory_stories_member_idx").on(t.memberId),
+    index("memory_stories_title_answer_idx").on(t.titleAnswerId),
+    check(
+      "memory_stories_title_check",
+      sql`${t.titleStart} >= 0 and ${t.titleEnd} > ${t.titleStart} and ${t.titleEnd} - ${t.titleStart} <= 200`,
+    ),
+  ],
+);
+
+/** One memory in a story: an exchange is in one story at most, which keeps two weavings apart. */
+export const memoryStoryMoments = pgTable(
+  "memory_story_moments",
+  {
+    storyId: uuid("story_id")
+      .notNull()
+      .references(() => memoryStories.id, { onDelete: "cascade" }),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .unique("memory_story_moments_exchange_id_key")
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ name: "memory_story_moments_pkey", columns: [t.storyId, t.exchangeId] })],
+);
+
+/**
+ * The family's photo box (ADR-58): photos the family added once, which Vela turns into her free
+ * mornings. A photo here has no deletion date (`media.expires_at` null) and lives under `book/`,
+ * which no bucket rule clears; taking it out of the box gives it its deletion date again.
+ */
+export const photoBox = pgTable(
+  "photo_box",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    mediaId: uuid("media_id")
+      .notNull()
+      .unique("photo_box_media_id_key")
+      .references(() => media.id, { onDelete: "cascade" }),
+    era: text("era", { enum: PHOTO_BOX_ERAS }).notNull(),
+    /** The family's one line about the photo, in their words; null when they wrote none. */
+    caption: sealedText("photo_box.caption"),
+    addedBy: uuid("added_by").references(() => members.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("photo_box_family_idx").on(t.familyId, t.createdAt),
+    check("photo_box_era_check", isOneOf(t.era, PHOTO_BOX_ERAS)),
+  ],
+);
+
+/**
+ * A morning Vela made from the photo box (ADR-58): which of her mornings, and which box photos it
+ * showed. A photo taken out of the box leaves its uses behind (`box_id` null), so her rhythm of
+ * picture mornings still counts the morning.
+ */
+export const photoBoxUses = pgTable(
+  "photo_box_uses",
+  {
+    id: uuidv7Id(),
+    exchangeId: uuid("exchange_id")
+      .notNull()
+      .references(() => exchanges.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    boxId: uuid("box_id").references(() => photoBox.id, { onDelete: "set null" }),
+    /** Her local day of the morning. */
+    localDay: date("local_day").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("photo_box_uses_member_day_idx").on(t.memberId, t.localDay),
+    index("photo_box_uses_box_idx").on(t.boxId),
+    index("photo_box_uses_exchange_idx").on(t.exchangeId),
+  ],
 );
 
 export const weeklyReads = pgTable(
@@ -1063,7 +1483,8 @@ export const weeklyReads = pgTable(
     suggestion: sealedText("weekly_reads.suggestion"),
     /**
      * {answered_days, counted_days, hello_mornings, family_asks, usual_time, topics[], patterns[],
-     * family_patterns[]} (reads before ADR-46: drift_min and voice_len_drift instead of the patterns).
+     * family_patterns[], suggestion_day} (reads before ADR-46: drift_min and voice_len_drift instead
+     * of the patterns; suggestion_day, the answered day the suggestion grows from, since weekly_read.v6).
      * The first four are the counts `renderWeeklyRead` in @vela/core writes for organisers, followed
      * by the family patterns; the model never writes a count, and she never sees one or a family
      * pattern (spec §8, §13). No health word and no mood label is ever stored here.
@@ -1349,6 +1770,8 @@ export const consents = pgTable(
   },
   (t) => [
     index("consents_subject_ref_idx").on(t.subjectRef),
+    index("consents_member_latest_idx").on(t.memberId, t.kind, t.givenAt, t.id),
+    index("consents_kind_withdrawn_idx").on(t.kind, t.withdrawnAt),
     check("consents_kind_check", isOneOf(t.kind, CONSENT_KINDS)),
     check("consents_answer_check", isOneOf(t.answer, CONSENT_ANSWERS)),
     // A reference that names another subject than the row's own member or contact would make the
@@ -1615,6 +2038,19 @@ export const pilotRoster = pgTable(
   ],
 );
 
+/**
+ * The closed test's approved families (ADR-52), approved and removed by the founder on the admin
+ * page, each change in `admin_access_log`. With `PILOT_ADMISSION` on and family approval on, a
+ * family takes part, on any messenger, when listed here; everyone who joins it by its invite takes
+ * part with it. Deleting the family removes its row.
+ */
+export const pilotFamilies = pgTable("pilot_families", {
+  familyId: uuid("family_id")
+    .primaryKey()
+    .references(() => families.id, { onDelete: "cascade" }),
+  approvedAt: timestamptz("approved_at").notNull().defaultNow(),
+});
+
 /** The job types a queue carries, as the pilot Worker's queue handler reads them. */
 export const DEAD_LETTER_JOB_TYPES = [
   "deliver",
@@ -1793,6 +2229,7 @@ export type NewOnboardingSession = typeof onboardingSessions.$inferInsert;
 export type NearbyContact = typeof nearbyContacts.$inferSelect;
 export type NewNearbyContact = typeof nearbyContacts.$inferInsert;
 export type Media = typeof media.$inferSelect;
+export type PhotoBoxRow = typeof photoBox.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
 export type Exchange = typeof exchanges.$inferSelect;
 export type NewExchange = typeof exchanges.$inferInsert;
@@ -1820,6 +2257,7 @@ export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type QuietEvent = typeof quietEvents.$inferSelect;
 export type BookEntry = typeof bookEntries.$inferSelect;
+export type KeepSuggestion = typeof keepSuggestions.$inferSelect;
 export type NewQuietEvent = typeof quietEvents.$inferInsert;
 export type AwayPeriod = typeof awayPeriods.$inferSelect;
 export type NewAwayPeriod = typeof awayPeriods.$inferInsert;
@@ -1856,3 +2294,94 @@ export type WaitlistSignup = typeof waitlistSignups.$inferSelect;
 export type DeadLetter = typeof deadLetters.$inferSelect;
 export type MetricsDaily = typeof metricsDaily.$inferSelect;
 export type NewMetricsDaily = typeof metricsDaily.$inferInsert;
+
+/** Private-test report metadata only. Quotes are rebuilt from live sources, never copied here.
+ * Permission/presentation/selection rows cascade with their author, source or family.
+ */
+export const weeklySupportPermissions = pgTable(
+  "weekly_support_permissions",
+  {
+    memberId: uuid("member_id")
+      .primaryKey()
+      .references(() => members.id, { onDelete: "cascade" }),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    revision: uuid("revision").notNull(),
+    ownerRevision: uuid("owner_revision").notNull(),
+    version: text("version").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    state: text("state", { enum: ["yes", "no", "withdrawn"] }).notNull(),
+    audience: sealedJsonb("weekly_support_permissions.audience")
+      .$type<{ id: string; revision: string; userId: string | null; name: string }[]>()
+      .notNull(),
+    givenAt: timestamptz("given_at").notNull(),
+  },
+  (t) => [
+    check("weekly_support_permissions_state_check", sql`${t.state} in ('yes', 'no', 'withdrawn')`),
+  ],
+);
+
+export const weeklySupportPresentations = pgTable(
+  "weekly_support_presentations",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerRevision: uuid("owner_revision").notNull(),
+    textSha256: text("text_sha256").notNull(),
+    permissionRevision: uuid("permission_revision"),
+    audience: sealedJsonb("weekly_support_presentations.audience")
+      .$type<{ id: string; revision: string; userId: string | null; name: string }[]>()
+      .notNull(),
+    issuedAt: timestamptz("issued_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+    usedAt: timestamptz("used_at"),
+  },
+  (t) => [index("weekly_support_presentations_expiry_idx").on(t.expiresAt)],
+);
+
+export const weeklySupportSelections = pgTable(
+  "weekly_support_selections",
+  {
+    id: uuidv7Id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    answerId: uuid("answer_id")
+      .notNull()
+      .references(() => answers.id, { onDelete: "cascade" }),
+    permissionRevision: uuid("permission_revision").notNull(),
+    sourceDigest: sealedText("weekly_support_selections.source_digest").notNull(),
+    templateVersion: text("template_version").notNull(),
+    kind: text("kind", { enum: ["shared_interest", "company", "practical_help"] }).notNull(),
+    reviewerId: uuid("reviewer_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    reviewerRevision: uuid("reviewer_revision").notNull(),
+    reviewedAt: timestamptz("reviewed_at").notNull(),
+    expiresAt: timestamptz("expires_at").notNull(),
+  },
+  (t) => [
+    unique("weekly_support_member_answer_key").on(t.memberId, t.answerId),
+    index("weekly_support_selection_expiry_idx").on(t.expiresAt),
+    check(
+      "weekly_support_selections_kind_check",
+      sql`${t.kind} in ('shared_interest', 'company', 'practical_help')`,
+    ),
+  ],
+);
