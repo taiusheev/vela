@@ -177,6 +177,7 @@ function useSignInGuard(parent: boolean | undefined): void {
 
 function Root() {
   const { settled } = useAppLocale();
+  const { scheme } = useTheme();
   const [ready, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -196,11 +197,20 @@ function Root() {
 
   if (Platform.OS !== "web" && (!settled || (!ready && fontError === null))) return null;
 
-  return <Navigation />;
+  // The account gate settles before navigation mounts, so a new sign-in cannot show questions
+  // behind a loading modal or start navigation transitions beneath a native presentation.
+  return (
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <AppPrivacyGate>
+        <Navigation />
+      </AppPrivacyGate>
+    </>
+  );
 }
 
 function Navigation() {
-  const { palette, scheme } = useTheme();
+  const { palette } = useTheme();
   const parent = useParentMode();
   const segments = useSegments();
   useSignInGuard(parent);
@@ -212,34 +222,31 @@ function Navigation() {
 
   return (
     <>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <AppPrivacyGate>
-        <UsageAnalytics />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            headerStyle: { backgroundColor: palette.bg },
-            headerTintColor: palette.ink,
-            headerShadowVisible: false,
-            headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
-            contentStyle: { backgroundColor: palette.bg },
-          }}
-          // The tab group keeps its bar full width and centres each tab page itself.
-          screenLayout={({ route, children }) =>
-            route.name === "(tabs)" ? children : <ReadingColumn>{children}</ReadingColumn>
-          }
-        >
-          {/* Short tasks slide up as sheets: known here, before they open, so the phone animates
+      <UsageAnalytics />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: palette.bg },
+          headerTintColor: palette.ink,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 17 },
+          contentStyle: { backgroundColor: palette.bg },
+        }}
+        // The tab group keeps its bar full width and centres each tab page itself.
+        screenLayout={({ route, children }) =>
+          route.name === "(tabs)" ? children : <ReadingColumn>{children}</ReadingColumn>
+        }
+      >
+        {/* Short tasks slide up as sheets: known here, before they open, so the phone animates
               them as sheets and a swipe down closes them. */}
-          {SHEET_ROUTES.map((name) => (
-            <Stack.Screen
-              key={name}
-              name={name}
-              options={{ presentation: "modal", headerShown: true }}
-            />
-          ))}
-        </Stack>
-      </AppPrivacyGate>
+        {SHEET_ROUTES.map((name) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            options={{ presentation: "modal", headerShown: true }}
+          />
+        ))}
+      </Stack>
     </>
   );
 }
