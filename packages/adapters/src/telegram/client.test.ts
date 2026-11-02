@@ -1,5 +1,6 @@
 import { ChannelSendError } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
+import { chunkedBody } from "../testing.ts";
 import { createTelegramClient, type TelegramClient } from "./client.ts";
 import {
   createRecordingFetch,
@@ -209,5 +210,92 @@ describe("Bot API error mapping", () => {
     );
     expect(error.code).toBe("not_found");
     expect(error.message).not.toContain(TEST_BOT_TOKEN);
+  });
+});
+
+// The isolate has 128 MB, so a download is read piece by piece and dropped as soon as it passes
+// its limit, whether or not Telegram declared its length.
+describe("file downloads", () => {
+  const download = (client: TelegramClient) => client.downloadFile("voice/file_12.oga", 1024);
+
+  it("stops reading a body with no declared length as soon as it passes the limit", async () => {
+    const body = chunkedBody(256, 1024);
+
+    const error = await failureOf(download, () => new Response(body.stream));
+
+    expect(error.code).toBe("invalid_request");
+    expect(error.retryable).toBe(false);
+    expect(error.message).toBe("telegram file exceeds the 1024-byte download limit");
+    // Four pieces are exactly the limit; the fifth passes it, and nothing after it is read.
+    expect(body.progress.read).toBe(5);
+    expect(body.progress.cancelled).toBe(true);
+  });
+
+  it("returns a body with no declared length that fits, byte for byte", async () => {
+    const body = chunkedBody(256, 4);
+    const { client } = clientWith(
+      () => new Response(body.stream, { headers: { "content-type": "audio/ogg" } }),
+    );
+
+    const file = await download(client);
+
+    expect(new Uint8Array(file.body)).toStrictEqual(body.bytes);
+    expect(file.contentType).toBe("audio/ogg");
+  });
+
+  it("refuses a declared length over the limit without reading the body, and lets it go", async () => {
+    const body = chunkedBody(256, 8);
+
+    const error = await failureOf(
+      download,
+      () => new Response(body.stream, { headers: { "content-length": "2048" } }),
+    );
+
+    expect(error.code).toBe("invalid_request");
+    expect(body.progress.read).toBe(0);
+    expect(body.progress.cancelled).toBe(true);
+  });
+
+  it("gives a download a timeout", async () => {
+    let signal: AbortSignal | undefined;
+    const client = createTelegramClient({
+      botToken: TEST_BOT_TOKEN,
+      fetch: async (_input, init) => {
+        signal = init?.signal ?? undefined;
+        return new Response(new Uint8Array(16));
+      },
+    });
+
+    await download(client);
+
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it("maps a download that outlasts its timeout to unavailable", async () => {
+    const error = await failureOf(download, () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    });
+
+    expect(error.code).toBe("unavailable");
+    expect(error.retryable).toBe(true);
+    expect(error.message).toBe("telegram file download failed: no answer within 30 s");
+  });
+
+  it("maps a body that stops arriving within the timeout to unavailable", async () => {
+    // The fetch's timeout covers its body: a piece arrives, then the signal ends the rest.
+    let pulls = 0;
+    const stalled = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        if (pulls === 1) controller.enqueue(new Uint8Array(256));
+        else controller.error(new DOMException("The operation timed out.", "TimeoutError"));
+      },
+    });
+
+    const error = await failureOf(download, () => new Response(stalled));
+
+    expect(error.code).toBe("unavailable");
+    expect(error.message).toBe("telegram file download failed: no answer within 30 s");
   });
 });
