@@ -1,0 +1,2 @@
+ALTER TABLE "nearby_contacts" DROP CONSTRAINT "nearby_contacts_external_channel_check";--> statement-breakpoint
+ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" in ('telegram', 'line'));

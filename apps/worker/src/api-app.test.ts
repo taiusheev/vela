@@ -517,6 +517,7 @@ function fixture(
         .mockResolvedValue({
           contact_id: MEMBER_ID,
           link: "https://t.me/vela_test_bot?start=nTOKEN",
+          line_link: null,
         }),
       registerApiPushDevice: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["registerApiPushDevice"]>()
@@ -2916,6 +2917,7 @@ describe("someone nearby on Telegram (ADR-36)", () => {
     expect(await response.json()).toEqual({
       contact_id: MEMBER_ID,
       link: "https://t.me/vela_test_bot?start=nTOKEN",
+      line_link: null,
     });
 
     f.writes.services.inviteApiNearby.mockRejectedValue(

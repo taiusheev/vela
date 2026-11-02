@@ -69,7 +69,7 @@ export default function NearbyScreen() {
             <Words variant="body" tone="ink2">
               <Trans>
                 Up to two people who live close to {name} and could look in if a morning goes quiet.
-                Send each one a link with Ask on Telegram: Vela writes to them only once they open
+                Send each one a link on LINE or Telegram: Vela writes to them only once they open
                 it, and asks them in your name. Until they say yes, you can call them yourself.
               </Trans>
             </Words>

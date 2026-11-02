@@ -7,38 +7,55 @@ import { ConfirmationDialog } from "./confirmation-dialog.tsx";
 import { LoadingLight } from "./loading-light.tsx";
 import { Card, Hairline, PrimaryButton, SecondaryButton, TextField, Words } from "./ui.tsx";
 
+type Messenger = "line" | "telegram";
+
 /**
  * The people nearby one kept-light member (spec A3): who is there, where each one's yes stands,
- * Ask on Telegram for anyone who has not said yes, Remove, and a name and relation to add someone
- * while there is room. Never a number: nobody hears from Vela by being added here, only once they
- * open the link the organiser sends them (ADR-36).
+ * Ask on LINE or Ask on Telegram for anyone who has not said yes, Remove, and a name and relation
+ * to add someone while there is room. Never a number: nobody hears from Vela by being added here,
+ * only once they open the link the organiser sends them (ADR-36). LINE comes first in Chinese,
+ * where neighbours are on LINE, and is offered only where Vela has LINE.
  */
 export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyView }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const messengers: Messenger[] =
+    i18n.locale === "zh-TW" ? ["line", "telegram"] : ["telegram", "line"];
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const whoToRemove = removing?.name ?? "";
   const [person, setPerson] = useState("");
   const [relation, setRelation] = useState("");
   const [shareTrouble, setShareTrouble] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [sharedWith, setSharedWith] = useState<string | null>(null);
+  const [sharedWith, setSharedWith] = useState<{ who: string; via: Messenger } | null>(null);
+  const [lineOff, setLineOff] = useState(false);
+  const sharedWithName = sharedWith?.who ?? "";
   // The link goes from the organiser's own phone, in their own words around it: Vela writes to
   // nobody until they open it (ADR-36). Telegram shows a link from someone outside the reader's
-  // contacts as plain text (first test, 15 Oct 2026), so the message says how to make it open.
-  const askOnTelegram = async (contactId: string, who: string) => {
+  // contacts as plain text (first test, 15 Oct 2026), so its message says how to make it open; a
+  // LINE link opens Vela's chat for anyone.
+  const ask = async (contactId: string, who: string, via: Messenger) => {
     setSharing(true);
     setShareTrouble(false);
+    setLineOff(false);
     try {
-      const link = await nearby.invite(contactId);
-      if (link === null) return;
-      const ask = t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`;
-      const ifClosed = t`If the link doesn’t open, add me to your contacts, then tap it again.`;
+      const links = await nearby.invite(contactId);
+      if (links === null) return;
+      const link = via === "line" ? links.line : links.telegram;
+      if (link === null) {
+        setLineOff(true);
+        return;
+      }
+      const hello = t`Hi ${who}! If I can’t reach ${name}, could I ask you to look in? You can say yes here:`;
+      const ifClosed =
+        via === "telegram"
+          ? t`If the link doesn’t open, add me to your contacts, then tap it again.`
+          : t`The link opens a chat with Vela Light. Tap Send there.`;
       const result = await Share.share({
         message:
-          Platform.OS === "ios" ? `${ask}\n\n${ifClosed}` : `${ask}\n\n${link}\n\n${ifClosed}`,
+          Platform.OS === "ios" ? `${hello}\n\n${ifClosed}` : `${hello}\n\n${link}\n\n${ifClosed}`,
         ...(Platform.OS === "ios" ? { url: link } : {}),
       });
-      if (result.action !== Share.dismissedAction) setSharedWith(who);
+      if (result.action !== Share.dismissedAction) setSharedWith({ who, via });
     } catch {
       setShareTrouble(true);
     } finally {
@@ -78,21 +95,30 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
                     </Words>
                   </View>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: space.xl }}>
-                    {contact.saidYes ? null : (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t`Ask ${who} on Telegram`}
-                        hitSlop={hitSlop}
-                        disabled={nearby.changing || sharing}
-                        accessibilityState={{ disabled: nearby.changing || sharing }}
-                        style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
-                        onPress={() => void askOnTelegram(contact.id, who)}
-                      >
-                        <Words variant="button" tone="action">
-                          <Trans>Ask on Telegram</Trans>
-                        </Words>
-                      </Pressable>
-                    )}
+                    {contact.saidYes
+                      ? null
+                      : messengers.map((via) => (
+                          <Pressable
+                            key={via}
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                              via === "line" ? t`Ask ${who} on LINE` : t`Ask ${who} on Telegram`
+                            }
+                            hitSlop={hitSlop}
+                            disabled={nearby.changing || sharing}
+                            accessibilityState={{ disabled: nearby.changing || sharing }}
+                            style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}
+                            onPress={() => void ask(contact.id, who, via)}
+                          >
+                            <Words variant="button" tone="action">
+                              {via === "line" ? (
+                                <Trans>Ask on LINE</Trans>
+                              ) : (
+                                <Trans>Ask on Telegram</Trans>
+                              )}
+                            </Words>
+                          </Pressable>
+                        ))}
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={t`Remove ${who}`}
@@ -174,19 +200,25 @@ export function NearbyEditor({ name, nearby }: { name: string; nearby: NearbyVie
           <Trans>Two people nearby is the most.</Trans>
         </Words>
       ) : null}
-      {sharedWith === null || shareTrouble ? null : (
+      {sharedWith === null || sharedWith.via !== "telegram" || shareTrouble ? null : (
         <Words variant="body" tone="ink2">
           <Trans>
-            If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their
-            contacts. Ask {sharedWith} to add you, or send the invite by text message instead.
+            If {sharedWithName} can’t tap the link, Telegram is hiding it because you are not in
+            their contacts. Ask {sharedWithName} to add you, or send the invite by text message
+            instead.
           </Trans>
         </Words>
       )}
-      {shareTrouble ? (
+      {lineOff ? (
         <Words variant="body" tone="ink2">
           <Trans>
-            The invite could not be shared. Try Ask on Telegram again; nobody has been contacted.
+            Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted.
           </Trans>
+        </Words>
+      ) : null}
+      {shareTrouble ? (
+        <Words variant="body" tone="ink2">
+          <Trans>The invite could not be shared. Try again; nobody has been contacted.</Trans>
         </Words>
       ) : null}
       {nearby.refused === undefined ? null : (

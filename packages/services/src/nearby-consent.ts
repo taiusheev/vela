@@ -31,9 +31,11 @@ import {
   type InsertResult,
   insertOutbound,
   type OutboundRequest,
+  replyFieldOf,
 } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
 import { sha256Hex } from "./hash.ts";
+import { lineInviteLink } from "./invites.ts";
 import {
   chatConsentEvidence,
   forgetConsentSubjects,
@@ -44,6 +46,19 @@ import { activeOrganisersWithLinks, MESSENGER, type Queryable } from "./repo.ts"
 
 /** The text a contact's tap answers: text B of the nearby-contact consent, on Telegram. */
 export const NEARBY_TEXT_VERSION = "nearby-consent.v3";
+/** Text B on LINE: the same request, keeping "this LINE account" (`nearby.request_line`). */
+export const NEARBY_LINE_TEXT_VERSION = "nearby-consent.v4";
+
+/** The messengers a contact can answer on: where their link opens and where they are asked. */
+type ContactChannel = "telegram" | "line";
+
+function contactChannelOf(channel: InboundEvent["channel"]): ContactChannel | null {
+  return channel === "telegram" || channel === "line" ? channel : null;
+}
+
+function requestKeyOf(channel: ContactChannel): "nearby.request" | "nearby.request_line" {
+  return channel === "line" ? "nearby.request_line" : "nearby.request";
+}
 /** A contact's link: `n` and 24 random bytes, apart from a member's invite of 43 characters. */
 const NEARBY_START = /^n[A-Za-z0-9_-]{32}$/;
 const NEARBY_TOKEN_BYTES = 24;
@@ -63,7 +78,7 @@ export class NearbyInviteRefusedError extends Error {
   }
 }
 
-/** Whether a Telegram start parameter is a nearby contact's link rather than her invite. */
+/** Whether a start parameter (Telegram's, or LINE's typed /start) is a contact's link, not her invite. */
 export function isNearbyStart(param: string | undefined): boolean {
   return NEARBY_START.test(param?.trim() ?? "");
 }
@@ -77,11 +92,12 @@ export function isNearbyStart(param: string | undefined): boolean {
  */
 export async function inviteApiNearby(
   deps: Pick<Deps, "db" | "clock" | "random"> & {
-    config: Pick<Deps["config"], "telegramBotUsername">;
+    config: Pick<Deps["config"], "telegramBotUsername"> &
+      Partial<Pick<Deps["config"], "lineBasicId">>;
   },
   identity: SessionIdentity,
   contactId: string,
-): Promise<{ contact_id: string; link: string }> {
+): Promise<{ contact_id: string; link: string; line_link: string | null }> {
   if (!UUID.test(contactId)) throw new VelaError("not_found", "Not found");
   const id = contactId.toLowerCase();
   const token = `n${deps.random.token(NEARBY_TOKEN_BYTES)}`;
@@ -107,6 +123,11 @@ export async function inviteApiNearby(
   return {
     contact_id: id,
     link: `https://t.me/${deps.config.telegramBotUsername}?start=${token}`,
+    // The same token typed into Vela's LINE chat (05-line-flows §2.3), where LINE is on.
+    line_link:
+      deps.config.lineBasicId === undefined || deps.config.lineBasicId === null
+        ? null
+        : lineInviteLink(deps.config.lineBasicId, token),
   };
 }
 
@@ -153,6 +174,8 @@ async function requestParams(
  * a newer one, is refused as any spent link is.
  */
 export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promise<void> {
+  const channel = contactChannelOf(event.channel);
+  if (channel === null) return;
   const token = event.startParam?.trim() ?? "";
   const conversationId = event.conversation.externalId;
   const lang = languageOfSender(event.sender.languageCode, event.channel);
@@ -188,8 +211,10 @@ export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promis
     channel: event.channel,
     conversationId,
     lang,
-    text: t(lang, "nearby.request", params),
-    consentTextVersion: NEARBY_TEXT_VERSION,
+    // On LINE, Vela can answer someone who is not yet its friend only with the opened link's reply.
+    ...replyFieldOf(event),
+    text: t(lang, requestKeyOf(channel), params),
+    consentTextVersion: channel === "line" ? NEARBY_LINE_TEXT_VERSION : NEARBY_TEXT_VERSION,
     buttons: [
       [
         {
@@ -263,6 +288,8 @@ export async function handleNearbyConsentButton(
 ): Promise<void> {
   const adapter = deps.channels.get(event.channel);
   await adapter.acknowledgeButton(event);
+  const channel = contactChannelOf(event.channel);
+  if (channel === null) return;
   const conversationId = event.conversation.externalId;
   const now = deps.clock.now();
   const pending: Pending = [];
@@ -294,7 +321,7 @@ export async function handleNearbyConsentButton(
       chatId: conversationId,
       messageId: event.messageId,
       lang,
-      key: "nearby.request",
+      key: requestKeyOf(channel),
       params,
     });
     const sentText = (sent.payload as { message?: { text?: string } }).message?.text;
@@ -350,7 +377,7 @@ export async function handleNearbyConsentButton(
         .update(nearbyContacts)
         .set({
           externalId: event.sender.externalUserId,
-          channel: "telegram",
+          channel,
           consentedAt: now,
           declinedAt: null,
           inviteTokenHash: null,
@@ -442,11 +469,17 @@ export async function deleteContact(
  * own answer to strangers.
  */
 export async function handleNearbyMessage(deps: Deps, event: InboundEvent): Promise<boolean> {
-  if (event.conversation.kind !== "private" || event.channel !== "telegram") return false;
+  const channel = contactChannelOf(event.channel);
+  if (event.conversation.kind !== "private" || channel === null) return false;
   const listed = await deps.db
     .select()
     .from(nearbyContacts)
-    .where(eq(nearbyContacts.externalId, event.sender.externalUserId));
+    .where(
+      and(
+        eq(nearbyContacts.externalId, event.sender.externalUserId),
+        eq(nearbyContacts.channel, channel),
+      ),
+    );
   if (listed.length === 0) return false;
   const conversationId = event.conversation.externalId;
   const lang = languageOfSender(event.sender.languageCode, event.channel);
@@ -480,8 +513,9 @@ export async function handleNearbyMessage(deps: Deps, event: InboundEvent): Prom
       }),
       // A row belongs to a member: the first family's kept-light member, whose contact this is.
       memberId: first.memberId,
-      channel: "telegram",
+      channel,
       conversationId,
+      ...replyFieldOf(event),
       lang,
       text: t(lang, stop ? "nearby.removed" : "nearby.help"),
     });

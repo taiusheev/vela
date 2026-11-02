@@ -29,6 +29,7 @@ import { applyRetention } from "./jobs.ts";
 import { askApiToLookIn, type LookInRefusedError } from "./nearby-ask.ts";
 import {
   inviteApiNearby,
+  NEARBY_LINE_TEXT_VERSION,
   NEARBY_TEXT_VERSION,
   NearbyInviteRefusedError,
 } from "./nearby-consent.ts";
@@ -410,5 +411,100 @@ describe("asking them to look in on a quiet morning", () => {
     );
     expect((refused as LookInRefusedError).reason).toBe("settled");
     expect(await h.db.select().from(outbound).where(eq(outbound.kind, "nearby_ask"))).toEqual([]);
+  });
+});
+
+describe("someone nearby on LINE", () => {
+  const LIN = "U00000000000000000000000000000a11";
+
+  function onLine(fields: Partial<InboundEvent>): InboundEvent {
+    return { ...from(LIN, fields), channel: "line", eventId: `line:${events}` } as InboundEvent;
+  }
+
+  async function withLine<T>(run: () => Promise<T>): Promise<T> {
+    const config = h.deps.config as { lineBasicId: string | null };
+    config.lineBasicId = "@vela";
+    try {
+      return await run();
+    } finally {
+      config.lineBasicId = null;
+    }
+  }
+
+  /** The token LINE types into Vela's chat when the link opens: "/start <token>". */
+  function lineStartOf(link: string): string {
+    return decodeURIComponent(new URL(link).search.slice(1)).replace(/^\/start /, "");
+  }
+
+  it("gives a LINE link beside the Telegram one where LINE is on, for the same token", async () => {
+    const off = await inviteApiNearby(h.deps, mia, contactId);
+    expect(off.line_link).toBeNull();
+
+    const on = await withLine(() => inviteApiNearby(h.deps, mia, contactId));
+    expect(on.line_link).toMatch(/^https:\/\/line\.me\/R\/oaMessage\/%40vela\/\?/);
+    expect(lineStartOf(on.line_link ?? "")).toBe(startOf(on.link));
+  });
+
+  it("asks on LINE, keeps the LINE account with the yes, and asks to look in there", async () => {
+    const invite = await withLine(() => inviteApiNearby(h.deps, mia, contactId));
+    await send(onLine({ kind: "start", startParam: lineStartOf(invite.line_link ?? "") }));
+    const request = h.line.sentTo(LIN).at(-1);
+    expect(request?.message.text).toContain("your name and LINE account");
+    expect(h.telegram.sentTo(LIN)).toEqual([]);
+    const yes = request?.message.buttons?.[0]?.[0];
+    if (yes === undefined) throw new Error("expected Yes");
+    await send(
+      onLine({ kind: "button", buttonData: yes.id, messageId: "request", callbackId: "cb" }),
+    );
+
+    expect(await contactRow()).toMatchObject({ externalId: LIN, channel: "line" });
+    const [proof] = await h.db.select().from(consents).where(eq(consents.contactId, contactId));
+    expect(proof).toMatchObject({
+      answer: "yes",
+      textVersion: NEARBY_LINE_TEXT_VERSION,
+      channel: "line",
+    });
+
+    const exchange = await seedExchange(h.db, seed, {
+      date: localDateOf(h.clock.now(), seed.member.tz),
+      state: "delivered",
+      deliveredAt: new Date(h.clock.now().getTime() - 3 * 60 * 60_000),
+    });
+    const [quiet] = await h.db
+      .insert(quietEvents)
+      .values({
+        exchangeId: exchange.id,
+        memberId: seed.member.id,
+        openedAt: h.clock.now(),
+        lastNotifiedAt: h.clock.now(),
+        notifyCount: 1,
+        notifiedMemberIds: [seed.organiser.id],
+      })
+      .returning();
+    if (quiet === undefined) throw new Error("expected a quiet event");
+    const asked = await askApiToLookIn(h.deps, mia, "ask-line", quiet.id, {
+      contact_id: contactId,
+    });
+    for (const id of asked.after.outboundIds) {
+      await h.queues.outbound.send({ type: "deliver", outboundId: id });
+    }
+    await h.run(handlers);
+    const ask = h.line.sentTo(LIN).at(-1);
+    expect(ask?.message.text).toBe(
+      "Mia asks: could you look in on Mrs Chen today? Mrs Chen hasn't answered this morning.",
+    );
+    const lookIn = ask?.message.buttons?.[0]?.[0];
+    if (lookIn === undefined) throw new Error("expected I'll look in");
+    await send(
+      onLine({ kind: "button", buttonData: lookIn.id, messageId: "ask", callbackId: "cb" }),
+    );
+    expect(h.line.sentTo(LIN).at(-1)?.message.text).toBe("Thank you. Mia knows you'll look in.");
+    expect(h.telegram.sentTo(seed.organiserLink.externalId).at(-1)?.message.text).toBe(
+      "Anna will look in on Mrs Chen.",
+    );
+
+    // Stop on LINE removes them, as on Telegram.
+    await send(onLine({ kind: "text", text: "停" }));
+    expect(await contactRow()).toBeUndefined();
   });
 });

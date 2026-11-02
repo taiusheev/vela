@@ -28,6 +28,12 @@ export interface NearbyPerson {
   saidYes: boolean;
 }
 
+/** One contact's invite, as a link for each messenger Vela is on. */
+export interface NearbyLinks {
+  telegram: string;
+  line: string | null;
+}
+
 export interface NearbyView {
   people: NearbyPerson[];
   loading: boolean;
@@ -40,9 +46,10 @@ export interface NearbyView {
   remove(contactId: string): void;
   /**
    * The link for one person who has not said yes, to send them from the organiser's own phone; they
-   * open it in Telegram and Vela asks them there (ADR-36). Null when it could not be had.
+   * open it in Telegram, or in LINE where Vela has LINE, and Vela asks them there (ADR-36). One
+   * link works: the other is voided with it. Null when it could not be had.
    */
-  invite(contactId: string): Promise<string | null>;
+  invite(contactId: string): Promise<NearbyLinks | null>;
   changing: boolean;
   /** Why the last change did not go through, in words for the screen. */
   refused?: string;
@@ -201,9 +208,15 @@ export function useNearby(familyId: string | undefined, memberId: string | undef
       }
     },
     async invite(contactId) {
-      if (demo) return "https://t.me/VelaLightBot?start=nEXAMPLE";
+      if (demo) {
+        return {
+          telegram: "https://t.me/VelaLightBot?start=nEXAMPLE",
+          line: "https://line.me/R/oaMessage/@vela/?%2Fstart%20nEXAMPLE",
+        };
+      }
       try {
-        return (await inviting.mutateAsync(contactId)).link;
+        const invite = await inviting.mutateAsync(contactId);
+        return { telegram: invite.link, line: invite.line_link };
       } catch {
         return null;
       }

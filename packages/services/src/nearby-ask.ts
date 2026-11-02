@@ -1,6 +1,6 @@
 /**
  * "Ask them to look in" (spec §8, §14.1 A11, §14.3 M6; ADR-36): on a quiet morning an organiser asks
- * someone nearby who said yes, on Telegram and in the organiser's own name, whether they could look
+ * someone nearby who said yes, on Telegram or LINE and in the organiser's own name, whether they could look
  * in on her today, with "I'll look in" and "Can't today". Their answer goes to whoever asked, and
  * the sheet shows it; when the morning closes (she answers, or an organiser says she is fine) each
  * contact asked and not refused is told there is no need. One ask per contact per quiet morning: the
@@ -32,8 +32,15 @@ import {
   type InsertResult,
   insertOutbound,
   type OutboundRequest,
+  replyFieldOf,
 } from "./gateway.ts";
-import { channelLinkOfMember, familyHasEnded, memberById, type Queryable } from "./repo.ts";
+import {
+  channelLinkOfMember,
+  familyHasEnded,
+  MESSENGER,
+  memberById,
+  type Queryable,
+} from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -74,14 +81,19 @@ export class LookInRefusedError extends Error {
   }
 }
 
-/** Whether a contact can be asked: listed, with the Telegram account their yes gave. */
+/** Whether a contact can be asked: listed, with the Telegram or LINE account their yes gave. */
 export function canBeAsked(contact: NearbyContact): boolean {
   return (
     contact.consentedAt !== null &&
     contact.declinedAt === null &&
     contact.externalId !== null &&
-    contact.channel === "telegram"
+    contactChannel(contact) !== null
   );
+}
+
+/** The messenger a contact's yes came from, where every message to them goes. */
+export function contactChannel(contact: NearbyContact): "telegram" | "line" | null {
+  return contact.channel === "telegram" || contact.channel === "line" ? contact.channel : null;
 }
 
 /** The language a contact said yes in, which every message to them is written in. */
@@ -178,7 +190,7 @@ export async function askApiToLookIn(
           }),
           memberId: her.id,
           actorId: organiser.id,
-          channel: "telegram",
+          channel: contactChannel(contact) ?? "telegram",
           conversationId: contact.externalId,
           exchangeId: quiet.exchangeId,
           lang,
@@ -257,8 +269,8 @@ type Pending = { request: OutboundRequest; written: InsertResult }[];
 
 /**
  * Their "I'll look in" or "Can't today". It counts once, from someone the morning asked: their
- * Telegram account names their row near her, and the event names the ask. The organiser who asked
- * hears it on Telegram, the sheet shows it, and they are thanked. A tap after the morning closed is
+ * Telegram or LINE account names their row near her, and the event names the ask. The organiser who
+ * asked hears it on their messenger, the sheet shows it, and they are thanked. A tap after the morning closed is
  * answered with the stand-down instead.
  */
 export async function handleLookInButton(
@@ -321,14 +333,15 @@ export async function handleLookInButton(
           suffix: `look_in:${quiet.id}:${event.eventId}`,
         }),
         memberId: her.id,
-        channel: "telegram",
+        channel: event.channel,
         conversationId,
         lang,
+        ...replyFieldOf(event),
         text: thanks,
       }),
     );
     if (asker !== null && !settled) {
-      const link = await channelLinkOfMember(tx, asker.id, "telegram");
+      const link = await channelLinkOfMember(tx, asker.id, MESSENGER);
       if (link !== null && link.blockedAt === null) {
         pending.push(
           await written(deps, tx, {
@@ -338,7 +351,7 @@ export async function handleLookInButton(
               suffix: `look_in:${quiet.id}:${contact.id}`,
             }),
             memberId: asker.id,
-            channel: "telegram",
+            channel: link.channel,
             conversationId: link.externalId,
             exchangeId: quiet.exchangeId,
             lang: asker.language,
@@ -389,7 +402,8 @@ export async function lookInStandDowns(
       .from(nearbyContacts)
       .where(eq(nearbyContacts.id, ask.contact_id))
       .limit(1);
-    if (contact === undefined || contact.externalId === null) continue;
+    const channel = contact === undefined ? null : contactChannel(contact);
+    if (contact === undefined || contact.externalId === null || channel === null) continue;
     const lang = await languageOfContact(db, contact);
     notices.push({
       kind: "system",
@@ -398,7 +412,7 @@ export async function lookInStandDowns(
         suffix: `look_in_stand_down:${closed.id}`,
       }),
       memberId: her.id,
-      channel: "telegram",
+      channel,
       conversationId: contact.externalId,
       exchangeId: closed.exchangeId,
       lang,

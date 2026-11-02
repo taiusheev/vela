@@ -28,3 +28,4 @@ tags:
 - assertVisible: "Wei"
 - assertVisible: "Has not said yes yet"
 - assertVisible: "Ask on Telegram"
+- assertVisible: "Ask on LINE"

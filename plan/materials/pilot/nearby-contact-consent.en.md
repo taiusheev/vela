@@ -45,6 +45,10 @@ Text B was never sent; before its first use it was fitted to how the app reaches
 >
 > Buttons: **Yes, I'm happy to** · **No, thank you**
 
+## Text B on LINE (`nearby-consent.v4`, 3 November 2026)
+
+The same request as v3, sent when the contact opens the organiser's link in LINE instead of Telegram. The only change: Vela keeps their name and **this LINE account** (`nearby.request_line`). It is sent as the reply to the message their link typed, so it reaches someone who has not added Vela Light as a friend.
+
 ## What saying yes means
 
 **What Vela keeps:** your name, how you know [Name], your phone number, the messaging app you use, and when and how you said yes.

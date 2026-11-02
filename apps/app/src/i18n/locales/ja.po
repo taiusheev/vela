@@ -1011,6 +1011,10 @@ msgid "Ask {recipient} something"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
+msgid "Ask {who} on LINE"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
 msgid "Ask {who} on Telegram"
 msgstr ""
 
@@ -1024,6 +1028,10 @@ msgstr ""
 
 #: src/components/story-day.tsx
 msgid "Ask it on Sunday"
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Ask on LINE"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -2087,7 +2095,7 @@ msgid "If {name} says yes today"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
-msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgid "If {sharedWithName} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWithName} to add you, or send the invite by text message instead."
 msgstr ""
 
 #: src/data/notifications.ts
@@ -4646,7 +4654,7 @@ msgid "The first page is waiting."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
-msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
+msgid "The invite could not be shared. Try again; nobody has been contacted."
 msgstr ""
 
 #: app/morning-settings.tsx
@@ -4659,6 +4667,10 @@ msgstr ""
 
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "The link opens a chat with Vela Light. Tap Send there."
 msgstr ""
 
 #: src/data/memories.ts
@@ -5203,7 +5215,7 @@ msgid "Until she's back"
 msgstr ""
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link on LINE or Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -5293,6 +5305,10 @@ msgstr ""
 
 #: app/story/[id].tsx
 msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
+msgstr ""
+
+#: src/components/nearby-editor.tsx
+msgid "Vela isn’t on LINE here yet. Use Ask on Telegram; nobody has been contacted."
 msgstr ""
 
 #: src/data/family.ts

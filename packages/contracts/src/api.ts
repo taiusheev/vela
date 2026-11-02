@@ -1109,12 +1109,18 @@ export type AddNearby = z.infer<typeof AddNearby>;
 /** Removing someone nearby takes no body: the contact is in the path. */
 export const RemoveNearby = z.strictObject({});
 
-/** Asking someone nearby on Telegram (`POST /v1/nearby/:contactId/invite`, ADR-36): no body. */
+/** Asking someone nearby on Telegram or LINE (`POST /v1/nearby/:contactId/invite`, ADR-36): no body. */
 export const InviteNearby = z.strictObject({});
 export type InviteNearby = z.infer<typeof InviteNearby>;
 
 /** The link to share with them, once: it is the only way in, and a new one voids it. */
-export const ApiNearbyInvite = z.object({ contact_id: z.uuid(), link: z.url() });
+export const ApiNearbyInvite = z.object({
+  contact_id: z.uuid(),
+  /** The Telegram link. */
+  link: z.url(),
+  /** The same link opened in Vela's LINE chat, where LINE is on; null where it is off. */
+  line_link: z.url().nullable(),
+});
 export type ApiNearbyInvite = z.infer<typeof ApiNearbyInvite>;
 export type RemoveNearby = z.infer<typeof RemoveNearby>;
 
