@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../src/components/back-button.tsx";
 import { LoadingLight } from "../src/components/loading-light.tsx";
@@ -66,13 +66,18 @@ export default function NearbyScreen() {
           </>
         ) : organiser ? (
           <>
-            <Words variant="body" tone="ink2">
-              <Trans>
-                Up to two people who live close to {name} and could look in if a morning goes quiet.
-                Send each one a link on LINE or Telegram: Vela writes to them only once they open
-                it, and asks them in your name. Until they say yes, you can call them yourself.
-              </Trans>
-            </Words>
+            <View style={{ gap: space.xs }}>
+              <Words variant="body">
+                <Trans>
+                  Up to two people near {name} who could look in if a morning goes quiet.
+                </Trans>
+              </Words>
+              <Words variant="caption" tone="ink3">
+                <Trans>
+                  Send each one a link. Vela writes to them only once they open it, in your name.
+                </Trans>
+              </Words>
+            </View>
             <NearbyEditor name={name} nearby={nearby} />
           </>
         ) : (
