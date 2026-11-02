@@ -1,10 +1,18 @@
 import { createFakeAi, fakeRecord, type WeeklyInsight, type WeeklyInsightInput } from "@vela/ai";
 import type { LocalDate, LocalTime } from "@vela/contracts";
 import { zonedInstant } from "@vela/core";
-import { aiCalls, answers, type Exchange, members, replies, weeklyReads } from "@vela/db";
+import {
+  adminAccessLog,
+  aiCalls,
+  answers,
+  type Exchange,
+  members,
+  replies,
+  weeklyReads,
+} from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { loadFamilyPage, sendWeeklyRead } from "./admin.ts";
+import { loadFamilyPage, sendWeeklyRead, setWeeklyFeedback } from "./admin.ts";
 import type { OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { applyRetention, draftWeeklyRead } from "./jobs.ts";
@@ -206,6 +214,33 @@ describe("draftWeeklyRead with the weekly insight (ADR-48)", () => {
     expect(JSON.stringify(read?.stats)).not.toContain(tom.member.id);
     const calls = await h.db.select().from(aiCalls).where(eq(aiCalls.call, "weekly_insight"));
     expect(calls).toHaveLength(1);
+  });
+
+  it("drafts no feedback for an organiser who asked for none", async () => {
+    const { seed } = await seededWeek();
+    h.config.weeklyInsight = true;
+    await h.db
+      .update(members)
+      .set({ weeklyFeedback: false })
+      .where(eq(members.id, seed.organiser.id));
+    let seen: WeeklyInsightInput | null = null;
+    const ai = createFakeAi({
+      weeklyInsight: async (input) => {
+        seen = input;
+        return { ok: true, value: MODEL_ANSWER, record: fakeRecord("weekly_insight") };
+      },
+    });
+
+    await draftWeeklyRead({ ...h.deps, ai }, seed.member.id, WEEK_END);
+
+    expect(seen).toMatchObject({
+      family: [
+        { key: "f1", name: "Mia", feedback: false },
+        { key: "f2", name: "Tom", feedback: false },
+      ],
+    });
+    const [read] = await h.db.select().from(weeklyReads);
+    expect(read?.stats).toMatchObject({ feedback: [] });
   });
 
   it("calls nothing and stores nothing while the switch is off", async () => {
@@ -430,6 +465,46 @@ describe("the insight on the page, in the send, and after 30 days", () => {
         { member_id: seed.organiser.id, text: "Your Monday ask landed.\nAsk about pears." },
       ],
     });
+  });
+
+  // Privacy-notice v13: an organiser who asks for no feedback gets none, whatever was drafted.
+  it("sends no feedback to an organiser the founder turned it off for, and logs the change once", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    const readId = await readWithFeedback(seed, seed.organiser.id);
+    h.clock.set(at(WEEK_END, "19:00"));
+
+    expect(
+      await setWeeklyFeedback(h.deps, FOUNDER, { memberId: seed.organiser.id, on: false }),
+    ).toBe("changed");
+    expect(
+      await setWeeklyFeedback(h.deps, FOUNDER, { memberId: seed.organiser.id, on: false }),
+    ).toBe("same");
+    const logs = await h.db.select().from(adminAccessLog);
+    expect(logs.map((log) => log.action)).toEqual(["weekly_feedback_off"]);
+
+    expect(
+      await sendWeeklyRead(h.deps, FOUNDER, {
+        weeklyReadId: readId,
+        lines: ["Mom went to the market with Auntie Lin."],
+        suggestion: "Ask about the pears.",
+        feedback: { [seed.organiser.id]: "Your Monday ask landed.\nAsk about pears." },
+      }),
+    ).toBe("sent");
+    await h.run({ outbound: (job: OutboundJob) => deliverOutbound(h.deps, job.outboundId) });
+
+    const toMia = h.telegram.sentTo("1001")[0]?.message.text ?? "";
+    expect(toMia).toContain("Mom went to the market with Auntie Lin.");
+    expect(toMia).not.toContain("Just for you");
+    const [read] = await h.db.select().from(weeklyReads).where(eq(weeklyReads.id, readId));
+    expect(read?.stats).toMatchObject({ feedback_sent: 0 });
+    expect(read?.stats).not.toHaveProperty("sent_feedback");
+  });
+
+  it("refuses to switch feedback for someone who is not an organiser", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await expect(
+      setWeeklyFeedback(h.deps, FOUNDER, { memberId: seed.member.id, on: false }),
+    ).rejects.toMatchObject({ code: "invalid_payload" });
   });
 
   it("clears the readings and feedback 30 days after the week ends, keeping the rest of the read", async () => {
