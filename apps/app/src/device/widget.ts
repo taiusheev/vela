@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import type { TodayLight } from "../data/today.ts";
 
 /** The App Group the app and its widget share (app.json, targets/widget). */
-export const WIDGET_APP_GROUP = "group.family.vela.light";
+export const WIDGET_APP_GROUP = "group.family.vela.light.shared";
 /** The one key the widget reads: `WidgetSnapshot` as JSON. */
 export const WIDGET_KEY = "lights";
 

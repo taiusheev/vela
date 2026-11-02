@@ -2,7 +2,7 @@ import SwiftUI
 import WidgetKit
 
 /// Shared with the app through the App Group (`src/device/widget.ts`).
-private let appGroup = "group.family.vela.light"
+private let appGroup = "group.family.vela.light.shared"
 private let snapshotKey = "lights"
 
 struct WidgetLight: Codable, Hashable {

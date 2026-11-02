@@ -128,7 +128,7 @@
       },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true,
-        "com.apple.security.application-groups": ["group.family.vela.light"]
+        "com.apple.security.application-groups": ["group.family.vela.light.shared"]
       }
     },
     "android": {
