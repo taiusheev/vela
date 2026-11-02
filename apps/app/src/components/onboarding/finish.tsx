@@ -1,7 +1,7 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { useQueryClient } from "@tanstack/react-query";
-import { appPrivacyAcceptance, type CreateFamily } from "@vela/contracts";
+import { appPrivacyAcceptance, type CreateFamily, privacyLangOf } from "@vela/contracts";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Share, View } from "react-native";
@@ -109,7 +109,7 @@ export function Save({ name }: { name: string }) {
         {
           const profile = {
             display_name: start.you.trim(),
-            privacy_acceptance: appPrivacyAcceptance(),
+            privacy_acceptance: appPrivacyAcceptance(privacyLangOf(locale)),
             language: locale,
             tz: deviceZone(start.zone),
           };

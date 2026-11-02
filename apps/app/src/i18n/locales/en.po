@@ -982,6 +982,10 @@ msgstr "Anyone"
 msgid "Approve this offer for {count} days"
 msgstr "Approve this offer for {count} days"
 
+#: src/components/onboarding/questions.tsx
+msgid "Around {name}"
+msgstr "Around {name}"
+
 #: src/components/reminders.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name}"
@@ -1312,10 +1316,6 @@ msgstr "Chosen · choose another"
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "Close"
-
-#: src/components/onboarding/questions.tsx
-msgid "Close by"
-msgstr "Close by"
 
 #: app/weekly-report.tsx
 msgid "Close message review"

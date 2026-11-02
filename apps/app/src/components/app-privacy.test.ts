@@ -20,6 +20,7 @@ vi.mock("../api/client.ts", async (original) => ({
   fetchMe: (...args: unknown[]) => mocks.read(...args),
   provisionAccount: (...args: unknown[]) => mocks.provision(...args),
 }));
+vi.mock("./light.tsx", () => ({ Light: () => null }));
 vi.mock("../auth/clerk.tsx", () => ({
   useAccount: () => ({
     ready: true,
@@ -31,7 +32,10 @@ vi.mock("../auth/clerk.tsx", () => ({
   }),
 }));
 vi.mock("@lingui/react/macro", () => ({
-  useLingui: () => ({ t: (strings: TemplateStringsArray) => strings.join("") }),
+  useLingui: () => ({
+    t: (strings: TemplateStringsArray) => strings.join(""),
+    i18n: { locale: "en" },
+  }),
   Trans: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("react-native", () => ({
@@ -50,6 +54,7 @@ vi.mock("./ui.tsx", () => ({
   Card: "card",
   PrimaryButton: "primary-button",
   SecondaryButton: "secondary-button",
+  TextButton: "text-button",
   Words: "words",
 }));
 

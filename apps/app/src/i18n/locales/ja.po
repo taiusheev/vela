@@ -976,6 +976,10 @@ msgstr ""
 msgid "Approve this offer for {count} days"
 msgstr ""
 
+#: src/components/onboarding/questions.tsx
+msgid "Around {name}"
+msgstr ""
+
 #: src/components/reminders.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name}"
@@ -1305,10 +1309,6 @@ msgstr ""
 #: src/components/photo-box.tsx
 #: src/components/quiet-notice.tsx
 msgid "Close"
-msgstr ""
-
-#: src/components/onboarding/questions.tsx
-msgid "Close by"
 msgstr ""
 
 #: app/weekly-report.tsx

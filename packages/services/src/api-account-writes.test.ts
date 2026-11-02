@@ -655,6 +655,7 @@ describe("explicit app privacy permission", () => {
     const [first] = await h.db.select().from(users);
     expect(first?.privacyAcceptance).toEqual({
       version: APP_PRIVACY_VERSION,
+      lang: "en",
       text_sha256: await sha256Hex(APP_PRIVACY_TEXT),
       accepted_at: h.clock.now().toISOString(),
     });
@@ -663,6 +664,18 @@ describe("explicit app privacy permission", () => {
     const [again] = await h.db.select().from(users);
     expect(again?.privacyAcceptance).toEqual(first?.privacyAcceptance);
     expect((await loadApiMe(h.db, identity))?.privacy_accepted).toBe(true);
+  });
+  it("records the Chinese text's fingerprint when the permission was shown in Chinese", async () => {
+    const { appPrivacyAcceptance, APP_PRIVACY_TEXT_ZH_TW } = await import("@vela/contracts");
+    await provision("privacy-zh", {
+      ...profile,
+      privacy_acceptance: appPrivacyAcceptance("zh-TW"),
+    });
+    const [account] = await h.db.select().from(users);
+    expect(account?.privacyAcceptance).toMatchObject({
+      lang: "zh-TW",
+      text_sha256: await sha256Hex(APP_PRIVACY_TEXT_ZH_TW),
+    });
   });
   it("does not infer permission from an old app, a false answer or a made-up text version", async () => {
     await provision();

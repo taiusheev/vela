@@ -42,3 +42,18 @@ export function fromDevice(locales: readonly DeviceLocale[]): AppLocale {
   const region = first.languageRegionCode ?? first.regionCode;
   return region !== null && TRADITIONAL_REGIONS.has(region) ? "zh-TW" : "en";
 }
+
+/**
+ * The language a reader starts in before any account has given one: English while the server allows
+ * nothing else; else the one they chose on this phone; else the phone's own, so a Taiwanese organiser
+ * with a Chinese iPhone meets Vela in Chinese from the first screen, before signing in.
+ */
+export function startingLocale(input: {
+  englishOnly: boolean;
+  remembered: string | null | undefined;
+  device: readonly DeviceLocale[];
+}): AppLocale {
+  if (input.englishOnly) return "en";
+  if (isAppLocale(input.remembered)) return input.remembered;
+  return fromDevice(input.device);
+}
