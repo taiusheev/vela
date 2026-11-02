@@ -9,7 +9,7 @@ import {
   Literata_500Medium,
   Literata_600SemiBold,
 } from "@expo-google-fonts/literata";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
@@ -32,6 +32,7 @@ import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
 import { activateOnboardingSession, readDraft } from "../src/data/onboarding-draft.ts";
 import { clearPhotoCache } from "../src/data/photos.ts";
+import { createSessionQueries } from "../src/data/query-client.ts";
 import { readDeviceToken } from "../src/device/token.ts";
 import { LocaleProvider, useAppLocale } from "../src/i18n/provider.tsx";
 import { PushProvider } from "../src/push/provider.tsx";
@@ -58,7 +59,7 @@ function SessionQueries({ children, scope }: { children: ReactNode; scope: strin
     clearPhotoCache();
     activatePrivateSession(scope);
     activatePortraitSession(scope);
-    return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 60_000 } } });
+    return createSessionQueries();
   });
   useEffect(() => {
     sessionRequests.activate(scope);
