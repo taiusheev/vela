@@ -327,6 +327,11 @@ export const ApiWeeklyRead = z.object({
         })
         .nullable()
         .optional(),
+      /**
+       * ADR-48: the caller's own feedback on their messages that week, as it was sent to them, never
+       * another organiser's. Null when there is none, when locked, and 30 days after the week ends.
+       */
+      my_feedback: z.string().nullable().optional(),
     })
     .nullable(),
 });

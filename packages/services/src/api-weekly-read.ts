@@ -28,8 +28,8 @@ const COVERING = new Set(["trial", "active", "grace"]);
  * member of the family who said yes; anyone else, a stranger, and a family that is not the caller's
  * all answer null.
  *
- * Only a sent read is shown: the founder edits each draft before it goes (Appendix A), so the app
- * shows what Telegram's organisers were sent. The seven days are read again from her answers by the
+ * Only a sent read is shown, so the app shows what the organisers were sent, with the caller's own
+ * feedback (ADR-48) and never another organiser's. The seven days are read again from her answers by the
  * draft's own rule (`loadWeekDays`); the counts are the numbers stored when it was drafted. Without
  * a Vela Light trial or plan covering her, the days show and the rest is locked (`locked`).
  *
@@ -44,8 +44,9 @@ export async function loadApiWeeklyRead(
   now: Date,
   options: { pilotFree?: boolean; readId?: string | undefined } = {},
 ): Promise<ApiWeeklyRead | null> {
-  const her = await organisersParent(db, identity, familyId, memberId);
-  if (her === null) return null;
+  const found = await organisersParent(db, identity, familyId, memberId);
+  if (found === null) return null;
+  const { her, organiserId } = found;
   let readId: string | undefined;
   if (options.readId !== undefined) {
     const parsed = ApiWeeklyReadList.shape.reads.element.shape.id.safeParse(options.readId);
@@ -174,13 +175,34 @@ export async function loadApiWeeklyRead(
       notes: covered ? [...(read.sentLines ?? []), ...healthLines] : null,
       suggestion,
       suggestion_source: suggestionSource,
+      my_feedback: covered ? ownFeedback(stats.sent_feedback, organiserId) : null,
     },
   });
 }
 
+/** The caller's own entry in a read's `sent_feedback`, or null; any other shape reads as none. */
+function ownFeedback(stored: unknown, organiserId: string): string | null {
+  if (!Array.isArray(stored)) return null;
+  for (const entry of stored) {
+    if (
+      typeof entry === "object" &&
+      entry !== null &&
+      "member_id" in entry &&
+      "text" in entry &&
+      entry.member_id === organiserId &&
+      typeof entry.text === "string" &&
+      entry.text.trim() !== ""
+    ) {
+      return entry.text;
+    }
+  }
+  return null;
+}
+
 /**
- * Her kept-light membership in the caller's family, for an organiser of it; null for anyone else,
- * a member who is not hers to read, or a missing or malformed id.
+ * Her kept-light membership in the caller's family, with the caller's own membership, for an
+ * organiser of it; null for anyone else, a member who is not hers to read, or a missing or
+ * malformed id.
  */
 async function organisersParent(
   db: Queryable,
@@ -202,7 +224,7 @@ async function organisersParent(
   ) {
     return null;
   }
-  return her;
+  return { her, organiserId: access.access.memberId };
 }
 
 /**
@@ -217,7 +239,7 @@ export async function listApiWeeklyReads(
   familyId: string,
   memberId: string | undefined,
 ): Promise<ApiWeeklyReadList | null> {
-  const her = await organisersParent(db, identity, familyId, memberId);
+  const her = (await organisersParent(db, identity, familyId, memberId))?.her ?? null;
   if (her === null) return null;
   const rows = await db
     .select({ id: weeklyReads.id, weekStart: weeklyReads.weekStart, sentAt: weeklyReads.sentAt })

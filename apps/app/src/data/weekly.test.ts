@@ -40,6 +40,7 @@ function apiRead(locked: boolean): ApiWeeklyRead {
         : { counted_days: 6, answered_days: 5, hello_mornings: 2, family_asks: 4 },
       notes: locked ? null : ["She told you about the garden twice."],
       suggestion: locked ? null : "Ask her which seeds she kept.",
+      my_feedback: locked ? null : "Your seeds question landed.\nAsk about the fence next.",
     },
   });
 }
@@ -91,13 +92,23 @@ describe("the weekly read on Sunday", () => {
     ]);
     expect(week?.notes).toEqual(["She told you about the garden twice."]);
     expect(week?.suggestion).toBe("Ask her which seeds she kept.");
+    expect(week?.feedback).toBe("Your seeds question landed.\nAsk about the fence next.");
+  });
+
+  it("has no feedback for a read sent before it, or without any for this reader", () => {
+    const api = apiRead(false);
+    const older = {
+      ...api,
+      read: api.read === null ? null : { ...api.read, my_feedback: undefined },
+    };
+    expect(toWeeklyRead(ApiWeeklyRead.parse(older)).week?.feedback).toBeNull();
   });
 
   it("keeps the seven days and nothing else when the read is locked", () => {
     const read = toWeeklyRead(apiRead(true));
     expect(read.locked).toBe(true);
     expect(read.week?.lights).toHaveLength(7);
-    expect(read.week).toMatchObject({ counts: [], notes: [], suggestion: null });
+    expect(read.week).toMatchObject({ counts: [], notes: [], suggestion: null, feedback: null });
   });
 
   it("has no week until the first read has been sent", () => {

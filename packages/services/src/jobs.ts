@@ -102,6 +102,7 @@ import { keepBoxPhotosStored, releaseBoxPhotosOfLeavers } from "./photo-box.ts";
 import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
+  activeAppOrganiserIds,
   activeOrganisersWithLinks,
   dayAnsweredAt,
   familyById,
@@ -706,11 +707,13 @@ export async function draftWeeklyRead(
           family,
           weekStart,
           weekEnd,
-          new Set(
-            (await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
+          // Organisers the read reaches: on their messenger, or in the app.
+          new Set([
+            ...(await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
               (organiser) => organiser.member.id,
             ),
-          ),
+            ...(await activeAppOrganiserIds(deps.db, family.id)),
+          ]),
         )
       : null;
   const insightOutcome =
@@ -1661,11 +1664,18 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
         .for("update");
       if (
         read === undefined ||
-        (!Object.hasOwn(read.stats, "insight") && !Object.hasOwn(read.stats, "feedback"))
+        (!Object.hasOwn(read.stats, "insight") &&
+          !Object.hasOwn(read.stats, "feedback") &&
+          !Object.hasOwn(read.stats, "sent_feedback"))
       ) {
         return false;
       }
-      const { insight: _insight, feedback: _feedback, ...kept } = read.stats;
+      const {
+        insight: _insight,
+        feedback: _feedback,
+        sent_feedback: _sentFeedback,
+        ...kept
+      } = read.stats;
       await tx.update(weeklyReads).set({ stats: kept }).where(eq(weeklyReads.id, id));
       return true;
     });

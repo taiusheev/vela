@@ -70,7 +70,7 @@ import {
   type WeeklyRead,
   weeklyReads,
 } from "@vela/db";
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type AdminAiWatch, loadAdminAiWatch } from "./admin-ai-watch.ts";
 import {
@@ -95,6 +95,7 @@ import {
 import { forgetConsentSubjects, recordDeletion, subjectRef } from "./proofs.ts";
 import { type ChannelQuotaSnapshot, loadChannelQuota } from "./quota.ts";
 import {
+  activeAppOrganiserIds,
   activeOrganisersWithLinks,
   channelLinkOfMember,
   exchangeForLocalDate,
@@ -1352,19 +1353,8 @@ export async function deliverWeeklyRead(
   }
   const stats = parseStats(read);
   const organisers = await activeOrganisersWithLinks(tx, family.id, ORGANISER_CHANNEL);
-  const [app] = await tx
-    .select({ n: count() })
-    .from(members)
-    .where(
-      and(
-        eq(members.familyId, family.id),
-        eq(members.role, "organiser"),
-        eq(members.status, "active"),
-        isNull(members.leftAt),
-        isNotNull(members.userId),
-      ),
-    );
-  const appOrganisers = app?.n ?? 0;
+  const appIds = await activeAppOrganiserIds(tx, family.id);
+  const appOrganisers = appIds.length;
   if (organisers.length === 0 && appOrganisers === 0) {
     return "no_organiser";
   }
@@ -1374,7 +1364,8 @@ export async function deliverWeeklyRead(
   const text = organiserText(family, member, stats, content.lines, content.suggestion, health);
   const weekEnd = weekEndOf(read);
   let sentTo = 0;
-  let feedbackSent = 0;
+  // Each organiser's own feedback as it reached them, for their copy in the app; kept 30 days.
+  const reached = new Set(appIds);
   for (const organiser of organisers) {
     // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them.
     const own = content.feedback[organiser.member.id]?.trim() ?? "";
@@ -1397,9 +1388,14 @@ export async function deliverWeeklyRead(
     });
     if ("outboundId" in result) {
       sentTo += 1;
-      if (own !== "") feedbackSent += 1;
+      reached.add(organiser.member.id);
     }
   }
+  const sentFeedback = [...reached].flatMap((memberId) => {
+    const text = content.feedback[memberId]?.trim() ?? "";
+    return text === "" ? [] : [{ member_id: memberId, text }];
+  });
+  const feedbackSent = sentFeedback.length;
   if (sentTo === 0 && appOrganisers === 0) {
     return "budget";
   }
@@ -1409,9 +1405,14 @@ export async function deliverWeeklyRead(
       sentLines: content.lines,
       sentSuggestion: content.suggestion,
       sentAt: at,
-      // Her health words are never stored here: only that the read went out with them. The
-      // feedback itself is in each organiser's sent message, so only its count is kept.
-      stats: { ...read.stats, health_sent: health.length > 0, feedback_sent: feedbackSent },
+      // Her health words are never stored here: only that the read went out with them. Each
+      // organiser's feedback is kept for their own copy in the app until retention clears it.
+      stats: {
+        ...read.stats,
+        health_sent: health.length > 0,
+        feedback_sent: feedbackSent,
+        ...(feedbackSent > 0 ? { sent_feedback: sentFeedback } : {}),
+      },
     })
     .where(eq(weeklyReads.id, read.id));
   return {

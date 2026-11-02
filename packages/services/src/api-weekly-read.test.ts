@@ -148,8 +148,38 @@ describe("loadApiWeeklyRead", () => {
         notes: ["She told you about the garden twice."],
         suggestion: "Ask her which seeds she kept.",
         suggestion_source: null,
+        my_feedback: null,
       },
     });
+  });
+
+  // ADR-48: each organiser's feedback is theirs alone, in the app as in their own messenger copy.
+  it("gives each organiser only their own feedback, and none while the read is locked", async () => {
+    const read = await readOfHerWeek();
+    const ben: SessionIdentity = { authSubject: "auth|Ben", sessionId: "session-4" };
+    const benMember = await seedGroupMember(h.db, seed, {
+      now: h.clock.now(),
+      name: "Ben",
+      externalId: "4003",
+      role: "organiser",
+    });
+    await account(ben, benMember.member.id);
+    await h.db
+      .update(weeklyReads)
+      .set({
+        stats: {
+          ...read.stats,
+          sent_feedback: [
+            { member_id: seed.organiser.id, text: "Your Monday ask landed.\nAsk about pears." },
+          ],
+        },
+      })
+      .where(eq(weeklyReads.id, read.id));
+
+    expect((await load())?.read?.my_feedback).toBeNull();
+    await covered("trial", new Date("2026-10-01T00:00:00.000Z"));
+    expect((await load())?.read?.my_feedback).toBe("Your Monday ask landed.\nAsk about pears.");
+    expect((await load(ben))?.read?.my_feedback).toBeNull();
   });
 
   it("shows the seven days and locks the rest when no Vela Light covers her", async () => {
