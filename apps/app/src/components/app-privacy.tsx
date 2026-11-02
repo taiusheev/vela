@@ -8,13 +8,14 @@ import {
 } from "@vela/contracts";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Linking, Modal, ScrollView } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
 import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { privacyGateDecision } from "../data/app-privacy-gate.ts";
 import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-draft.ts";
+import { retryAccountRead } from "../data/query-client.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { LegalLinks } from "./legal-links.tsx";
@@ -107,6 +108,7 @@ export function AppPrivacyGate({ children }: { children: ReactNode }) {
 function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
   const { t } = useLingui();
+  const palette = usePalette();
   const draft = useOnboardingDraft();
   const queries = useQueryClient();
   const mounted = useRef(true);
@@ -156,14 +158,16 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   });
   // A read still waiting after this long is offered again, so no one is left on a loading screen.
   const [slow, setSlow] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const waitingAttempt = decision === "loading" ? retryAttempt : null;
   useEffect(() => {
-    if (decision !== "loading") {
+    if (waitingAttempt === null) {
       setSlow(false);
       return;
     }
     const timer = setTimeout(() => setSlow(true), SLOW_ACCOUNT_MS);
     return () => clearTimeout(timer);
-  }, [decision]);
+  }, [waitingAttempt]);
   const saveChoice = save.mutate;
   useEffect(() => {
     if (decision === "save" && save.status === "idle") saveChoice();
@@ -174,49 +178,46 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     void account.signOut();
   };
   return (
-    <>
-      {children}
-      <Modal visible onRequestClose={decline}>
-        {decision === "ask" ? (
-          <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
-        ) : (
-          <ScrollView
-            contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
-          >
-            {decision === "loading" ? (
-              <LoadingLight label={t`Loading your account…`} size="large" />
-            ) : null}
-            <Words variant="body" tone="ink2">
-              {decision === "loading" ? null : decision === "unavailable" ? (
-                <Trans>
-                  Your account could not be reached. Your privacy choice has not changed.
-                </Trans>
-              ) : save.isError ? (
-                <Trans>Your choice could not be saved. Please try again.</Trans>
-              ) : (
-                <Trans>Saving your choice…</Trans>
-              )}
-            </Words>
-            {decision === "loading" && slow ? (
-              <Words variant="body" tone="ink2">
-                <Trans>This is taking longer than it should.</Trans>
-              </Words>
-            ) : null}
-            {decision === "unavailable" || (decision === "loading" && slow) ? (
-              <SecondaryButton
-                label={t`Try again`}
-                onPress={() => {
-                  setSlow(false);
-                  void me.refetch({ cancelRefetch: true });
-                }}
-              />
+    <View style={{ flex: 1, backgroundColor: palette.bg }}>
+      {decision === "ask" ? (
+        <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
+      ) : (
+        <ScrollView
+          style={{ flex: 1, backgroundColor: palette.bg }}
+          contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
+        >
+          {decision === "loading" ? (
+            <LoadingLight label={t`Loading your account…`} size="large" />
+          ) : null}
+          <Words variant="body" tone="ink2">
+            {decision === "loading" ? null : decision === "unavailable" ? (
+              <Trans>Your account could not be reached. Your privacy choice has not changed.</Trans>
             ) : save.isError ? (
-              <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
-            ) : null}
-          </ScrollView>
-        )}
-      </Modal>
-    </>
+              <Trans>Your choice could not be saved. Please try again.</Trans>
+            ) : (
+              <Trans>Saving your choice…</Trans>
+            )}
+          </Words>
+          {decision === "loading" && slow ? (
+            <Words variant="body" tone="ink2">
+              <Trans>This is taking longer than it should.</Trans>
+            </Words>
+          ) : null}
+          {decision === "unavailable" || (decision === "loading" && slow) ? (
+            <SecondaryButton
+              label={t`Try again`}
+              onPress={() => {
+                setSlow(false);
+                setRetryAttempt((attempt) => attempt + 1);
+                void retryAccountRead(queries);
+              }}
+            />
+          ) : save.isError ? (
+            <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
+          ) : null}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 

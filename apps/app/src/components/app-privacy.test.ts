@@ -5,7 +5,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { createElement, type ReactNode, useEffect } from "react";
+import { createElement, Fragment, type ReactNode, useEffect } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, fetchMe } from "../api/client.ts";
@@ -37,8 +37,8 @@ vi.mock("@lingui/react/macro", () => ({
 vi.mock("react-native", () => ({
   Platform: { OS: "ios" },
   Linking: { openURL: vi.fn() },
-  Modal: "modal",
   ScrollView: "scroll-view",
+  View: "view",
 }));
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
@@ -58,7 +58,12 @@ let queries: QueryClient;
 let mounts = 0;
 let unmounts = 0;
 
-/** The navigator's screens observe the same account read as the privacy gate. */
+/** As in Root, this account read stays mounted while the gate waits. */
+function WarmAccountProbe() {
+  useQuery({ queryKey: ["me"], queryFn: () => fetchMe("synthetic-token") });
+  return null;
+}
+
 function NavigationProbe() {
   useQuery({ queryKey: ["me"], queryFn: () => fetchMe("synthetic-token") });
   useEffect(() => {
@@ -87,6 +92,7 @@ afterEach(async () => {
   queries.clear();
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
+  vi.useRealTimers();
 });
 
 function nodes(type: string) {
@@ -99,23 +105,77 @@ async function open() {
       createElement(
         QueryClientProvider,
         { client: queries },
-        createElement(AppPrivacyGate, null, createElement(NavigationProbe)),
+        createElement(
+          Fragment,
+          null,
+          createElement(WarmAccountProbe),
+          createElement(AppPrivacyGate, null, createElement(NavigationProbe)),
+        ),
       ),
     );
   });
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(20);
+    else await new Promise((resolve) => setTimeout(resolve, 20));
   });
 }
 
 describe("privacy gate with shared account readers", () => {
+  it("shows only the account screen while waiting, then replaces a stuck first read on retry", async () => {
+    vi.useFakeTimers();
+    let finishOld: (value: unknown) => void = () => {};
+    mocks.read.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOld = resolve;
+        }),
+    );
+    mocks.read.mockImplementationOnce(() => new Promise(() => {}));
+    const user = { id: "synthetic-user", display_name: "Anna", language: "en", tz: "Asia/Taipei" };
+    mocks.read.mockResolvedValue({ user, memberships: [], privacy_accepted: true });
+    updateDraft({ privacyAccepted: true });
+    await open();
+    expect(nodes("loading-light")).toHaveLength(1);
+    expect(nodes("navigator")).toHaveLength(0);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    await act(async () => {
+      nodes("secondary-button")
+        .find((node) => node.props.label === "Try again")
+        ?.props.onPress();
+      await vi.advanceTimersByTimeAsync(20);
+    });
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+    expect(nodes("loading-light")).toHaveLength(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    await act(async () => {
+      nodes("secondary-button")
+        .find((node) => node.props.label === "Try again")
+        ?.props.onPress();
+      await vi.advanceTimersByTimeAsync(20);
+    });
+    expect(mocks.read).toHaveBeenCalledTimes(3);
+    expect(nodes("loading-light")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(1);
+    await act(async () => {
+      finishOld({ user, memberships: [], privacy_accepted: false });
+      await vi.advanceTimersByTimeAsync(20);
+    });
+    expect(queries.getQueryData(["me"])).toMatchObject({ privacy_accepted: true });
+    expect(nodes("loading-light")).toHaveLength(0);
+    expect(mounts).toBe(1);
+  });
+
   it("settles a new-account read even if sign-in left focus inactive and another screen observes it", async () => {
     focusManager.setFocused(false);
     mocks.read.mockRejectedValue(new ApiError(404, "not_found"));
     updateDraft({ privacyAccepted: true });
     await open();
     expect(queries.getQueryState(["me"])?.status).toBe("error");
-    expect(nodes("modal")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(1);
     expect(mocks.read).toHaveBeenCalledTimes(1);
   });
 
@@ -128,14 +188,14 @@ describe("privacy gate with shared account readers", () => {
     updateDraft({ privacyAccepted: true });
     await open();
     expect(queries.getQueryState(["me"])?.status).toBe("error");
-    expect(nodes("modal")).toHaveLength(1);
+    expect(nodes("navigator")).toHaveLength(0);
     expect(nodes("primary-button")).toHaveLength(0);
     await act(async () => {
       nodes("secondary-button")[0]?.props.onPress();
       await new Promise((resolve) => setTimeout(resolve, 20));
     });
     expect(mocks.read).toHaveBeenCalledTimes(2);
-    expect(nodes("modal")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(1);
     expect(mocks.provision).not.toHaveBeenCalled();
   });
   it("continues into setup after a new account accepts privacy, without restarting its missing-account read", async () => {
@@ -150,11 +210,11 @@ describe("privacy gate with shared account readers", () => {
     expect(mounts).toBe(1);
     expect(unmounts).toBe(0);
     expect(mocks.read).toHaveBeenCalledTimes(1);
-    expect(nodes("modal")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(1);
     expect(mocks.provision).not.toHaveBeenCalled();
   });
 
-  it("keeps navigation and its state while an existing account's choice is saved", async () => {
+  it("opens navigation only after an existing account's choice is saved", async () => {
     const user = { id: "synthetic-user", display_name: "Anna", language: "en", tz: "Asia/Taipei" };
     mocks.read.mockResolvedValueOnce({ user, memberships: [], privacy_accepted: false });
     mocks.read.mockResolvedValue({ user, memberships: [], privacy_accepted: true });
@@ -167,6 +227,6 @@ describe("privacy gate with shared account readers", () => {
     expect(mocks.provision).toHaveBeenCalledTimes(1);
     expect(mounts).toBe(1);
     expect(unmounts).toBe(0);
-    expect(nodes("modal")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(1);
   });
 });
