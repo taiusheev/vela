@@ -40,6 +40,7 @@ import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
 import { usePlannedQuestions } from "../src/data/usePlannedQuestions.ts";
 import { dayName, type TodayView, useToday } from "../src/data/useToday.ts";
+import { tapLanded } from "../src/device/haptics.ts";
 import { usePush } from "../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../src/storage/flags.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
@@ -361,6 +362,7 @@ function AskComposer({
       return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
     onSuccess: async () => {
+      tapLanded();
       await finishQuestionSave(queries, familyId, draft.clear);
       if (params.edit === undefined && (await offerAfterAsk())) setOffering(true);
       else

@@ -2866,6 +2866,7 @@ msgstr "No suggestions are available from the messages currently shared."
 
 #: src/data/today.ts
 #: src/data/useToday.ts
+#: src/device/widget.ts
 msgid "No word yet today"
 msgstr "No word yet today"
 
@@ -3180,6 +3181,10 @@ msgstr "Open this exchange"
 #: src/components/onboarding/finish.tsx
 msgid "Open Today to see it."
 msgstr "Open Today to see it."
+
+#: src/device/widget.ts
+msgid "Open Vela"
+msgstr "Open Vela"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."

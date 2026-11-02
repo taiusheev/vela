@@ -54,6 +54,7 @@ import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePlannedQuestions } from "../src/data/usePlannedQuestions.ts";
 import { useQuestionProfile } from "../src/data/useQuestionProfile.ts";
 import { useToday } from "../src/data/useToday.ts";
+import { tapLanded } from "../src/device/haptics.ts";
 import { space } from "../src/theme/tokens.ts";
 
 const UNKNOWN_CHOICE = "unsure";
@@ -333,6 +334,7 @@ function PersonalDraft({
     onSuccess: (outcome) => {
       if (!mounted.current) return;
       if (outcome === undefined) return;
+      tapLanded();
       // Acceptance is final; an unavailable refresh must not turn success into another send.
       void finishQuestionSave(queries, familyId, async () => {});
       setWords("");

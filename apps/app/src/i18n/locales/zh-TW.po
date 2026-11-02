@@ -2867,6 +2867,7 @@ msgstr "目前分享的訊息沒有可用的陪伴建議。"
 
 #: src/data/today.ts
 #: src/data/useToday.ts
+#: src/device/widget.ts
 msgid "No word yet today"
 msgstr "今天還沒有回覆"
 
@@ -3181,6 +3182,10 @@ msgstr "打開這次交流"
 #: src/components/onboarding/finish.tsx
 msgid "Open Today to see it."
 msgstr "打開「今天」就能看到。"
+
+#: src/device/widget.ts
+msgid "Open Vela"
+msgstr "打開 Vela 看看"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open your own Vela chat and confirm it’s you. Your family and messages stay together."
