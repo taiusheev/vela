@@ -17,7 +17,13 @@ describe("password sign-in", () => {
     expect(activate).toHaveBeenCalledExactlyOnceWith({ session: "session_demo" });
   });
 
-  it.each(["needs_first_factor", "needs_second_factor", "needs_new_password", null])(
+  it.each([
+    "needs_first_factor",
+    "needs_client_trust",
+    "needs_second_factor",
+    "needs_new_password",
+    null,
+  ])(
     "never activates an unfinished %s challenge even if a session id is present",
     async (status) => {
       const activate = vi.fn();
