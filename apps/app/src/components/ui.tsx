@@ -379,6 +379,7 @@ export function TextField({
   autoComplete,
   autoCapitalize,
   autoCorrect,
+  secureTextEntry = false,
   autoFocus = false,
   maxLength,
   minHeight,
@@ -401,7 +402,8 @@ export function TextField({
   /** The keyboard she gets: a number pad for a phone or a code, words for an ask. */
   keyboardType?: "phone-pad" | "number-pad" | "email-address";
   /** Lets the phone offer her own number, and fill a code from the message that carries it. */
-  autoComplete?: "tel" | "tel-national" | "one-time-code" | "email";
+  autoComplete?: "tel" | "tel-national" | "one-time-code" | "email" | "current-password";
+  secureTextEntry?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: boolean;
   /** For the one field a screen exists to fill, so it is ready without hunting for it. */
@@ -431,6 +433,7 @@ export function TextField({
         placeholder={placeholder}
         placeholderTextColor={palette.ink3}
         multiline={multiline}
+        secureTextEntry={secureTextEntry}
         {...(keyboardType === undefined ? {} : { keyboardType })}
         {...(autoComplete === undefined ? {} : { autoComplete })}
         {...(autoCapitalize === undefined ? {} : { autoCapitalize })}

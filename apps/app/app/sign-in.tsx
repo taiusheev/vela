@@ -18,6 +18,7 @@ import {
   verificationCode,
   verificationFailure,
 } from "../src/auth/code.ts";
+import { completePasswordSignIn } from "../src/auth/password.ts";
 import {
   COUNTRIES,
   type Country,
@@ -45,7 +46,7 @@ import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type Step = "identifier" | "code";
+type Step = "identifier" | "code" | "password";
 /** Which of Clerk's two one-time codes this attempt is carrying. */
 type Strategy = "email_code" | "phone_code";
 type Destination =
@@ -67,6 +68,8 @@ type Trouble = {
     | "country_unsupported"
     | "phone_off"
     | "email_invalid"
+    | "password_refused"
+    | "verification_required"
     | "expired"
     | "rate_limited"
     | "network";
@@ -224,6 +227,8 @@ function CodeSignIn() {
   const international = toInternational(country, number);
   const identifier = mode === "phone" ? (international ?? "") : email.trim();
   const [code, setCode] = useState("");
+  // Kept only in this screen's memory, cleared on success or leaving the password step.
+  const [password, setPassword] = useState("");
   const [trouble, setTrouble] = useState<Trouble | undefined>();
   const [working, setWorking] = useState(false);
   const inFlight = useRef(false);
@@ -245,6 +250,44 @@ function CodeSignIn() {
     setStep("code");
   };
   const ready = isLoaded && signUpLoaded && signIn !== undefined && signUp !== undefined;
+
+  const enterPassword = async () => {
+    if (!ready || signIn === undefined || inFlight.current || password.length === 0) return;
+    if (!validEmail(email)) {
+      setTrouble({ kind: "email_invalid" });
+      return;
+    }
+    inFlight.current = true;
+    setWorking(true);
+    setTrouble(undefined);
+    try {
+      const result = await completePasswordSignIn(
+        (params) => within(signIn.create(params)),
+        (params) => within(setActive(params)),
+        email,
+        password,
+      );
+      setPassword("");
+      if (result !== "complete") {
+        setTrouble({ kind: "verification_required" });
+        return;
+      }
+      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+    } catch (error: unknown) {
+      // Never display provider messages or log password inputs.
+      const codes = clerkErrorCodes(error).join(" ");
+      setTrouble({
+        kind: /rate_limit|too_many/.test(codes)
+          ? "rate_limited"
+          : error instanceof TypeError || error instanceof TookTooLong
+            ? "network"
+            : "password_refused",
+      });
+    } finally {
+      inFlight.current = false;
+      setWorking(false);
+    }
+  };
 
   /** Not yet an account: the same code, through the other door. */
   const startJoining = async (entered: string) => {
@@ -441,6 +484,10 @@ function CodeSignIn() {
         return t`Too many attempts. Wait a moment, then try again.`;
       case "network":
         return t`We could not connect. Check your internet connection and try again.`;
+      case "password_refused":
+        return t`We could not sign you in. Check your email and password, or use an email code.`;
+      case "verification_required":
+        return t`This account needs another verification step. Use an email code to sign in.`;
       case "cannot_receive":
         return t`That account cannot receive a code yet.`;
       case "did_not_work":
@@ -487,22 +534,26 @@ function CodeSignIn() {
         <View style={{ gap: space.xl }}>
           <BrandHeader />
           <SetupProgress
-            steps={[t`Your email`, t`Verify code`]}
+            steps={[t`Your email`, step === "password" ? t`Password` : t`Verify code`]}
             current={step === "identifier" ? 0 : 1}
           />
           <Words variant="title">
-            {step !== "identifier"
-              ? t`Check your inbox`
-              : savingFor === null
-                ? t`Welcome to Vela`
-                : t`Save ${savingFor}’s mornings`}
+            {step === "password"
+              ? t`Sign in with a password`
+              : step !== "identifier"
+                ? t`Check your inbox`
+                : savingFor === null
+                  ? t`Welcome to Vela`
+                  : t`Save ${savingFor}’s mornings`}
           </Words>
           <Words variant="body" tone="ink2">
-            {step !== "identifier"
-              ? t`Enter your code to continue to your family.`
-              : savingFor === null
-                ? t`A little closer to your family. Use your email to get started or sign in.`
-                : t`One email, one code, no password. Then ${savingFor}’s invitation is ready to send.`}
+            {step === "password"
+              ? t`Use the password already set for your account.`
+              : step !== "identifier"
+                ? t`Enter your code to continue to your family.`
+                : savingFor === null
+                  ? t`A little closer to your family. Use your email to get started or sign in.`
+                  : t`One email, one code, no password. Then ${savingFor}’s invitation is ready to send.`}
           </Words>
         </View>
         <Card>
@@ -590,6 +641,64 @@ function CodeSignIn() {
                 label={working ? t`Sending…` : t`Send me a code`}
                 disabled={working || !ready || identifier.length === 0}
                 onPress={sendCode}
+              />
+              {mode === "email" ? (
+                <SecondaryButton
+                  label={t`Use a password instead`}
+                  disabled={working}
+                  onPress={() => {
+                    setStep("password");
+                    setPassword("");
+                    setCode("");
+                    setJoining(false);
+                    setTrouble(undefined);
+                  }}
+                />
+              ) : null}
+            </>
+          ) : step === "password" ? (
+            <>
+              <TextField
+                label={t`Email`}
+                value={email}
+                disabled={working}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  setTrouble(undefined);
+                }}
+                keyboardType="email-address"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TextField
+                label={t`Password`}
+                value={password}
+                disabled={working}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  setTrouble(undefined);
+                }}
+                secureTextEntry
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                onSubmit={() => void enterPassword()}
+              />
+              <PrimaryButton
+                label={working ? t`Checking…` : t`Continue`}
+                disabled={working || !ready || email.trim().length === 0 || password.length === 0}
+                onPress={enterPassword}
+              />
+              <SecondaryButton
+                label={t`Use an email code instead`}
+                disabled={working}
+                onPress={() => {
+                  setPassword("");
+                  setStep("identifier");
+                  setTrouble(undefined);
+                }}
               />
             </>
           ) : (

@@ -3271,6 +3271,10 @@ msgstr "父母的設定"
 msgid "Parents"
 msgstr "長輩"
 
+#: app/sign-in.tsx
+msgid "Password"
+msgstr "密碼"
+
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
 msgid "Pause"
@@ -4126,6 +4130,10 @@ msgstr "登入後即可連結你的家庭。"
 msgid "Sign in to delete your account."
 msgstr "請先登入，再刪除你的帳號。"
 
+#: app/sign-in.tsx
+msgid "Sign in with a password"
+msgstr "使用密碼登入"
+
 #: app/settings.tsx
 msgid "Sign out"
 msgstr "登出"
@@ -4820,6 +4828,10 @@ msgstr "這位聯絡人將不再收到探望請求。你可以邀請其他人。
 msgid "This account already runs a family."
 msgstr "這個帳號已經有一個家庭了。"
 
+#: app/sign-in.tsx
+msgid "This account needs another verification step. Use an email code to sign in."
+msgstr "此帳號需要額外驗證。請改用電子郵件驗證碼登入。"
+
 #: app/delete-account.tsx
 msgid "This cannot be undone."
 msgstr "刪除後無法復原。"
@@ -5209,9 +5221,17 @@ msgstr "改用連結代碼"
 msgid "Use a different email"
 msgstr "使用其他電子郵件"
 
+#: app/sign-in.tsx
+msgid "Use a password instead"
+msgstr "改用密碼登入"
+
 #: src/components/telegram-family-link.tsx
 msgid "Use a private connection code instead"
 msgstr "改用私人連結碼"
+
+#: app/sign-in.tsx
+msgid "Use an email code instead"
+msgstr "改用電子郵件驗證碼登入"
 
 #: app/sign-in.tsx
 msgid "Use my email instead"
@@ -5220,6 +5240,10 @@ msgstr "改用我的電子郵件"
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
 msgstr "只填你自己會對這個人說的話，請不要加入隱私細節或別人的訊息。"
+
+#: app/sign-in.tsx
+msgid "Use the password already set for your account."
+msgstr "請輸入您為帳號設定的密碼。"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
@@ -5474,6 +5498,10 @@ msgstr "無法確認這位長輩是否有可用的聊天。再次邀請前，請
 #: app/sign-in.tsx
 msgid "We could not connect. Check your internet connection and try again."
 msgstr "無法連線。請檢查網路連線後再試。"
+
+#: app/sign-in.tsx
+msgid "We could not sign you in. Check your email and password, or use an email code."
+msgstr "無法登入。請確認電子郵件地址和密碼，或改用電子郵件驗證碼。"
 
 #: src/components/telegram-family-link.tsx
 msgid "We couldn’t finish connecting. Your family and messages are unchanged. Try again when Vela is available."
