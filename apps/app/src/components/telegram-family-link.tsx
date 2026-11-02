@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { appPrivacyAcceptance } from "@vela/contracts";
+import { appPrivacyAcceptance, privacyLangOf } from "@vela/contracts";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, View } from "react-native";
@@ -84,7 +84,7 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       if (noAccount) {
         const profile = {
           display_name: name.trim(),
-          privacy_acceptance: appPrivacyAcceptance(),
+          privacy_acceptance: appPrivacyAcceptance(privacyLangOf(i18n.locale)),
           language: i18n.locale === "zh-TW" ? ("zh-TW" as const) : ("en" as const),
           tz: deviceZone("Asia/Taipei"),
         };

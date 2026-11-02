@@ -1,6 +1,6 @@
 import { LANGS } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
-import { type DeviceLocale, fromDevice, fromLang, isAppLocale } from "./locale.ts";
+import { type DeviceLocale, fromDevice, fromLang, isAppLocale, startingLocale } from "./locale.ts";
 
 function device(
   languageCode: string | null,
@@ -79,5 +79,27 @@ describe("fromDevice", () => {
     expect(fromDevice([])).toBe("en");
     expect(fromDevice([device(null, null, null)])).toBe("en");
     expect(fromDevice([device("ja", "Jpan", "JP")])).toBe("en");
+  });
+});
+
+describe("startingLocale", () => {
+  const taiwan = [device("zh", "Hant", "TW")];
+  it("meets a Taiwanese phone in Chinese once the server allows Chinese", () => {
+    expect(startingLocale({ englishOnly: false, remembered: null, device: taiwan })).toBe("zh-TW");
+  });
+  it("keeps the language chosen on this phone over the phone's own", () => {
+    expect(startingLocale({ englishOnly: false, remembered: "en", device: taiwan })).toBe("en");
+  });
+  it("stays English while the server allows nothing else", () => {
+    expect(startingLocale({ englishOnly: true, remembered: "zh-TW", device: taiwan })).toBe("en");
+  });
+  it("starts an English phone in English", () => {
+    expect(
+      startingLocale({
+        englishOnly: false,
+        remembered: undefined,
+        device: [device("en", null, "US")],
+      }),
+    ).toBe("en");
   });
 });

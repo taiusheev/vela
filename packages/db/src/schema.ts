@@ -220,6 +220,8 @@ export const users = pgTable(
     /** Current app permission evidence, never a parent’s or health consent. Cleared with account deletion. */
     privacyAcceptance: jsonb("privacy_acceptance").$type<{
       version: string;
+      /** The language the permission was shown in; absent on acceptances before it was recorded. */
+      lang?: string;
       text_sha256: string;
       accepted_at: string;
     }>(),

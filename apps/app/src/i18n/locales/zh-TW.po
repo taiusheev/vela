@@ -983,6 +983,10 @@ msgstr "大家"
 msgid "Approve this offer for {count} days"
 msgstr "確認這項提議，保留 {count} 天"
 
+#: src/components/onboarding/questions.tsx
+msgid "Around {name}"
+msgstr "{name}身邊"
+
 #: src/components/reminders.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name}"
@@ -1313,10 +1317,6 @@ msgstr "已選擇 · 換一張"
 #: src/components/quiet-notice.tsx
 msgid "Close"
 msgstr "關閉"
-
-#: src/components/onboarding/questions.tsx
-msgid "Close by"
-msgstr "住在附近的人"
 
 #: app/weekly-report.tsx
 msgid "Close message review"

@@ -1,5 +1,5 @@
 import {
-  APP_PRIVACY_TEXT,
+  APP_PRIVACY_TEXTS,
   ApiAccountPatch,
   ApiAccountProfile,
   type ApiMutationResponse,
@@ -90,7 +90,11 @@ export async function provisionApiAccount(
             .set({
               privacyAcceptance: {
                 version: parsed.data.privacy_acceptance.version,
-                text_sha256: await sha256Hex(APP_PRIVACY_TEXT),
+                // The exact text shown, in the language it was shown in.
+                lang: parsed.data.privacy_acceptance.lang ?? "en",
+                text_sha256: await sha256Hex(
+                  APP_PRIVACY_TEXTS[parsed.data.privacy_acceptance.lang ?? "en"],
+                ),
                 accepted_at: deps.clock.now().toISOString(),
               },
             })

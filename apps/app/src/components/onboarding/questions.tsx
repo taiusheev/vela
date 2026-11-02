@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { Animated, Image, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
+import { apiConfigured } from "../../api/client.ts";
 import { clockTime, timeOfDay } from "../../data/format.ts";
 import {
   arrivalAfter,
@@ -35,6 +36,7 @@ import {
   discardOnboardingPortrait,
   pickOnboardingPortrait,
 } from "../../data/onboarding-portrait.ts";
+import { useCapabilities } from "../../data/useCapabilities.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, space, type } from "../../theme/tokens.ts";
 import { QuestionPaper } from "../questions/flow.tsx";
@@ -228,7 +230,8 @@ export function Questions({ draft, step }: { draft: OnboardingDraft; step: Quest
   const relationship = relationships.find((choice) => choice.value === draft.relationship);
   const name = nameFor(draft, relationship === undefined ? t`them` : i18n._(relationship.label));
   const { chapter, index, size } = chapterOf(step);
-  const chapterName = [t`${name}’s mornings`, t`${name}’s world`, t`Close by`][chapter - 1] ?? "";
+  const chapterName =
+    [t`${name}’s mornings`, t`${name}’s world`, t`Around ${name}`][chapter - 1] ?? "";
   const lit = chapter;
   const paneLine =
     step === "who"
@@ -566,20 +569,35 @@ function Wake({ draft, name }: { draft: OnboardingDraft; name: string }) {
 
 function Messengers({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const { t } = useLingui();
+  const { capabilities } = useCapabilities();
+  const telegram = {
+    value: "telegram" as const,
+    title: t`On Telegram`,
+    detail: t`Vela writes in a chat of its own.`,
+    icon: CHAT,
+  };
+  const line = {
+    value: "line" as const,
+    title: t`On LINE`,
+    detail: t`Vela writes in a chat of its own.`,
+    icon: CHAT,
+  };
+  // LINE first for a parent in Taiwan, where nearly every parent already chats on it.
+  const messengers = draft.country === "TW" ? [line, telegram] : [telegram, line];
+  // Her own phone with Vela only where the server offers it; the example shows every choice.
+  const phoneOffered = !apiConfigured() || capabilities?.parent_app === true;
   const choices: { value: Messenger; title: string; detail: string; icon: string }[] = [
-    {
-      value: "telegram",
-      title: t`On Telegram`,
-      detail: t`Vela writes in a chat of its own.`,
-      icon: CHAT,
-    },
-    { value: "line", title: t`On LINE`, detail: t`Vela writes in a chat of its own.`, icon: CHAT },
-    {
-      value: "phone",
-      title: t`${name}’s own phone, with Vela`,
-      detail: t`Big words, one message at a time. You set it up together.`,
-      icon: PHONE,
-    },
+    ...messengers,
+    ...(phoneOffered
+      ? [
+          {
+            value: "phone" as const,
+            title: t`${name}’s own phone, with Vela`,
+            detail: t`Big words, one message at a time. You set it up together.`,
+            icon: PHONE,
+          },
+        ]
+      : []),
   ];
   return (
     <>

@@ -1,10 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  APP_PRIVACY_TEXT,
+  APP_PRIVACY_TEXTS,
   APP_PRIVACY_VERSION,
   type ApiMe,
   appPrivacyAcceptance,
+  privacyLangOf,
 } from "@vela/contracts";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -19,8 +20,9 @@ import { retryAccountRead } from "../data/query-client.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { LegalLinks } from "./legal-links.tsx";
+import { Light } from "./light.tsx";
 import { LoadingLight } from "./loading-light.tsx";
-import { Card, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
+import { Card, PrimaryButton, SecondaryButton, TextButton, Words } from "./ui.tsx";
 
 /** A versioned English notice for the current English testing cohort. */
 export function AppPrivacy({
@@ -34,7 +36,7 @@ export function AppPrivacy({
   working?: boolean;
   failed?: boolean;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const palette = usePalette();
   const [linkFailed, setLinkFailed] = useState(false);
   const [details, setDetails] = useState(false);
@@ -49,49 +51,59 @@ export function AppPrivacy({
         gap: space.l,
       }}
     >
+      {/* One lit window, as on every onboarding screen, so this step feels part of the same walk. */}
+      <View style={{ alignItems: "flex-start" }}>
+        <Light state="lit" height={40} />
+      </View>
       <Words variant="title">
         <Trans>Before you continue</Trans>
       </Words>
-      <Words variant="body" tone="ink2">
-        <Trans>
-          Vela saves the family information you choose to share. OpenAI and Deepgram process
-          messages and voice notes in the United States to help with questions and weekly reads.
-          OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run
-          this private test. Your parent makes their own separate choices.
-        </Trans>
-      </Words>
-      <SecondaryButton
-        label={details ? t`Hide privacy details` : t`Privacy details and terms`}
-        onPress={() => setDetails((value) => !value)}
-      />
+      <Card>
+        <Words variant="body" tone="ink2">
+          <Trans>
+            Vela saves the family information you choose to share. OpenAI and Deepgram process
+            messages and voice notes in the United States to help with questions and weekly reads.
+            OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run
+            this private test. Your parent makes their own separate choices.
+          </Trans>
+        </Words>
+      </Card>
+      <View style={{ alignItems: "flex-start" }}>
+        <TextButton
+          label={details ? t`Hide privacy details` : t`Privacy details and terms`}
+          onPress={() => setDetails((value) => !value)}
+        />
+      </View>
       {details ? (
         <>
           <Card>
-            <Words selectable>{APP_PRIVACY_TEXT}</Words>
+            <Words selectable>{APP_PRIVACY_TEXTS[privacyLangOf(i18n.locale)]}</Words>
           </Card>
           <LegalLinks />
+          <View style={{ alignItems: "flex-start" }}>
+            <TextButton
+              label={t`Read the privacy notice`}
+              onPress={() => {
+                void Linking.openURL(noticeUrl("/privacy")).catch(() => setLinkFailed(true));
+              }}
+            />
+          </View>
         </>
       ) : null}
       {linkFailed ? <Words selectable>{SUPPORT_EMAIL}</Words> : null}
-      {details ? (
-        <SecondaryButton
-          label={t`Read the privacy notice`}
-          onPress={() => {
-            void Linking.openURL(noticeUrl("/privacy")).catch(() => setLinkFailed(true));
-          }}
-        />
-      ) : null}
       {failed ? (
         <Words>
           <Trans>Your choice could not be saved. Please try again.</Trans>
         </Words>
       ) : null}
-      <PrimaryButton
-        label={working ? t`Saving…` : t`Agree and continue`}
-        disabled={working}
-        onPress={onAccept}
-      />
-      <SecondaryButton label={t`Not now`} disabled={working} onPress={onDecline} />
+      <View style={{ gap: space.s, marginTop: space.l }}>
+        <PrimaryButton
+          label={working ? t`Saving…` : t`Agree and continue`}
+          disabled={working}
+          onPress={onAccept}
+        />
+        <TextButton label={t`Not now`} disabled={working} onPress={onDecline} />
+      </View>
     </ScrollView>
   );
 }
@@ -107,7 +119,7 @@ export function AppPrivacyGate({ children }: { children: ReactNode }) {
 
 function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const palette = usePalette();
   const draft = useOnboardingDraft();
   const queries = useQueryClient();
@@ -146,7 +158,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
           display_name: me.data.user.display_name,
           language: me.data.user.language,
           tz: me.data.user.tz,
-          privacy_acceptance: appPrivacyAcceptance(),
+          privacy_acceptance: appPrivacyAcceptance(privacyLangOf(i18n.locale)),
         },
         `privacy:${me.data.user.id}:${APP_PRIVACY_VERSION}`,
         await account.token(),
