@@ -8,6 +8,7 @@ import {
   answers,
   apiRequestReceipts,
   awayPeriods,
+  channelLinks,
   chips,
   consents,
   deletions,
@@ -564,6 +565,97 @@ describe("draftWeeklyRead", () => {
       ADMIN_CHAT,
     ]);
     expect(h.logger.entries.map((entry) => entry.event)).not.toContain("weekly_read_draft_failed");
+  });
+
+  // Founder's choice (2 Nov 2026): where WEEKLY_READ_AUTO_SEND is on, the read goes to the family as
+  // soon as it is drafted, and the founder is told it was sent rather than asked to send it.
+  describe("sent as soon as it is drafted", () => {
+    const autoSend = () => ({ ...h.deps, config: { ...h.deps.config, weeklyReadAutoSend: true } });
+
+    async function draftedWeek(seed: SeededFamily): Promise<void> {
+      await setStartsOn(seed, "2026-09-14");
+      await seedMorning(seed, { date: "2026-09-15", answeredAt: "09:00", summary: "Fine" });
+      h.clock.set(at("2026-09-20", "18:00"));
+    }
+
+    it("sends the draft to each organiser, records it as sent, and tells the founder it went", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await draftedWeek(seed);
+
+      await draftWeeklyRead(autoSend(), seed.member.id, "2026-09-20");
+
+      const [read] = await h.db.select().from(weeklyReads);
+      expect(read?.sentAt).toEqual(h.clock.now());
+      expect(read?.sentLines).toEqual(read?.lines);
+      expect(read?.sentSuggestion).toBe(read?.suggestion);
+      const sent = await h.db.select().from(outbound).orderBy(asc(outbound.kind));
+      expect(sent.map((row) => [row.kind, row.conversationId])).toEqual([
+        ["system", ADMIN_CHAT],
+        ["weekly_read", "1001"],
+      ]);
+      expect(sent[0]?.payload).toMatchObject({
+        message: { text: expect.stringContaining("was sent") },
+      });
+      const [event] = (await eventRows()).filter((row) => row.name === "weekly_read_sent");
+      expect(event?.props).toMatchObject({ organisers: 1, app_organisers: 0, auto: true });
+
+      // A second run finds the week done and sends nothing more.
+      await draftWeeklyRead(autoSend(), seed.member.id, "2026-09-20");
+      expect(await h.db.select().from(outbound)).toHaveLength(2);
+    });
+
+    it("counts an organiser who uses only the app as reached, so the read shows in the app", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await draftedWeek(seed);
+      await h.db.delete(channelLinks).where(eq(channelLinks.memberId, seed.organiser.id));
+      const [user] = await h.db
+        .insert(users)
+        .values({ displayName: "Mia", email: "mia@example.test" })
+        .returning();
+      await h.db
+        .update(members)
+        .set({ userId: user?.id ?? null })
+        .where(eq(members.id, seed.organiser.id));
+
+      await draftWeeklyRead(autoSend(), seed.member.id, "2026-09-20");
+
+      const [read] = await h.db.select().from(weeklyReads);
+      expect(read?.sentAt).toEqual(h.clock.now());
+      expect((await h.db.select().from(outbound)).map((row) => row.kind)).toEqual(["system"]);
+      const [event] = (await eventRows()).filter((row) => row.name === "weekly_read_sent");
+      expect(event?.props).toMatchObject({ organisers: 0, app_organisers: 1, auto: true });
+    });
+
+    it("keeps a read nobody can receive as a draft, and asks the founder to send it", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await draftedWeek(seed);
+      await h.db.delete(channelLinks).where(eq(channelLinks.memberId, seed.organiser.id));
+
+      await draftWeeklyRead(autoSend(), seed.member.id, "2026-09-20");
+
+      const [read] = await h.db.select().from(weeklyReads);
+      expect(read?.sentAt).toBeNull();
+      const sent = await h.db.select().from(outbound);
+      expect(sent.map((row) => row.kind)).toEqual(["system"]);
+      expect(sent[0]?.payload).toMatchObject({
+        message: { text: expect.stringContaining("draft") },
+      });
+      expect((await eventRows()).map((row) => row.name)).not.toContain("weekly_read_sent");
+      expect(h.logger.entries.map((entry) => entry.event)).toContain(
+        "weekly_read_auto_send_refused",
+      );
+    });
+
+    it("waits for the founder while the switch is off", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await draftedWeek(seed);
+
+      await draftWeeklyRead(h.deps, seed.member.id, "2026-09-20");
+
+      const [read] = await h.db.select().from(weeklyReads);
+      expect(read?.sentAt).toBeNull();
+      expect((await h.db.select().from(outbound)).map((row) => row.kind)).toEqual(["system"]);
+    });
   });
 
   it("retunes T_quiet from her last fourteen answered days and records what it was computed from", async () => {

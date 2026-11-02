@@ -2257,6 +2257,10 @@ msgstr "Japan"
 msgid "Join a plan Dad mentioned"
 msgstr "Join a plan Dad mentioned"
 
+#: src/components/weekly-read-card.tsx
+msgid "Just for you, about your own messages"
+msgstr "Just for you, about your own messages"
+
 #: src/auth/phone.ts
 msgid "Kazakhstan"
 msgstr "Kazakhstan"
@@ -3130,6 +3134,10 @@ msgstr "Only on this device. Removed when you sign out."
 #: app/personal-question.tsx
 msgid "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
 msgstr "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
+
+#: src/components/weekly-read-card.tsx
+msgid "Only you see this part."
+msgstr "Only you see this part."
 
 #: src/components/telegram-family-link.tsx
 msgid "Open {messenger} again"
@@ -6053,6 +6061,12 @@ msgstr "Your pilot is free. Quiet notices and important updates arrive in the or
 #: app/personal-question.tsx
 msgid "Your question"
 msgstr "Your question"
+
+#: src/data/weekly.ts
+msgid "Your question about the seeds got her longest answer of the week.\n"
+"Next time, ask about one thing she named, like the new bed by the fence."
+msgstr "Your question about the seeds got her longest answer of the week.\n"
+"Next time, ask about one thing she named, like the new bed by the fence."
 
 #: app/ask.tsx
 msgid "Your question for {name}"

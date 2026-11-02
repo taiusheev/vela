@@ -19,6 +19,7 @@ import {
   readRichMemories,
   readSendAsMe,
   readWeeklyInsight,
+  readWeeklyReadAutoSend,
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
@@ -963,6 +964,17 @@ describe("the weekly insight switch", () => {
     expect(readConfig({ ...chosenStaging, SEND_AS_ME: "on" }, filled).sendAsMe).toBe(true);
     const error = configErrorOf(() => readSendAsMe({ SEND_AS_ME: "yes" }));
     expect(errorLabel(error)).toBe("ConfigError:SEND_AS_ME");
+  });
+
+  it("waits for the founder unless WEEKLY_READ_AUTO_SEND says on, and refuses anything else", () => {
+    expect(readWeeklyReadAutoSend({})).toBe(false);
+    expect(readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "off" })).toBe(false);
+    expect(readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "on" })).toBe(true);
+    expect(
+      readConfig({ ...chosenStaging, WEEKLY_READ_AUTO_SEND: "on" }, filled).weeklyReadAutoSend,
+    ).toBe(true);
+    const error = configErrorOf(() => readWeeklyReadAutoSend({ WEEKLY_READ_AUTO_SEND: "yes" }));
+    expect(errorLabel(error)).toBe("ConfigError:WEEKLY_READ_AUTO_SEND");
   });
 
   it("is off unless WEEKLY_INSIGHT says on, and refuses anything else by name", () => {

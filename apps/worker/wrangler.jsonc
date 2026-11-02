@@ -286,6 +286,7 @@
     "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
     "WEEKLY_INSIGHT": "on",
+    "WEEKLY_READ_AUTO_SEND": "on",
     "WEEKLY_SUPPORT": "off",
     "WEEKLY_SUPPORT_NOTICE": "",
     "WEEKLY_SUPPORT_FAMILIES": "",
@@ -423,6 +424,7 @@
         "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
+        "WEEKLY_READ_AUTO_SEND": "on",
         "WEEKLY_SUPPORT": "off",
         "WEEKLY_SUPPORT_NOTICE": "",
         "WEEKLY_SUPPORT_FAMILIES": "",
@@ -566,6 +568,7 @@
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
+        "WEEKLY_READ_AUTO_SEND": "off",
         "WEEKLY_SUPPORT": "off",
         "WEEKLY_SUPPORT_NOTICE": "",
         "WEEKLY_SUPPORT_FAMILIES": "",

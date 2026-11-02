@@ -183,6 +183,7 @@ const OTHER_WEEKLY_READ_NAME_SAMPLE: Record<(typeof MVP_LANGS)[number], string> 
 const WEEKLY_READ_KEYS: readonly MessageKey[] = [
   "parent.family_sees_weekly_read",
   "admin.weekly_read_draft",
+  "admin.weekly_read_sent",
 ];
 
 /**
@@ -253,6 +254,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["parent.family_sees_weekly_read", []],
   ["admin.flag", ["family", "link"]],
   ["admin.weekly_read_draft", ["family", "link"]],
+  ["admin.weekly_read_sent", ["family", "link"]],
   ["admin.understand_failed", ["family", "link"]],
   ["admin.member_left_group", ["family", "name"]],
   ["admin.line_quota", ["limit", "link", "used"]],

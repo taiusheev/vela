@@ -13,7 +13,7 @@ type Week = NonNullable<WeeklyRead["week"]>;
 /**
  * One weekly read, laid out to be acted on (founder, 26 October 2026): what to ask her next first,
  * with why, the morning it grows from, and a button that starts the question; then what she told
- * the family this week; the counts last, small. The read is the week's peak, so it is lit as
+ * the family this week; the reader's own feedback, which no one else sees; the counts last, small. The read is the week's peak, so it is lit as
  * Today lights her morning.
  */
 export function WeeklyReadCard({
@@ -135,6 +135,24 @@ export function WeeklyReadCard({
               {note}
             </Text>
           ))}
+        </View>
+      )}
+
+      {week.feedback === null ? null : (
+        <View style={{ gap: space.s }}>
+          <Text style={[type.label, { letterSpacing: 0.4, color: room.muted }]}>
+            {t`Just for you, about your own messages`}
+          </Text>
+          {week.feedback
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+            .map((line) => (
+              <Text key={line} style={[type.body, { color: room.ink }]}>
+                {line}
+              </Text>
+            ))}
+          <Text style={[type.caption, { color: room.muted }]}>{t`Only you see this part.`}</Text>
         </View>
       )}
 

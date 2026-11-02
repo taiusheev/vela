@@ -424,7 +424,12 @@ describe("the insight on the page, in the send, and after 30 days", () => {
     // The readings are the founder's only: in no organiser's message.
     expect(`${toMia}\n${toBen}`).not.toContain("worry");
     const [read] = await h.db.select().from(weeklyReads).where(eq(weeklyReads.id, readId));
-    expect(read?.stats).toMatchObject({ feedback_sent: 1 });
+    expect(read?.stats).toMatchObject({
+      feedback_sent: 1,
+      sent_feedback: [
+        { member_id: seed.organiser.id, text: "Your Monday ask landed.\nAsk about pears." },
+      ],
+    });
   });
 
   it("clears the readings and feedback 30 days after the week ends, keeping the rest of the read", async () => {
@@ -432,6 +437,16 @@ describe("the insight on the page, in the send, and after 30 days", () => {
     const readId = await readWithFeedback(seed, seed.organiser.id);
     const stats = async () =>
       (await h.db.select().from(weeklyReads).where(eq(weeklyReads.id, readId)))[0]?.stats;
+    // As the send keeps it for the organiser's copy in the app.
+    await h.db
+      .update(weeklyReads)
+      .set({
+        stats: {
+          ...(await stats()),
+          sent_feedback: [{ member_id: seed.organiser.id, text: "Your Monday ask landed." }],
+        },
+      })
+      .where(eq(weeklyReads.id, readId));
 
     h.clock.set(new Date("2026-10-19T12:00:00Z"));
     expect((await applyRetention(h.deps)).weekly_insights_cleared).toBe(0);
@@ -442,6 +457,7 @@ describe("the insight on the page, in the send, and after 30 days", () => {
     const after = await stats();
     expect(after).not.toHaveProperty("insight");
     expect(after).not.toHaveProperty("feedback");
+    expect(after).not.toHaveProperty("sent_feedback");
     expect(after).toMatchObject({ answered_days: 2, family_asks: 2 });
   });
 });

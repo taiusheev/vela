@@ -2258,6 +2258,10 @@ msgstr "日本"
 msgid "Join a plan Dad mentioned"
 msgstr "一起參與爸爸提過的計畫"
 
+#: src/components/weekly-read-card.tsx
+msgid "Just for you, about your own messages"
+msgstr "這段只給你，關於你自己傳的訊息"
+
 #: src/auth/phone.ts
 msgid "Kazakhstan"
 msgstr "哈薩克"
@@ -3131,6 +3135,10 @@ msgstr "照片只留在這部裝置，登出時會移除。"
 #: app/personal-question.tsx
 msgid "Only you can see this setup for this parent. Saving keeps your wording examples, comfort level, usual contact, and boundaries for 30 days. The question you want to ask is not saved here."
 msgstr "只有你看得到你為這位長輩填寫的設定。儲存後，你的訊息範例、相處方式、聯絡頻率及話題界線會保留 30 天。這次想問的問題不會儲存在這裡。"
+
+#: src/components/weekly-read-card.tsx
+msgid "Only you see this part."
+msgstr "這一段只有你看得到。"
 
 #: src/components/telegram-family-link.tsx
 msgid "Open {messenger} again"
@@ -6054,6 +6062,12 @@ msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram
 #: app/personal-question.tsx
 msgid "Your question"
 msgstr "你的問題"
+
+#: src/data/weekly.ts
+msgid "Your question about the seeds got her longest answer of the week.\n"
+"Next time, ask about one thing she named, like the new bed by the fence."
+msgstr "你問種子的那個問題，換來媽媽這週最長的回答。\n"
+"下次可以挑一件媽媽提過的事來問，像是籬笆旁新整的那塊菜圃。"
 
 #: app/ask.tsx
 msgid "Your question for {name}"
