@@ -1467,6 +1467,34 @@ describe("ingestAnswerMedia", () => {
     );
   });
 
+  it.each([
+    ["an unsure transcript", { text: "我今仔日去市場", confidence: 0.31 }],
+    ["no words at all", { text: "", confidence: 0.9 }],
+  ])(
+    "keeps her voice alone, with no words, retries or founder note, for %s",
+    async (_case, stt) => {
+      const scene = await morning({ memberLanguage: "zh-TW" });
+      const answer = await herVoice(scene);
+      h.deps.stt = createFakeStt(stt);
+
+      await ingestAnswerMedia(h.deps, answer.id);
+
+      const stored = await answerById(answer.id);
+      expect(stored).toMatchObject({ transcript: null, summary: null });
+      expect(stored.understoodAt).not.toBeNull();
+      expect(stored.payload).toMatchObject({ voice_only: true });
+      expect(h.queues.understand.pending).toHaveLength(0);
+      // The family has her voice itself, and no line of words under it.
+      expect(h.telegram.sentTo(GROUP)[0]?.message.media).toEqual([VOICE]);
+      expect((await outboundRows()).filter((row) => row.kind === "answer_post")).toHaveLength(1);
+      expect(h.logger.entries.map((entry) => entry.event)).toContain("voice_kept_without_words");
+
+      // Reconcile has nothing left to re-run, so she is never transcribed again.
+      await ingestAnswerMedia(h.deps, answer.id);
+      expect((await aiCallRows()).filter((row) => row.call === "transcribe")).toHaveLength(1);
+    },
+  );
+
   it("transcribes on the attempt the provider recovers and understands the answer", async () => {
     const scene = await morning();
     const answer = await herVoice(scene);

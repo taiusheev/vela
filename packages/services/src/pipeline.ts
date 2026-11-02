@@ -36,6 +36,7 @@ import {
   type AiCallRecord,
   type AiOutcome,
   type DatedPlan,
+  DETECT_FALLBACK_BELOW,
   type FlagResult,
   isAiOff,
   type TranslateInput,
@@ -94,6 +95,14 @@ import {
 
 /** `reconcile` stops re-running an answer at this many attempts; the founder is told then. */
 export const MAX_PROCESSING_ATTEMPTS = 3;
+
+/**
+ * Below this confidence, after speech-to-text has also tried detecting another language, a
+ * transcript is a guess: a note in Taiwanese Hokkien heard as Mandarin, say, comes back as wrong
+ * words. Her voice then stands on its own (founder, 3 Nov 2026): the family has the recording, in
+ * the group and in the app, and nothing written in her name that she did not say.
+ */
+export const VOICE_ONLY_BELOW = DETECT_FALLBACK_BELOW;
 
 interface AnswerContext {
   answer: Answer;
@@ -287,7 +296,8 @@ async function loadAudio(
 /**
  * `ingest_answer_media` (flows §3.10): store her voice, transcribe it with her language as the hint,
  * keep the transcript, and hand the answer to understanding. A failed transcription is logged and
- * ends the attempt; the voice itself is already in the group.
+ * ends the attempt; the voice itself is already in the group. An unsure or empty transcript
+ * (`VOICE_ONLY_BELOW`) settles the answer as her voice alone, with no words.
  */
 export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<void> {
   const ctx = await loadAnswer(deps, answerId);
@@ -298,6 +308,10 @@ export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<v
     // A redelivered job: the words are known, so the voice is not transcribed (and paid for) twice,
     // and understanding, which stops by itself once done, is the only step left.
     await deps.queues.understand.send({ type: "understand_answer", answerId });
+    return;
+  }
+  if (ctx.answer.understoodAt !== null) {
+    // Settled as her voice alone: a redelivered job pays for no second guess at her words.
     return;
   }
   const attempts = await countAttempt(deps, answerId);
@@ -354,13 +368,26 @@ export async function ingestAnswerMedia(deps: Deps, answerId: string): Promise<v
       },
       tx,
     );
-    if (!transcription.ok || text.length === 0) return false;
+    if (!transcription.ok) return false;
+    if (text.length === 0 || (transcription.confidence ?? 1) < VOICE_ONLY_BELOW) {
+      // Settled as her voice alone: no transcript, nothing to understand, no retry, no founder
+      // note; `voice_only` says why there are no words.
+      await tx
+        .update(answers)
+        .set({ payload: { ...answer.payload, voice_only: true }, understoodAt: deps.clock.now() })
+        .where(eq(answers.id, answerId));
+      return "voice_only";
+    }
     await tx
       .update(answers)
       .set({ transcript: text, transcriptLang: transcription.language ?? member.language })
       .where(eq(answers.id, answerId));
     return true;
   });
+  if (committed === "voice_only") {
+    deps.logger.info("voice_kept_without_words", { answerId });
+    return;
+  }
   if (!committed) {
     deps.logger.warn("transcription_failed", {
       answerId,
