@@ -29,8 +29,8 @@ const MEMBER = "0198f6aa-0000-7000-8000-00000000000c";
 const EVENT = "0198f6aa-0000-7000-8000-00000000000d";
 
 describe("push kinds", () => {
-  it("pushes the two ordinary kinds, each already held to one a day by the budget index", () => {
-    expect(ORDINARY_PUSH_KINDS).toEqual(["answer_receipt", "turn_prompt"]);
+  it("pushes the three ordinary kinds, each already held to one a day by the budget index", () => {
+    expect(ORDINARY_PUSH_KINDS).toEqual(["answer_receipt", "turn_prompt", "weekly_read"]);
     const budgeted: readonly string[] = BUDGETED_OUTBOUND_KINDS;
     for (const kind of ORDINARY_PUSH_KINDS) {
       expect(budgeted, kind).toContain(kind);
@@ -163,7 +163,7 @@ describe("PushData", () => {
     for (const invalid of [
       { ...base, text: "The tomatoes finally turned." },
       { ...base, name: "Mom" },
-      { ...base, kind: "weekly_read" },
+      { ...base, kind: "arrival" },
       { ...base, kind: "arrival" },
       { ...base, exchange_id: "yesterday" },
       { kind: "answer_receipt", family_id: FAMILY },

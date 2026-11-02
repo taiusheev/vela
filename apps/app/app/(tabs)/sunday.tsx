@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
@@ -38,7 +38,9 @@ export default function SundayScreen() {
 
 function FamilySunday({ day }: { day: TodayView }) {
   const { t } = useLingui();
-  const [selected, select] = useState<string | undefined>();
+  // A tapped weekly-read notification opens on that parent's read (ADR-59).
+  const { member } = useLocalSearchParams<{ member?: string }>();
+  const [selected, select] = useState<string | undefined>(member);
   const view = useWeeklyRead(selected);
   const pull = usePullRefresh(view.refresh);
   useFocusEffect(

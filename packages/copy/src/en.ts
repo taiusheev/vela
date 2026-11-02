@@ -274,6 +274,7 @@ export const en = {
     "It's been quiet at {name}'s today. The morning's message arrived at {sent}. Open Vela to call or wait.",
   "push.answer_receipt": "{name} answered you.",
   "push.turn_prompt": "Tomorrow morning is yours: ask {name} something.",
+  "push.weekly_read": "{name}'s weekly read is here.",
   "away.confirmed": "Until {date}, then. Have a lovely time.",
   "away.confirmed_open": "Understood. Have a lovely time.",
   "weekly_read.answered": "{name} answered {answered} of {days} days.",
