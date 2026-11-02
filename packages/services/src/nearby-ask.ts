@@ -28,12 +28,14 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import {
+  enqueueOutbound,
   handOverOutbound,
   type InsertResult,
   insertOutbound,
   type OutboundRequest,
   replyFieldOf,
 } from "./gateway.ts";
+import { AUTO_ASK_TEXT_VERSIONS } from "./nearby-consent.ts";
 import {
   channelLinkOfMember,
   familyHasEnded,
@@ -43,6 +45,14 @@ import {
 } from "./repo.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `sent_by` of an ask Vela made itself (ADR-60), where an organiser's ask names their member id. */
+export const VELA_ASKED = "vela";
+
+/** The organiser who asked, or null for Vela's own ask. */
+async function askerOf(db: Queryable, ask: LookInAsk): Promise<Member | null> {
+  return ask.sent_by === VELA_ASKED ? null : await memberById(db, ask.sent_by);
+}
 
 /** One ask on a quiet morning, as `quiet_events.ask_to_check` keeps it. */
 export interface LookInAsk {
@@ -94,6 +104,24 @@ export function canBeAsked(contact: NearbyContact): boolean {
 /** The messenger a contact's yes came from, where every message to them goes. */
 export function contactChannel(contact: NearbyContact): "telegram" | "line" | null {
   return contact.channel === "telegram" || contact.channel === "line" ? contact.channel : null;
+}
+
+/** The text version of a contact's standing yes, or "" without one. */
+async function yesVersionOf(db: Queryable, contact: NearbyContact): Promise<string> {
+  const [yes] = await db
+    .select({ textVersion: consents.textVersion })
+    .from(consents)
+    .where(
+      and(
+        eq(consents.contactId, contact.id),
+        eq(consents.kind, "nearby"),
+        eq(consents.answer, "yes"),
+        isNull(consents.withdrawnAt),
+      ),
+    )
+    .orderBy(desc(consents.givenAt))
+    .limit(1);
+  return yes?.textVersion ?? "";
 }
 
 /** The language a contact said yes in, which every message to them is written in. */
@@ -305,7 +333,7 @@ export async function handleLookInButton(
     const ask = contact === undefined ? undefined : asks.find((a) => a.contact_id === contact.id);
     if (contact === undefined || ask === undefined || ask.reply !== null) return false;
     const her = await memberById(tx, quiet.memberId);
-    const asker = await memberById(tx, ask.sent_by);
+    const asker = await askerOf(tx, ask);
     if (her === null) return false;
     const lang = await languageOfContact(tx, contact);
     const reply = action.accept ? "yes" : "no";
@@ -340,8 +368,10 @@ export async function handleLookInButton(
         text: thanks,
       }),
     );
-    if (asker !== null && !settled) {
-      const link = await channelLinkOfMember(tx, asker.id, MESSENGER);
+    // Their answer goes to whoever asked; to Vela's own ask, to every organiser who was told.
+    const told = asker !== null ? [asker] : await notifiedOrganisers(tx, quiet);
+    for (const organiser of settled ? [] : told) {
+      const link = await channelLinkOfMember(tx, organiser.id, MESSENGER);
       if (link !== null && link.blockedAt === null) {
         pending.push(
           await written(deps, tx, {
@@ -350,13 +380,13 @@ export async function handleLookInButton(
               conversationId: link.externalId,
               suffix: `look_in:${quiet.id}:${contact.id}`,
             }),
-            memberId: asker.id,
+            memberId: organiser.id,
             channel: link.channel,
             conversationId: link.externalId,
             exchangeId: quiet.exchangeId,
-            lang: asker.language,
+            lang: organiser.language,
             text: t(
-              asker.language,
+              organiser.language,
               action.accept ? "organiser.look_in_yes" : "organiser.look_in_no",
               {
                 contact: contact.name,
@@ -374,6 +404,118 @@ export async function handleLookInButton(
     await adapter.closeButtons(conversationId, event.messageId);
   }
   deps.logger.info("look_in_button", { recorded, accept: action.accept });
+}
+
+/** The members a quiet event's notices told, as rows, for what follows Vela's own ask. */
+async function notifiedOrganisers(db: Queryable, quiet: QuietEvent): Promise<Member[]> {
+  const rows: Member[] = [];
+  for (const id of quiet.notifiedMemberIds) {
+    const member = await memberById(db, id);
+    if (member !== null && member.leftAt === null) rows.push(member);
+  }
+  return rows;
+}
+
+/**
+ * Vela's own ask (ADR-60, `NEARBY_AUTO_ASK`): on the check-in ladder's reminder, when nobody acted
+ * on the first notice for two hours, each person nearby who said yes is asked to look in, on the
+ * messenger their yes came from, and every organiser told of the quiet hears whom Vela asked. Not
+ * when an organiser already asked someone that morning: they are on it. In the caller's
+ * transaction, under the event's row lock; each ask is keyed per event and contact, so a second
+ * reminder round sends nothing twice.
+ */
+export async function askNearbyAutomatically(
+  deps: Deps,
+  tx: VelaTransaction,
+  input: { quiet: QuietEvent; her: Member },
+): Promise<number> {
+  const { quiet, her } = input;
+  if (asksOf(quiet).length > 0 || quiet.resolvedAt !== null) return 0;
+  const contacts: NearbyContact[] = [];
+  for (const contact of await tx
+    .select()
+    .from(nearbyContacts)
+    .where(eq(nearbyContacts.memberId, her.id))) {
+    // Only someone whose yes was to a text saying Vela may ask them itself (ADR-60).
+    if (canBeAsked(contact) && AUTO_ASK_TEXT_VERSIONS.has(await yesVersionOf(tx, contact))) {
+      contacts.push(contact);
+    }
+  }
+  if (contacts.length === 0) return 0;
+  const now = deps.clock.now();
+  const asks: LookInAsk[] = contacts.map((contact) => ({
+    contact_id: contact.id,
+    sent_by: VELA_ASKED,
+    sent_at: now.toISOString(),
+    reply: null,
+    replied_at: null,
+  }));
+  await tx.update(quietEvents).set({ askToCheck: asks }).where(eq(quietEvents.id, quiet.id));
+  for (const contact of contacts) {
+    const channel = contactChannel(contact);
+    if (channel === null || contact.externalId === null) continue;
+    const lang = await languageOfContact(tx, contact);
+    await enqueueOutbound(deps, tx, {
+      kind: "nearby_auto_ask",
+      idempotencyKey: outboundKey("nearby_auto_ask", {
+        quietEventId: quiet.id,
+        conversationId: contact.externalId,
+      }),
+      memberId: her.id,
+      channel,
+      conversationId: contact.externalId,
+      exchangeId: quiet.exchangeId,
+      lang,
+      text: t(lang, "nearby.ask_auto", { name: addressOf(her) }),
+      buttons: [
+        [
+          {
+            id: encodeButton({ type: "look_in", quietEventId: quiet.id, accept: true }),
+            label: t(lang, "nearby.ask_yes"),
+          },
+          {
+            id: encodeButton({ type: "look_in", quietEventId: quiet.id, accept: false }),
+            label: t(lang, "nearby.ask_no"),
+          },
+        ],
+      ],
+    });
+    await recordEvent(
+      tx,
+      {
+        name: "ask_to_check_sent",
+        familyId: her.familyId,
+        memberId: her.id,
+        exchangeId: quiet.exchangeId,
+        props: { contact_id: contact.id, by: VELA_ASKED },
+      },
+      now,
+    );
+  }
+  for (const organiser of await notifiedOrganisers(tx, quiet)) {
+    const link = await channelLinkOfMember(tx, organiser.id, MESSENGER);
+    if (link === null || link.blockedAt !== null) continue;
+    await enqueueOutbound(deps, tx, {
+      kind: "system",
+      idempotencyKey: outboundKey("system", {
+        conversationId: link.externalId,
+        suffix: `nearby_auto_asked:${quiet.id}`,
+      }),
+      memberId: organiser.id,
+      channel: link.channel,
+      conversationId: link.externalId,
+      exchangeId: quiet.exchangeId,
+      lang: organiser.language,
+      text: t(organiser.language, "organiser.nearby_auto_asked", {
+        contacts: contacts
+          .map((contact) => contact.name)
+          .join(organiser.language === "zh-TW" ? "、" : ", "),
+        name: addressOf(her),
+      }),
+    });
+  }
+  deps.logger.info("nearby_auto_asked", { contacts: contacts.length });
+  return contacts.length;
 }
 
 async function written(

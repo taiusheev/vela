@@ -33,6 +33,7 @@ import {
   NEARBY_TEXT_VERSION,
   NearbyInviteRefusedError,
 } from "./nearby-consent.ts";
+import { notifyQuiet } from "./quiet.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import {
   type SeededFamily,
@@ -394,6 +395,94 @@ describe("asking them to look in on a quiet morning", () => {
     expect(h.telegram.sentTo(ANNA).at(-1)?.message.text).toBe(
       "Mrs Chen has answered now, so there is no need to look in. Thank you.",
     );
+  });
+
+  describe("asked by Vela when nobody acted on the notice (ADR-60)", () => {
+    const today = () => localDateOf(h.clock.now(), seed.member.tz);
+
+    async function reminderRound(autoAsk: boolean) {
+      const config = h.deps.config as { nearbyAutoAsk?: boolean };
+      config.nearbyAutoAsk = autoAsk;
+      try {
+        h.clock.advanceMinutes(120);
+        await notifyQuiet(h.deps, seed.member.id, today(), true);
+        await h.run(handlers);
+      } finally {
+        config.nearbyAutoAsk = undefined;
+      }
+    }
+
+    /** Anna's yes to the request that says Vela may ask her itself (`nearby-consent.v5`). */
+    async function annaSaysYesToAutoAsk() {
+      const config = h.deps.config as { nearbyAutoAsk?: boolean };
+      config.nearbyAutoAsk = true;
+      try {
+        const { request } = await annaOpensTheLink();
+        expect(request.message.text).toContain(
+          "when nobody in the family has answered Vela's notice",
+        );
+        const yes = request.message.buttons?.[0]?.[0];
+        if (yes === undefined) throw new Error("expected Yes");
+        await tap(ANNA, yes.id);
+      } finally {
+        config.nearbyAutoAsk = undefined;
+      }
+      const [proof] = await h.db.select().from(consents).where(eq(consents.contactId, contactId));
+      expect(proof?.textVersion).toBe("nearby-consent.v5");
+    }
+
+    it("asks them itself on the reminder, tells the organiser whom, and passes on their answer", async () => {
+      await annaSaysYesToAutoAsk();
+
+      await reminderRound(true);
+
+      const asked = h.telegram.sentTo(ANNA).at(-1);
+      expect(asked?.message.text).toBe(
+        "Mrs Chen hasn't answered this morning, and the family hasn't been reached yet. Could you look in on Mrs Chen today?",
+      );
+      const organiser = h.telegram.sentTo(seed.organiserLink.externalId).map((m) => m.message.text);
+      expect(organiser).toContain(
+        "Nobody had answered the notice, so Vela asked Anna to look in on Mrs Chen. You'll hear their answer here.",
+      );
+      const notice = await loadApiQuiet(h.db, mia, quietId);
+      expect(notice?.contacts[0]?.asked).toMatchObject({ by_name: null, reply: null });
+
+      const lookIn = asked?.message.buttons?.[0]?.[0];
+      if (lookIn === undefined) throw new Error("expected I'll look in");
+      await tap(ANNA, lookIn.id, "auto");
+      expect(h.telegram.sentTo(seed.organiserLink.externalId).at(-1)?.message.text).toBe(
+        "Anna will look in on Mrs Chen.",
+      );
+
+      // A later round asks nobody twice.
+      await reminderRound(true);
+      expect(
+        await h.db.select().from(outbound).where(eq(outbound.kind, "nearby_auto_ask")),
+      ).toHaveLength(1);
+    });
+
+    it("never asks someone whose yes was to 'any request comes from the organiser'", async () => {
+      await annaSaysYes();
+      await reminderRound(true);
+      expect(
+        await h.db.select().from(outbound).where(eq(outbound.kind, "nearby_auto_ask")),
+      ).toEqual([]);
+    });
+
+    it("asks nobody with the switch off, or when an organiser already asked someone", async () => {
+      await annaSaysYesToAutoAsk();
+      await reminderRound(false);
+      expect(
+        await h.db.select().from(outbound).where(eq(outbound.kind, "nearby_auto_ask")),
+      ).toEqual([]);
+
+      await ask();
+      await h.db.update(quietEvents).set({ notifyCount: 1 }).where(eq(quietEvents.id, quietId));
+      await reminderRound(true);
+      expect(
+        await h.db.select().from(outbound).where(eq(outbound.kind, "nearby_auto_ask")),
+      ).toEqual([]);
+    });
   });
 
   it("refuses someone without a Telegram yes, and a morning already settled", async () => {

@@ -627,6 +627,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-60: Vela asks the people nearby itself only where test families are, until privacy-notice.v14
+  // and the contacts' new consent text say it may. The commit that turns it on changes this.
+  it("ask the people nearby automatically in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.NEARBY_AUTO_ASK,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and
   // off in production until the founder has told the family it applies to. The commit that turns it
   // on changes this.

@@ -169,6 +169,7 @@ export const OUTBOUND_KINDS = [
   "weekly_read",
   "ack",
   "nearby_ask",
+  "nearby_auto_ask",
   "flag",
   "consent",
   "onboarding",
