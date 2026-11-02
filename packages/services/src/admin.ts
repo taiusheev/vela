@@ -1025,6 +1025,40 @@ export async function endAway(deps: Deps, ctx: AdminContext, awayPeriodId: strin
   }
 }
 
+/**
+ * Turns an organiser's weekly feedback on their own messages off or back on (ADR-48), as the
+ * privacy notice promises: "tell the founder, who then turns it off for them". Off, the next weekly
+ * reads draft none for them and send none, in their chat or the app. Setting what is already set
+ * changes and logs nothing.
+ */
+export async function setWeeklyFeedback(
+  deps: Pick<Deps, "db" | "clock">,
+  ctx: AdminContext,
+  input: { memberId: string; on: boolean },
+): Promise<"changed" | "same"> {
+  const admin = parseContext(ctx);
+  const action = input.on ? "weekly_feedback_on" : "weekly_feedback_off";
+  const memberId = parse(Uuid, input.memberId, action);
+  const at = deps.clock.now();
+  return deps.db.transaction(async (tx) => {
+    const { member, family } = await lockMember(tx, admin, memberId, action);
+    if (member.role !== "organiser") {
+      throw new VelaError("invalid_payload", `${action}: only an organiser gets weekly feedback`);
+    }
+    if (member.weeklyFeedback === input.on) return "same";
+    await tx.update(members).set({ weeklyFeedback: input.on }).where(eq(members.id, member.id));
+    await tx.insert(adminAccessLog).values({
+      admin: admin.admin,
+      familyId: family.id,
+      memberId: member.id,
+      action,
+      what: input.on ? "weekly feedback on" : "weekly feedback off",
+      at,
+    });
+    return "changed";
+  });
+}
+
 // Leaving, death, deletion ----------------------------------------------------------------------------
 
 /**
@@ -1368,8 +1402,11 @@ export async function deliverWeeklyRead(
   // Each organiser's own feedback as it reached them, for their copy in the app; kept 30 days.
   const reached = new Set(appIds);
   for (const organiser of organisers) {
-    // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them.
-    const own = content.feedback[organiser.member.id]?.trim() ?? "";
+    // ADR-48: an organiser's own feedback goes in their copy only, under a heading for them, and
+    // never to one who asked for none.
+    const own = organiser.member.weeklyFeedback
+      ? (content.feedback[organiser.member.id]?.trim() ?? "")
+      : "";
     const copy =
       own === ""
         ? text
@@ -1408,8 +1445,16 @@ export async function deliverWeeklyRead(
       );
     }
   }
+  const feedbackOff = new Set(
+    (
+      await tx
+        .select({ id: members.id })
+        .from(members)
+        .where(and(eq(members.familyId, family.id), eq(members.weeklyFeedback, false)))
+    ).map((row) => row.id),
+  );
   const sentFeedback = [...reached].flatMap((memberId) => {
-    const text = content.feedback[memberId]?.trim() ?? "";
+    const text = feedbackOff.has(memberId) ? "" : (content.feedback[memberId]?.trim() ?? "");
     return text === "" ? [] : [{ member_id: memberId, text }];
   });
   const feedbackSent = sentFeedback.length;
