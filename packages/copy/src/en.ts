@@ -366,6 +366,7 @@ export const en = {
   "onboarding.done":
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
   "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
+  "admin.weekly_read_sent": "Weekly read for {family} was sent to the family: {link}",
   "admin.flag": "Flag in {family}. Open: {link}",
   "admin.quiet_reminder":
     "Nobody has acted on {name}'s quiet notice in {family} for 2 hours. It went to the organisers again. Open: {link}",

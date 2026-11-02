@@ -199,6 +199,12 @@ export interface Config {
    */
   weeklyInsight?: boolean;
   /**
+   * Whether the weekly read goes to the organisers as soon as it is drafted, without waiting for
+   * the founder's send (`WEEKLY_READ_AUTO_SEND`). Absent means it waits. Off in production until
+   * the privacy notice stops promising that the founder checks each read first.
+   */
+  weeklyReadAutoSend?: boolean;
+  /**
    * Whether an organiser who chose it has Vela's suggestion, drafted in their own style, sent in
    * their name on a morning nobody in the family wrote for (`SEND_AS_ME`). Absent means not.
    */

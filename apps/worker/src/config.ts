@@ -576,6 +576,16 @@ export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): bo
   return env.WEEKLY_INSIGHT === undefined ? false : readOnOff(env.WEEKLY_INSIGHT, "WEEKLY_INSIGHT");
 }
 
+/**
+ * The var `WEEKLY_READ_AUTO_SEND`: "on" sends the weekly read to the organisers as soon as it is
+ * drafted; absent or "off" waits for the founder's send; any other value is refused.
+ */
+export function readWeeklyReadAutoSend(env: { readonly WEEKLY_READ_AUTO_SEND?: string }): boolean {
+  return env.WEEKLY_READ_AUTO_SEND === undefined
+    ? false
+    : readOnOff(env.WEEKLY_READ_AUTO_SEND, "WEEKLY_READ_AUTO_SEND");
+}
+
 /** Individual notification choices: off until notice and product review; unknown values fail closed. */
 export function readNotificationControls(env: {
   readonly NOTIFICATION_CONTROLS?: string;
@@ -639,6 +649,7 @@ function readOnOff(
     | "MEMORY"
     | "BOOK"
     | "WEEKLY_INSIGHT"
+    | "WEEKLY_READ_AUTO_SEND"
     | "SEND_AS_ME"
     | "PHOTO_BOX"
     | "CHECK_IN"
@@ -795,6 +806,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
+    weeklyReadAutoSend: readWeeklyReadAutoSend(env),
     sendAsMe: readSendAsMe(env),
     photoBox: readPhotoBox(env),
     checkIn: readCheckIn(env),
