@@ -10,7 +10,9 @@ export type TapTarget =
   /** Today, and for a quiet notice the sheet for that event, which says calmly if it is settled. */
   | { screen: "today"; quietEventId?: string }
   | { screen: "chat"; recipientId: string }
-  | { screen: "ask"; recipientId: string; suggestionId?: string };
+  | { screen: "ask"; recipientId: string; suggestionId?: string }
+  /** The Week tab, on her newest weekly read. */
+  | { screen: "week"; memberId?: string };
 
 const DATA_KEYS = [
   "kind",
@@ -61,6 +63,9 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
       return data.suggestion_id === undefined
         ? { screen: "ask", recipientId: data.member_id }
         : { screen: "ask", recipientId: data.member_id, suggestionId: data.suggestion_id };
+    // The weekly read (ADR-59): the Week tab, on her read when the family is the one shown.
+    case "weekly_read":
+      return shown ? { screen: "week", memberId: data.member_id } : { screen: "week" };
   }
 }
 
@@ -68,7 +73,8 @@ export function tapTargetOf(data: PushData, shownFamilyId: string | undefined): 
 export type TapHref =
   | { pathname: "/"; params: { quiet?: string } }
   | { pathname: "/conversation"; params: { recipient: string } }
-  | { pathname: "/ask"; params: { recipient: string; suggestion?: string } };
+  | { pathname: "/ask"; params: { recipient: string; suggestion?: string } }
+  | { pathname: "/sunday"; params: { member?: string } };
 
 export function hrefOf(target: TapTarget): TapHref {
   switch (target.screen) {
@@ -86,6 +92,11 @@ export function hrefOf(target: TapTarget): TapHref {
           target.suggestionId === undefined
             ? { recipient: target.recipientId }
             : { recipient: target.recipientId, suggestion: target.suggestionId },
+      };
+    case "week":
+      return {
+        pathname: "/sunday",
+        params: target.memberId === undefined ? {} : { member: target.memberId },
       };
   }
 }

@@ -986,3 +986,18 @@ Consequences: a box photo costs one R2 copy and delete when it is added and noth
 **Update 31 October 2026 (testing across channels and states).** A use now counts only once its morning reached her (`exchanges.delivered_at`): a morning dropped for a pause, or one that failed, no longer marks its photo shown, spends her turn, or counts toward her rhythm. A picture morning whose photos are all gone when it is sent (taken out of the box after the morning was made) goes as the plain hello, never a question about a photo she cannot see; a choice left with one photo asks about that one. The page's preview comes from the server (`next` in `ApiPhotoBox`, from the same plan `takePictureMorning` follows), in her language. The test LINE adapter now names stored photos by key, as the real one does (`mediaByUrl`).
 
 Revisit if: families want the box to say which parent a photo is for; she answers picture mornings less than others (the weekly numbers' `said_something`); a model should write the question from the line or see the photo; or the box's 40 photos prove too few or too many.
+
+
+## ADR-59 · The weekly read goes to the family as soon as it is drafted
+
+2 November 2026. Accepted (founder: "weekly report should be in the adult child app - no need me to check"; earlier the same day, "send right away" for staging, PR #231).
+
+Context: the weekly read waited for the founder's Send on the admin page (flows §3.17). On 1 November nobody pressed it, so no organiser got a read and the app's Week tab stayed empty. An organiser with only an app account could never receive one.
+
+Decision: where `WEEKLY_READ_AUTO_SEND` is on, `draftWeeklyRead` delivers the draft in the same transaction (`deliverWeeklyRead`, shared with the admin Send): each organiser's messenger copy, and `sent_at` for the app, where an active organiser with an account counts as reached. Her health words go in only under her current yes, as before; each organiser's feedback only in their own copy and their own app view (`my_feedback`, kept 30 days). The founder's note says the read was sent. A read nobody can receive stays a draft for the founder. `privacy-notice.v13` (English and Traditional Chinese) drops the promises that the founder checks each read, can leave health words out and edits feedback before it is sent, and says the read is in the app with its earlier weeks. On in every environment.
+
+Gate kept: `WEEKLY_INSIGHT` stays off in production. v13 says an organiser who would rather not get feedback can ask the founder to turn it off for them, and there is no per-organiser switch yet; turning the insight on in production needs that switch first.
+
+Numbering: the photo box's approved notice text (`privacy-notice.v13-photo-box-approved.en.md`, ADR-58) becomes v14 when it is merged into the live notice, on top of this one.
+
+Revisit if: a read goes out that a family finds wrong or unkind (the founder can still read every sent read on the admin page); or families ask to see the read before Sunday evening.

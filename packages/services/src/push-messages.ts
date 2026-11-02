@@ -225,7 +225,10 @@ export async function ordinaryPushReader(
         eq(users.id, member.userId),
         isNull(users.deletedAt),
         eq(users.oneMomentADay, true),
-        eq(kind === "answer_receipt" ? users.replyNotifications : users.turnReminders, true),
+        // The weekly read has no choice of its own: "One moment a day" alone decides it.
+        kind === "weekly_read"
+          ? undefined
+          : eq(kind === "answer_receipt" ? users.replyNotifications : users.turnReminders, true),
         eq(pushDevices.permission, "granted"),
       ),
     )
@@ -319,6 +322,34 @@ export function answerReceiptPush(input: {
     exchangeId: input.exchangeId,
     lang,
     text: t(lang, "push.answer_receipt", { name: input.herName }),
+  };
+}
+
+/**
+ * "{name}'s weekly read is here." to an organiser who reads it in the app alone (ADR-59): once per
+ * week of hers and reader, keyed by her, the week and the account (a messenger copy has its chat
+ * instead), within the day's budget for weekly reads. Never a line of the read itself: the tap opens the Week tab.
+ */
+export function weeklyReadPush(input: {
+  reader: PushReader;
+  herId: string;
+  weekEnd: LocalDate;
+  herName: string;
+}): OutboundRequest {
+  const { reader } = input;
+  const lang = reader.member.language;
+  return {
+    kind: "weekly_read",
+    idempotencyKey: outboundKey("weekly_read", {
+      memberId: input.herId,
+      date: input.weekEnd,
+      conversationId: reader.userId,
+    }),
+    memberId: reader.member.id,
+    channel: PUSH_CHANNEL,
+    conversationId: reader.userId,
+    lang,
+    text: t(lang, "push.weekly_read", { name: input.herName }),
   };
 }
 

@@ -362,11 +362,13 @@ export type PushPermission = z.infer<typeof PushPermission>;
 /**
  * The ordinary pushes (spec §15): at most one of each per member per local day, held by the same
  * budget index as every other channel (`outbound_budget_idx`), and never sent while the reader's
- * "One moment a day" is off. The weekly read joins them when it is pushed.
+ * "One moment a day" is off. The weekly read is pushed only to an organiser it reached in the app
+ * alone, since one sent on their messenger already holds that day's budget.
  */
 export const ORDINARY_PUSH_KINDS = [
   "answer_receipt",
   "turn_prompt",
+  "weekly_read",
 ] as const satisfies readonly BudgetedOutboundKind[];
 export type OrdinaryPushKind = (typeof ORDINARY_PUSH_KINDS)[number];
 

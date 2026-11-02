@@ -93,6 +93,7 @@ import {
   NAME_MAX_LENGTH,
 } from "./invites.ts";
 import { forgetConsentSubjects, recordDeletion, subjectRef } from "./proofs.ts";
+import { ordinaryPushReader, weeklyReadPush } from "./push-messages.ts";
 import { type ChannelQuotaSnapshot, loadChannelQuota } from "./quota.ts";
 import {
   activeAppOrganiserIds,
@@ -1389,6 +1390,22 @@ export async function deliverWeeklyRead(
     if ("outboundId" in result) {
       sentTo += 1;
       reached.add(organiser.member.id);
+    }
+  }
+  // An organiser who reads it in the app alone hears it is there (ADR-59); one reached on their
+  // messenger already has it in their chat, and that copy holds the day's budget for weekly reads.
+  const messengerReached = new Set(
+    organisers.filter((organiser) => reached.has(organiser.member.id)).map((o) => o.member.id),
+  );
+  for (const memberId of appIds) {
+    if (messengerReached.has(memberId)) continue;
+    const reader = await ordinaryPushReader(tx, memberId, "weekly_read");
+    if (reader !== null) {
+      await enqueueOutbound(
+        deps,
+        tx,
+        weeklyReadPush({ reader, herId: member.id, weekEnd, herName: member.displayName }),
+      );
     }
   }
   const sentFeedback = [...reached].flatMap((memberId) => {

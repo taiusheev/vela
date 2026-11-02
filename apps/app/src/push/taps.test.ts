@@ -28,7 +28,7 @@ describe("reading a notification's data", () => {
       undefined,
       "quiet_notice",
       {},
-      { kind: "weekly_read", family_id: FAMILY, member_id: HER },
+      { kind: "weekly_note", family_id: FAMILY, member_id: HER },
       { kind: "quiet_notice", family_id: "not-a-uuid", member_id: HER },
       { kind: "answer_receipt", member_id: HER },
       { ...data({ kind: "quiet_notice" }), quiet_event_id: "../../settings" },
@@ -114,5 +114,17 @@ describe("a notification arriving while the app is open", () => {
         shouldSetBadge: false,
       });
     }
+  });
+
+  it("opens the Week tab on her weekly read, and on the newest one for another family", () => {
+    expect(tapTargetOf(data({ kind: "weekly_read" }), FAMILY)).toEqual({
+      screen: "week",
+      memberId: data({ kind: "weekly_read" }).member_id,
+    });
+    expect(tapTargetOf(data({ kind: "weekly_read" }), undefined)).toEqual({ screen: "week" });
+    expect(hrefOf({ screen: "week", memberId: "m" })).toEqual({
+      pathname: "/sunday",
+      params: { member: "m" },
+    });
   });
 });

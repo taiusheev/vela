@@ -184,6 +184,7 @@ const WEEKLY_READ_KEYS: readonly MessageKey[] = [
   "parent.family_sees_weekly_read",
   "admin.weekly_read_draft",
   "admin.weekly_read_sent",
+  "push.weekly_read",
 ];
 
 /**
@@ -240,6 +241,7 @@ const PINNED_PARAMETERS: readonly (readonly [MessageKey, readonly string[]])[] =
   ["push.quiet_notice", ["name", "sent"]],
   ["push.answer_receipt", ["name"]],
   ["push.turn_prompt", ["name"]],
+  ["push.weekly_read", ["name"]],
   ["group.turn_prompt_idea", ["idea"]],
   ["group.turn_prompt_reply_first", ["name"]],
   ["group.answer_question", ["name", "question", "time"]],
