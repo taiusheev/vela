@@ -10,6 +10,7 @@ import { apiConfigured } from "../src/api/client.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import {
   clerkErrorCodes,
+  hasPasswordFactor,
   preferredCodeFactor,
   resendDelay,
   unknownIdentity,
@@ -45,7 +46,7 @@ import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type Step = "identifier" | "code";
+type Step = "identifier" | "code" | "password";
 /** Which of Clerk's two one-time codes this attempt is carrying. */
 type Strategy = "email_code" | "phone_code";
 type Destination =
@@ -62,6 +63,7 @@ type Trouble = {
     | "bot_check"
     | "needs_more"
     | "wrong_code"
+    | "wrong_password"
     | "code_took_too_long"
     | "number_invalid"
     | "country_unsupported"
@@ -224,6 +226,7 @@ function CodeSignIn() {
   const international = toInternational(country, number);
   const identifier = mode === "phone" ? (international ?? "") : email.trim();
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [trouble, setTrouble] = useState<Trouble | undefined>();
   const [working, setWorking] = useState(false);
   const inFlight = useRef(false);
@@ -280,6 +283,14 @@ function CodeSignIn() {
     setTrouble(undefined);
     try {
       const attempt = await within(signIn.create({ identifier: entered }));
+      // An account with a password (Apple's reviewer) signs in with it; everyone else gets a code.
+      if (hasPasswordFactor(attempt.supportedFirstFactors ?? [])) {
+        setSentTo(entered);
+        setPassword("");
+        setJoining(false);
+        setStep("password");
+        return;
+      }
       // Whichever way this account can be reached; an account made with an email has no number.
       const factor = preferredCodeFactor(attempt.supportedFirstFactors ?? [], mode);
       if (factor === undefined) {
@@ -396,6 +407,36 @@ function CodeSignIn() {
     }
   };
 
+  /** An account that has a password: one check, then the family. */
+  const enterPassword = async () => {
+    if (!ready || signIn === undefined || inFlight.current || password.length === 0) return;
+    inFlight.current = true;
+    setWorking(true);
+    setTrouble(undefined);
+    try {
+      const attempt = await within(signIn.attemptFirstFactor({ strategy: "password", password }));
+      if (attempt.status !== "complete" || attempt.createdSessionId === null) {
+        setTrouble({ kind: "wrong_code", codes: `status_${attempt.status}` });
+        return;
+      }
+      await within(setActive({ session: attempt.createdSessionId }));
+      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+    } catch (error: unknown) {
+      logClerkCodes("verify", error);
+      const codes = codesOf(error).join(", ");
+      setTrouble(
+        error instanceof TookTooLong
+          ? { kind: "code_took_too_long" }
+          : codes.length === 0
+            ? { kind: "wrong_password" }
+            : { kind: "wrong_password", codes },
+      );
+    } finally {
+      inFlight.current = false;
+      setWorking(false);
+    }
+  };
+
   const resend = async () => {
     if (
       !ready ||
@@ -463,6 +504,8 @@ function CodeSignIn() {
         return t`That code was right, but this account needs more than that to finish.`;
       case "wrong_code":
         return t`That code did not work. Check it or resend the code below.`;
+      case "wrong_password":
+        return t`That password did not work. Check it and try again.`;
       case "code_took_too_long":
         return t`That took too long to check. Try the code again.`;
     }
@@ -491,11 +534,13 @@ function CodeSignIn() {
             current={step === "identifier" ? 0 : 1}
           />
           <Words variant="title">
-            {step !== "identifier"
-              ? t`Check your inbox`
-              : savingFor === null
-                ? t`Welcome to Vela`
-                : t`Save ${savingFor}’s mornings`}
+            {step === "password"
+              ? t`Enter your password`
+              : step !== "identifier"
+                ? t`Check your inbox`
+                : savingFor === null
+                  ? t`Welcome to Vela`
+                  : t`Save ${savingFor}’s mornings`}
           </Words>
           <Words variant="body" tone="ink2">
             {step !== "identifier"
@@ -590,6 +635,41 @@ function CodeSignIn() {
                 label={working ? t`Sending…` : t`Send me a code`}
                 disabled={working || !ready || identifier.length === 0}
                 onPress={sendCode}
+              />
+            </>
+          ) : step === "password" ? (
+            <>
+              <Words variant="body" tone="ink2">
+                <Trans>{sentTo} signs in with a password.</Trans>
+              </Words>
+              <TextField
+                label={t`Password`}
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  setTrouble(undefined);
+                }}
+                disabled={working}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                secret
+                autoFocus
+                onSubmit={() => void enterPassword()}
+              />
+              <PrimaryButton
+                label={working ? t`Checking…` : t`Continue`}
+                onPress={enterPassword}
+                disabled={working || !ready || password.length === 0}
+              />
+              <SecondaryButton
+                label={PHONE_SIGN_IN ? t`Change email or number` : t`Use a different email`}
+                disabled={working}
+                onPress={() => {
+                  setStep("identifier");
+                  setPassword("");
+                  setTrouble(undefined);
+                }}
               />
             </>
           ) : (

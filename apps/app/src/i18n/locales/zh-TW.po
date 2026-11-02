@@ -484,6 +484,10 @@ msgstr "{recipient}看過了 · {time}"
 msgid "{relation} · asked after setup"
 msgstr "{relation} · 設定好後再詢問"
 
+#: app/sign-in.tsx
+msgid "{sentTo} signs in with a password."
+msgstr "{sentTo} 用密碼登入。"
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr "{someone}住在附近，安靜的日子可以聯絡"
@@ -1609,6 +1613,10 @@ msgstr "請輸入訊息中的六位數字。"
 #: app/sign-in.tsx
 msgid "Enter your code to continue to your family."
 msgstr "輸入驗證碼，繼續連結你的家人。"
+
+#: app/sign-in.tsx
+msgid "Enter your password"
+msgstr "輸入密碼"
 
 #: app/sign-in.tsx
 msgid "Error code: {code}"
@@ -3271,6 +3279,10 @@ msgstr "父母的設定"
 msgid "Parents"
 msgstr "長輩"
 
+#: app/sign-in.tsx
+msgid "Password"
+msgstr "密碼"
+
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
 msgid "Pause"
@@ -4508,6 +4520,10 @@ msgstr "無法拿出這一頁，請再試一次。"
 #: app/legal.tsx
 msgid "That page could not open. Write to Vela support instead."
 msgstr "這個頁面打不開。請改寫信給 Vela 支援。"
+
+#: app/sign-in.tsx
+msgid "That password did not work. Check it and try again."
+msgstr "密碼不正確，請確認後再試一次。"
 
 #: src/components/onboarding/questions.tsx
 msgid "That photo could not be opened. Try another, or use initials for now."

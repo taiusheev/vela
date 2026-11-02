@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clerkErrorCodes,
+  hasPasswordFactor,
   preferredCodeFactor,
   resendDelay,
   unknownIdentity,
@@ -74,4 +75,12 @@ it("keeps support codes bounded and excludes malformed entries and private provi
       ],
     }),
   ).toEqual(["form_code_incorrect"]);
+});
+
+describe("hasPasswordFactor", () => {
+  it("is true only for an account that has a password", () => {
+    expect(hasPasswordFactor([{ strategy: "email_code" }, { strategy: "password" }])).toBe(true);
+    expect(hasPasswordFactor([{ strategy: "email_code" }])).toBe(false);
+    expect(hasPasswordFactor([])).toBe(false);
+  });
 });

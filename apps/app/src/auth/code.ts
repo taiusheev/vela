@@ -25,6 +25,14 @@ export function preferredCodeFactor<T extends { strategy: string }>(
   );
 }
 
+/**
+ * Whether this account signs in with a password rather than a code: only an account that has one
+ * (Apple's reviewer account), since password sign-in is optional and never asked for at sign-up.
+ */
+export function hasPasswordFactor(factors: readonly { strategy: string }[]): boolean {
+  return factors.some((factor) => factor.strategy === "password");
+}
+
 export function resendDelay(sentAt: number, now: number): number {
   return Math.max(0, Math.ceil((sentAt + 30_000 - now) / 1000));
 }
