@@ -81,7 +81,15 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { ADMIN_CHANNEL, ADMIN_LANG, adminLink } from "./admin.ts";
+import {
+  ADMIN_CHANNEL,
+  ADMIN_LANG,
+  adminLink,
+  type DeliveredWeeklyRead,
+  deliverWeeklyRead,
+  translateForHer,
+  weeklyReadSentEvent,
+} from "./admin.ts";
 import { deleteOldDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
@@ -94,6 +102,7 @@ import { keepBoxPhotosStored, releaseBoxPhotosOfLeavers } from "./photo-box.ts";
 import { pilotFamilyAllowed } from "./pilot-admission.ts";
 import { forgetFamilySubjects, forgetMembersWithTheirContacts, recordDeletion } from "./proofs.ts";
 import {
+  activeAppOrganiserIds,
   activeOrganisersWithLinks,
   dayAnsweredAt,
   familyById,
@@ -698,11 +707,13 @@ export async function draftWeeklyRead(
           family,
           weekStart,
           weekEnd,
-          new Set(
-            (await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
+          // Organisers the read reaches: on their messenger, or in the app.
+          new Set([
+            ...(await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
               (organiser) => organiser.member.id,
             ),
-          ),
+            ...(await activeAppOrganiserIds(deps.db, family.id)),
+          ]),
         )
       : null;
   const insightOutcome =
@@ -732,7 +743,7 @@ export async function draftWeeklyRead(
     patterns: patterns.notes,
     family_patterns: patterns.family,
   };
-  await deps.db.transaction(async (tx) => {
+  const delivered = await deps.db.transaction(async (tx): Promise<DeliveredWeeklyRead | null> => {
     const [currentFamily] = await tx
       .select()
       .from(families)
@@ -751,7 +762,7 @@ export async function draftWeeklyRead(
       currentMember.leftAt !== null ||
       !(await pilotFamilyAllowed(tx, deps.config.pilotAdmission, family.id))
     )
-      return;
+      return null;
     const withdrewHealth = healthAtStart && !(await hasHealthWordsConsent(tx, member.id, now));
     const value = withdrewHealth ? SAFE_DEFAULTS.weekly_read(weeklyInput) : outcome.value;
     if (!isAiOff(outcome)) {
@@ -812,9 +823,9 @@ export async function draftWeeklyRead(
         createdAt: now,
       })
       .onConflictDoNothing()
-      .returning({ id: weeklyReads.id });
+      .returning();
     if (read === undefined) {
-      return;
+      return null;
     }
     await recordEvent(
       tx,
@@ -836,26 +847,69 @@ export async function draftWeeklyRead(
       },
       now,
     );
-    const admin = deps.config.adminConversationId;
-    if (admin === null) {
-      return;
+    // Sent as drafted, without waiting for the founder, where switched on. Her health words go in
+    // only under her current yes (`weeklyHealthMentions`), and each organiser's feedback only in
+    // their own copy; a read nobody can receive stays a draft for the founder to send.
+    const sent =
+      deps.config.weeklyReadAutoSend === true
+        ? await deliverWeeklyRead(
+            deps,
+            tx,
+            read,
+            {
+              lines: value.lines,
+              suggestion: value.suggestion,
+              includeHealth: true,
+              feedback:
+                insight === null || withdrewHealth
+                  ? {}
+                  : Object.fromEntries(
+                      insight.kept.feedback.map((entry) => [
+                        entry.member_id,
+                        `${entry.landed}\n${entry.try_next}`,
+                      ]),
+                    ),
+            },
+            now,
+          )
+        : null;
+    const delivered = sent !== null && typeof sent !== "string" ? sent : null;
+    if (delivered !== null) {
+      await recordEvent(tx, weeklyReadSentEvent(delivered, true), now);
+    } else if (sent !== null) {
+      deps.logger.warn("weekly_read_auto_send_refused", {
+        memberId,
+        weekEnd,
+        result: sent,
+      });
     }
-    await enqueueOutbound(deps, tx, {
-      kind: "system",
-      idempotencyKey: outboundKey("system", {
+    const admin = deps.config.adminConversationId;
+    if (admin !== null) {
+      await enqueueOutbound(deps, tx, {
+        kind: "system",
+        idempotencyKey: outboundKey("system", {
+          conversationId: admin,
+          suffix: `weekly_read_draft:${read.id}`,
+        }),
+        memberId: member.id,
+        channel: ADMIN_CHANNEL,
         conversationId: admin,
-        suffix: `weekly_read_draft:${read.id}`,
-      }),
-      memberId: member.id,
-      channel: ADMIN_CHANNEL,
-      conversationId: admin,
-      lang: ADMIN_LANG,
-      text: t(ADMIN_LANG, "admin.weekly_read_draft", {
-        family: family.name,
-        link: adminLink(deps.config, family.id),
-      }),
-    });
+        lang: ADMIN_LANG,
+        text: t(
+          ADMIN_LANG,
+          delivered === null ? "admin.weekly_read_draft" : "admin.weekly_read_sent",
+          {
+            family: family.name,
+            link: adminLink(deps.config, family.id),
+          },
+        ),
+      });
+    }
+    return delivered;
   });
+  if (delivered !== null) {
+    await translateForHer(deps, delivered);
+  }
 }
 
 // metrics ----------------------------------------------------------------------------------------
@@ -1610,11 +1664,18 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
         .for("update");
       if (
         read === undefined ||
-        (!Object.hasOwn(read.stats, "insight") && !Object.hasOwn(read.stats, "feedback"))
+        (!Object.hasOwn(read.stats, "insight") &&
+          !Object.hasOwn(read.stats, "feedback") &&
+          !Object.hasOwn(read.stats, "sent_feedback"))
       ) {
         return false;
       }
-      const { insight: _insight, feedback: _feedback, ...kept } = read.stats;
+      const {
+        insight: _insight,
+        feedback: _feedback,
+        sent_feedback: _sentFeedback,
+        ...kept
+      } = read.stats;
       await tx.update(weeklyReads).set({ stats: kept }).where(eq(weeklyReads.id, id));
       return true;
     });

@@ -129,6 +129,11 @@ export interface PilotEnv extends SharedEnv {
    * (ADR-48). Production is "off" until the founder has told the family it applies to.
    */
   readonly WEEKLY_INSIGHT?: string;
+  /**
+   * "on" or "off" (absent is "off"): whether the weekly read goes to the organisers as soon as it is
+   * drafted. Production is "off" while the privacy notice promises the founder checks each read.
+   */
+  readonly WEEKLY_READ_AUTO_SEND?: string;
   /** New report purpose; independent off switch, approved notice and explicit family roster. */
   readonly WEEKLY_SUPPORT?: string;
   readonly WEEKLY_SUPPORT_NOTICE?: string;

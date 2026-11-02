@@ -47,6 +47,8 @@ export interface WeeklyRead {
     suggestion: string | null;
     /** The morning the suggestion grows from, when the read names one. */
     source: SuggestionSource | null;
+    /** The reader's own feedback on their messages that week (ADR-48), only ever theirs. */
+    feedback: string | null;
     /** "7 – 13 Sep": the week the read is about. */
     range: string;
   } | null;
@@ -124,6 +126,7 @@ export function toWeeklyRead(api: ApiWeeklyRead): WeeklyRead {
             notes: read.notes ?? [],
             suggestion: read.suggestion,
             source: sourceOf(read.suggestion_source),
+            feedback: read.my_feedback ?? null,
             range: `${localDayMonth(read.week_start)} – ${localDayMonth(read.week_end)}`,
           },
   };
@@ -170,6 +173,7 @@ export function weeklyFixture(): WeeklyRead {
         asker: t`Mia`,
         summary: t`Planted the last tomato seeds by the fence.`,
       },
+      feedback: t`Your question about the seeds got her longest answer of the week.\nNext time, ask about one thing she named, like the new bed by the fence.`,
       range: `${localDayMonth(dates[0] ?? "")} – ${localDayMonth(dates[6] ?? "")}`,
     },
   };
