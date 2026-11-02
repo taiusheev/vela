@@ -71,6 +71,7 @@ export async function provisionApiUser(
 export async function loadApiMe(
   db: Queryable,
   identity: SessionIdentity,
+  notificationControls = false,
 ): Promise<Omit<ApiMe, "photos" | "push"> | null> {
   if (!hasIdentity(identity)) {
     return null;
@@ -80,6 +81,8 @@ export async function loadApiMe(
     .select({
       user: userProjection,
       oneMomentADay: users.oneMomentADay,
+      replyNotifications: users.replyNotifications,
+      turnReminders: users.turnReminders,
       privacyAcceptance: users.privacyAcceptance,
       membership: { member_id: members.id, role: members.role, status: members.status },
       family: {
@@ -125,6 +128,14 @@ export async function loadApiMe(
     user: first.user,
     memberships,
     one_moment_a_day: first.oneMomentADay,
+    ...(notificationControls
+      ? {
+          notification_preferences: {
+            replies: first.oneMomentADay && first.replyNotifications,
+            turns: first.oneMomentADay && first.turnReminders,
+          },
+        }
+      : {}),
     privacy_accepted: first.privacyAcceptance?.version === APP_PRIVACY_VERSION,
   };
 }

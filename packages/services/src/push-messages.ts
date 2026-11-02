@@ -21,7 +21,7 @@ import {
   type PushKind,
 } from "@vela/contracts";
 import { t } from "@vela/copy";
-import { localTimeOf, outboundKey } from "@vela/core";
+import { localDateOf, localTimeOf, outboundKey } from "@vela/core";
 import { type Member, pushDevices, type QuietEvent, users } from "@vela/db";
 import { and, eq, isNull } from "drizzle-orm";
 import type { PushMessage } from "./deps.ts";
@@ -118,9 +118,12 @@ export function appRowProblem(
 
 /**
  * The message Expo sends one phone for a row of `kind`. The quiet notice breaks through Focus
- * (time-sensitive) and sounds on the loud channel; its close sounds too, without breaking through;
- * an ordinary push is silent and may wait for the phone. Never a title (the app's name shows),
- * never a badge.
+ * (time-sensitive) and sounds on the loud channel; its close sounds too, without breaking through,
+ * and takes the notice's place on the lock screen (one `collapseId` and Android `tag` per quiet
+ * event), so a settled morning no longer reads "It's been quiet". Her answer receipt is an ordinary
+ * active push; the evening's turn prompt is passive, a nudge for the notification summary that never
+ * lights the screen. Every push about one parent stacks in one thread. Never a title (the app's
+ * name shows), never a badge.
  */
 export function pushMessageFor(
   kind: PushKind,
@@ -132,12 +135,21 @@ export function pushMessageFor(
   for (const [name, value] of Object.entries(data)) {
     if (typeof value === "string") fields[name] = value;
   }
+  // Ids only, as in `data`: one thread per parent of a family, one replaceable slot per quiet event.
+  const threadId = `${data.family_id}:${data.member_id}`;
+  const quietSlot =
+    data.quiet_event_id === undefined
+      ? {}
+      : { collapseId: `quiet:${data.quiet_event_id}`, tag: `quiet:${data.quiet_event_id}` };
   switch (kind) {
+    case "flag":
     case "quiet_notice":
       return {
         to: token,
         body,
         data: fields,
+        threadId,
+        ...quietSlot,
         channelId: ANDROID_QUIET_CHANNEL,
         priority: "high",
         interruptionLevel: "time-sensitive",
@@ -149,10 +161,23 @@ export function pushMessageFor(
         to: token,
         body,
         data: fields,
+        threadId,
+        ...quietSlot,
         channelId: ANDROID_QUIET_CHANNEL,
         priority: "high",
         interruptionLevel: "active",
         sound: "default",
+        ttl: OTHER_PUSH_TTL_SECONDS,
+      };
+    case "turn_prompt":
+      return {
+        to: token,
+        body,
+        data: fields,
+        threadId,
+        channelId: ANDROID_DAILY_CHANNEL,
+        priority: "normal",
+        interruptionLevel: "passive",
         ttl: OTHER_PUSH_TTL_SECONDS,
       };
     default:
@@ -160,6 +185,7 @@ export function pushMessageFor(
         to: token,
         body,
         data: fields,
+        threadId,
         channelId: ANDROID_DAILY_CHANNEL,
         priority: "normal",
         interruptionLevel: "active",
@@ -172,6 +198,8 @@ export function pushMessageFor(
 export interface PushReader {
   member: Member;
   userId: string;
+  /** Account time zone keeps the daily reminder slot consistent across memberships. */
+  timeZone?: string;
 }
 
 /**
@@ -182,13 +210,14 @@ export interface PushReader {
 export async function ordinaryPushReader(
   db: Queryable,
   memberId: string,
+  kind: OrdinaryPushKind = "answer_receipt",
 ): Promise<PushReader | null> {
   const member = await memberById(db, memberId);
   if (member === null || member.status !== "active" || member.userId === null) {
     return null;
   }
   const [phone] = await db
-    .select({ id: pushDevices.id })
+    .select({ id: pushDevices.id, timeZone: users.tz })
     .from(users)
     .innerJoin(pushDevices, eq(pushDevices.userId, users.id))
     .where(
@@ -196,11 +225,45 @@ export async function ordinaryPushReader(
         eq(users.id, member.userId),
         isNull(users.deletedAt),
         eq(users.oneMomentADay, true),
+        // The weekly read has no choice of its own: "One moment a day" alone decides it.
+        kind === "weekly_read"
+          ? undefined
+          : eq(kind === "answer_receipt" ? users.replyNotifications : users.turnReminders, true),
         eq(pushDevices.permission, "granted"),
       ),
     )
     .limit(1);
-  return phone === undefined ? null : { member, userId: member.userId };
+  return phone === undefined ? null : { member, userId: member.userId, timeZone: phone.timeZone };
+}
+
+/**
+ * Her "Not okay" for one organiser's phones (ADR-57): that she wants her family and a call, never
+ * that she is unwell, since a lock screen is read by anyone and the words pass through Apple and
+ * Google. Keyed as her flag for that reader with `:app`, so a redelivered tap pushes once. It breaks
+ * through Focus and sounds on the loud channel, as the quiet notice does.
+ */
+export function notOkayPush(input: {
+  exchangeId: string;
+  answerId: string;
+  reader: PushReader;
+  herName: string;
+}): OutboundRequest {
+  const { reader } = input;
+  const lang = reader.member.language;
+  return {
+    kind: "flag",
+    idempotencyKey: outboundKey("flag", {
+      exchangeId: input.exchangeId,
+      conversationId: reader.userId,
+      suffix: `${input.answerId}:${PUSH_CHANNEL}`,
+    }),
+    memberId: reader.member.id,
+    channel: PUSH_CHANNEL,
+    conversationId: reader.userId,
+    exchangeId: input.exchangeId,
+    lang,
+    text: t(lang, "push.not_okay", { name: input.herName }),
+  };
 }
 
 /**
@@ -263,11 +326,40 @@ export function answerReceiptPush(input: {
 }
 
 /**
+ * "{name}'s weekly read is here." to an organiser who reads it in the app alone (ADR-59): once per
+ * week of hers and reader, keyed by her, the week and the account (a messenger copy has its chat
+ * instead), within the day's budget for weekly reads. Never a line of the read itself: the tap opens the Week tab.
+ */
+export function weeklyReadPush(input: {
+  reader: PushReader;
+  herId: string;
+  weekEnd: LocalDate;
+  herName: string;
+}): OutboundRequest {
+  const { reader } = input;
+  const lang = reader.member.language;
+  return {
+    kind: "weekly_read",
+    idempotencyKey: outboundKey("weekly_read", {
+      memberId: input.herId,
+      date: input.weekEnd,
+      conversationId: reader.userId,
+    }),
+    memberId: reader.member.id,
+    channel: PUSH_CHANNEL,
+    conversationId: reader.userId,
+    lang,
+    text: t(lang, "push.weekly_read", { name: input.herName }),
+  };
+}
+
+/**
  * The evening's turn for a family with no group (S6): the holder's phones hear that tomorrow morning
- * is theirs, under the key the group's prompt would have used. Its local day is the holder's today,
- * the day it is sent, so it never takes the next day's place in the budget.
+ * is theirs. A shared account/day key limits reminder attempts across parents and families;
+ * answer receipts keep their own budget. The effect still names the parent's target morning.
  */
 export function turnPromptPush(input: {
+  now: Date;
   holder: PushReader;
   familyId: string;
   recipientId: string;
@@ -278,10 +370,12 @@ export function turnPromptPush(input: {
   const lang = holder.member.language;
   return {
     kind: "turn_prompt",
-    idempotencyKey: outboundKey("turn_prompt", {
-      memberId: input.recipientId,
-      date: input.forDate,
-    }),
+    idempotencyKey: `app:${outboundKey("turn_prompt", {
+      // Account-wide daily reminder slot. The database idempotency key arbitrates simultaneous
+      // turns across parents/families; answer receipts retain their independent budget.
+      memberId: holder.userId,
+      date: localDateOf(input.now, holder.timeZone ?? holder.member.tz),
+    })}`,
     memberId: holder.member.id,
     channel: PUSH_CHANNEL,
     conversationId: holder.userId,

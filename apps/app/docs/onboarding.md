@@ -11,3 +11,14 @@ Setup drafts live only in memory, bind to the intended sign-in when saving and c
 Migrations 0017 (member setup answers) and 0018 (account app-permission evidence) must deploy before the app. No new native permissions/modules, billing, public registration, parent-device activation or provider switch.
 
 Validation: local root check all nine packages; 347 app tests with one existing opt-in skip, 1,561 services tests, 1,222 Worker tests. Complete demo wizard/privacy/completion browser walkthrough plus six narrow light/dark layouts; separate Maestro introduction smoke. Native source doctor retains 10 collected-data and four required-reason categories; a source doctor is not an archive, signed-device or provider test. TestFlight submission waits for final CI, staging/production guards and archive inspection.
+
+## First-question UX refinement — 31 October 2026
+
+Keep the first real question in the existing setup rather than add a mandatory personalization
+questionnaire. The first-question editor now has a clear label, the app's writing typeface and an
+optional idea picker. Its delivery preview appears when the organiser has entered or chosen actual
+words; the previous empty-message placeholder is removed. The first-question contract, ten-question
+setup sequence, account/privacy gates and first-week construction are unchanged. Detailed voice
+examples and boundaries are contextual options in the separate reviewed-draft flow, not newly
+collected during onboarding. This is a scoped UI improvement; it does not claim a shorter total
+onboarding or measured conversion improvement.

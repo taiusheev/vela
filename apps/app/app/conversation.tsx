@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ComposeAsk } from "@vela/contracts";
 import { ASK_BANK, type AskBankLang } from "@vela/copy";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -11,7 +11,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Text,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -25,6 +24,9 @@ import { ActionSheet, type SheetAction } from "../src/components/chat/action-she
 import { ChatBubble, DayChip } from "../src/components/chat/chat-bubble.tsx";
 import { ChatComposer } from "../src/components/chat/chat-composer.tsx";
 import { Light } from "../src/components/light.tsx";
+import { LoadingLight } from "../src/components/loading-light.tsx";
+import { NotOkayFollowUp } from "../src/components/not-okay-follow-up.tsx";
+import { Text } from "../src/components/scaled-text.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { canAsk } from "../src/data/ask-target.ts";
 import {
@@ -33,15 +35,25 @@ import {
   chatFixture,
   dayLabel,
   localDateIn,
+  newestMine,
+  type PendingChatMessage,
+  pendingHasArrived,
+  showsStatus,
+  showsTime,
   startsGroup,
   toChat,
 } from "../src/data/chat.ts";
+import { exampleNames } from "../src/data/example-names.ts";
 import { clockTime } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { selectedLight } from "../src/data/selected-light.ts";
+import { notOkayExampleFixture } from "../src/data/today.ts";
 import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
+import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { useToday } from "../src/data/useToday.ts";
+import { tapLanded, tapLight } from "../src/device/haptics.ts";
+import { clearShownAbout } from "../src/push/notifications.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../src/theme/tokens.ts";
@@ -72,12 +84,20 @@ function starters(lang: AskBankLang): string[] {
 
 function Conversation() {
   const { recipient } = useLocalSearchParams<{ recipient?: string }>();
+  const { suggestion } = useLocalSearchParams<{ suggestion?: string }>();
   const day = useToday();
-  const light = selectedLight(day.today.lights, recipient);
+  const { example } = useLocalSearchParams<{ example?: string }>();
+  const light = selectedLight(
+    demoDataAllowed(apiConfigured(), accountsConfigured()) && example === "not-okay"
+      ? notOkayExampleFixture().lights
+      : day.today.lights,
+    recipient,
+  );
   const account = useAccount();
   const queries = useQueryClient();
   const [watching, setWatching] = useState(false);
   const history = useExchanges(watching);
+  const pull = usePullRefresh(history.refresh);
   useFocusEffect(
     useCallback(() => {
       setWatching(true);
@@ -94,48 +114,82 @@ function Conversation() {
   const lang: AskBankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const draft = useDraft(`conversation.${day.familyId ?? UNLINKED}.${light?.memberId ?? UNLINKED}`);
+  const offered = useRef(false);
+  useEffect(() => {
+    if (!draft.ready || offered.current || suggestion === undefined) return;
+    offered.current = true;
+    // An existing unfinished message always takes priority over an offered starting point.
+    if (!draft.text) draft.setText(suggestion);
+  }, [draft.ready, draft.text, draft.setText, suggestion]);
   const [note, setNote] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"more" | "menu" | null>(null);
   // What the reader sent in the demo, and the words of a send still on its way.
   const [demoSent, setDemoSent] = useState<ChatMessage[]>([]);
   const [demoReactions, setDemoReactions] = useState<Record<string, ChatReactionKind[]>>({});
-  const [pending, setPending] = useState<string | null>(null);
+  // The words of a send on its way: "sending" until Vela has them, then "sent" until the
+  // conversation, read again, holds them itself (so they never blink out in between).
+  const [pending, setPending] = useState<PendingChatMessage[]>([]);
+  const sending = useRef(false);
   const calling = useCallingNumber(day.familyId, light?.memberId);
   const reactKey = useIdempotencyKey("chat-reaction");
+  const herId = light?.memberId;
   useFocusEffect(
     useCallback(() => {
       history.refresh();
       day.refresh();
-    }, [history.refresh, day.refresh]),
+      if (herId !== undefined) void clearShownAbout(herId);
+    }, [history.refresh, day.refresh, herId]),
   );
   const name = light?.displayName ?? t`Your parent`;
   const invited = light?.invited === true;
 
   const send = useMutation({
-    mutationFn: async () => {
-      if (demo) return { when: "now" };
+    mutationFn: async ({ text }: { text: string; localId: string }) => {
+      if (demo) return { when: "now", id: undefined };
       if (day.familyId === undefined || light === undefined) throw new Error("No recipient");
       const body = {
         recipient_id: light.memberId,
         type: "question" as const,
         when: invited ? ("whenever" as const) : ("now" as const),
-        text: draft.text.trim(),
+        text,
       };
       const saved = draft.savedBody<ComposeAsk>();
       const request = ComposeAsk.parse(
         saved?.text === body.text && saved?.recipient_id === body.recipient_id ? saved : body,
       );
-      await composeAsk(day.familyId, await draft.keyFor(request), request, await account.token());
-      return { when: request.when };
+      const [key, token] = await Promise.all([draft.keyFor(request), account.token()]);
+      const accepted = await composeAsk(day.familyId, key, request, token);
+      return { when: request.when, id: accepted.id };
     },
-    onMutate: () => {
+    onMutate: ({ text, localId }) => {
       setNote(null);
-      setPending(draft.text.trim());
+      setPending((earlier) => [
+        ...earlier,
+        {
+          localId,
+          text,
+          status: "sending",
+          since: Date.now(),
+          existingIds: history.summaries.map((summary) => summary.id),
+        },
+      ]);
       following.current = true;
     },
-    onSuccess: async (accepted) => {
-      const words = draft.text.trim();
-      await draft.clear();
+    onSuccess: async (accepted, { text: words, localId }) => {
+      tapLanded();
+      // Vela has it now: say so at once, and read the conversation again without waiting on it.
+      setPending((current) =>
+        current.map((message) =>
+          message.localId === localId
+            ? {
+                ...message,
+                status: "sent",
+                ...(accepted.id === undefined ? {} : { exchangeId: accepted.id }),
+              }
+            : message,
+        ),
+      );
+      await draft.clear().catch(() => {});
       if (demo) {
         const now = new Date();
         setDemoSent((earlier) => [
@@ -144,7 +198,7 @@ function Conversation() {
             key: `demo:${earlier.length}`,
             exchangeId: `demo:${earlier.length}`,
             side: "me",
-            from: "Mia",
+            from: exampleNames().mia,
             at: now.getTime(),
             day: localDateIn(now.getTime()),
             time: clockTime(now.getHours(), now.getMinutes()),
@@ -155,14 +209,19 @@ function Conversation() {
         ]);
         setNote(t`Example only. Nothing was sent.`);
       } else if (accepted.when === "whenever") {
-        setNote(t`Saved for their first morning after they join.`);
+        setNote(
+          t`Saved. The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`,
+        );
       }
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["exchanges"] }),
-        queries.invalidateQueries({ queryKey: ["today"] }),
-      ]);
+      if (demo) setPending((current) => current.filter((message) => message.localId !== localId));
+      void queries.invalidateQueries({ queryKey: ["exchanges"] });
+      void queries.invalidateQueries({ queryKey: ["today"] });
     },
-    onSettled: () => setPending(null),
+    onError: (_error, { localId }) =>
+      setPending((current) => current.filter((message) => message.localId !== localId)),
+    onSettled: () => {
+      sending.current = false;
+    },
   });
 
   const react = useMutation({
@@ -176,6 +235,7 @@ function Conversation() {
       );
     },
     onSuccess: async (_done, { exchangeId, kind }) => {
+      tapLight();
       if (demo) {
         setDemoReactions((earlier) => ({
           ...earlier,
@@ -220,23 +280,31 @@ function Conversation() {
           ...message,
           reactions: [
             ...message.reactions,
-            ...given.map((kind) => ({ kind, from: "Mia", mine: true })),
+            ...given.map((kind) => ({ kind, from: exampleNames().mia, mine: true })),
           ],
         };
   });
-  if (pending !== null && pending.length > 0) {
-    const now = Date.now();
-    const date = new Date(now);
+  const outstanding = pending.filter((message) => !pendingHasArrived(message, built));
+  useEffect(() => {
+    if (outstanding.length !== pending.length) {
+      const arrived = pending.filter((message) => !outstanding.includes(message));
+      setPending((current) =>
+        current.filter((message) => !arrived.some((sent) => sent.localId === message.localId)),
+      );
+    }
+  }, [outstanding, pending]);
+  for (const message of outstanding) {
+    const date = new Date(message.since);
     messages.push({
-      key: "pending",
-      exchangeId: "pending",
+      key: message.localId,
+      exchangeId: message.exchangeId ?? message.localId,
       side: "me",
       from: "",
-      at: now,
-      day: localDateIn(now, light?.timeZone),
+      at: message.since,
+      day: localDateIn(message.since, light?.timeZone),
       time: clockTime(date.getHours(), date.getMinutes()),
-      text: pending,
-      status: "sending",
+      text: message.text,
+      status: message.status,
       reactions: [],
     });
   }
@@ -363,14 +431,18 @@ function Conversation() {
         <SecondaryButton label={t`Go to Settings`} onPress={() => router.push("/settings")} />
       ) : (
         <ChatComposer
-          value={draft.text}
+          value={send.isPending ? "" : draft.text}
           onChangeText={(text) => {
             draft.setText(text);
             setNote(null);
           }}
           placeholder={t`Write to ${name}`}
-          sendLabel={invited ? t`Save for their first morning` : t`Send now`}
-          onSend={() => send.mutate()}
+          sendLabel={invited ? t`Save for when they say yes` : t`Send now`}
+          onSend={() => {
+            if (sending.current || !draft.text.trim()) return;
+            sending.current = true;
+            send.mutate({ text: draft.text.trim(), localId: `pending:${Date.now()}` });
+          }}
           {...(moreActions.length === 0 ? {} : { onMore: () => setSheet("more") })}
           disabled={send.isPending || !draft.ready}
           canSend={canSend}
@@ -379,6 +451,7 @@ function Conversation() {
     </View>
   );
 
+  const newest = newestMine(messages);
   return (
     <>
       <Stack.Screen
@@ -393,13 +466,15 @@ function Conversation() {
               <View
                 accessible
                 accessibilityRole="header"
-                accessibilityLabel={`${name}, ${light.stateText}`}
+                accessibilityLabel={`${name}, ${light.notOkayAt === undefined ? light.stateText : t`said she is not okay`}`}
                 style={{ flexDirection: "row", alignItems: "center", gap: space.s }}
               >
                 <Light state={light.answerReceived === true ? "lit" : light.state} height={26} />
                 <View>
                   <Text style={[type.heading, { color: palette.ink }]}>{name}</Text>
-                  <Text style={[type.caption, { color: palette.ink3 }]}>{light.stateText}</Text>
+                  <Text style={[type.caption, { color: palette.ink3 }]}>
+                    {light.notOkayAt === undefined ? light.stateText : t`said she is not okay`}
+                  </Text>
                 </View>
               </View>
             ),
@@ -424,6 +499,20 @@ function Conversation() {
             ),
         }}
       />
+      {light?.notOkayAt === undefined ? null : (
+        <View
+          style={{
+            paddingHorizontal: space.l,
+            paddingVertical: space.s,
+            backgroundColor: palette.bg,
+            maxHeight: "45%",
+          }}
+        >
+          <ScrollView>
+            <NotOkayFollowUp light={light} familyId={day.familyId} inConversation />
+          </ScrollView>
+        </View>
+      )}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
@@ -443,9 +532,7 @@ function Conversation() {
           }}
           scrollEventThrottle={100}
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl refreshing={history.refreshing} onRefresh={history.refresh} />
-          }
+          refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.refresh} />}
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: space.l,
@@ -456,8 +543,8 @@ function Conversation() {
           <View style={{ alignItems: "center", paddingHorizontal: space.l, gap: space.xs }}>
             <Words variant="caption" tone="ink3">
               {invited
-                ? t`${name} has not said yes yet. What you write waits for their first morning.`
-                : t`Your words reach ${name}'s chat now, signed with your name. Their morning stays as it is.`}
+                ? t`${name} has not said yes yet. Write a first hello now: it reaches ${name} the moment they say yes, so the chat is waiting for them.`
+                : t`Your words reach ${name}'s chat now, signed with your name. Tomorrow's morning question still comes as planned.`}
             </Words>
           </View>
           {history.more ? (
@@ -479,9 +566,7 @@ function Conversation() {
           ) : null}
           {history.loading && !demo ? (
             <View style={{ paddingTop: space.xl, alignItems: "center" }}>
-              <Words variant="body" tone="ink2">
-                <Trans>Loading your conversation…</Trans>
-              </Words>
+              <LoadingLight label={t`Loading your conversation…`} size="large" />
             </View>
           ) : null}
           {history.trouble ? (
@@ -542,6 +627,8 @@ function Conversation() {
                   message={message}
                   first={first}
                   last={last}
+                  showTime={showsTime(message, next)}
+                  showStatus={showsStatus(message, newest)}
                   familyId={day.familyId}
                   {...(message.side === "her" && (demo || day.live)
                     ? {

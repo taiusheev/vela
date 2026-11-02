@@ -1,5 +1,5 @@
 -- Vela · Postgres schema
--- GENERATED FILE: DO NOT EDIT. The source of truth is packages/db/src/schema.ts.
+-- GENERATED FILE: DO NOT EDIT. Sources: packages/db/src/schema.ts and sql/*-guards.sql.
 -- Regenerate with: pnpm --filter @vela/db export-sql
 -- Applied through the migrations in packages/db/migrations (pnpm --filter @vela/db generate).
 -- Column meanings, retention rules, and the invariants behind each index are documented in
@@ -37,7 +37,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove'))
 );
 
 CREATE TABLE "ai_calls" (
@@ -78,8 +78,9 @@ CREATE TABLE "answers" (
 	"understood_at" timestamp with time zone,
 	"processing_attempts" smallint DEFAULT 0 NOT NULL,
 	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"words_expired_at" timestamp with time zone,
 	CONSTRAINT "answers_channel_external_id_key" UNIQUE("channel","external_id"),
-	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'sticker', 'other')),
+	CONSTRAINT "answers_kind_check" CHECK ("kind" in ('voice', 'chip', 'photo_pick', 'vote', 'heart', 'text', 'photo', 'fine', 'not_okay', 'sticker', 'other')),
 	CONSTRAINT "answers_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device'))
 );
 
@@ -118,6 +119,7 @@ CREATE TABLE "book_entries" (
 	"member_id" uuid NOT NULL,
 	"exchange_id" uuid NOT NULL,
 	"kept_at" timestamp with time zone NOT NULL,
+	"kept_by" uuid,
 	"removed_at" timestamp with time zone,
 	"removed_by" uuid,
 	CONSTRAINT "book_entries_exchange_id_key" UNIQUE("exchange_id")
@@ -157,7 +159,7 @@ CREATE TABLE "consents" (
 	"withdrawn_at" timestamp with time zone,
 	"evidence" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"subject_deleted_at" timestamp with time zone,
-	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words')),
+	CONSTRAINT "consents_kind_check" CHECK ("kind" in ('light', 'nearby', 'privacy_notice', 'pilot', 'health_words', 'rich_memories', 'memory_keep')),
 	CONSTRAINT "consents_answer_check" CHECK ("answer" in ('yes', 'no')),
 	CONSTRAINT "consents_subject_ref_check" CHECK ("subject_ref" ~ '^(member|contact):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' and ("member_id" is null or "subject_ref" = ('member:' || "member_id"::text)) and ("contact_id" is null or "subject_ref" = ('contact:' || "contact_id"::text))),
 	CONSTRAINT "consents_withdrawn_at_check" CHECK ("withdrawn_at" is null or "answer" = 'yes'),
@@ -283,6 +285,24 @@ CREATE TABLE "invites" (
 	CONSTRAINT "invites_channel_check" CHECK ("channel" in ('link', 'line', 'whatsapp', 'telegram', 'sms', 'email'))
 );
 
+CREATE TABLE "keep_suggestions" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"kind" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"dismissed_at" timestamp with time zone,
+	"dismissed_by" uuid,
+	CONSTRAINT "keep_suggestions_exchange_id_key" UNIQUE("exchange_id"),
+	CONSTRAINT "keep_suggestions_offsets_check" CHECK ("keep_suggestions"."start_offset" >= 0 and "keep_suggestions"."end_offset" > "keep_suggestions"."start_offset" and "keep_suggestions"."end_offset" - "keep_suggestions"."start_offset" <= 2000),
+	CONSTRAINT "keep_suggestions_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up'))
+);
+
 CREATE TABLE "media" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -311,6 +331,7 @@ CREATE TABLE "members" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
 	"user_id" uuid,
+	"memory_membership_revision" uuid DEFAULT uuidv7() NOT NULL,
 	"role" text DEFAULT 'member' NOT NULL,
 	"billing" boolean DEFAULT false NOT NULL,
 	"display_name" text NOT NULL,
@@ -338,6 +359,7 @@ CREATE TABLE "members" (
 	"learning_until" date,
 	"suggestions_signed_by" uuid,
 	"answer_stats" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"memories_off_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"left_at" timestamp with time zone,
 	CONSTRAINT "members_family_id_user_id_key" UNIQUE("family_id","user_id"),
@@ -351,6 +373,26 @@ CREATE TABLE "members" (
 	CONSTRAINT "members_primary_surface_check" CHECK ("primary_surface" in ('app', 'parent-surface', 'line', 'whatsapp', 'telegram', 'voice'))
 );
 
+CREATE TABLE "memory_candidates" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"source_answer_id" uuid NOT NULL,
+	"consent_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"source_digest" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"dismissed_at" timestamp with time zone,
+	"kept_at" timestamp with time zone,
+	CONSTRAINT "memory_candidates_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
+	CONSTRAINT "memory_candidates_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
+	CONSTRAINT "memory_candidates_offsets_check" CHECK ("memory_candidates"."start_offset" >= 0 and "memory_candidates"."end_offset" > "memory_candidates"."start_offset" and "memory_candidates"."end_offset" - "memory_candidates"."start_offset" <= 2000),
+	CONSTRAINT "memory_candidates_expiry_check" CHECK ("memory_candidates"."expires_at" > "memory_candidates"."created_at")
+);
+
 CREATE TABLE "memory_facts" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -362,6 +404,94 @@ CREATE TABLE "memory_facts" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone,
 	CONSTRAINT "memory_facts_kind_check" CHECK ("kind" in ('date', 'person', 'place', 'health', 'plan', 'preference'))
+);
+
+CREATE TABLE "memory_keeps" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"candidate_id" uuid,
+	"source_answer_id" uuid NOT NULL,
+	"discovery_consent_id" uuid NOT NULL,
+	"keep_consent_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"start_offset" integer NOT NULL,
+	"end_offset" integer NOT NULL,
+	"quote" text NOT NULL,
+	"source_digest" text NOT NULL,
+	"lang" text NOT NULL,
+	"occurred_at" timestamp with time zone NOT NULL,
+	"kept_at" timestamp with time zone NOT NULL,
+	"sharing_revision" uuid DEFAULT uuidv7() NOT NULL,
+	"removed_at" timestamp with time zone,
+	CONSTRAINT "memory_keeps_source_span_key" UNIQUE("source_answer_id","start_offset","end_offset"),
+	CONSTRAINT "memory_keeps_candidate_key" UNIQUE("candidate_id"),
+	CONSTRAINT "memory_keeps_kind_check" CHECK ("kind" in ('preference', 'story', 'humour', 'person', 'moment', 'follow_up')),
+	CONSTRAINT "memory_keeps_offsets_check" CHECK ("memory_keeps"."start_offset" >= 0 and "memory_keeps"."end_offset" > "memory_keeps"."start_offset" and "memory_keeps"."end_offset" - "memory_keeps"."start_offset" <= 2000)
+);
+
+CREATE TABLE "memory_permission_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"member_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"membership_revision" uuid NOT NULL,
+	"text_version" text NOT NULL,
+	"notice_version" text NOT NULL,
+	"lang" text NOT NULL,
+	"text_sha256" text NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"consumed_at" timestamp with time zone,
+	CONSTRAINT "memory_permission_presentations_sha_check" CHECK ("memory_permission_presentations"."text_sha256" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "memory_permission_presentations_timing_check" CHECK ("memory_permission_presentations"."expires_at" = "memory_permission_presentations"."issued_at" + interval '5 minutes' and ("memory_permission_presentations"."consumed_at" is null or ("memory_permission_presentations"."consumed_at" >= "memory_permission_presentations"."issued_at" and "memory_permission_presentations"."consumed_at" < "memory_permission_presentations"."expires_at")))
+);
+
+CREATE TABLE "memory_shares" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"keep_id" uuid NOT NULL,
+	"recipient_member_id" uuid NOT NULL,
+	"recipient_user_id" uuid NOT NULL,
+	"recipient_membership_revision" uuid NOT NULL,
+	"sharing_revision" uuid NOT NULL,
+	"presentation_id" uuid,
+	"confirmation_version" text NOT NULL,
+	"fingerprint" text NOT NULL,
+	"granted_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "memory_shares_keep_recipient_key" UNIQUE("keep_id","recipient_member_id"),
+	CONSTRAINT "memory_shares_fingerprint_check" CHECK ("memory_shares"."fingerprint" ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE "memory_sharing_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"keep_id" uuid NOT NULL,
+	"owner_user_id" uuid NOT NULL,
+	"owner_membership_revision" uuid NOT NULL,
+	"recipient_ids" uuid[] NOT NULL,
+	"fingerprint" text NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"consumed_at" timestamp with time zone,
+	CONSTRAINT "memory_sharing_presentations_fingerprint_check" CHECK ("memory_sharing_presentations"."fingerprint" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "memory_sharing_presentations_audience_check" CHECK (cardinality("memory_sharing_presentations"."recipient_ids") between 1 and 50 and array_position("memory_sharing_presentations"."recipient_ids", null) is null),
+	CONSTRAINT "memory_sharing_presentations_timing_check" CHECK ("memory_sharing_presentations"."expires_at" = "memory_sharing_presentations"."issued_at" + interval '5 minutes' and ("memory_sharing_presentations"."consumed_at" is null or ("memory_sharing_presentations"."consumed_at" >= "memory_sharing_presentations"."issued_at" and "memory_sharing_presentations"."consumed_at" < "memory_sharing_presentations"."expires_at")))
+);
+
+CREATE TABLE "memory_stories" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"title_answer_id" uuid NOT NULL,
+	"title_start" integer NOT NULL,
+	"title_end" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "memory_stories_title_check" CHECK ("memory_stories"."title_start" >= 0 and "memory_stories"."title_end" > "memory_stories"."title_start" and "memory_stories"."title_end" - "memory_stories"."title_start" <= 200)
+);
+
+CREATE TABLE "memory_story_moments" (
+	"story_id" uuid NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	CONSTRAINT "memory_story_moments_pkey" PRIMARY KEY("story_id","exchange_id"),
+	CONSTRAINT "memory_story_moments_exchange_id_key" UNIQUE("exchange_id")
 );
 
 CREATE TABLE "message_refs" (
@@ -456,6 +586,32 @@ CREATE TABLE "outbound" (
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
 );
 
+CREATE TABLE "photo_box" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"media_id" uuid NOT NULL,
+	"era" text NOT NULL,
+	"caption" text,
+	"added_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "photo_box_media_id_key" UNIQUE("media_id"),
+	CONSTRAINT "photo_box_era_check" CHECK ("era" in ('new', 'old'))
+);
+
+CREATE TABLE "photo_box_uses" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"exchange_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"box_id" uuid,
+	"local_day" date NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "pilot_families" (
+	"family_id" uuid PRIMARY KEY NOT NULL,
+	"approved_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE "pilot_roster" (
 	"telegram_user_id" text PRIMARY KEY NOT NULL,
 	"added_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -485,6 +641,22 @@ CREATE TABLE "push_tickets" (
 	"outbound_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "push_tickets_token_sha256_check" CHECK ("token_sha256" ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE "question_profiles" (
+	"family_id" uuid NOT NULL,
+	"author_id" uuid NOT NULL,
+	"recipient_id" uuid NOT NULL,
+	"owner_user_id" uuid NOT NULL,
+	"revision" uuid DEFAULT uuidv7() NOT NULL,
+	"data" jsonb,
+	"notice_version" text NOT NULL,
+	"changed_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "question_profiles_pkey" PRIMARY KEY("family_id","author_id","recipient_id"),
+	CONSTRAINT "question_profiles_distinct_people" CHECK ("question_profiles"."author_id" <> "question_profiles"."recipient_id"),
+	CONSTRAINT "question_profiles_bounded_retention" CHECK ("question_profiles"."expires_at" > "question_profiles"."changed_at" and "question_profiles"."expires_at" <= "question_profiles"."changed_at" + interval '720 hours'),
+	CONSTRAINT "question_profiles_data_object" CHECK ("question_profiles"."data" is null or jsonb_typeof("question_profiles"."data") = 'object')
 );
 
 CREATE TABLE "quiet_events" (
@@ -639,6 +811,8 @@ CREATE TABLE "users" (
 	"language" text DEFAULT 'en' NOT NULL,
 	"tz" text DEFAULT 'UTC' NOT NULL,
 	"one_moment_a_day" boolean DEFAULT true NOT NULL,
+	"reply_notifications" boolean DEFAULT true NOT NULL,
+	"turn_reminders" boolean DEFAULT true NOT NULL,
 	"privacy_acceptance" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
@@ -677,6 +851,52 @@ CREATE TABLE "weekly_reads" (
 	CONSTRAINT "weekly_reads_sent_lines_sent_suggestion_sent_at_check" CHECK (("sent_lines" is null) = ("sent_at" is null) and ("sent_suggestion" is null) = ("sent_at" is null))
 );
 
+CREATE TABLE "weekly_support_permissions" (
+	"member_id" uuid PRIMARY KEY NOT NULL,
+	"family_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"revision" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"version" text NOT NULL,
+	"notice_version" text NOT NULL,
+	"text_sha256" text NOT NULL,
+	"state" text NOT NULL,
+	"audience" jsonb NOT NULL,
+	"given_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_permissions_state_check" CHECK ("weekly_support_permissions"."state" in ('yes', 'no', 'withdrawn'))
+);
+
+CREATE TABLE "weekly_support_presentations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"owner_revision" uuid NOT NULL,
+	"text_sha256" text NOT NULL,
+	"permission_revision" uuid,
+	"audience" jsonb NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone
+);
+
+CREATE TABLE "weekly_support_selections" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"family_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"answer_id" uuid NOT NULL,
+	"permission_revision" uuid NOT NULL,
+	"source_digest" text NOT NULL,
+	"template_version" text NOT NULL,
+	"kind" text NOT NULL,
+	"reviewer_id" uuid NOT NULL,
+	"reviewer_revision" uuid NOT NULL,
+	"reviewed_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "weekly_support_member_answer_key" UNIQUE("member_id","answer_id"),
+	CONSTRAINT "weekly_support_selections_kind_check" CHECK ("weekly_support_selections"."kind" in ('shared_interest', 'company', 'practical_help'))
+);
+
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "account_link_challenges" ADD CONSTRAINT "account_link_challenges_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
@@ -693,6 +913,7 @@ ALTER TABLE "away_periods" ADD CONSTRAINT "away_periods_set_by_members_id_fk" FO
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_kept_by_members_id_fk" FOREIGN KEY ("kept_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "book_entries" ADD CONSTRAINT "book_entries_removed_by_members_id_fk" FOREIGN KEY ("removed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "channel_links" ADD CONSTRAINT "channel_links_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "chips" ADD CONSTRAINT "chips_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
@@ -709,14 +930,42 @@ ALTER TABLE "invites" ADD CONSTRAINT "invites_family_id_families_id_fk" FOREIGN 
 ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_members_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_for_member_id_members_id_fk" FOREIGN KEY ("for_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "invites" ADD CONSTRAINT "invites_accepted_by_members_id_fk" FOREIGN KEY ("accepted_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "keep_suggestions" ADD CONSTRAINT "keep_suggestions_dismissed_by_members_id_fk" FOREIGN KEY ("dismissed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "media" ADD CONSTRAINT "media_uploaded_by_members_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "members" ADD CONSTRAINT "members_suggestions_signed_by_members_id_fk" FOREIGN KEY ("suggestions_signed_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_candidates" ADD CONSTRAINT "memory_candidates_consent_id_consents_id_fk" FOREIGN KEY ("consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "memory_facts" ADD CONSTRAINT "memory_facts_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_candidate_id_memory_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."memory_candidates"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_source_answer_id_answers_id_fk" FOREIGN KEY ("source_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_discovery_consent_id_consents_id_fk" FOREIGN KEY ("discovery_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_keeps" ADD CONSTRAINT "memory_keeps_keep_consent_id_consents_id_fk" FOREIGN KEY ("keep_consent_id") REFERENCES "public"."consents"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_permission_presentations" ADD CONSTRAINT "memory_permission_presentations_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_permission_presentations" ADD CONSTRAINT "memory_permission_presentations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_keep_id_memory_keeps_id_fk" FOREIGN KEY ("keep_id") REFERENCES "public"."memory_keeps"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_recipient_member_id_members_id_fk" FOREIGN KEY ("recipient_member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_recipient_user_id_users_id_fk" FOREIGN KEY ("recipient_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_shares" ADD CONSTRAINT "memory_shares_presentation_id_memory_sharing_presentations_id_fk" FOREIGN KEY ("presentation_id") REFERENCES "public"."memory_sharing_presentations"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_keep_id_memory_keeps_id_fk" FOREIGN KEY ("keep_id") REFERENCES "public"."memory_keeps"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_sharing_presentations" ADD CONSTRAINT "memory_sharing_presentations_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_stories" ADD CONSTRAINT "memory_stories_title_answer_id_answers_id_fk" FOREIGN KEY ("title_answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_story_moments" ADD CONSTRAINT "memory_story_moments_story_id_memory_stories_id_fk" FOREIGN KEY ("story_id") REFERENCES "public"."memory_stories"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "memory_story_moments" ADD CONSTRAINT "memory_story_moments_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "message_refs" ADD CONSTRAINT "message_refs_quiet_event_id_quiet_events_id_fk" FOREIGN KEY ("quiet_event_id") REFERENCES "public"."quiet_events"("id") ON DELETE cascade ON UPDATE no action;
@@ -727,9 +976,20 @@ ALTER TABLE "nearby_contacts" ADD CONSTRAINT "nearby_contacts_invited_by_members
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "outbound" ADD CONSTRAINT "outbound_actor_id_members_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box" ADD CONSTRAINT "photo_box_added_by_members_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "photo_box_uses" ADD CONSTRAINT "photo_box_uses_box_id_photo_box_id_fk" FOREIGN KEY ("box_id") REFERENCES "public"."photo_box"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "pilot_families" ADD CONSTRAINT "pilot_families_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_devices" ADD CONSTRAINT "push_devices_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_device_id_push_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."push_devices"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_tickets" ADD CONSTRAINT "push_tickets_outbound_id_outbound_id_fk" FOREIGN KEY ("outbound_id") REFERENCES "public"."outbound"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_author_id_members_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_recipient_id_members_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "question_profiles" ADD CONSTRAINT "question_profiles_owner_user_id_users_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_exchange_id_exchanges_id_fk" FOREIGN KEY ("exchange_id") REFERENCES "public"."exchanges"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "quiet_events" ADD CONSTRAINT "quiet_events_resolved_by_members_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
@@ -758,6 +1018,16 @@ ALTER TABLE "turns" ADD CONSTRAINT "turns_recipient_id_members_id_fk" FOREIGN KE
 ALTER TABLE "turns" ADD CONSTRAINT "turns_holder_id_members_id_fk" FOREIGN KEY ("holder_id") REFERENCES "public"."members"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "weekly_reads" ADD CONSTRAINT "weekly_reads_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_permissions" ADD CONSTRAINT "weekly_support_permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_presentations" ADD CONSTRAINT "weekly_support_presentations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "weekly_support_selections" ADD CONSTRAINT "weekly_support_selections_reviewer_id_members_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."members"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "account_link_challenges_user_idx" ON "account_link_challenges" USING btree ("user_id");
 CREATE INDEX "account_link_challenges_expiry_idx" ON "account_link_challenges" USING btree ("expires_at");
 CREATE INDEX "account_link_challenges_completed_idx" ON "account_link_challenges" USING btree ("completed_at");
@@ -769,6 +1039,8 @@ CREATE INDEX "away_active_idx" ON "away_periods" USING btree ("member_id") WHERE
 CREATE INDEX "book_entries_family_idx" ON "book_entries" USING btree ("family_id","kept_at");
 CREATE INDEX "channel_links_member_idx" ON "channel_links" USING btree ("member_id");
 CREATE INDEX "consents_subject_ref_idx" ON "consents" USING btree ("subject_ref");
+CREATE INDEX "consents_member_latest_idx" ON "consents" USING btree ("member_id","kind","given_at","id");
+CREATE INDEX "consents_kind_withdrawn_idx" ON "consents" USING btree ("kind","withdrawn_at");
 CREATE INDEX "dead_letters_failed_at_idx" ON "dead_letters" USING btree ("failed_at");
 CREATE INDEX "events_family_at_idx" ON "events" USING btree ("family_id","at");
 CREATE INDEX "events_name_at_idx" ON "events" USING btree ("name","at");
@@ -776,18 +1048,50 @@ CREATE UNIQUE INDEX "exchanges_one_per_day" ON "exchanges" USING btree ("recipie
 CREATE INDEX "exchanges_queue_idx" ON "exchanges" USING btree ("recipient_id","when_rule","created_at") WHERE "state" = 'composed';
 CREATE INDEX "exchanges_family_recent_idx" ON "exchanges" USING btree ("family_id","scheduled_for" DESC NULLS FIRST);
 CREATE UNIQUE INDEX "family_channels_channel_conversation_id_idx" ON "family_channels" USING btree ("channel","conversation_id") WHERE "unlinked_at" is null;
+CREATE INDEX "keep_suggestions_family_idx" ON "keep_suggestions" USING btree ("family_id","created_at");
+CREATE INDEX "keep_suggestions_answer_idx" ON "keep_suggestions" USING btree ("answer_id");
+CREATE INDEX "keep_suggestions_expiry_idx" ON "keep_suggestions" USING btree ("expires_at");
 CREATE INDEX "media_expiry_idx" ON "media" USING btree ("expires_at") WHERE "kept" = false;
 CREATE UNIQUE INDEX "media_family_id_channel_provider_unique_id_idx" ON "media" USING btree ("family_id","channel","provider_unique_id") WHERE "provider_unique_id" is not null;
 CREATE INDEX "members_due_idx" ON "members" USING btree ("next_wake_at") WHERE "status" = 'active';
 CREATE INDEX "members_family_idx" ON "members" USING btree ("family_id");
+CREATE INDEX "memory_candidates_family_page_idx" ON "memory_candidates" USING btree ("family_id","id");
+CREATE INDEX "memory_candidates_member_idx" ON "memory_candidates" USING btree ("member_id");
+CREATE INDEX "memory_candidates_consent_idx" ON "memory_candidates" USING btree ("consent_id");
+CREATE INDEX "memory_candidates_expiry_idx" ON "memory_candidates" USING btree ("expires_at");
 CREATE INDEX "memory_facts_family_idx" ON "memory_facts" USING btree ("family_id","on_date");
 CREATE INDEX "memory_facts_answer_idx" ON "memory_facts" USING btree ("source_answer_id");
+CREATE INDEX "memory_keeps_family_page_idx" ON "memory_keeps" USING btree ("family_id","id");
+CREATE INDEX "memory_keeps_member_idx" ON "memory_keeps" USING btree ("member_id");
+CREATE INDEX "memory_keeps_discovery_consent_idx" ON "memory_keeps" USING btree ("discovery_consent_id");
+CREATE INDEX "memory_keeps_keep_consent_idx" ON "memory_keeps" USING btree ("keep_consent_id");
+CREATE INDEX "memory_keeps_removed_idx" ON "memory_keeps" USING btree ("removed_at");
+CREATE INDEX "memory_permission_presentations_member_idx" ON "memory_permission_presentations" USING btree ("member_id");
+CREATE INDEX "memory_permission_presentations_user_idx" ON "memory_permission_presentations" USING btree ("user_id");
+CREATE INDEX "memory_permission_presentations_expiry_idx" ON "memory_permission_presentations" USING btree ("expires_at");
+CREATE INDEX "memory_shares_recipient_idx" ON "memory_shares" USING btree ("recipient_member_id");
+CREATE INDEX "memory_shares_user_idx" ON "memory_shares" USING btree ("recipient_user_id");
+CREATE INDEX "memory_shares_presentation_idx" ON "memory_shares" USING btree ("presentation_id");
+CREATE INDEX "memory_sharing_presentations_keep_idx" ON "memory_sharing_presentations" USING btree ("keep_id");
+CREATE INDEX "memory_sharing_presentations_owner_idx" ON "memory_sharing_presentations" USING btree ("owner_user_id");
+CREATE INDEX "memory_sharing_presentations_recipients_idx" ON "memory_sharing_presentations" USING gin ("recipient_ids");
+CREATE INDEX "memory_sharing_presentations_expiry_idx" ON "memory_sharing_presentations" USING btree ("expires_at");
+CREATE INDEX "memory_stories_family_idx" ON "memory_stories" USING btree ("family_id","created_at");
+CREATE INDEX "memory_stories_member_idx" ON "memory_stories" USING btree ("member_id");
+CREATE INDEX "memory_stories_title_answer_idx" ON "memory_stories" USING btree ("title_answer_id");
 CREATE UNIQUE INDEX "nearby_contacts_member_external_idx" ON "nearby_contacts" USING btree ("member_id","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "outbound_budget_idx" ON "outbound" USING btree ("member_id","local_day","kind") WHERE "kind" in ('arrival', 'repeat', 'turn_prompt', 'weekly_read', 'ack', 'answer_receipt') and "status" <> 'dropped';
 CREATE INDEX "outbound_pending_idx" ON "outbound" USING btree ("queued_at") WHERE "status" = 'queued';
+CREATE INDEX "photo_box_family_idx" ON "photo_box" USING btree ("family_id","created_at");
+CREATE INDEX "photo_box_uses_member_day_idx" ON "photo_box_uses" USING btree ("member_id","local_day");
+CREATE INDEX "photo_box_uses_box_idx" ON "photo_box_uses" USING btree ("box_id");
+CREATE INDEX "photo_box_uses_exchange_idx" ON "photo_box_uses" USING btree ("exchange_id");
 CREATE INDEX "push_devices_user_idx" ON "push_devices" USING btree ("user_id");
 CREATE INDEX "push_tickets_created_idx" ON "push_tickets" USING btree ("created_at");
 CREATE INDEX "push_tickets_device_idx" ON "push_tickets" USING btree ("device_id");
+CREATE INDEX "question_profiles_expiry_idx" ON "question_profiles" USING btree ("expires_at");
+CREATE INDEX "question_profiles_recipient_idx" ON "question_profiles" USING btree ("recipient_id");
+CREATE INDEX "question_profiles_owner_idx" ON "question_profiles" USING btree ("owner_user_id");
 CREATE INDEX "quiet_open_idx" ON "quiet_events" USING btree ("member_id") WHERE "resolved_at" is null;
 CREATE UNIQUE INDEX "reminders_one_per_fact" ON "reminders" USING btree ("member_id","fact_id");
 CREATE INDEX "reminders_member_idx" ON "reminders" USING btree ("member_id","due_date");
@@ -795,3 +1099,221 @@ CREATE INDEX "replies_exchange_idx" ON "replies" USING btree ("exchange_id");
 CREATE UNIQUE INDEX "replies_channel_external_id_idx" ON "replies" USING btree ("channel","external_id") WHERE "external_id" is not null;
 CREATE UNIQUE INDEX "replies_one_reaction_idx" ON "replies" USING btree ("exchange_id","member_id","kind") WHERE "kind" in ('heart', 'laugh', 'hug');
 CREATE UNIQUE INDEX "suggestions_one_per_day" ON "suggestions" USING btree ("about_member_id","local_day");
+CREATE INDEX "weekly_support_presentations_expiry_idx" ON "weekly_support_presentations" USING btree ("expires_at");
+CREATE INDEX "weekly_support_selection_expiry_idx" ON "weekly_support_selections" USING btree ("expires_at");
+
+-- Explicit schema names also support the isolated Worker schema generator.
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_source"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  -- Clearing non-health analysis does not change the chosen words (including existing book trim).
+  IF NEW.mentions = '{}'::jsonb
+     AND (OLD.mentions -> 'health' IS NULL OR OLD.mentions -> 'health' = '[]'::jsonb)
+     AND ROW(NEW.payload, NEW.transcript, NEW.transcript_lang, NEW.member_id, NEW.exchange_id,
+             NEW.kind, NEW.received_at, NEW.flag, NEW.words_expired_at)
+       IS NOT DISTINCT FROM
+         ROW(OLD.payload, OLD.transcript, OLD.transcript_lang, OLD.member_id, OLD.exchange_id,
+             OLD.kind, OLD.received_at, OLD.flag, OLD.words_expired_at) THEN
+    RETURN NEW;
+  END IF;
+  -- One narrowly defined retention transition, not permission to replace or erase words by hand.
+  IF OLD.words_expired_at IS NULL AND NEW.words_expired_at IS NOT NULL
+     AND NEW.words_expired_at >= OLD.received_at + interval '720 hours'
+     AND NEW.payload = OLD.payload - ARRAY['text', 'choice']
+     AND NEW.transcript IS NULL
+     AND NEW.transcript_lang IS NOT DISTINCT FROM OLD.transcript_lang
+     AND NEW.member_id = OLD.member_id AND NEW.exchange_id = OLD.exchange_id
+     AND NEW.kind = OLD.kind AND NEW.received_at = OLD.received_at
+     AND NEW.flag = OLD.flag AND NEW.mentions = '{}'::jsonb THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.payload IS DISTINCT FROM OLD.payload
+     OR NEW.transcript IS DISTINCT FROM OLD.transcript
+     OR NEW.transcript_lang IS DISTINCT FROM OLD.transcript_lang
+     OR NEW.member_id IS DISTINCT FROM OLD.member_id
+     OR NEW.exchange_id IS DISTINCT FROM OLD.exchange_id
+     OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.received_at IS DISTINCT FROM OLD.received_at
+     OR NEW.flag IS DISTINCT FROM OLD.flag OR NEW.mentions IS DISTINCT FROM OLD.mentions
+     OR NEW.words_expired_at IS DISTINCT FROM OLD.words_expired_at THEN
+    DELETE FROM "public"."memory_keeps" WHERE source_answer_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_source_guard BEFORE UPDATE ON "public"."answers"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_source"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_keep_permission"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'consents' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF NEW.kind = 'rich_memories' THEN
+        -- Serialize a new consent against a keep using the member lock; a later yes is not a revival.
+        PERFORM id FROM "public"."members" WHERE id = NEW.member_id FOR UPDATE;
+        DELETE FROM "public"."memory_keeps" WHERE member_id = NEW.member_id
+          AND discovery_consent_id <> NEW.id;
+      END IF;
+    ELSIF NEW.answer <> 'yes' OR NEW.withdrawn_at IS NOT NULL OR NEW.subject_deleted_at IS NOT NULL
+       OR NEW.kind IS DISTINCT FROM OLD.kind OR NEW.member_id IS DISTINCT FROM OLD.member_id
+       OR NEW.text_version IS DISTINCT FROM OLD.text_version OR NEW.given_at IS DISTINCT FROM OLD.given_at THEN
+      DELETE FROM "public"."memory_keeps" WHERE removed_at IS NULL
+        AND (discovery_consent_id = OLD.id OR keep_consent_id = OLD.id);
+    END IF;
+  ELSIF TG_TABLE_NAME = 'members' THEN
+    IF NEW.left_at IS NOT NULL OR NEW.status NOT IN ('active', 'paused') OR NEW.family_id <> OLD.family_id THEN
+      DELETE FROM "public"."memory_keeps" WHERE member_id = OLD.id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'families' THEN
+    IF NEW.deleted_at IS NOT NULL THEN
+      DELETE FROM "public"."memory_keeps" WHERE family_id = OLD.id;
+    END IF;
+  ELSIF TG_TABLE_NAME = 'exchanges' THEN
+    IF NEW.family_id IS DISTINCT FROM OLD.family_id THEN
+      DELETE FROM "public"."memory_keeps" WHERE source_answer_id IN
+        (SELECT id FROM "public"."answers" WHERE exchange_id = OLD.id);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_consent_guard AFTER INSERT OR UPDATE ON "public"."consents"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_member_guard AFTER UPDATE ON "public"."members"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_family_guard AFTER UPDATE ON "public"."families"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+--> statement-breakpoint
+CREATE TRIGGER memory_keep_exchange_guard AFTER UPDATE OF family_id ON "public"."exchanges"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_keep_permission"();
+
+-- No quote/name copies. These guards invalidate both live grants and pending choices.
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_member"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  binding_changed boolean;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id];
+    RETURN OLD;
+  END IF;
+  binding_changed := NEW.user_id IS DISTINCT FROM OLD.user_id
+    OR NEW.family_id IS DISTINCT FROM OLD.family_id
+    OR NEW.left_at IS DISTINCT FROM OLD.left_at
+    OR (NEW.status IN ('active', 'paused')) IS DISTINCT FROM (OLD.status IN ('active', 'paused'))
+    OR NEW.memory_membership_revision IS DISTINCT FROM OLD.memory_membership_revision;
+  IF binding_changed THEN
+    NEW.memory_membership_revision := uuidv7();
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id];
+    DELETE FROM "public"."memory_shares" WHERE recipient_member_id = OLD.id;
+    -- A replacement account must not inherit the author's private kept words or shared choices.
+    DELETE FROM "public"."memory_keeps" WHERE member_id = OLD.id;
+  ELSIF NEW.display_name IS DISTINCT FROM OLD.display_name THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE recipient_ids @> ARRAY[OLD.id]
+      AND consumed_at IS NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_member_guard BEFORE UPDATE OR DELETE ON "public"."members"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_member"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_user"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.auth_subject IS DISTINCT FROM OLD.auth_subject OR NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN
+    -- Do not update member rows before account deletion takes its ordered organiser locks.
+    -- Sharing locks the bound user rows first, so a concurrent share cannot survive this purge.
+    DELETE FROM "public"."memory_sharing_presentations" WHERE owner_user_id = OLD.id
+      OR recipient_ids && ARRAY(SELECT id FROM "public"."members" WHERE user_id = OLD.id);
+    DELETE FROM "public"."memory_shares" WHERE recipient_user_id = OLD.id;
+    DELETE FROM "public"."memory_keeps" WHERE member_id IN
+      (SELECT id FROM "public"."members" WHERE user_id = OLD.id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_user_guard BEFORE UPDATE OF auth_subject, deleted_at ON "public"."users"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_user"();
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION "public"."invalidate_memory_sharing_keep"() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.removed_at IS NOT NULL OR NEW.sharing_revision IS DISTINCT FROM OLD.sharing_revision THEN
+    DELETE FROM "public"."memory_sharing_presentations" WHERE keep_id = OLD.id;
+    DELETE FROM "public"."memory_shares" WHERE keep_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER memory_sharing_keep_guard BEFORE UPDATE OF removed_at, sharing_revision ON "public"."memory_keeps"
+FOR EACH ROW EXECUTE FUNCTION "public"."invalidate_memory_sharing_keep"();
+
+-- Scope and lifecycle guards for optional, private question drafting profiles.
+CREATE FUNCTION question_profiles_check_scope() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM members a
+    JOIN members r ON r.id = NEW.recipient_id AND r.family_id = a.family_id
+    JOIN families f ON f.id = a.family_id AND f.deleted_at IS NULL
+    JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
+    WHERE a.id = NEW.author_id AND a.family_id = NEW.family_id AND u.id = NEW.owner_user_id
+      AND a.left_at IS NULL AND a.status IN ('active', 'paused')
+      AND (r.user_id IS NULL OR EXISTS (SELECT 1 FROM users ru WHERE ru.id = r.user_id AND ru.deleted_at IS NULL))
+      AND (NEW.data IS NULL OR (a.status = 'active' AND r.status = 'active' AND r.left_at IS NULL
+        AND r.light_on AND r.light_consented_at IS NOT NULL))
+  ) THEN
+    RAISE EXCEPTION 'Question profile scope is invalid' USING ERRCODE = '23514', CONSTRAINT = 'question_profiles_scope';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_scope_guard BEFORE INSERT OR UPDATE ON question_profiles
+FOR EACH ROW EXECUTE FUNCTION question_profiles_check_scope();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_member_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.family_id IS DISTINCT FROM OLD.family_id OR NEW.user_id IS DISTINCT FROM OLD.user_id
+    OR NEW.left_at IS NOT NULL OR NEW.status IN ('left', 'deceased')
+    OR (OLD.light_on AND NOT NEW.light_on)
+    OR NEW.light_consented_at IS DISTINCT FROM OLD.light_consented_at THEN
+    DELETE FROM question_profiles WHERE author_id = OLD.id OR recipient_id = OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_member_cleanup AFTER UPDATE OF family_id, user_id, left_at, status, light_on, light_consented_at ON members
+FOR EACH ROW EXECUTE FUNCTION question_profiles_member_changed();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_account_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.deleted_at IS NOT NULL OR NEW.auth_subject IS DISTINCT FROM OLD.auth_subject THEN
+    DELETE FROM question_profiles WHERE owner_user_id = OLD.id
+      OR author_id IN (SELECT id FROM members WHERE user_id = OLD.id)
+      OR recipient_id IN (SELECT id FROM members WHERE user_id = OLD.id);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_account_cleanup AFTER UPDATE OF deleted_at, auth_subject ON users
+FOR EACH ROW EXECUTE FUNCTION question_profiles_account_changed();
+--> statement-breakpoint
+CREATE FUNCTION question_profiles_family_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.deleted_at IS NOT NULL THEN DELETE FROM question_profiles WHERE family_id = OLD.id; END IF;
+  RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER question_profiles_family_cleanup AFTER UPDATE OF deleted_at ON families
+FOR EACH ROW EXECUTE FUNCTION question_profiles_family_changed();

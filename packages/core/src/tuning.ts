@@ -116,3 +116,77 @@ export function quietAfterMinutes(
 export function learningUntil(consentDate: LocalDate): LocalDate {
   return addDays(consentDate, TUNING.learningDays);
 }
+
+/**
+ * The check-in ladder (ADR-55, with `CHECK_IN`): when the check-in goes, when her organisers are
+ * told, and when they are told again if nobody acted, all in minutes from delivery except the
+ * reminder, which counts from the first notice. From the timing research of 27 October 2026: ask
+ * again an hour after her usual answer, tell a person 90 minutes later and before lunch, and never
+ * let a first notice wait more than five hours.
+ */
+export const CHECK_IN = {
+  /** The check-in goes an hour after her usual (median) answer time... */
+  afterUsualMinutes: 60,
+  /** ...no sooner than an hour after her morning, and no later than two and a half hours. */
+  minMinutes: 60,
+  maxMinutes: 150,
+  /** Her organisers are told 90 minutes after the check-in... */
+  noticeAfterCheckInMinutes: 90,
+  /** ...and never sooner than an hour after her late days (her 90th-percentile answer)... */
+  lateMarginMinutes: 60,
+  /** ...and never later than five hours after her morning. */
+  capMinutes: 300,
+  /** Before her rhythm is known (fewer than 14 answered days): check in at 2 h, tell at 4 h. */
+  learningCheckInMinutes: 120,
+  learningNoticeMinutes: 240,
+  /** A notice nobody acted on is sent again, with the founder told, two hours later, once. */
+  reminderAfterMinutes: 120,
+} as const;
+
+export interface CheckInLadder {
+  /** Minutes from delivery to the check-in. */
+  checkInAfterMinutes: number;
+  /** Minutes from delivery to the first notice, told at once even in her first weeks. */
+  quietAfterMinutes: number;
+  /** Minutes from the first notice to the one reminder, when nobody acted on it. */
+  remindAfterMinutes: number;
+}
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
+/**
+ * Her ladder from her own rhythm: the median and 90th-percentile answer latencies of her last 14
+ * answered days, as `answer_stats` stores them. Fewer than 14 days, or no numbers, is the learning
+ * ladder. The notice always comes after the check-in, so a late check-in never meets its notice.
+ */
+export function checkInLadder(stats: {
+  medianLatencyMinutes: number | null;
+  lateLatencyMinutes: number | null;
+  days: number;
+}): CheckInLadder {
+  const { medianLatencyMinutes: usual, lateLatencyMinutes: late, days } = stats;
+  if (days < TUNING.minSamples || usual === null || late === null) {
+    return {
+      checkInAfterMinutes: CHECK_IN.learningCheckInMinutes,
+      quietAfterMinutes: CHECK_IN.learningNoticeMinutes,
+      remindAfterMinutes: CHECK_IN.reminderAfterMinutes,
+    };
+  }
+  const checkIn = Math.ceil(
+    clamp(usual + CHECK_IN.afterUsualMinutes, CHECK_IN.minMinutes, CHECK_IN.maxMinutes),
+  );
+  const notice = Math.ceil(
+    clamp(
+      Math.max(checkIn + CHECK_IN.noticeAfterCheckInMinutes, late + CHECK_IN.lateMarginMinutes),
+      checkIn + CHECK_IN.noticeAfterCheckInMinutes,
+      CHECK_IN.capMinutes,
+    ),
+  );
+  return {
+    checkInAfterMinutes: checkIn,
+    quietAfterMinutes: notice,
+    remindAfterMinutes: CHECK_IN.reminderAfterMinutes,
+  };
+}

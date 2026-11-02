@@ -249,7 +249,7 @@ export function QuietNoticeSheet({
                   <Words variant="body" tone="ink2">
                     <Trans>
                       Contact {name} using your usual phone call or Telegram chat. You can add their
-                      calling number in You → Settings, with their permission.
+                      calling number in You → {name}, with their permission.
                     </Trans>
                   </Words>
                 ) : (

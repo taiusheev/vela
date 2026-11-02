@@ -1,0 +1,49 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-22 15:50+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh-TW\n"
+"X-Native-Review: pending; entries without the native-reviewed flag are drafts (build plan 2.4)\n"
+
+#: src/analytics/provider.tsx
+msgid "Allow usage counts"
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Analytics ID for access or deletion:"
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Help improve Vela?"
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "No thanks / turn off"
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Optional usage counts help us see which screens work well. PostHog receives a random ID, screen names, opening times and time on screen. No names, family messages, photos, audio or recordings are included. This is separate from your family permissions. Choosing no changes nothing in Vela."
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Storage region: European Union."
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Storage region: United States."
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "The analytics service receives network details when your phone connects. Our free PostHog plan has a 1-year event reporting window in the configured region. This does not guarantee immediate deletion at its end. You can stop future counts here anytime. Turning this off clears this device's analytics identity; it does not delete earlier counts. For access or deletion, contact t.aiusheev@gmail.com."
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Usage privacy"
+msgstr ""
+
+#: src/analytics/provider.tsx
+msgid "Your choice could not be saved on this device. Counts are stopped for this session. Please choose turn off again to save it for future openings."
+msgstr ""

@@ -66,6 +66,9 @@ function randomAction(random: () => number): ButtonAction {
       "pick",
       "vote",
       "consent",
+      "consent_both",
+      "memory_permission",
+      "memory_offer",
       "health_words",
       "fine",
       "wait",
@@ -81,7 +84,7 @@ function randomAction(random: () => number): ButtonAction {
       return {
         type: "answer",
         exchangeId: uuidv7(random),
-        answer: pick(random, ["fine", "heart"]),
+        answer: pick(random, ["fine", "heart", "not_okay"]),
       };
     case "chip":
       return { type: "chip", exchangeId: uuidv7(random), index };
@@ -91,6 +94,20 @@ function randomAction(random: () => number): ButtonAction {
       return { type: "vote", exchangeId: uuidv7(random), index };
     case "consent":
       return { type: "consent", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "memory_permission":
+      return { type: "memory_permission", memberId: uuidv7(random), accept: random() < 0.5 };
+    case "memory_offer":
+      return {
+        type: "memory_offer",
+        candidateId: uuidv7(random),
+        choice: pick(random, ["keep", "share", "leave"] as const),
+      };
+    case "consent_both":
+      return {
+        type: "consent_both",
+        memberId: uuidv7(random),
+        choice: pick(random, ["both", "light", "no"] as const),
+      };
     case "health_words":
       return { type: "health_words", memberId: uuidv7(random), accept: random() < 0.5 };
     case "fine":
@@ -170,6 +187,17 @@ describe("encodeButton and decodeButton", () => {
     const id = EXCHANGE.replaceAll("-", "");
 
     expect(encodeButton({ type: "consent", memberId: EXCHANGE, accept: true })).toBe(`k:${id}:y`);
+    // The single consent message's three choices are their own code, never an old Yes or No.
+    for (const [choice, tail] of [
+      ["both", "b"],
+      ["light", "l"],
+      ["no", "n"],
+    ] as const) {
+      const action = { type: "consent_both", memberId: EXCHANGE, choice } as const;
+      expect(encodeButton(action)).toBe(`j:${id}:${tail}`);
+      expect(decodeButton(`j:${id}:${tail}`)).toEqual(action);
+    }
+    expect(decodeButton(`j:${id}:y`)).toBeNull();
     expect(encodeButton({ type: "health_words", memberId: EXCHANGE, accept: true })).toBe(
       `h:${id}:y`,
     );

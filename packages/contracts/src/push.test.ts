@@ -29,22 +29,21 @@ const MEMBER = "0198f6aa-0000-7000-8000-00000000000c";
 const EVENT = "0198f6aa-0000-7000-8000-00000000000d";
 
 describe("push kinds", () => {
-  it("pushes the two ordinary kinds, each already held to one a day by the budget index", () => {
-    expect(ORDINARY_PUSH_KINDS).toEqual(["answer_receipt", "turn_prompt"]);
+  it("pushes the three ordinary kinds, each already held to one a day by the budget index", () => {
+    expect(ORDINARY_PUSH_KINDS).toEqual(["answer_receipt", "turn_prompt", "weekly_read"]);
     const budgeted: readonly string[] = BUDGETED_OUTBOUND_KINDS;
     for (const kind of ORDINARY_PUSH_KINDS) {
       expect(budgeted, kind).toContain(kind);
     }
   });
 
-  it("never budgets the quiet notice or its close, and pushes no flag", () => {
-    expect(PUSH_EXCEPTION_KINDS).toEqual(["quiet_notice", "quiet_resolved"]);
+  it("never budgets the quiet notice, its close, or a Not okay flag (ADR-57)", () => {
+    expect(PUSH_EXCEPTION_KINDS).toEqual(["quiet_notice", "quiet_resolved", "flag"]);
     const budgeted: readonly string[] = BUDGETED_OUTBOUND_KINDS;
     for (const kind of PUSH_EXCEPTION_KINDS) {
       expect(budgeted, kind).not.toContain(kind);
     }
     expect(PUSH_KINDS).toEqual([...ORDINARY_PUSH_KINDS, ...PUSH_EXCEPTION_KINDS]);
-    expect(PUSH_KINDS).not.toContain("flag");
     const outbound: readonly string[] = OUTBOUND_KINDS;
     for (const kind of PUSH_KINDS) {
       expect(outbound, kind).toContain(kind);
@@ -164,7 +163,7 @@ describe("PushData", () => {
     for (const invalid of [
       { ...base, text: "The tomatoes finally turned." },
       { ...base, name: "Mom" },
-      { ...base, kind: "flag" },
+      { ...base, kind: "arrival" },
       { ...base, kind: "arrival" },
       { ...base, exchange_id: "yesterday" },
       { kind: "answer_receipt", family_id: FAMILY },

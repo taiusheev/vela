@@ -21,6 +21,37 @@ const ENVIRONMENTS = ["development", "staging", "production"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
 
+export function readPersonalQuestionProfiles(
+  env: { PERSONAL_QUESTION_PROFILES?: string },
+  environment: Environment,
+): boolean {
+  const value = env.PERSONAL_QUESTION_PROFILES?.trim() ?? "off";
+  if (value !== "on" && value !== "off")
+    throw new ConfigError("PERSONAL_QUESTION_PROFILES", "Use on or off");
+  if (value === "on" && environment === "production")
+    throw new ConfigError(
+      "PERSONAL_QUESTION_PROFILES",
+      "Saved question profiles need approved notice and activation",
+    );
+  return value === "on";
+}
+
+/** First phase is development/test only; never activates processing on production. */
+export function readPersonalQuestionDrafts(
+  env: { PERSONAL_QUESTION_DRAFTS?: string },
+  environment: Environment,
+): boolean {
+  const value = env.PERSONAL_QUESTION_DRAFTS?.trim() ?? "off";
+  if (value !== "on" && value !== "off")
+    throw new ConfigError("PERSONAL_QUESTION_DRAFTS", "Use on or off");
+  if (value === "on" && environment === "production")
+    throw new ConfigError(
+      "PERSONAL_QUESTION_DRAFTS",
+      "Reviewed drafting is not approved for production activation",
+    );
+  return value === "on";
+}
+
 /**
  * A configuration a Worker cannot run with. The variable to fix is the error's `code`, because
  * failures are logged through `errorLabel`, which keeps a code and never a message: the log line
@@ -546,6 +577,25 @@ export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): bo
 }
 
 /**
+ * The var `WEEKLY_READ_AUTO_SEND`: "on" sends the weekly read to the organisers as soon as it is
+ * drafted; absent or "off" waits for the founder's send; any other value is refused.
+ */
+export function readWeeklyReadAutoSend(env: { readonly WEEKLY_READ_AUTO_SEND?: string }): boolean {
+  return env.WEEKLY_READ_AUTO_SEND === undefined
+    ? false
+    : readOnOff(env.WEEKLY_READ_AUTO_SEND, "WEEKLY_READ_AUTO_SEND");
+}
+
+/** Individual notification choices: off until notice and product review; unknown values fail closed. */
+export function readNotificationControls(env: {
+  readonly NOTIFICATION_CONTROLS?: string;
+}): boolean {
+  return env.NOTIFICATION_CONTROLS === undefined
+    ? false
+    : readOnOff(env.NOTIFICATION_CONTROLS, "NOTIFICATION_CONTROLS");
+}
+
+/**
  * The var `SEND_AS_ME` (first test, 16 Oct 2026): "on" lets an organiser have Vela's suggestion sent
  * in their name on a morning nobody in the family wrote for; absent or "off" does not; any other
  * value is refused.
@@ -554,9 +604,59 @@ export function readSendAsMe(env: { readonly SEND_AS_ME?: string }): boolean {
   return env.SEND_AS_ME === undefined ? false : readOnOff(env.SEND_AS_ME, "SEND_AS_ME");
 }
 
+/**
+ * The var `PHOTO_BOX` (ADR-58): "on" keeps the family's photo box and turns its photos into her free
+ * mornings; absent or "off" does not; anything else is refused.
+ */
+export function readPhotoBox(env: { readonly PHOTO_BOX?: string }): boolean {
+  return env.PHOTO_BOX === undefined ? false : readOnOff(env.PHOTO_BOX, "PHOTO_BOX");
+}
+
+/** The var `CHECK_IN` (ADR-54): "on" or "off"; absent is off; anything else is refused. */
+export function readCheckIn(env: { readonly CHECK_IN?: string }): boolean {
+  return env.CHECK_IN === undefined ? false : readOnOff(env.CHECK_IN, "CHECK_IN");
+}
+
+/**
+ * The var `RICH_MEMORIES` (privacy-notice v7 wording, founder's approval of 22 Oct 2026): "on"
+ * offers each person their own memories in the app; absent or "off" does not; anything else is refused.
+ */
+export function readRichMemories(env: { readonly RICH_MEMORIES?: string }): boolean {
+  return env.RICH_MEMORIES === undefined ? false : readOnOff(env.RICH_MEMORIES, "RICH_MEMORIES");
+}
+
+/**
+ * The var `MEMORY_DISCOVERY` (memory-discovery.ts): "on" sends screened, ordinary answers to
+ * `memory_pick` for private memory suggestions; absent or "off" does not; anything else is refused.
+ */
+export function readMemoryDiscovery(env: { readonly MEMORY_DISCOVERY?: string }): boolean {
+  return env.MEMORY_DISCOVERY === undefined
+    ? false
+    : readOnOff(env.MEMORY_DISCOVERY, "MEMORY_DISCOVERY");
+}
+
+/**
+ * The var `MEMORY_STORIES` (stories.ts, ADR-51): "on" gathers her memories into stories; absent or
+ * "off" does not; anything else is refused.
+ */
+export function readMemoryStories(env: { readonly MEMORY_STORIES?: string }): boolean {
+  return env.MEMORY_STORIES === undefined ? false : readOnOff(env.MEMORY_STORIES, "MEMORY_STORIES");
+}
+
 function readOnOff(
   raw: string | undefined,
-  name: "MEMORY" | "BOOK" | "WEEKLY_INSIGHT" | "SEND_AS_ME",
+  name:
+    | "MEMORY"
+    | "BOOK"
+    | "WEEKLY_INSIGHT"
+    | "WEEKLY_READ_AUTO_SEND"
+    | "SEND_AS_ME"
+    | "PHOTO_BOX"
+    | "CHECK_IN"
+    | "RICH_MEMORIES"
+    | "MEMORY_DISCOVERY"
+    | "MEMORY_STORIES"
+    | "NOTIFICATION_CONTROLS",
 ): boolean {
   const value = raw?.trim() ?? "";
   if (value !== "on" && value !== "off") {
@@ -619,7 +719,10 @@ export function readPeerHealthz(
 }
 
 export function readPilotAdmission(
-  env: Pick<PilotEnv, "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST">,
+  env: Pick<
+    PilotEnv,
+    "PILOT_ADMISSION" | "PILOT_TELEGRAM_ALLOWLIST" | "PILOT_FAMILY_APPROVAL" | "PILOT_LANGUAGES"
+  >,
 ): PilotAdmission | null {
   const mode = env.PILOT_ADMISSION?.trim() ?? "off";
   if (mode === "off") return null;
@@ -637,7 +740,30 @@ export function readPilotAdmission(
       "A closed pilot requires a private roster of valid Telegram user IDs",
     );
   }
-  return { telegramUserIds: [...new Set(ids)] };
+  // ADR-52: families the founder approves on the admin page take part on any messenger. Off, the
+  // Telegram roster alone admits; the approved families are read from the table per request.
+  const approval = env.PILOT_FAMILY_APPROVAL?.trim() ?? "off";
+  if (approval !== "on" && approval !== "off") {
+    throw new ConfigError("PILOT_FAMILY_APPROVAL", "PILOT_FAMILY_APPROVAL must be on or off");
+  }
+  // The languages the test runs in, as the privacy notice in force allows: English alone until a
+  // notice says otherwise.
+  const languages = (env.PILOT_LANGUAGES?.trim() || "en").split(",").map((code) => code.trim());
+  if (
+    languages.length === 0 ||
+    languages.some((code) => code !== "en" && code !== "zh-TW") ||
+    new Set(languages).size !== languages.length
+  ) {
+    throw new ConfigError(
+      "PILOT_LANGUAGES",
+      "PILOT_LANGUAGES must list en and/or zh-TW, once each",
+    );
+  }
+  return {
+    telegramUserIds: [...new Set(ids)],
+    languages,
+    ...(approval === "on" ? { familyIds: [] } : {}),
+  };
 }
 
 /** Only the account webhook reads this endpoint-specific secret; no payload supplies its key. */
@@ -680,7 +806,13 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
+    weeklyReadAutoSend: readWeeklyReadAutoSend(env),
     sendAsMe: readSendAsMe(env),
+    photoBox: readPhotoBox(env),
+    checkIn: readCheckIn(env),
+    richMemories: readRichMemories(env),
+    memoryDiscovery: readMemoryDiscovery(env),
+    memoryStories: readMemoryStories(env),
     pilotAdmission,
     suggestions: readApiSwitch(env) === "on",
     peerHealthz: readPeerHealthz(env, environment),
@@ -713,6 +845,7 @@ export interface ApiConfig {
    * switch because a device counts toward someone being told only while pushes are sent.
    */
   readonly pushSend: PushSend;
+  readonly notificationControls?: boolean;
   /**
    * The privacy notice links, as the pilot Worker reads them: the consent request a phone set up
    * for the parent surface is sent names hers (ADR-35).
@@ -863,6 +996,7 @@ export function readApiConfig(env: PilotEnv): ApiConfig | null {
         : null,
     regions: readRegions(env),
     pushSend: readPushSend(env),
+    ...(readNotificationControls(env) ? { notificationControls: true } : {}),
     privacyNoticeUrls: privacyNoticeUrlsOf(env),
     pilotAdmission: readPilotAdmission(env),
   };

@@ -2,7 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ApiAskConflict, ComposeAsk } from "@vela/contracts";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   findNodeHandle,
   KeyboardAvoidingView,
@@ -14,51 +14,85 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiConfigured, askConflict, composeAsk } from "../src/api/client.ts";
+import { apiConfigured, askConflict, composeAsk, editQuestion } from "../src/api/client.ts";
 import { photoRefusal, uploadVoice } from "../src/api/upload.ts";
 import type { Recorded } from "../src/audio/useRecording.ts";
 import { accountsConfigured, useAccount } from "../src/auth/clerk.tsx";
-import { BackButton } from "../src/components/back-button.tsx";
-import { ChoiceTile } from "../src/components/brand/experience.tsx";
-import { SuggestionDisclosure } from "../src/components/brand/suggestion.tsx";
+import { type AskIdea, AskIdeas } from "../src/components/ask-ideas.tsx";
+import { CancelButton, SHEET } from "../src/components/back-button.tsx";
+import { MorningCalendar } from "../src/components/morning-calendar.tsx";
 import { PhotoSlots, useAskPhotos } from "../src/components/photo-slots.tsx";
 import { PushOffer } from "../src/components/push-offer.tsx";
+import { SoftCard } from "../src/components/today-hero.tsx";
 import { Chip, PrimaryButton, SecondaryButton, TextField, Words } from "../src/components/ui.tsx";
-import { VoiceHello } from "../src/components/voice-hello.tsx";
+import { VoiceRecorder } from "../src/components/voice-recorder.tsx";
 import { freshVoteOptions, type VoteOption, VoteOptions } from "../src/components/vote-options.tsx";
-import { type AskType, askTypes, composableType, suggestedKind } from "../src/data/ask.ts";
-import { acceptedAsk, useAskOutcome } from "../src/data/ask-outcome.tsx";
+import { type AskType, composableType } from "../src/data/ask.ts";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
-import { demoDataAllowed } from "../src/data/live-state.ts";
-import { askExtras, photoCount } from "../src/data/photos.ts";
+import { exampleNames } from "../src/data/example-names.ts";
+import { finishQuestionSave } from "../src/data/finish-question-save.ts";
+import { localDayMonth } from "../src/data/format.ts";
+import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
+import { questionsFor } from "../src/data/onboarding.ts";
+import { askExtras } from "../src/data/photos.ts";
+import { editablePlannedQuestion, questionDates } from "../src/data/question-schedule.ts";
+import { tomorrowIn } from "../src/data/story.ts";
 import type { TodayLight, TomorrowSuggestion } from "../src/data/today.ts";
+import { usePlannedQuestions } from "../src/data/usePlannedQuestions.ts";
 import { dayName, type TodayView, useToday } from "../src/data/useToday.ts";
+import { tapLanded } from "../src/device/haptics.ts";
 import { usePush } from "../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../src/storage/flags.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
-type When = "tomorrow" | "another_day" | "whenever";
+type When = "tomorrow" | "another_day" | "whenever" | "date";
 
 /** Remembered once notifications have been offered after an ask, so they are offered only once. */
 const OFFERED_AFTER_ASK = "push-offered.after-ask";
 /** A draft storage key before a family is linked, never visible copy. */
 const UNLINKED_FAMILY = "pending";
+const NEW_QUESTION = "new";
 
-type AskParams = { recipient?: string; suggestion?: string; text?: string; kind?: string };
+type AskParams = {
+  recipient?: string;
+  suggestion?: string;
+  text?: string;
+  kind?: string;
+  edit?: string;
+  /** A free morning chosen on the Questions calendar, to start the question on. */
+  date?: string;
+};
 
 /** The kinds the chat's "+" can open Ask on; anything else opens on a question. */
 const OPENING_KINDS: readonly string[] = ["question", "two_photos", "voice_note"];
 
 export default function AskScreen() {
+  const scope = sessionScope(useAccount());
   const view = useToday();
   const params = useLocalSearchParams<AskParams>();
   const demo = demoDataAllowed(apiConfigured(), accountsConfigured());
   const lights = demo || view.live ? view.today.lights : [];
   const recipient = askRecipient(lights, params.recipient);
-  const draft = useDraft(`ask.${view.familyId ?? UNLINKED_FAMILY}`, params.text ?? "");
-  const composerKey = `${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}`;
+  const schedule = usePlannedQuestions(view.familyId);
+  const editing = editablePlannedQuestion(
+    schedule.data?.questions ?? [],
+    params.edit,
+    recipient?.memberId,
+  );
+  const composerKey = `${scope}:${view.familyId ?? UNLINKED_FAMILY}:${recipient?.memberId ?? UNLINKED_FAMILY}:${params.edit ?? NEW_QUESTION}`;
+  const initialEdit = useRef<{ scope: string; id: string; text: string } | null>(null);
+  if (initialEdit.current?.scope !== composerKey) initialEdit.current = null;
+  if (editing && initialEdit.current?.id !== editing.id)
+    initialEdit.current = { scope: composerKey, id: editing.id, text: editing.text };
+  const draft = useDraft(
+    params.edit
+      ? `ask.${view.familyId ?? UNLINKED_FAMILY}.edit.${params.edit}`
+      : `ask.${view.familyId ?? UNLINKED_FAMILY}`,
+    params.text ?? (initialEdit.current?.id === params.edit ? initialEdit.current?.text : "") ?? "",
+    params.edit === undefined,
+  );
   // A different parent starts a fresh media/when/suggestion state. Written words remain in the
   // family's existing encrypted draft, including the identity of any unconfirmed send.
   return (
@@ -109,7 +143,6 @@ function AskComposer({
   const { t, i18n } = useLingui();
   const account = useAccount();
   const queries = useQueryClient();
-  const outcome = useAskOutcome();
   const { today, familyId, live, photos: photosOn, organiser, pushSent } = view;
   const push = usePush();
   // push (A2): after a person's first ask, someone who does not organise is offered notifications
@@ -130,9 +163,52 @@ function AskComposer({
       ? (params.kind as AskType)
       : "question",
   );
-  const [moreTypes, setMoreTypes] = useState(false);
+  const [showIdeas, setShowIdeas] = useState(false);
+  const [date, setDate] = useState(params.date ?? "");
+  const schedule = usePlannedQuestions(familyId);
+  const editing = editablePlannedQuestion(
+    schedule.data?.questions ?? [],
+    params.edit,
+    recipient?.memberId,
+  );
+  const [editLoaded, setEditLoaded] = useState(false);
   const { text, setText } = draft;
-  const [when, setWhen] = useState<When>(recipient?.invited === true ? "whenever" : "tomorrow");
+  const [when, setWhen] = useState<When>(
+    recipient?.invited === true
+      ? "whenever"
+      : params.date !== undefined && params.date !== tomorrowIn(new Date(), recipient?.timeZone)
+        ? "date"
+        : "tomorrow",
+  );
+  useEffect(() => {
+    if (!editing || editLoaded) return;
+    setWhen(editing.date === null ? "whenever" : "date");
+    setDate(editing.date ?? "");
+    setEditLoaded(true);
+  }, [editing, editLoaded]);
+  const tomorrowDate = tomorrowIn(new Date(), recipient?.timeZone);
+  const occupiedDates = new Set(
+    (schedule.data?.questions ?? [])
+      .filter(
+        (question) => question.recipient_id === recipient?.memberId && question.id !== params.edit,
+      )
+      .flatMap((question) => (question.date === null ? [] : [question.date])),
+  );
+  const occupiedMarks = new Map(Array.from(occupiedDates, (value) => [value, "taken" as const]));
+  const firstFreeDate = questionDates(tomorrowDate).find((value) => !occupiedDates.has(value));
+  useEffect(() => {
+    if (
+      params.edit ||
+      recipient?.invited === true ||
+      when !== "tomorrow" ||
+      firstFreeDate === tomorrowDate
+    )
+      return;
+    if (firstFreeDate) {
+      setDate(firstFreeDate);
+      setWhen("date");
+    }
+  }, [params.edit, recipient, when, firstFreeDate, tomorrowDate]);
   const [taken, setTaken] = useState<ApiAskConflict | null>(null);
   // A vote's options and a photo ask's photos (ADR-33), and what they add to the ask when sent.
   const [options, setOptions] = useState<VoteOption[]>(freshVoteOptions);
@@ -147,7 +223,7 @@ function AskComposer({
   });
   const optionWords = options.map((option) => option.text);
   const extras = askExtras(kind, photos.slots, optionWords);
-  // A photo ask names its morning (B1): Whenever is not offered, and moves to the next one there is.
+  // A photo ask names its morning (B1): "Next free morning" is not offered, and moves to the next one there is.
   // With none free in her two weeks there is no morning to move to, and the button says so below.
   useEffect(() => {
     if (photos.count === 0 || when !== "whenever") return;
@@ -168,20 +244,49 @@ function AskComposer({
   const fill = useCallback(
     (chosen: TomorrowSuggestion, recipientId: string) => {
       setText(chosen.text);
-      setKind(suggestedKind(chosen.type));
+      setKind("question");
       setUsed({ id: chosen.id, recipientId });
     },
     [setText],
   );
+  // Ideas to start from: Vela's suggestion from her own words first, then the bank's family wording
+  // in the topics chosen for her at setup (a broad, warm set when none were), a few at a time;
+  // "More ideas" turns the page.
+  const bankLang = i18n.locale === "zh-TW" ? "zh-TW" : "en";
+  const herInterests = recipient?.interests;
+  const bank = useMemo(() => questionsFor(herInterests ?? [], 60), [herInterests]);
+  const [ideaPage, setIdeaPage] = useState(0);
+  const IDEAS_A_PAGE = 3;
+  const pageCount = Math.max(1, Math.ceil(bank.length / IDEAS_A_PAGE));
+  const ideas: AskIdea[] = [
+    ...(suggestion === undefined
+      ? []
+      : [
+          {
+            key: `suggestion:${suggestion.id}`,
+            text: suggestion.text,
+            fromHerWords: suggestion.fromHerWords,
+          },
+        ]),
+    ...bank
+      .slice(
+        (ideaPage % pageCount) * IDEAS_A_PAGE,
+        (ideaPage % pageCount) * IDEAS_A_PAGE + IDEAS_A_PAGE,
+      )
+      .map((item) => ({ key: item.id, text: item.child[bankLang] })),
+  ];
+
   // Today's card sends its suggestion along. The live day can arrive after the screen opens, so it
   // fills the field once, when it is there, and never over words already typed.
   const offered = useRef(false);
+  const [pendingIdea, setPendingIdea] = useState(false);
   useEffect(() => {
     if (!draft.ready || offered.current || recipient === undefined || suggestion === undefined)
       return;
     if (suggestion.id !== params.suggestion) return;
     offered.current = true;
     if (text.trim().length === 0) fill(suggestion, recipient.memberId);
+    else setPendingIdea(true);
   }, [draft.ready, recipient, suggestion, params.suggestion, text, fill]);
   const savedAsk = draft.savedBody<ComposeAsk>();
   const savedRecipient = lights.find((light) => light.memberId === savedAsk?.recipient_id);
@@ -199,26 +304,72 @@ function AskComposer({
 
   // The voice hello goes up when the ask is sent, under the recording's own key, so a retry of the
   // send uploads it again as the same recording and the ask names it (spec §4).
+  const [recording, setRecording] = useState(false);
   const [hello, setHello] = useState<Recorded | null>(null);
-  // A recording names its morning, as a photo does: Whenever goes when one is made.
+  // It starts going up as soon as the recording stops, so Send does not wait for it. The upload is
+  // keyed by the recording, so taking it again at Send, after a failure, is the same voice.
+  const helloUpload = useRef<{ key: string; id: Promise<string> } | null>(null);
+  const uploadHello = useCallback(
+    (recorded: Recorded): Promise<string> => {
+      const started = helloUpload.current;
+      if (started?.key === recorded.key) return started.id;
+      const id = account.token().then((token) => uploadVoice(familyId ?? "", recorded, token));
+      helloUpload.current = { key: recorded.key, id };
+      // A failure here is met again at Send, which uploads once more.
+      id.catch(() => {
+        if (helloUpload.current?.id === id) helloUpload.current = null;
+      });
+      return id;
+    },
+    [account, familyId],
+  );
+  useEffect(() => {
+    if (hello !== null && !demo && familyId !== undefined) void uploadHello(hello).catch(() => {});
+  }, [hello, demo, familyId, uploadHello]);
+  // A recording names its morning, as a photo does: "Next free morning" goes when one is made.
   useEffect(() => {
     if (hello !== null && when === "whenever") setWhen("tomorrow");
   }, [hello, when]);
+  // The morning now chosen, so the Questions calendar opens on it after saving.
+  const chosenDate =
+    when === "tomorrow"
+      ? tomorrowDate
+      : when === "date"
+        ? date
+        : when === "another_day"
+          ? (taken?.date_alternative ?? undefined)
+          : undefined;
   const compose = useMutation({
     mutationFn: async ({ ask, saved = false }: { ask: ComposeAsk; saved?: boolean }) => {
       const token = await account.token();
       const withHello =
-        hello === null || saved
-          ? ask
-          : { ...ask, voice_hello_id: await uploadVoice(familyId ?? "", hello, token) };
+        hello === null || saved ? ask : { ...ask, voice_hello_id: await uploadHello(hello) };
+      if (params.edit !== undefined)
+        return editQuestion(
+          params.edit,
+          await draft.keyFor({ id: params.edit, ...ask }),
+          {
+            text: ask.text,
+            date:
+              ask.when === "whenever"
+                ? null
+                : ask.when === "date"
+                  ? (ask.date ?? null)
+                  : tomorrowIn(new Date(), recipient?.timeZone),
+          },
+          token,
+        );
       return composeAsk(familyId ?? "", await draft.keyFor(withHello), withHello, token);
     },
-    onSuccess: async (accepted) => {
-      outcome.remember(acceptedAsk(accepted));
-      await draft.clear();
-      await queries.invalidateQueries({ queryKey: ["today"] });
-      if (await offerAfterAsk()) setOffering(true);
-      else router.replace("/");
+    onSuccess: async () => {
+      tapLanded();
+      await finishQuestionSave(queries, familyId, draft.clear);
+      if (params.edit === undefined && (await offerAfterAsk())) setOffering(true);
+      else
+        router.replace({
+          pathname: "/questions",
+          params: { recipient: recipient?.memberId, saved: "1", day: chosenDate },
+        });
     },
     onError: (error: unknown) => {
       if (photos.refusedAsk(error)) return;
@@ -231,13 +382,41 @@ function AskComposer({
 
   function send() {
     if (demo) {
-      outcome.remember({
-        familyId,
-        recipient: recipient?.displayName ?? "",
-        date: null,
-        demo: true,
+      const plannedDate =
+        when === "whenever"
+          ? null
+          : when === "date"
+            ? date
+            : tomorrowIn(new Date(), recipient?.timeZone);
+      queries.setQueryData<import("@vela/contracts").ApiPlannedQuestions>(
+        ["planned-questions", familyId],
+        (previous) => ({
+          questions: params.edit
+            ? (previous?.questions ?? []).map((question) =>
+                question.id === params.edit
+                  ? { ...question, text: text.trim(), date: plannedDate }
+                  : question,
+              )
+            : [
+                ...(previous?.questions ?? []),
+                {
+                  id: `demo-${Date.now()}`,
+                  recipient_id: recipient?.memberId ?? "",
+                  recipient_name: recipient?.displayName ?? "",
+                  asker_name: exampleNames().mia,
+                  editable: true,
+                  preparing: false,
+                  text: text.trim(),
+                  date: plannedDate,
+                },
+              ],
+        }),
+      );
+      void draft.clear();
+      router.replace({
+        pathname: "/questions",
+        params: { recipient: recipient?.memberId, saved: "1", day: chosenDate },
       });
-      router.replace("/");
       return;
     }
     const type = composableType[kind];
@@ -246,13 +425,15 @@ function AskComposer({
     if (extras === undefined || noMorning) return;
     const alternative = taken?.date_alternative;
     const timing: Pick<ComposeAsk, "when" | "date"> =
-      when === "another_day" && alternative !== null && alternative !== undefined
-        ? { when: "date", date: alternative }
-        : { when: when === "whenever" ? "whenever" : "tomorrow" };
+      when === "date"
+        ? { when: "date", date }
+        : when === "another_day" && alternative !== null && alternative !== undefined
+          ? { when: "date", date: alternative }
+          : { when: when === "whenever" ? "whenever" : "tomorrow" };
     compose.mutate({
       ask: {
         recipient_id: recipient.memberId,
-        type,
+        type: hello !== null ? "voice_note" : type,
         text: text.trim().length > 0 ? text.trim() : t`Listen to my voice note.`,
         ...timing,
         ...(usedSuggestionId === undefined ? {} : { suggestion_id: usedSuggestionId }), // suggestion
@@ -264,7 +445,7 @@ function AskComposer({
   const name = recipient?.displayName ?? t({ comment: "stands in for her name", message: "her" });
   // A voice note is its recording (spec §4): it needs one, and its words may be left to the default.
   const voiceNote = kind === "voice_note";
-  const written = text.trim().length > 0 || (voiceNote && hello !== null);
+  const written = text.trim().length > 0 || hello !== null;
   const trouble =
     compose.isError &&
     askConflict(compose.error) === null &&
@@ -282,17 +463,22 @@ function AskComposer({
   const holder = taken?.taken_by;
   // Named, never "the day after": the next free morning can be several days out.
   const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
+  // "Tomorrow" with its weekday, in her zone, so nobody wonders which morning it is.
+  const tomorrow = dayName(tomorrowIn(new Date(), recipient?.timeZone));
+  const plannedDay = `${dayName(date)}, ${localDayMonth(date)}`;
+
+  const screenTitle = params.edit ? t`Edit question` : t`Ask ${name} something`;
+  // Stack.Screen calls setOptions in a layout effect. Recreating its header callback on
+  // each navigation render can recurse until React aborts, especially when Ask reopens.
+  const screenOptions = useMemo(
+    () => ({ ...SHEET, title: screenTitle, headerLeft: () => <CancelButton /> }),
+    [screenTitle],
+  );
 
   if (offering) {
     return (
       <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: t`Ask ${name} something`,
-            headerLeft: () => <BackButton />,
-          }}
-        />
+        <Stack.Screen options={screenOptions} />
         <ScrollView
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
@@ -309,9 +495,9 @@ function AskComposer({
           </Words>
           <PushOffer
             reason={t`Hear it on this phone when ${name} answers.`}
-            onAnswered={() => router.replace("/")}
+            onAnswered={() => router.replace("/questions")}
           />
-          <Pressable accessibilityRole="button" onPress={() => router.replace("/")}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace("/questions")}>
             <Words variant="button" tone="action">
               <Trans>Not now</Trans>
             </Words>
@@ -335,18 +521,26 @@ function AskComposer({
       }}
     >
       <Words variant="caption" tone="ink2">
-        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning` : when === "another_day" ? t`${day} morning` : t`Whenever`}`}
+        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "date" ? `${dayName(date)}, ${localDayMonth(date)}` : when === "another_day" ? t`${day} morning` : t`Next free morning`}`}
       </Words>
       <PrimaryButton
-        label={compose.isPending ? t`Sending…` : t`Send to ${name}`}
+        label={compose.isPending ? t`Saving…` : params.edit ? t`Save changes` : t`Save question`}
         onPress={send}
         disabled={
           compose.isPending ||
+          (when === "tomorrow" && occupiedDates.has(tomorrowDate)) ||
+          recording ||
+          !written ||
+          (params.edit !== undefined && (!editing || !editLoaded)) ||
+          (when === "date" &&
+            (!questionDates(tomorrowIn(new Date(), recipient?.timeZone)).includes(date) ||
+              occupiedDates.has(date))) ||
           savedElsewhere ||
           !draft.ready ||
           extras === undefined ||
           noMorning ||
-          (!demo && (!ready || !written || (voiceNote && hello === null)))
+          (!demo &&
+            (!ready || !written || (voiceNote && hello === null && params.edit === undefined)))
         }
       />
     </View>
@@ -354,13 +548,7 @@ function AskComposer({
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: t`Ask ${name} something`,
-          headerLeft: () => <BackButton />,
-        }}
-      />
+      <Stack.Screen options={screenOptions} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -378,7 +566,7 @@ function AskComposer({
             gap: space.l,
           }}
         >
-          {lights.length > 1 ? (
+          {lights.length > 1 && params.edit === undefined ? (
             <View style={{ gap: space.m }}>
               <Words variant="heading">
                 <Trans>Who is this for?</Trans>
@@ -389,7 +577,13 @@ function AskComposer({
                     key={light.memberId}
                     label={light.displayName}
                     selected={recipient?.memberId === light.memberId}
-                    disabled={compose.isPending || savedAsk !== null || !canAsk(light)}
+                    disabled={
+                      recording ||
+                      params.edit !== undefined ||
+                      compose.isPending ||
+                      savedAsk !== null ||
+                      !canAsk(light)
+                    }
                     onPress={() =>
                       router.setParams({
                         recipient: light.memberId,
@@ -403,118 +597,153 @@ function AskComposer({
             </View>
           ) : null}
 
-          <View style={{ gap: space.m }}>
-            <Words variant="heading">
-              <Trans>What are you sending?</Trans>
-            </Words>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-              {askTypes
-                .filter(
-                  (option) =>
-                    moreTypes ||
-                    option.kind === kind ||
-                    ["question", "two_photos", "voice_note"].includes(option.kind),
-                )
-                .map((option) => (
-                  <ChoiceTile
-                    key={option.kind}
-                    icon={
-                      option.kind === "voice_note"
-                        ? "mic"
-                        : photoCount(option.kind) > 0
-                          ? "photo"
-                          : "ask"
-                    }
-                    label={i18n._(option.label)}
-                    selected={option.kind === kind}
-                    disabled={!option.available || (photos.off && photoCount(option.kind) > 0)}
-                    onPress={() => setKind(option.kind)}
-                  />
-                ))}
+          {pendingIdea && suggestion && recipient ? (
+            <View style={{ gap: space.s }}>
+              <Words variant="caption" tone="ink2">
+                <Trans>You have a draft. Keep writing, or replace it with the selected idea.</Trans>
+              </Words>
+              <SecondaryButton
+                label={t`Use this idea instead`}
+                disabled={compose.isPending || !draft.ready || savedElsewhere}
+                onPress={() => {
+                  fill(suggestion, recipient.memberId);
+                  setPendingIdea(false);
+                }}
+              />
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded: moreTypes }}
-              style={{ minHeight: 48, justifyContent: "center" }}
-              onPress={() => setMoreTypes((shown) => !shown)}
-            >
-              <Words variant="button" tone="action">
-                {moreTypes ? <Trans>Fewer choices</Trans> : <Trans>More ways to ask</Trans>}
-              </Words>
-            </Pressable>
-            {photos.explain ? (
-              <Words variant="caption" tone="ink3">
-                <Trans>Photos are not switched on here yet.</Trans>
-              </Words>
-            ) : null}
-          </View>
-
+          ) : null}
           <View style={{ gap: space.m }}>
+            <Words variant="heading">{t`Your question for ${name}`}</Words>
             <TextField
-              label={t`Your question`}
               inputRef={questionRef}
               onContentSizeChange={keepQuestionVisible}
-              editorial
               value={text}
               onChangeText={setText}
               placeholder={t`Say it the way you would say it`}
-              helper={t`One question at a time. The English pilot sends your words as written.`}
+              helper={t`Keep it short, like a message you would send yourself.`}
               multiline
               maxLength={1000}
               disabled={!draft.ready || compose.isPending || savedElsewhere}
             />
+            {params.edit ? null : (
+              <View>
+                <VoiceRecorder
+                  compact
+                  label={t`Record a voice question (up to 1 minute)`}
+                  maxMs={60_000}
+                  onRecordingChange={setRecording}
+                  sending={compose.isPending}
+                  disabled={photos.count > 0 || compose.isPending || !draft.ready || savedElsewhere}
+                  refusedText={t`Allow microphone access in Settings to record a question.`}
+                  onRecorded={setHello}
+                />
+              </View>
+            )}
           </View>
-          {/* Live with no suggestion for her morning, there is no card. */}
-          {suggestion === undefined || recipient === undefined ? null : (
-            <SuggestionDisclosure
-              label={
-                suggestion.fromHerWords ? t`Vela suggests · from her own words` : t`Vela suggests`
-              }
-            >
-              <Words variant="voice">{suggestion.text}</Words>
-              <SecondaryButton
-                label={t`Use this`}
-                disabled={!draft.ready || compose.isPending || savedElsewhere}
-                onPress={() => fill(suggestion, recipient.memberId)}
-              />
-            </SuggestionDisclosure>
-          )}
+          <SecondaryButton
+            icon="ask"
+            label={showIdeas ? t`Hide ideas` : t`Help me find a question`}
+            onPress={() => setShowIdeas((shown) => !shown)}
+          />
+          {showIdeas && kind === "question" && recipient !== undefined ? (
+            <AskIdeas
+              ideas={ideas}
+              name={name}
+              disabled={!draft.ready || compose.isPending || savedElsewhere}
+              onMore={() => setIdeaPage((page) => page + 1)}
+              onPick={(idea) => {
+                setPendingIdea(false);
+                if (
+                  idea.fromHerWords !== undefined &&
+                  suggestion !== undefined &&
+                  idea.key === `suggestion:${suggestion.id}`
+                )
+                  fill(suggestion, recipient.memberId);
+                else {
+                  setText(idea.text);
+                  setUsed(undefined);
+                }
+                questionRef.current?.focus();
+              }}
+            />
+          ) : null}
 
+          {showIdeas ? (
+            <Words variant="caption" tone="ink2">
+              <Trans>
+                Try something from today, a shared memory, or a small thing you have always
+                wondered. Make the words sound like you.
+              </Trans>
+            </Words>
+          ) : null}
+
+          {params.edit || photos.off ? null : (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+              <Chip
+                label={t`Add a photo`}
+                selected={kind === "old_photo"}
+                disabled={photos.off || compose.isPending || recording || hello !== null}
+                onPress={() => setKind(kind === "old_photo" ? "question" : "old_photo")}
+              />
+            </View>
+          )}
           <PhotoSlots photos={photos} />
-          {demo ? null : <VoiceHello onChange={setHello} note={voiceNote} />}
+
           {kind === "vote" ? <VoteOptions options={options} onChange={setOptions} /> : null}
 
           <View style={{ gap: space.m }}>
             <Words variant="heading">
-              <Trans comment="heading over the morning the ask arrives">When</Trans>
+              <Trans>When should it arrive?</Trans>
             </Words>
             {taken === null ? null : (
               <Words variant="body" tone="ink2">
                 <Trans>{holder} already has that morning.</Trans>
               </Words>
             )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
-              <Chip
-                label={t`Tomorrow morning`}
-                selected={when === "tomorrow"}
-                disabled={taken !== null || invited}
-                onPress={() => setWhen("tomorrow")}
-              />
-              {day === null ? null : (
-                <Chip
-                  label={t`${day} morning`}
-                  selected={when === "another_day"}
-                  onPress={() => setWhen("another_day")}
+            {invited || noMorning ? null : (
+              <SoftCard>
+                <MorningCalendar
+                  dates={questionDates(tomorrowDate)}
+                  selected={chosenDate}
+                  marks={occupiedMarks}
+                  tomorrow={tomorrowDate}
+                  disabled={compose.isPending}
+                  onSelect={(value) => {
+                    // Tomorrow keeps its own meaning, so its line says "tomorrow's morning message".
+                    if (value === tomorrowDate && taken === null) setWhen("tomorrow");
+                    else {
+                      setDate(value);
+                      setWhen("date");
+                    }
+                    setTaken(null);
+                  }}
                 />
-              )}
-              {photos.count > 0 || hello !== null ? null : (
+              </SoftCard>
+            )}
+            {photos.count > 0 || hello !== null || params.edit ? null : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
                 <Chip
-                  label={t`Whenever`}
+                  label={t`Next free morning`}
                   selected={when === "whenever"}
+                  disabled={compose.isPending}
                   onPress={() => setWhen("whenever")}
                 />
-              )}
-            </View>
+              </View>
+            )}
+            {/* What the chosen morning means, in one line, so no choice has to be guessed. */}
+            {noMorning ? null : (
+              <Words variant="caption" tone="ink2">
+                {when === "tomorrow"
+                  ? t`It reaches ${name} with tomorrow's morning message.`
+                  : when === "date"
+                    ? t`It reaches ${name} with the morning message on ${plannedDay}.`
+                    : when === "another_day"
+                      ? t`It reaches ${name} on ${day} morning, the first one nobody else has asked for.`
+                      : invited
+                        ? t`The first message waiting reaches ${name} the moment they say yes; the rest come with their mornings.`
+                        : t`It waits its turn and reaches ${name} on the first morning nobody else has asked for.`}
+              </Words>
+            )}
             {noMorning ? (
               <Words variant="body" tone="ink2">
                 <Trans>
@@ -540,7 +769,8 @@ function AskComposer({
           {trouble ? (
             <Words variant="body" tone="ink2">
               <Trans>
-                The send could not be confirmed. Retry the saved attempt to finish the same send.
+                Your changes could not be confirmed. Your words are still here. Reload the schedule
+                if this question is already preparing for delivery, or retry the saved attempt.
               </Trans>
             </Words>
           ) : null}

@@ -26,7 +26,12 @@ import {
 } from "../answers.ts";
 import { handleAskCommand, handleGroupAsk, parseAskCommand } from "../asks.ts";
 import { handleBookDropButton } from "../book.ts";
-import { handleConsentButton, handleHealthWordsButton, handleInviteStart } from "../consent.ts";
+import {
+  handleCombinedConsentButton,
+  handleConsentButton,
+  handleHealthWordsButton,
+  handleInviteStart,
+} from "../consent.ts";
 import type { Deps } from "../deps.ts";
 import { errorLabel } from "../errors.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf } from "../gateway.ts";
@@ -41,6 +46,7 @@ import {
   resolveGroupSender,
   sendOutsideGateway,
 } from "../group.ts";
+import { handleRetiredMemoryButton } from "../memories.ts";
 import { handleLookInButton } from "../nearby-ask.ts";
 import {
   handleNearbyConsentButton,
@@ -50,7 +56,7 @@ import {
 } from "../nearby-consent.ts";
 import { handleOnboarding } from "../onboarding.ts";
 import { handleParentCommand } from "../parent-commands.ts";
-import { pilotAllowsInbound } from "../pilot-admission.ts";
+import { pilotAdmitsInbound } from "../pilot-admission.ts";
 import { handleQuietButton } from "../quiet.ts";
 import { handleRecipeKeepButton } from "../recipes.ts";
 import { handleGroupReply, handleReaction } from "../replies.ts";
@@ -105,25 +111,33 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
   const command = event.text === undefined ? null : parseParentCommand(event.text);
   const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
   const declines =
-    (action?.type === "consent" ||
+    ((action?.type === "consent" ||
       action?.type === "health_words" ||
       action?.type === "nearby_consent") &&
-    !action.accept;
+      !action.accept) ||
+    (action?.type === "consent_both" && action.choice === "no");
+  // Her yes on the consent request is answered even before the founder approves the family: the
+  // consent flow records nothing then, tells her to wait and tells the founder (ADR-52).
+  const startsLight =
+    (action?.type === "consent" && action.accept) ||
+    (action?.type === "consent_both" && action.choice !== "no");
   const rights =
     event.conversation.kind === "private" &&
     (command === "stop" ||
       command === "what_family_sees" ||
+      command === "memories_off" ||
       declines ||
+      startsLight ||
       (event.kind === "button" && /^lr:/.test(event.buttonData ?? "")) ||
       action?.type === "book_drop");
   if (
-    !pilotAllowsInbound(deps.config.pilotAdmission, event) &&
     !rights &&
     event.kind !== "unsent" &&
     event.kind !== "member_left" &&
     event.kind !== "bot_removed" &&
     event.kind !== "blocked" &&
-    event.kind !== "unblocked"
+    event.kind !== "unblocked" &&
+    !(await pilotAdmitsInbound(deps.db, deps.config.pilotAdmission, event))
   ) {
     if (
       event.channel === "telegram" &&
@@ -281,6 +295,15 @@ async function routeButton(deps: Deps, event: InboundEvent): Promise<void> {
     return;
   }
   switch (action.type) {
+    case "memory_permission":
+      await handleRetiredMemoryButton(deps, event);
+      return;
+    case "memory_offer":
+      await handleRetiredMemoryButton(deps, event);
+      return;
+    case "consent_both":
+      await handleCombinedConsentButton(deps, event, action);
+      return;
     case "consent":
       await handleConsentButton(deps, event, action);
       return;

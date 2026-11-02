@@ -21,6 +21,7 @@ import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { insertOutbound } from "./gateway.ts";
+import { assertQuestionProfileRevision } from "./question-profiles.ts";
 import {
   channelLinkOfMember,
   familyById,
@@ -76,7 +77,7 @@ export class AskPhotoMissingError extends Error {
  * read route decides (`sharedWith`). It must be kept, or not deleted before `until`: her morning
  * and the day after it, when a pick is still resolved against it.
  */
-async function lockAskPhotos(
+export async function lockAskPhotos(
   tx: VelaTransaction,
   familyId: string,
   askerId: string,
@@ -117,18 +118,21 @@ export class AskVoiceMissingError extends Error {
 
 /** A voice hello is about ten seconds (spec §4); a little more is allowed for a slow stop. */
 export const MAX_VOICE_HELLO_MS = 15_000;
+/** The editor stops at 60 seconds; the 200 ms native poll and device stop need a little headroom. */
+export const MAX_VOICE_QUESTION_MS = 65_000;
 
 /**
  * Takes the voice hello an ask names, `for share` as its photos are taken, and refuses the ask
  * unless it is the asker's own recording from the app, short enough to be a hello, and kept past
  * her morning (`AskVoiceMissingError`).
  */
-async function lockAskVoice(
+export async function lockAskVoice(
   tx: VelaTransaction,
   familyId: string,
   askerId: string,
   id: string,
   until: Date,
+  maxMs = MAX_VOICE_HELLO_MS,
 ): Promise<void> {
   const [row] = await tx
     .select({ kept: media.kept, expiresAt: media.expiresAt, durationMs: media.durationMs })
@@ -147,7 +151,7 @@ async function lockAskVoice(
   const lasts =
     row !== undefined &&
     (row.kept || (row.expiresAt !== null && row.expiresAt.getTime() > until.getTime()));
-  const short = row?.durationMs === null || (row?.durationMs ?? 0) <= MAX_VOICE_HELLO_MS;
+  const short = row?.durationMs === null || (row?.durationMs ?? 0) <= maxMs;
   if (!lasts || !short) throw new AskVoiceMissingError();
 }
 
@@ -183,7 +187,7 @@ async function markSuggestionUsed(
  * The first morning in her own days that nobody has claimed, or null when the window holds none.
  * The search is bounded by the same ceiling a caller may ask for, so it cannot walk forever.
  */
-async function nextFreeDate(
+export async function nextFreeDate(
   tx: VelaTransaction,
   recipientId: string,
   from: LocalDate,
@@ -198,7 +202,7 @@ async function nextFreeDate(
 }
 
 /** Who holds a morning, for the conflict: the asker's name, and Vela's when it is her own hello. */
-async function holderOf(tx: VelaTransaction, askerId: string | null): Promise<string> {
+export async function holderOf(tx: VelaTransaction, askerId: string | null): Promise<string> {
   const asker = askerId === null ? null : await memberById(tx, askerId);
   return asker?.displayName ?? "Vela";
 }
@@ -282,6 +286,15 @@ export async function composeApiAsk(
         }
         const asker = await memberById(tx, askerId);
         if (asker === null) throw new VelaError("not_found", "Asker not found");
+        if (ask.personal_profile_revision !== undefined)
+          await assertQuestionProfileRevision(
+            tx,
+            identity,
+            familyId,
+            locked.id,
+            ask.personal_profile_revision,
+            deps.clock.now(),
+          );
         // The contract refuses photos on a whenever ask; this only keeps it from reaching the insert.
         if (
           (ask.media_ids !== undefined || ask.voice_hello_id !== undefined) &&
@@ -307,7 +320,14 @@ export async function composeApiAsk(
             await lockAskPhotos(tx, familyId, asker.id, ask.media_ids, until);
           }
           if (ask.voice_hello_id !== undefined) {
-            await lockAskVoice(tx, familyId, asker.id, ask.voice_hello_id, until);
+            await lockAskVoice(
+              tx,
+              familyId,
+              asker.id,
+              ask.voice_hello_id,
+              until,
+              ask.type === "voice_note" ? MAX_VOICE_QUESTION_MS : MAX_VOICE_HELLO_MS,
+            );
           }
           const taken = await lockExchangeForLocalDate(tx, locked.id, scheduledFor);
           if (taken !== null) {
@@ -334,7 +354,7 @@ export async function composeApiAsk(
             type,
             state: ask.when === "now" ? "scheduled" : "composed",
             text: ask.text,
-            textLang: asker.language,
+            textLang: ask.text_language ?? asker.language,
             // `arrivals.ts` reads a vote's options from this one key; anything else delivers empty.
             options: ask.vote_options === undefined ? {} : { vote_options: ask.vote_options },
             whenRule: ask.when,
@@ -348,7 +368,11 @@ export async function composeApiAsk(
         if (exchange === undefined) throw new Error("exchange insert returned no row");
         // Authored questions are the newest style evidence. Remove only unused future drafts so
         // the next writer can use those words instead of serving three days of stale drafts.
-        if (ask.suggestion_id === undefined) {
+        if (
+          ask.suggestion_id === undefined &&
+          ask.ai_assisted !== true &&
+          ask.personal_profile_revision === undefined
+        ) {
           await tx
             .delete(suggestions)
             .where(
@@ -392,7 +416,10 @@ export async function composeApiAsk(
               source: "app",
               media: ask.media_ids?.length ?? 0,
               queued: false,
-              from_suggestion: fromSuggestion,
+              from_suggestion:
+                fromSuggestion ||
+                ask.ai_assisted === true ||
+                ask.personal_profile_revision !== undefined,
             },
           },
           now,

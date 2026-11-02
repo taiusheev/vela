@@ -1,24 +1,28 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  APP_PRIVACY_TEXT,
+  APP_PRIVACY_TEXTS,
   APP_PRIVACY_VERSION,
   type ApiMe,
   appPrivacyAcceptance,
+  privacyLangOf,
 } from "@vela/contracts";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Linking, Modal, ScrollView } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ApiError, apiBaseUrl, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
-import { PRODUCTION_NOTICE_ORIGIN, SUPPORT_EMAIL } from "../api/support.ts";
+import { ApiError, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
+import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { privacyGateDecision } from "../data/app-privacy-gate.ts";
 import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-draft.ts";
+import { retryAccountRead } from "../data/query-client.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
 import { LegalLinks } from "./legal-links.tsx";
-import { Card, PrimaryButton, SecondaryButton, Words } from "./ui.tsx";
+import { Light } from "./light.tsx";
+import { LoadingLight } from "./loading-light.tsx";
+import { Card, PrimaryButton, SecondaryButton, TextButton, Words } from "./ui.tsx";
 
 /** A versioned English notice for the current English testing cohort. */
 export function AppPrivacy({
@@ -32,7 +36,7 @@ export function AppPrivacy({
   working?: boolean;
   failed?: boolean;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const palette = usePalette();
   const [linkFailed, setLinkFailed] = useState(false);
   const [details, setDetails] = useState(false);
@@ -47,54 +51,64 @@ export function AppPrivacy({
         gap: space.l,
       }}
     >
+      {/* One lit window, as on every onboarding screen, so this step feels part of the same walk. */}
+      <View style={{ alignItems: "flex-start" }}>
+        <Light state="lit" height={40} />
+      </View>
       <Words variant="title">
         <Trans>Before you continue</Trans>
       </Words>
-      <Words variant="body" tone="ink2">
-        <Trans>
-          Vela saves the family information you choose to share. OpenAI and Deepgram process
-          messages and voice notes in the United States to help with questions and weekly reads.
-          OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run
-          this private test. Your parent makes their own separate choices.
-        </Trans>
-      </Words>
-      <SecondaryButton
-        label={details ? t`Hide privacy details` : t`Privacy details and terms`}
-        onPress={() => setDetails((value) => !value)}
-      />
+      <Card>
+        <Words variant="body" tone="ink2">
+          <Trans>
+            Vela saves the family information you choose to share. OpenAI and Deepgram process
+            messages and voice notes in the United States to help with questions and weekly reads.
+            OpenAI may keep processing logs for up to 30 days. The founder can read exchanges to run
+            this private test. Your parent makes their own separate choices.
+          </Trans>
+        </Words>
+      </Card>
+      <View style={{ alignItems: "flex-start" }}>
+        <TextButton
+          label={details ? t`Hide privacy details` : t`Privacy details and terms`}
+          onPress={() => setDetails((value) => !value)}
+        />
+      </View>
       {details ? (
         <>
           <Card>
-            <Words selectable>{APP_PRIVACY_TEXT}</Words>
+            <Words selectable>{APP_PRIVACY_TEXTS[privacyLangOf(i18n.locale)]}</Words>
           </Card>
           <LegalLinks />
+          <View style={{ alignItems: "flex-start" }}>
+            <TextButton
+              label={t`Read the privacy notice`}
+              onPress={() => {
+                void Linking.openURL(noticeUrl("/privacy")).catch(() => setLinkFailed(true));
+              }}
+            />
+          </View>
         </>
       ) : null}
       {linkFailed ? <Words selectable>{SUPPORT_EMAIL}</Words> : null}
-      {details ? (
-        <SecondaryButton
-          label={t`Read the privacy notice`}
-          onPress={() => {
-            void Linking.openURL(`${apiBaseUrl ?? PRODUCTION_NOTICE_ORIGIN}/privacy`).catch(() =>
-              setLinkFailed(true),
-            );
-          }}
-        />
-      ) : null}
       {failed ? (
         <Words>
           <Trans>Your choice could not be saved. Please try again.</Trans>
         </Words>
       ) : null}
-      <PrimaryButton
-        label={working ? t`Saving…` : t`Agree and continue`}
-        disabled={working}
-        onPress={onAccept}
-      />
-      <SecondaryButton label={t`Not now`} disabled={working} onPress={onDecline} />
+      <View style={{ gap: space.s, marginTop: space.l }}>
+        <PrimaryButton
+          label={working ? t`Saving…` : t`Agree and continue`}
+          disabled={working}
+          onPress={onAccept}
+        />
+        <TextButton label={t`Not now`} disabled={working} onPress={onDecline} />
+      </View>
     </ScrollView>
   );
 }
+
+const SLOW_ACCOUNT_MS = 10_000;
 
 /** Server permission is authoritative; onboarding's explicit choice is saved without asking again. */
 export function AppPrivacyGate({ children }: { children: ReactNode }) {
@@ -105,7 +119,8 @@ export function AppPrivacyGate({ children }: { children: ReactNode }) {
 
 function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const palette = usePalette();
   const draft = useOnboardingDraft();
   const queries = useQueryClient();
   const mounted = useRef(true);
@@ -123,6 +138,9 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     retry: false,
   });
   const missing = me.error instanceof ApiError && me.error.status === 404;
+  const knownMissing = useRef(false);
+  if (missing) knownMissing.current = true;
+  else if (me.data !== undefined || me.isError) knownMissing.current = false;
   const decision = privacyGateDecision({
     enabled,
     accepted: me.data?.privacy_accepted,
@@ -130,6 +148,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     missing,
     failed: me.isError,
     localAccepted: draft.privacyAccepted,
+    knownMissing: knownMissing.current,
   });
   const save = useMutation({
     mutationFn: async () => {
@@ -139,7 +158,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
           display_name: me.data.user.display_name,
           language: me.data.user.language,
           tz: me.data.user.tz,
-          privacy_acceptance: appPrivacyAcceptance(),
+          privacy_acceptance: appPrivacyAcceptance(privacyLangOf(i18n.locale)),
         },
         `privacy:${me.data.user.id}:${APP_PRIVACY_VERSION}`,
         await account.token(),
@@ -153,6 +172,18 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
       void queries.invalidateQueries({ queryKey: ["me"] });
     },
   });
+  // A read still waiting after this long is offered again, so no one is left on a loading screen.
+  const [slow, setSlow] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const waitingAttempt = decision === "loading" ? retryAttempt : null;
+  useEffect(() => {
+    if (waitingAttempt === null) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), SLOW_ACCOUNT_MS);
+    return () => clearTimeout(timer);
+  }, [waitingAttempt]);
   const saveChoice = save.mutate;
   useEffect(() => {
     if (decision === "save" && save.status === "idle") saveChoice();
@@ -163,37 +194,46 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     void account.signOut();
   };
   return (
-    <>
-      {children}
-      <Modal visible onRequestClose={decline}>
-        {decision === "ask" ? (
-          <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
-        ) : (
-          <ScrollView
-            contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
-          >
-            <Words variant="body" tone="ink2">
-              {decision === "loading" ? (
-                <Trans>Loading your account…</Trans>
-              ) : decision === "unavailable" ? (
-                <Trans>
-                  Your account could not be reached. Your privacy choice has not changed.
-                </Trans>
-              ) : save.isError ? (
-                <Trans>Your choice could not be saved. Please try again.</Trans>
-              ) : (
-                <Trans>Saving your choice…</Trans>
-              )}
-            </Words>
-            {decision === "unavailable" ? (
-              <SecondaryButton label={t`Try again`} onPress={() => void me.refetch()} />
+    <View style={{ flex: 1, backgroundColor: palette.bg }}>
+      {decision === "ask" ? (
+        <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
+      ) : (
+        <ScrollView
+          style={{ flex: 1, backgroundColor: palette.bg }}
+          contentContainerStyle={{ padding: space.margin, paddingTop: space.huge, gap: space.l }}
+        >
+          {decision === "loading" ? (
+            <LoadingLight label={t`Loading your account…`} size="large" />
+          ) : null}
+          <Words variant="body" tone="ink2">
+            {decision === "loading" ? null : decision === "unavailable" ? (
+              <Trans>Your account could not be reached. Your privacy choice has not changed.</Trans>
             ) : save.isError ? (
-              <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
-            ) : null}
-          </ScrollView>
-        )}
-      </Modal>
-    </>
+              <Trans>Your choice could not be saved. Please try again.</Trans>
+            ) : (
+              <Trans>Saving your choice…</Trans>
+            )}
+          </Words>
+          {decision === "loading" && slow ? (
+            <Words variant="body" tone="ink2">
+              <Trans>This is taking longer than it should.</Trans>
+            </Words>
+          ) : null}
+          {decision === "unavailable" || (decision === "loading" && slow) ? (
+            <SecondaryButton
+              label={t`Try again`}
+              onPress={() => {
+                setSlow(false);
+                setRetryAttempt((attempt) => attempt + 1);
+                void retryAccountRead(queries);
+              }}
+            />
+          ) : save.isError ? (
+            <SecondaryButton label={t`Try again`} onPress={() => save.mutate()} />
+          ) : null}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 

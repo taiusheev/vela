@@ -37,6 +37,7 @@ import { replyLine } from "../../src/data/lines.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { toExchange, useExchanges } from "../../src/data/useExchanges.ts";
 import { useToday } from "../../src/data/useToday.ts";
+import { tapLanded } from "../../src/device/haptics.ts";
 import { useDraft } from "../../src/storage/useDraft.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { space } from "../../src/theme/tokens.ts";
@@ -89,6 +90,7 @@ function ExchangeReader({ id }: { id: string }) {
       }
     },
     onSuccess: async (_reply, sentReply) => {
+      tapLanded();
       if ("text" in sentReply) await draft.clear();
       else await draft.clearAttempt();
       await Promise.all([

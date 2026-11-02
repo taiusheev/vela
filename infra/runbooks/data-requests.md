@@ -402,6 +402,45 @@ From then on no morning message, repeat, quiet notice or turn prompt is due for 
 
 After the identity question in the notice ("How"), run the queries for that person and send the results only to them. For the person the light is for, add the second group.
 
+### Optional saved question choices: not activated
+
+The saved-profile feature is OFF; do not turn it on to fulfil a data request or treat its draft
+notice supplement as approved. If choices exist in an authorized test account, the authenticated
+`GET /v1/families/:familyId/members/:recipientId/question-profile` supplies **that requester's**
+current unexpired setup for that parent. Derive the author from the verified account; never query
+or send all family profiles to an organiser. This is one component of a data copy, not the whole
+account export. Reading never renews expiry and is available with collection/pilot admission off.
+The strict save endpoint supports correction using the current revision and explicit 30-day save.
+The authenticated `POST .../question-profile/forget` with `{}` and a write key removes words and
+selections immediately, retaining only bounded revision/scope metadata to reject stale saves.
+Already-approved scheduled questions must be reviewed/removed separately in their schedule.
+
+### Kept conversational memories: not activated
+
+Rich conversational memories are still disabled and have no live consent or download flow. Do
+not enable them to fulfil a request, record consent for someone, or treat this section as notice
+approval. Before activation, the authenticated data-copy delivery must include the requester's
+own kept memories, not every quote the requester can see in the family collection.
+
+The internal `loadOwnKeptMemoriesForExport` service supplies at most 50 items per page. It derives
+the author from the authenticated membership; a caller cannot name another author. Repeat with
+`next_cursor` until it is null, including when a filtered page is empty. Every call rechecks current
+family membership, both consent proofs and source validity. Access does not require the processing
+switch or a paid plan. Expired conversation words are not reconstructed: only an explicitly kept
+quote can remain, with `source_available: false`. Removed or withdrawn words are excluded.
+
+This is one component, not a complete personal-data export. No route, download link, file, media
+bundle or founder impersonation path exists yet. Future delivery must be authenticated and private,
+disable response/shared caching, stop when authorisation fails, and avoid persisting a partial
+bundle. Re-read current pages before delivery rather than serving old queued snapshots; a privacy
+change must invalidate an in-progress bundle. Never place quote text in a log, receipt or support
+ticket. Once a person downloads their own copy, Vela cannot retract that person's copy.
+
+Database console values for sealed columns are ciphertext, not a readable data copy. Do not send
+ciphertext as a completed request or paste it into a chat for decryption. The queries below are
+the legacy request inventory; authorised sealed-value delivery remains a separate implementation
+and verification gate before rich memories are activated.
+
 ```sql
 SELECT display_name, address_form, role, language, tz, country, status, wake_time, arrival_time, created_at, left_at
 FROM members WHERE id = '<member id>';

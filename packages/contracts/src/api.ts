@@ -27,6 +27,7 @@ import {
   TimeZone,
   WhenRule,
 } from "./domain.ts";
+import { FamilyMemoryKind } from "./rich-memories.ts";
 
 export const API_ERROR_CODES = [
   "unauthenticated",
@@ -73,6 +74,8 @@ export const ApiLinkChallenge = z.object({
   challenge_id: z.uuid(),
   expires_at: z.iso.datetime({ offset: true }),
   telegram_url: z.url().optional(),
+  /** The same link through Vela's LINE account, where LINE is on (ADR-52). */
+  line_url: z.url().optional(),
   confirmation: z.literal("telegram").optional(),
   requester_label: z.string().max(200).optional(),
 });
@@ -112,6 +115,10 @@ export const ApiCapabilities = z.strictObject({
   english_only: z.boolean(),
   memory: z.boolean(),
   book: z.boolean().default(false),
+  personal_questions: z.boolean().optional(),
+  personal_question_profiles: z.boolean().optional(),
+  /** The family's photo box (ADR-58): photos Vela turns into her free mornings. */
+  photo_box: z.boolean().default(false),
   parent_app: z.boolean(),
   billing: z.boolean(),
 });
@@ -152,7 +159,17 @@ export type ApiAccountProfile = z.infer<typeof ApiAccountProfile>;
  */
 export const ApiAccountPatch = ApiAccountProfile.omit({ privacy_acceptance: true })
   .partial()
-  .extend({ one_moment_a_day: z.boolean().optional() })
+  .extend({
+    one_moment_a_day: z.boolean().optional(),
+    reply_notifications: z.boolean().optional(),
+    turn_reminders: z.boolean().optional(),
+  })
+  .refine(
+    (patch) =>
+      patch.one_moment_a_day === undefined ||
+      (patch.reply_notifications === undefined && patch.turn_reminders === undefined),
+    "use the combined switch or individual notification choices, not both",
+  )
   .refine(
     (patch) =>
       Object.keys(patch).length > 0 && Object.values(patch).every((value) => value !== undefined),
@@ -190,6 +207,13 @@ export const ApiMe = z.object({
    * the evening's turn prompt, are sent. The quiet notice and its close come whatever it says.
    */
   one_moment_a_day: z.boolean(),
+  /** Present only when reviewed individual controls are enabled by this server. */
+  notification_preferences: z
+    .object({
+      replies: z.boolean(),
+      turns: z.boolean(),
+    })
+    .optional(),
   /**
    * Whether this API sends pushes at all (ADR-34, the Worker's `PUSH_SEND`): false while the switch
    * is off, so the app says its notifications are not sent yet instead of showing them as on to an
@@ -232,6 +256,11 @@ export const MemberLight = z.object({
    */
   unreachable_on: Channel.nullable(),
   quiet_event_id: z.uuid().nullable(),
+  /**
+   * What the organiser said she likes talking about at setup, so the app can offer questions in
+   * those topics. Optional: older responses and members without a choice carry none.
+   */
+  interests: z.array(InterestTopic).optional(),
 });
 export type MemberLight = z.infer<typeof MemberLight>;
 
@@ -282,10 +311,50 @@ export const ApiWeeklyRead = z.object({
       notes: z.array(z.string()).nullable(),
       /** Null when locked, and when the founder removed it before sending. */
       suggestion: z.string().nullable(),
+      /**
+       * The day the suggestion grows from (weekly_read.v6): that morning's ask and her answer's
+       * one-line summary, so an organiser sees why. Absent from older reads, null when the
+       * suggestion grows from no particular day, is locked or was removed, or that day is gone.
+       */
+      suggestion_source: z
+        .object({
+          date: LocalDate,
+          exchange_id: z.uuid(),
+          /** Who asked that morning; null when it was Vela's own hello. */
+          asker_name: z.string().nullable(),
+          /** Her answer's one-line summary; null when there is none. */
+          summary: z.string().nullable(),
+        })
+        .nullable()
+        .optional(),
+      /**
+       * ADR-48: the caller's own feedback on their messages that week, as it was sent to them, never
+       * another organiser's. Null when there is none, when locked, and 30 days after the week ends.
+       */
+      my_feedback: z.string().nullable().optional(),
     })
     .nullable(),
 });
 export type ApiWeeklyRead = z.infer<typeof ApiWeeklyRead>;
+
+/**
+ * Her sent weekly reads, newest first, up to a year of them (`GET
+ * /v1/families/:familyId/weekly-reads?member=`): the weeks an organiser can open again.
+ */
+export const ApiWeeklyReadList = z.object({
+  member_id: z.uuid(),
+  reads: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        week_start: LocalDate,
+        week_end: LocalDate,
+        sent_at: z.iso.datetime({ offset: true }),
+      }),
+    )
+    .max(53),
+});
+export type ApiWeeklyReadList = z.infer<typeof ApiWeeklyReadList>;
 
 /** An organiser opened a sent, unlocked read on screen; its id is in the path. */
 export const OpenWeeklyRead = z.strictObject({});
@@ -519,6 +588,8 @@ export const ApiTomorrowTurn = z.object({
 export type ApiTomorrowTurn = z.infer<typeof ApiTomorrowTurn>;
 
 export const ApiToday = z.object({
+  /** Explicit Not okay taps received on each parent's current local day, latest per parent. */
+  not_okay: z.array(z.object({ member_id: z.uuid(), at: z.iso.datetime() })).optional(),
   connection_days: z
     .array(
       z.object({
@@ -576,6 +647,27 @@ const AskText = z
     "the ask must be valid UTF8 text without NUL",
   );
 
+/** Edit a waiting question without replacing its media, author or delivery identity. */
+export const EditAsk = z.strictObject({
+  text: AskText,
+  date: LocalDate.nullable(),
+});
+export type EditAsk = z.infer<typeof EditAsk>;
+export const ApiEditedAsk = z.object({ id: z.uuid(), state: z.literal("composed") });
+export const ApiPlannedAsk = z.object({
+  id: z.uuid(),
+  recipient_id: z.uuid(),
+  recipient_name: z.string(),
+  asker_name: z.string(),
+  text: z.string(),
+  date: LocalDate.nullable(),
+  editable: z.boolean(),
+  preparing: z.boolean(),
+});
+export type ApiPlannedAsk = z.infer<typeof ApiPlannedAsk>;
+export const ApiPlannedQuestions = z.object({ questions: z.array(ApiPlannedAsk) });
+export type ApiPlannedQuestions = z.infer<typeof ApiPlannedQuestions>;
+
 export const ComposeAsk = z
   .strictObject({
     recipient_id: z.uuid(),
@@ -596,6 +688,12 @@ export const ComposeAsk = z
      * is composed. One already used, or not hers, marks nothing and never stops the ask.
      */
     suggestion_id: z.uuid().optional(),
+    /** Reviewed assisted wording is never independent evidence of the author's writing style. */
+    ai_assisted: z.boolean().optional(),
+    /** Reject a reviewed draft when the saved setup it used was changed, expired or forgotten. */
+    personal_profile_revision: z.uuid().optional(),
+    /** The language of reviewed words, which can differ from the app/account language. */
+    text_language: Lang.optional(),
     /**
      * The photos a photo ask shows her, in order, each one uploaded to this family first
      * (`POST /v1/families/:familyId/media`, ADR-33). A photo choice's first is her "1".
@@ -1255,6 +1353,8 @@ export const ApiBookEntry = z.object({
   /** The old photo she told about (an old-photo ask), read through the family's media route. */
   photo_ids: z.array(z.uuid()),
   kept_at: z.iso.datetime({ offset: true }),
+  /** The organiser who kept an ordinary answer with "Keep" (ADR-50); null for a story. */
+  kept_by: z.string().nullable(),
   answers: z.array(
     z.object({
       kind: z.string(),
@@ -1294,12 +1394,72 @@ export const ApiBookRecipe = z.object({
 });
 export type ApiBookRecipe = z.infer<typeof ApiBookRecipe>;
 
+/**
+ * An answer Vela suggests the organisers keep (ADR-50): the phrase that made it worth keeping, in
+ * her exact words. Shown to organisers only.
+ */
+export const ApiKeepSuggestion = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  question: z.string().nullable(),
+  quote: z.string(),
+  at: z.iso.datetime({ offset: true }),
+});
+export type ApiKeepSuggestion = z.infer<typeof ApiKeepSuggestion>;
+
+/**
+ * One of her memories (ADR-51): an answer worth remembering and safe to show as one, from the last
+ * 30 days or kept. `quote` is the phrase that makes it one, in her exact words, where Vela found it.
+ */
+export const ApiMoment = z.object({
+  exchange_id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  asked_by: z.string().nullable(),
+  question: z.string().nullable(),
+  words: z.string().nullable(),
+  quote: z.string().nullable(),
+  kind: FamilyMemoryKind.nullable(),
+  at: z.iso.datetime({ offset: true }),
+  /** Her photo, read through `GET /v1/families/:familyId/media/:id`. */
+  photo_id: z.uuid().nullable(),
+  voice: z.object({ media_id: z.uuid(), duration_ms: z.number().int().nullable() }).nullable(),
+  kept: z.boolean(),
+  kept_by: z.string().nullable(),
+  story_id: z.uuid().nullable(),
+  /** When it fades with her words unless kept; null once kept. */
+  fades_at: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ApiMoment = z.infer<typeof ApiMoment>;
+
+/** A story Vela gathered from two to five of her memories on one subject, all in her words. */
+export const ApiMemoryStory = z.object({
+  id: z.uuid(),
+  member_id: z.uuid(),
+  member_name: z.string(),
+  /** A phrase of hers, word for word. */
+  title: z.string(),
+  /** Its memories in `moments`, oldest first. */
+  moment_ids: z.array(z.uuid()).min(2),
+  kept: z.boolean(),
+  from: z.iso.datetime({ offset: true }),
+  to: z.iso.datetime({ offset: true }),
+});
+export type ApiMemoryStory = z.infer<typeof ApiMemoryStory>;
+
 export const ApiBook = z.object({
   entries: z.array(ApiBookEntry),
+  /** Answers worth keeping, newest first; empty for anyone but an organiser. */
+  suggestions: z.array(ApiKeepSuggestion),
   /** Her kept recipe cards, newest first. */
   recipes: z.array(ApiBookRecipe),
   /** Story asks not yet delivered, soonest first. */
   coming: z.array(ApiComingStory),
+  /** Her memories, newest first; absent from a server before ADR-51. */
+  moments: z.array(ApiMoment).optional(),
+  /** Stories gathered from them, newest first. */
+  stories: z.array(ApiMemoryStory).optional(),
 });
 export type ApiBook = z.infer<typeof ApiBook>;
 
@@ -1309,6 +1469,116 @@ export type RemoveBookEntry = z.infer<typeof RemoveBookEntry>;
 
 export const ApiBookRemoved = z.object({ exchange_id: z.uuid(), removed: z.literal(true) });
 export type ApiBookRemoved = z.infer<typeof ApiBookRemoved>;
+
+// The photo box (ADR-58) ----------------------------------------------------------------------------
+
+/** A photo of today ("new") or of long ago ("old"): Vela asks about each differently. */
+export const PhotoBoxEra = z.enum(["new", "old"]);
+export type PhotoBoxEra = z.infer<typeof PhotoBoxEra>;
+
+/** The family's one line about a photo, which Vela puts in the question it asks her. */
+export const PHOTO_BOX_CAPTION_MAX = 140;
+const PhotoBoxCaption = z
+  .string()
+  .trim()
+  .max(PHOTO_BOX_CAPTION_MAX)
+  .transform((caption) => (caption.length === 0 ? null : caption));
+
+/** How many photos a family's box holds at once. */
+export const PHOTO_BOX_LIMIT = 40;
+
+/** One photo in the box, as every live member of the family sees it. */
+export const ApiPhotoBoxPhoto = z.object({
+  id: z.uuid(),
+  /** Read through `GET /v1/families/:familyId/media/:mediaId`, as any family photo is. */
+  media_id: z.uuid(),
+  era: PhotoBoxEra,
+  caption: z.string().nullable(),
+  width: z.number().int().positive().nullable(),
+  height: z.number().int().positive().nullable(),
+  added_by_name: z.string().nullable(),
+  /** Whether the caller may change or remove it: whoever added it, or an organiser. */
+  can_change: z.boolean(),
+  /** Her local day of the last morning Vela showed it on, or null while it waits its turn. */
+  last_used_on: LocalDate.nullable(),
+});
+export type ApiPhotoBoxPhoto = z.infer<typeof ApiPhotoBoxPhoto>;
+
+/**
+ * The picture morning Vela would send one parent next, as she will read it: its type, the box
+ * photos it shows in her order, and its words and signature in her language.
+ */
+export const ApiPhotoBoxNext = z.object({
+  member_id: z.uuid(),
+  name: z.string(),
+  type: z.enum(["question", "memory_photo", "photo_choice"]),
+  box_ids: z.array(z.uuid()).min(1).max(2),
+  text: z.string(),
+  signature: z.string(),
+});
+export type ApiPhotoBoxNext = z.infer<typeof ApiPhotoBoxNext>;
+
+export const ApiPhotoBox = z.object({
+  photos: z.array(ApiPhotoBoxPhoto),
+  limit: z.number().int().positive(),
+  /** One per parent whose light the family keeps, when the box has a morning for them. */
+  next: z.array(ApiPhotoBoxNext).default([]),
+});
+export type ApiPhotoBox = z.infer<typeof ApiPhotoBox>;
+
+/** Put a photo the caller uploaded (`POST /v1/families/:familyId/media`) into the family's box. */
+export const AddToPhotoBox = z.strictObject({
+  media_id: z.uuid(),
+  era: PhotoBoxEra,
+  caption: PhotoBoxCaption.optional(),
+});
+export type AddToPhotoBox = z.infer<typeof AddToPhotoBox>;
+
+/** Change a box photo's era or its line; a null or empty caption clears the line. */
+export const ChangePhotoBoxPhoto = z
+  .strictObject({ era: PhotoBoxEra.optional(), caption: PhotoBoxCaption.nullable().optional() })
+  .refine((change) => change.era !== undefined || change.caption !== undefined);
+export type ChangePhotoBoxPhoto = z.infer<typeof ChangePhotoBoxPhoto>;
+
+/** Take a photo out of the box: no body, the photo is in the path. */
+export const RemovePhotoBoxPhoto = z.strictObject({});
+export type RemovePhotoBoxPhoto = z.infer<typeof RemovePhotoBoxPhoto>;
+
+export const ApiPhotoBoxRemoved = z.object({ id: z.uuid(), removed: z.literal(true) });
+export type ApiPhotoBoxRemoved = z.infer<typeof ApiPhotoBoxRemoved>;
+
+/**
+ * Why a photo box write was refused, in `details.reason`: `photo_missing` (404), the photo is not the
+ * caller's upload, is gone, or is not a photo; `in_box` (409), it is in the box already; `box_full`
+ * (409), the box holds `PHOTO_BOX_LIMIT` photos.
+ */
+export const PHOTO_BOX_REFUSALS = ["photo_missing", "in_box", "box_full"] as const;
+export type PhotoBoxRefusal = (typeof PHOTO_BOX_REFUSALS)[number];
+
+/** An organiser keeps one of her answers (`POST /v1/book/:exchangeId/keep`, ADR-50). */
+export const KeepBookEntry = z.strictObject({});
+export type KeepBookEntry = z.infer<typeof KeepBookEntry>;
+
+/**
+ * Kept, or why not: she said "memories off", the answer holds health or other sensitive words, it
+ * has no answer of hers, or she took it out herself.
+ */
+export const ApiBookKept = z.object({
+  exchange_id: z.uuid(),
+  kept: z.boolean(),
+  reason: z.enum(["not_kept", "memories_off", "sensitive", "no_answer"]).optional(),
+});
+export type ApiBookKept = z.infer<typeof ApiBookKept>;
+
+/** "Not this one" on a suggestion (`POST /v1/book/:exchangeId/dismiss`, ADR-50). */
+export const DismissKeepSuggestion = z.strictObject({});
+export type DismissKeepSuggestion = z.infer<typeof DismissKeepSuggestion>;
+
+export const ApiKeepSuggestionDismissed = z.object({
+  exchange_id: z.uuid(),
+  dismissed: z.literal(true),
+});
+export type ApiKeepSuggestionDismissed = z.infer<typeof ApiKeepSuggestionDismissed>;
 
 /**
  * Something she said will happen on a known day (spec §12, build plan 5.3), offered to a family

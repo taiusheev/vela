@@ -42,22 +42,21 @@ export const zhTW: Record<keyof typeof en, string> = {
     "要將家人連結至這個 Vela 帳號嗎？\n帳號：{account}\n連結編號：{reference}\n\n只有在您剛從自己已登入的 Vela 開啟此聊天，且帳號與編號相符時，才按下「連結我的家人」。開啟聊天本身不會完成連結。\n\n若使用另一部裝置，您的私人備用代碼是 {code}，請勿分享。",
   "account_link.approve": "連結我的家人",
   "account_link.refuse": "這不是我",
-  "account_link.approved":
-    "Telegram 已確認。請回到 iPhone 上的 Vela，確認家人並完成連結。不用複製代碼。",
-  "account_link.cancelled": "連結已取消。您的家人與 Telegram 帳號沒有變更。",
+  "account_link.approved": "已確認。請回到 iPhone 上的 Vela，確認家人並完成連結。不用複製代碼。",
+  "account_link.cancelled": "連結已取消。您的家人和這個聊天室都沒有變更。",
   "account_link.code":
-    "請在 Vela 輸入這個代碼，連結您的 Telegram 帳號：{code}\n請保密；代碼即將到期。",
+    "請在 Vela 輸入這個代碼，把這個聊天室連結到 app：{code}\n請保密；代碼即將到期。",
   "account_link.unavailable":
-    "無法開啟這個帳號連結。請先在 Telegram 完成家人的設定，再從 Vela 建立新的連結。",
+    "無法開啟這個帳號連結。請先在這個聊天室完成家人的設定，再從 Vela 建立新的連結。",
   "pilot.activation_wait":
-    "您的燈還沒亮起。家人的安排人需要一個已獲准、且能收到訊息的 Telegram 帳號。請安排人完成設定，再試一次。",
+    "您的燈還沒亮起。發起人的設定還沒完成：家庭需要先通過核准，發起人也要能收到訊息。請發起人完成設定，再試一次。",
   "pilot.invitation_only":
     "Vela 的英語試用僅限受邀者。請聯絡創辦人申請使用。您的 Telegram ID：{telegram_id}。",
   "arrival.greeting": "{address}，早安。",
   "arrival.greeting_2": "早安，{address}！",
   "arrival.greeting_3": "嗨，{address}，早安。",
   "arrival.late": "不好意思，這則訊息晚到了。",
-  "arrival.repeat": "怕您沒看到，再傳一次：",
+  "arrival.repeat": "不急，有空再回就好。這是今天早上的訊息。",
   "arrival.readback_heading": "家人的回覆：",
   "arrival.signed": "—— {asker}",
   "arrival.signed_on_behalf": "—— {asker}（替{child}問）",
@@ -67,9 +66,18 @@ export const zhTW: Record<keyof typeof en, string> = {
   "arrival.photo_choice": "選哪一張呢？請按 1 或 2。",
   "arrival.vote": "請按一個選項。",
   "arrival.hello": "您早上過得好嗎？",
-  "arrival.hello_signature": "—— Vela，代表您的家人",
-  "arrival.hello_question": "今天想請您和家人分享：",
-  "arrival.hint": "您可以傳語音訊息回覆，或按下面的按鈕。",
+  "arrival.hello_signature": "—— 家人的小幫手 Vela",
+  "arrival.hello_question": "傳段語音跟我說說吧，我會轉告家人。",
+  "photo_box.look": "家人傳來一張新照片。您看了想到什麼呢？",
+  "photo_box.look_caption": "家人傳來一張新照片：「{caption}」。您看了想到什麼呢？",
+  "photo_box.story": "家人找到一張老照片。您還記得這張照片的故事嗎？",
+  "photo_box.story_caption": "家人找到一張老照片：「{caption}」。您還記得那時候的事嗎？",
+  "photo_box.choice": "家人傳來兩張新照片。您比較喜歡哪一張呢？",
+  "arrival.hint": "用語音回覆最好；在忙的話，按 ❤️ 就好。",
+  "arrival.hint_words": "傳段語音或打幾個字回覆就好。",
+  "checkin.text": "{address}，想關心一下您，今天還好嗎？",
+  "button.okay": "🙂 我還好",
+  "button.not_okay": "不太好，告訴家人",
   "button.fine": "我很好",
   "button.heart": "❤️",
   "button.choice": "{n}",
@@ -78,6 +86,15 @@ export const zhTW: Record<keyof typeof en, string> = {
   "ack.thanks_3": "謝謝您，{address}。家人等一下就會收到。",
   "ack.thanks_4": "謝謝您，{address}。這就轉給家人。",
   "ack.story": "謝謝您，{address}。您說的故事已經收進家庭故事書了。",
+  "ack.not_okay":
+    "謝謝您告訴我，{address}。我已經馬上通知{names}了。如果情況緊急，請直接撥打 119。",
+  "ack.not_okay_founder":
+    "謝謝您告訴我，{address}。我現在沒辦法透過 Vela 聯絡到您的家人，所以已經請 Vela 團隊幫忙聯絡。如果情況緊急，請直接撥打 119。",
+  "ack.not_okay_family": "謝謝您告訴我，{address}。請打電話給家人；如果情況緊急，請直接撥打 119。",
+  "ack.tap_asker": "謝謝您，{address} ❤️ {asker}很想多聽您說一點。有空的時候，傳一段語音好嗎？",
+  "ack.tap_question":
+    "謝謝您，{address} ❤️ 有空的時候，傳段語音跟家人說說您的想法吧，大家都很想聽。",
+  "ack.tap_hello": "謝謝您，{address} ❤️ 今天在忙些什麼呢？有空的話，傳段語音給家人聽聽吧。",
   "book.dont_keep": "這則不要保留",
   "book.dropped": "沒問題，這則故事已經從家庭故事書拿掉了。",
   "recipe.offer": "{address}，這是您說的{title}做法：\n\n{card}\n\n要收進家庭故事書嗎？",
@@ -93,16 +110,30 @@ export const zhTW: Record<keyof typeof en, string> = {
   "readback.photo": "{name}傳了一張照片。",
   "readback.reactions": "{names}送上{emoji}",
   "consent.invalid_link": "這個連結已經失效了。請跟傳連結給您的人再要一個新的。",
-  "consent.already_linked": "這個 Telegram 帳號已經連結到 Vela 上的另一個家庭。",
+  "consent.already_linked": "這個帳號已經連結到 Vela 上的另一個家庭。",
   "consent.request":
     "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
   "consent.health_words":
     "還有一個問題。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您，並在週日的每週小記裡寫出這週不只一次提到的話嗎？就算您說不要，Vela 也會照常運作。",
+  "consent.request_both":
+    "{organiser}想為您留一盞燈。每天早上，家裡會有人問您一件事。您回覆了，家人就知道您一切都好。如果哪天早上的訊息一直沒有回覆，{organiser}會收到一則簡短的通知，就可以打電話給您。您隨時都可以說「停」。\n\n身體狀況的話是另一個選擇。如果您提到身體狀況，例如跌倒或哪裡痛，Vela 可以把您說的話轉告{organiser}，讓{organiser}打電話給您，並在週日的每週小記裡寫出這週不只一次提到的話。如果您選擇不分享，Vela 也會照常運作。\n\n請點「兩個都好」、「好，健康的話不分享」（健康的話只留給自己），或「不用了，謝謝」。Vela 由 Timur Aiusheev 經營。您的資料會怎麼使用，請看： {notice}",
+  "consent.both": "兩個都好",
+  "consent.light_only": "好，健康的話不分享",
+  "memory.told":
+    "{organiser}把您的一則回答留作回憶，這則回答 30 天後不會被刪除。家人可以保留想記住的回答。要停止並移除已保留的回答，請寫「關閉回憶」。",
+  "memory.off_done":
+    "好了。您的回答不會再被留作回憶，已保留的也已移除。平常的聊天不受影響。要讓家人再保留回答，請寫「開啟回憶」。",
+  "memory.on_done": "好了。家人又可以把您的回答留作回憶了。要停止，請寫「關閉回憶」。",
+  "memory.gone": "這裡不需要做什麼。家人會在 App 裡保留回憶。要停止，請寫「關閉回憶」。",
   "consent.yes": "好，沒問題",
   "consent.no": "不用了，謝謝",
-  "consent.accepted": "謝謝您。第一則早安訊息會在明天 {time} 送到。",
+  "consent.accepted": "謝謝您。{organiser}一定會很開心。第一則早安訊息會在明天 {time} 送到。",
+  "consent.accepted_first":
+    "謝謝您。{organiser}一定會很開心。{organiser}有第一則訊息要給您，馬上就到。之後每天早上 {time} 都會有一則訊息，從明天開始。",
   "consent.declined": "沒關係，不會傳任何訊息給您。",
   "organiser.consent_given": "{name}同意了。第一則早安訊息會在明天 {time} 送到。",
+  "organiser.consent_given_first":
+    "{name}同意了，您的第一則訊息正在傳給{name}。早安訊息從明天 {time} 開始。",
   "organiser.consent_declined": "{name}說暫時先不要。不會傳送任何訊息。",
   "invite.for_her":
     "{name}您好，我是{organiser}。我想為您留一盞燈：每天早上，家人會問您一件小事。打開這個連結看看，願意的話就說好： {link} 您隨時都可以說「停」。",
@@ -131,6 +162,7 @@ export const zhTW: Record<keyof typeof en, string> = {
   "group.ask_from_app": "{asker}已經為{name}準備好明天早上的提問。",
   "group.answer_light": "☀️ {name}回覆了{asker} · {time}",
   "group.answer_hello": "☀️ {name}一切都好 · {time}",
+  "group.answer_not_okay": "⚠️ {name}說今天不太好 · {time}",
   "group.answer_question": "☀️ {name}回答了 Vela 今天的問題 · {time}\n「{question}」",
   "group.answer_question_tap":
     "Vela 問了：「{question}」直接回覆這則訊息，親自問問看：回覆會是{name}明天早上第一個收到的。",
@@ -154,11 +186,15 @@ export const zhTW: Record<keyof typeof en, string> = {
   "quiet.resolved_away": "{organiser}說{name}不在家。",
   "delivery.failed": "今天沒辦法透過 {channel} 把訊息送給{name}。除此之外，目前沒有別的消息。",
   "flag.notice": "{name}說了一句話，您可能會想知道：「{quote}」",
+  "not_okay.notice":
+    "⚠️ {name}在 {time} 回覆 Vela 的關心訊息時，按了「不太好」。請盡快打電話給{name}。",
   "flag.notice_no_words": "{name}今天說了一些話，也許值得打個電話問問。",
+  "push.not_okay": "{name}在 Vela 上想找家人，請現在打電話給{name}。",
   "push.quiet_notice":
     "{name}那邊今天比較安靜。早安訊息在 {sent} 送到。打開 Vela，可以打個電話，也可以再等等。",
   "push.answer_receipt": "{name}回覆了您。",
   "push.turn_prompt": "明天早上輪到您了：問問{name}一件事吧。",
+  "push.weekly_read": "{name}這週的每週小記到了。",
   "away.confirmed": "好的，那就到{date}為止。祝您過得愉快。",
   "away.confirmed_open": "好的，知道了。祝您過得愉快。",
   "weekly_read.answered": "{name}這週 {days} 天中回覆了 {answered} 天。",
@@ -233,8 +269,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.country_other": "其他",
   "onboarding.ask_zone": "在哪個時區？",
   "onboarding.ask_zone_other":
-    "這位家人住在哪個時區？請輸入時區名稱，例如 Asia/Seoul 或 Europe/Paris。",
-  "onboarding.invalid_zone": "請輸入像 Asia/Seoul 或 Europe/Paris 這樣的時區名稱。",
+    "這位家人住在哪個時區？請輸入時區名稱，例如 Asia/Taipei 或 America/Los_Angeles。",
+  "onboarding.invalid_zone": "請輸入像 Asia/Taipei 或 America/Los_Angeles 這樣的時區名稱。",
   "onboarding.ask_wake": "這位家人通常幾點起床？請按一個選項，或輸入像 07:30 這樣的時間。",
   "onboarding.ask_nearby":
     "有沒有住在附近、需要的時候可以過去看看的人？請傳送對方的名字，也可以加上對方和這位家人的關係，例如：王小姐，鄰居。或按「略過」。請您先親自問過對方。這裡只填名字：對方同意之後，才會加上電話號碼。",
@@ -245,8 +281,16 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.done":
     "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
   "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
+  "admin.weekly_read_sent": "{family}的每週小記已經寄給家人了： {link}",
   "admin.flag": "{family}有一則標記。查看： {link}",
+  "admin.quiet_reminder":
+    "{family}的{name}安靜通知已經 2 小時沒有人處理，已再次通知發起人。查看： {link}",
+  "admin.not_okay": "{family}有人按了「不太好」。查看： {link}",
+  "admin.not_okay_nobody_told":
+    "緊急：{family}有人按了「不太好」，但沒有任何發起人收到通知。請立刻聯絡這個家庭。查看： {link}",
   "admin.understand_failed": "{family}有一則回覆試了三次仍無法讀取。查看： {link}",
+  "admin.family_waiting":
+    "{family}的{name}按了同意，但燈還不能亮：請在試用名單核准這個家庭，並確認發起人收過 Vela 的訊息。然後請{name}再按一次同意。查看： {link}",
   "admin.member_left_group": "{name}退出了{family}的家人群組。{name}這邊沒有任何變動。",
   "admin.organisers_unreachable":
     "{family}已經無法再通知{name}，也沒有其他發起人能收到通知：那裡有人安靜下來時，不會有人知道。查看： {link}",

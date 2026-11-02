@@ -123,3 +123,47 @@ export async function loadApiExchange(
     delivered_at: row.exchange.deliveredAt?.toISOString() ?? null,
   };
 }
+
+/** All waiting questions, independent of the conversation's history pagination. */
+export async function loadApiPlannedQuestions(
+  db: Queryable,
+  identity: SessionIdentity,
+  familyId: string,
+) {
+  const access = await authorizeFamilyAccess(db, identity, familyId);
+  if (access.kind !== "granted") return null;
+  const rows = await db
+    .select({ exchange: exchanges, recipient: members })
+    .from(exchanges)
+    .innerJoin(members, eq(members.id, exchanges.recipientId))
+    .where(
+      and(
+        eq(exchanges.familyId, familyId),
+        or(
+          eq(exchanges.state, "composed"),
+          and(eq(exchanges.state, "scheduled"), isNotNull(exchanges.scheduledFor)),
+        ),
+      ),
+    );
+  const authors = await db
+    .select({ id: members.id, name: members.displayName })
+    .from(members)
+    .where(eq(members.familyId, familyId));
+  const names = new Map(authors.map((author) => [author.id, author.name]));
+  return {
+    questions: rows
+      .map(({ exchange, recipient }) => ({
+        id: exchange.id,
+        recipient_id: recipient.id,
+        recipient_name: recipient.displayName,
+        asker_name: exchange.askerId === null ? "Vela" : (names.get(exchange.askerId) ?? "Family"),
+        text: exchange.text ?? "",
+        date: exchange.scheduledFor,
+        editable: exchange.state === "composed" && exchange.askerId === access.access.memberId,
+        preparing: exchange.state === "scheduled",
+      }))
+      .sort(
+        (a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999") || a.id.localeCompare(b.id),
+      ),
+  };
+}

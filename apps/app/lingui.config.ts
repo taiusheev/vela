@@ -34,8 +34,36 @@ export default defineConfig({
   fallbackLocales: { default: "en" },
   catalogs: [
     {
+      path: "<rootDir>/src/i18n/locales/analytics/{locale}",
+      include: ["<rootDir>/src/analytics"],
+      exclude: ["**/*.test.ts"],
+    },
+    {
       path: "<rootDir>/src/i18n/locales/{locale}",
       include: ["<rootDir>/app", "<rootDir>/src"],
+      exclude: [
+        "**/analytics/**",
+        "**/*.test.ts",
+        "**/memory-review-preview.tsx",
+        "**/memory-review-demo.ts",
+        "**/memory-sharing-preview.tsx",
+        "**/memory-sharing-demo.ts",
+      ],
+    },
+    {
+      path: "<rootDir>/src/i18n/locales/memory-review/{locale}",
+      include: [
+        "<rootDir>/app/memory-review-preview.tsx",
+        "<rootDir>/src/data/memory-review-demo.ts",
+      ],
+      exclude: ["**/*.test.ts"],
+    },
+    {
+      path: "<rootDir>/src/i18n/locales/memory-sharing/{locale}",
+      include: [
+        "<rootDir>/app/memory-sharing-preview.tsx",
+        "<rootDir>/src/data/memory-sharing-demo.ts",
+      ],
       exclude: ["**/*.test.ts"],
     },
   ],

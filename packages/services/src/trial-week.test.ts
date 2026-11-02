@@ -189,7 +189,7 @@ describe("a family's first trial mornings", () => {
     );
     expect(prompt.message.text).toContain("If you'd like an idea:");
 
-    // Mia asks; Mom taps a chip on 15 Sep; Sam replies under her answer.
+    // Mia asks; Mom answers in words on 15 Sep; Sam replies under her answer.
     h.clock.set(at("2026-09-14", "19:05"));
     await inbound(
       inGroup(ORGANISER, {
@@ -200,7 +200,7 @@ describe("a family's first trial mornings", () => {
     );
     await runSchedulerUntil(her.id, at("2026-09-15", "08:00"));
     h.clock.set(at("2026-09-15", "08:05"));
-    await inbound(tapLast(HER, 0));
+    await inbound(privately(HER, { kind: "text", text: "Cabbage soup" }));
     const answerPost = lastTo(GROUP).result.primaryMessageId;
     h.clock.set(at("2026-09-15", "09:00"));
     await inbound(inGroup(SIBLING, { kind: "text", text: "Yum!", replyToMessageId: answerPost }));
@@ -219,7 +219,7 @@ describe("a family's first trial mornings", () => {
     });
     const morning16 = lastTo(HER).message.text;
     expect(morning16).toContain("Sam: Yum!");
-    expect(morning16).toContain(`${t("en", "arrival.hello_question")}\n${question16}`);
+    expect(morning16).toContain(`${question16} ${t("en", "arrival.hello_question")}`);
     expect(morning16).not.toContain(t("en", "arrival.hello"));
 
     h.clock.set(at("2026-09-16", "08:30"));
@@ -271,7 +271,7 @@ describe("a family's first trial mornings", () => {
       quietNoticeDays: 1,
       trueConcern: 0,
       stopsSaid: 0,
-      // A chip, then words twice: every answer this week said something.
+      // Words every day: every answer this week said something.
       saidSomethingDays: 3,
     });
     const numbers = Object.fromEntries(

@@ -29,6 +29,7 @@ import {
   families,
   media,
   members,
+  photoBox,
   replies,
   users,
   type VelaTransaction,
@@ -382,6 +383,13 @@ export function sharedWith(db: Queryable, familyId: string, memberId: string): S
         .from(replies)
         .innerJoin(exchanges, eq(exchanges.id, replies.exchangeId))
         .where(and(eq(replies.mediaId, media.id), eq(exchanges.familyId, familyId))),
+    ),
+    // In the family's photo box (ADR-58): every live member sees what is in it.
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(photoBox)
+        .where(and(eq(photoBox.mediaId, media.id), eq(photoBox.familyId, familyId))),
     ),
   );
 }

@@ -21,7 +21,7 @@ import {
   TIMEOUT_MS_FOR,
 } from "./models.ts";
 import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
-import { PROMPTS, renderUserTurn } from "./prompts/index.ts";
+import { promptFor, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -84,6 +84,8 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
     hello: (input) => invoke(client, { call: "hello" }, input),
     weeklyRead: (input) => invoke(client, { call: "weekly_read" }, input),
     recipe: (input) => invoke(client, { call: "recipe" }, input),
+    memoryPick: (input) => invoke(client, { call: "memory_pick" }, input),
+    storyWeave: (input) => invoke(client, { call: "story_weave" }, input),
     weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }
@@ -97,7 +99,7 @@ async function invoke<K extends AiCallName>(
   const input = INPUT_SCHEMAS[spec.call].parse(rawInput);
   const outputSchema: z.ZodType<AiCallTypes[K]["output"]> = OUTPUT_SCHEMAS[spec.call];
   const model = MODEL_FOR[spec.call];
-  const prompt = PROMPTS[spec.call];
+  const prompt = promptFor(spec.call, input);
   const capabilities = CAPABILITIES[model];
   const effort = EFFORT_FOR[spec.call];
   const format = betaZodOutputFormat(outputSchema);

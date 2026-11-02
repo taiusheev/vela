@@ -1,6 +1,6 @@
 import { genericChips, genericWeeklySuggestion } from "./defaults.ts";
 import { MODEL_FOR } from "./models.ts";
-import { PROMPTS } from "./prompts/index.ts";
+import { PROMPTS, promptFor } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -52,7 +52,14 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
       if (override !== undefined) {
         return override(input);
       }
-      return { ok: true, value: fallback(input), record: fakeRecord(call) };
+      return {
+        ok: true,
+        value: fallback(input),
+        record: {
+          ...fakeRecord(call),
+          promptVersion: promptFor(call, input).version,
+        },
+      };
     };
   }
 
@@ -100,7 +107,27 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         .filter((summary) => summary.length > 0)
         .slice(0, 4),
       suggestion: genericWeeklySuggestion(input.lang, input.elderName),
+      // The last day with a summary, as a real draft would build on what she said most recently.
+      suggestionDay:
+        input.days.filter((day) => (day.summary?.trim() ?? "") !== "").at(-1)?.date ?? null,
     })),
+    // Her first sentence, word for word, as a moment, so tests can see what flowed through.
+    memoryPick: method("memory_pick", overrides.memoryPick, (input) => {
+      const first = input.answer.split(/(?<=[.!?。！？])\s*/)[0]?.trim() ?? "";
+      return { picks: first.length === 0 ? [] : [{ quote: first, kind: "moment" as const }] };
+    }),
+    // Her first three moments as one story, titled with the first words of the first, so tests can
+    // see what flowed through.
+    storyWeave: method("story_weave", overrides.storyWeave, (input) => {
+      const [first] = input.moments;
+      if (input.moments.length < 3 || first === undefined) return { stories: [] };
+      const title = first.quote.split(/\s+/).slice(0, 3).join(" ");
+      return {
+        stories: [
+          { title, title_from: first.id, moments: input.moments.slice(0, 3).map((m) => m.id) },
+        ],
+      };
+    }),
     // Her answers as the steps, as she said them, so tests can see what flowed through.
     recipe: method("recipe", overrides.recipe, (input) => ({
       title: input.ask ?? "Recipe",

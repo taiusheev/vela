@@ -121,7 +121,8 @@
         "PUBLIC_BASE_URL": "https://vela-admin.vela-light.workers.dev",
         "TELEGRAM_BOT_USERNAME": "VelaLightbot",
         "AI_PROVIDER": "openai",
-        "LINE_CHANNEL": "off"
+        "LINE_CHANNEL": "on",
+        "LINE_BOT_BASIC_ID": "@675nhrpg"
       }
     }
   }

@@ -18,6 +18,7 @@ import {
   type AdminOverview,
   addContact,
   addToRoster,
+  approveFamily,
   type Config,
   type CreateInviteInput,
   createInvite,
@@ -34,11 +35,13 @@ import {
   loadDeadLetters,
   loadFailedOutbound,
   loadFamilyPage,
+  loadPilotFamilies,
   loadRoster,
   loadWaitlist,
   type MarkLeftResult,
   markDeceased,
   markLeft,
+  type PilotFamilyEntry,
   type RecordConsentInput,
   type RecordContactConsentInput,
   type ReplayRequest,
@@ -56,6 +59,7 @@ import {
   type TestWeekReport,
   type TrialOverview,
   type TrialReport,
+  unapproveFamily,
 } from "@vela/services";
 import { type AccessVerifier, createAccessVerifier } from "./access.ts";
 import { type AdminDeps, type AdminDepsHandle, buildAdminDeps } from "./deps.ts";
@@ -91,6 +95,18 @@ export interface AdminServices {
   loadRoster(deps: AdminDeps): Promise<RosterEntry[]>;
   addToRoster(deps: AdminDeps, ctx: AdminContext, id: string): Promise<"added" | "already">;
   removeFromRoster(deps: AdminDeps, ctx: AdminContext, id: string): Promise<"removed" | "absent">;
+  /** The closed test's families (ADR-52): every family, approved or waiting, and changes to it. */
+  loadPilotFamilies(deps: AdminDeps): Promise<PilotFamilyEntry[]>;
+  approveFamily(
+    deps: AdminDeps,
+    ctx: AdminContext,
+    familyId: string,
+  ): Promise<"approved" | "already">;
+  unapproveFamily(
+    deps: AdminDeps,
+    ctx: AdminContext,
+    familyId: string,
+  ): Promise<"unapproved" | "absent">;
   loadFamilyPage(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<FamilyPage | null>;
   recordConsent(deps: AdminDeps, ctx: AdminContext, input: RecordConsentInput): Promise<void>;
   recordContactConsent(
@@ -227,6 +243,9 @@ const services: AdminServices = {
   loadRoster: (deps) => loadRoster(deps),
   addToRoster: (deps, ctx, id) => addToRoster(deps, ctx, id),
   removeFromRoster: (deps, ctx, id) => removeFromRoster(deps, ctx, id),
+  loadPilotFamilies: (deps) => loadPilotFamilies(deps),
+  approveFamily: (deps, ctx, familyId) => approveFamily(deps, ctx, familyId),
+  unapproveFamily: (deps, ctx, familyId) => unapproveFamily(deps, ctx, familyId),
   loadFamilyPage: (deps, ctx, familyId) => loadFamilyPage(servicesDeps(deps), ctx, familyId),
   recordConsent: (deps, ctx, input) => recordConsent(servicesDeps(deps), ctx, input),
   recordContactConsent: (deps, ctx, input) => recordContactConsent(servicesDeps(deps), ctx, input),

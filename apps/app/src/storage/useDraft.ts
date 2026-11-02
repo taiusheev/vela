@@ -4,7 +4,7 @@ import { sessionScope } from "../data/live-state.ts";
 import { clearDraft, type PrivateDraft, readDraft, saveDraft } from "./drafts.ts";
 
 /** A native encrypted text draft, manually retried with the same write identity. */
-export function useDraft(name: string, initial = "") {
+export function useDraft(name: string, initial = "", persistent = true) {
   const account = useAccount();
   const scope = sessionScope(account);
   const [text, setText] = useState(initial);
@@ -15,6 +15,11 @@ export function useDraft(name: string, initial = "") {
     let current = true;
     setReady(false);
     setText(initial);
+    if (!persistent) {
+      value.current = { text: initial };
+      setReady(true);
+      return;
+    }
     void readDraft(scope, name).then((draft) => {
       if (!current) return;
       value.current = draft ?? { text: initial };
@@ -24,16 +29,17 @@ export function useDraft(name: string, initial = "") {
     return () => {
       current = false;
     };
-  }, [scope, name, initial]);
+  }, [scope, name, initial, persistent]);
   const changeText = useCallback(
     (next: string) => {
       setText(next);
       value.current = { ...value.current, text: next };
+      if (!persistent) return;
       void saveDraft(scope, name, value.current)
         .then(() => setSaveFailed(false))
         .catch(() => setSaveFailed(true));
     },
-    [scope, name],
+    [scope, name, persistent],
   );
   return {
     text,
@@ -62,17 +68,17 @@ export function useDraft(name: string, initial = "") {
       }
       const attempt = value.current.attempt;
       if (attempt === undefined) throw new Error("No write identity");
-      await saveDraft(scope, name, value.current);
+      if (persistent) await saveDraft(scope, name, value.current);
       return attempt.key;
     },
     clearAttempt: async () => {
       value.current = { text: value.current.text };
-      await saveDraft(scope, name, value.current);
+      if (persistent) await saveDraft(scope, name, value.current);
     },
     clear: async () => {
       value.current = { text: "" };
       setText("");
-      await clearDraft(scope, name);
+      if (persistent) await clearDraft(scope, name);
     },
   };
 }

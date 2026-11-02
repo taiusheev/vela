@@ -505,14 +505,32 @@ describe("disableApiAccount", () => {
     await disableApiAccount(h.deps, identity.authSubject);
     expect(
       await h.db.select().from(users).where(eq(users.authSubject, identity.authSubject)),
-    ).toEqual([{ ...before, deletedAt: timestamp }]);
+    ).toEqual([
+      {
+        ...before,
+        deletedAt: timestamp,
+        oneMomentADay: false,
+        replyNotifications: false,
+        turnReminders: false,
+      },
+    ]);
     expect(await receipts()).toEqual(others);
     expect(await challenges()).toEqual(otherChallenges);
     // Her own light is kept in the family (ADR-43): only its account link goes.
+    const releasedEffects = await sideEffects();
+    const revision = releasedEffects.members.find(
+      (row) => row.id === seed.member.id,
+    )?.memoryMembershipRevision;
+    expect(typeof revision).toBe("string");
+    expect(revision).not.toBe(
+      effects.members.find((row) => row.id === seed.member.id)?.memoryMembershipRevision,
+    );
     const unlinked = {
       ...effects,
       members: effects.members.map((row) =>
-        row.id === seed.member.id ? { ...row, userId: null } : row,
+        row.id === seed.member.id
+          ? { ...row, userId: null, memoryMembershipRevision: revision }
+          : row,
       ),
     };
     expect(await sideEffects()).toEqual(unlinked);
@@ -520,7 +538,15 @@ describe("disableApiAccount", () => {
     await disableApiAccount(h.deps, identity.authSubject);
     expect(
       await h.db.select().from(users).where(eq(users.authSubject, identity.authSubject)),
-    ).toEqual([{ ...before, deletedAt: timestamp }]);
+    ).toEqual([
+      {
+        ...before,
+        deletedAt: timestamp,
+        oneMomentADay: false,
+        replyNotifications: false,
+        turnReminders: false,
+      },
+    ]);
     await expect(provision()).rejects.toMatchObject(denied);
     await expect(update()).rejects.toMatchObject(denied);
     expect(await receipts()).toEqual(others);
@@ -629,6 +655,7 @@ describe("explicit app privacy permission", () => {
     const [first] = await h.db.select().from(users);
     expect(first?.privacyAcceptance).toEqual({
       version: APP_PRIVACY_VERSION,
+      lang: "en",
       text_sha256: await sha256Hex(APP_PRIVACY_TEXT),
       accepted_at: h.clock.now().toISOString(),
     });
@@ -637,6 +664,18 @@ describe("explicit app privacy permission", () => {
     const [again] = await h.db.select().from(users);
     expect(again?.privacyAcceptance).toEqual(first?.privacyAcceptance);
     expect((await loadApiMe(h.db, identity))?.privacy_accepted).toBe(true);
+  });
+  it("records the Chinese text's fingerprint when the permission was shown in Chinese", async () => {
+    const { appPrivacyAcceptance, APP_PRIVACY_TEXT_ZH_TW } = await import("@vela/contracts");
+    await provision("privacy-zh", {
+      ...profile,
+      privacy_acceptance: appPrivacyAcceptance("zh-TW"),
+    });
+    const [account] = await h.db.select().from(users);
+    expect(account?.privacyAcceptance).toMatchObject({
+      lang: "zh-TW",
+      text_sha256: await sha256Hex(APP_PRIVACY_TEXT_ZH_TW),
+    });
   });
   it("does not infer permission from an old app, a false answer or a made-up text version", async () => {
     await provision();
@@ -659,5 +698,79 @@ describe("explicit app privacy permission", () => {
     const [account] = await h.db.select().from(users);
     expect(account?.privacyAcceptance).toBeNull();
     expect(account?.deletedAt).not.toBeNull();
+  });
+});
+
+describe("individual notification preferences", () => {
+  it("refuses collecting choices while controls are off", async () => {
+    await provision();
+    await expect(update("disabled", { turn_reminders: false })).rejects.toMatchObject({
+      code: "unavailable",
+    });
+    expect(await receipts()).toHaveLength(1);
+    expect((await loadApiMe(h.db, identity))?.notification_preferences).toBeUndefined();
+  });
+
+  it("saves only the caller's choice, preserves the other choice, and replays safely", async () => {
+    await provision();
+    await provision("other", profile, other);
+    const deps = { ...h.deps, notificationControls: true };
+    const patch = { turn_reminders: false };
+    const first = await updateApiAccount(deps, identity, "turn-off", patch);
+    expect((await updateApiAccount(deps, identity, "turn-off", patch)).replayed).toBe(true);
+    expect(first.response.status).toBe(200);
+    expect(await loadApiMe(h.db, identity, true)).toMatchObject({
+      one_moment_a_day: true,
+      notification_preferences: { replies: true, turns: false },
+    });
+    expect(await loadApiMe(h.db, other, true)).toMatchObject({
+      notification_preferences: { replies: true, turns: true },
+    });
+    await updateApiAccount(deps, identity, "reply-off", { reply_notifications: false });
+    expect(await loadApiMe(h.db, identity, true)).toMatchObject({
+      one_moment_a_day: false,
+      notification_preferences: { replies: false, turns: false },
+    });
+    await updateApiAccount(deps, identity, "reply-on", { reply_notifications: true });
+    expect(await loadApiMe(h.db, identity, true)).toMatchObject({
+      one_moment_a_day: true,
+      notification_preferences: { replies: true, turns: false },
+    });
+    await expect(
+      updateApiAccount(deps, other, "bad-types", { reply_notifications: "off" }),
+    ).rejects.toMatchObject({ code: "invalid" });
+  });
+
+  it("lets an older app's combined switch control both choices", async () => {
+    await provision();
+    await update("legacy-off", { one_moment_a_day: false });
+    expect(await loadApiMe(h.db, identity, true)).toMatchObject({
+      notification_preferences: { replies: false, turns: false },
+    });
+    await updateApiAccount({ ...h.deps, notificationControls: true }, identity, "one-on", {
+      reply_notifications: true,
+    });
+    await update("legacy-on", { one_moment_a_day: true });
+    expect(await loadApiMe(h.db, identity, true)).toMatchObject({
+      notification_preferences: { replies: true, turns: true },
+    });
+  });
+
+  it("refuses unknown and deleted accounts, and clears saved choices on deletion", async () => {
+    const deps = { ...h.deps, notificationControls: true };
+    await expect(
+      updateApiAccount(deps, identity, "missing", { turn_reminders: false }),
+    ).rejects.toMatchObject({ code: "not_found" });
+    await provision();
+    await disableApiAccount(h.deps, identity.authSubject);
+    const [account] = await h.db.select().from(users);
+    expect(account).toMatchObject({
+      replyNotifications: false,
+      turnReminders: false,
+      oneMomentADay: false,
+    });
+    await expect(
+      updateApiAccount(deps, identity, "deleted", { turn_reminders: true }),
+    ).rejects.toMatchObject({ code: "not_found" });
   });
 });

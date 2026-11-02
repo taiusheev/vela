@@ -14,6 +14,8 @@ export const PUBLIC_SITE_PATHS: ReadonlySet<string> = new Set([
   ...SITE_LANGS.flatMap((lang) => [SITE_PATHS[lang].home, SITE_PATHS[lang].precision]),
   ...SITE_LANGS.flatMap((lang) => LEGAL_PAGES.map((page) => legalPath(lang, page))),
   WAITLIST_PATH,
+  "/analytics/config",
+  "/analytics/event",
   "/privacy",
   "/privacy/zh-TW",
   "/robots.txt",

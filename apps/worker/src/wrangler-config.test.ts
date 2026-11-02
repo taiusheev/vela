@@ -33,6 +33,14 @@ it("requires the private English trial roster in production", () => {
   expect(configOf("pilot", "production").vars.PILOT_ADMISSION).toBe("on");
 });
 
+// ADR-52: the Taiwan test (founder, 29 October 2026) admits approved families in English or
+// Traditional Chinese; privacy-notice v12, the live notice, names LINE and Chinese.
+it("admits families the founder approves, in English or Chinese, in production", () => {
+  const vars = configOf("pilot", "production").vars;
+  expect(vars.PILOT_FAMILY_APPROVAL).toBe("on");
+  expect(vars.PILOT_LANGUAGES).toBe("en,zh-TW");
+});
+
 /**
  * A deployed Worker's one address (H3): `https://<Worker name>.<subdomain>.workers.dev`, which is
  * what families, Telegram, and the founder's browser are sent to.
@@ -128,6 +136,12 @@ function pilotHeader(): string {
 }
 
 describe("the two Workers' configurations", () => {
+  it("keeps optional website analytics off until the separate project and notice rollout", () => {
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(configOf("pilot", environment).vars.SITE_ANALYTICS).toBeUndefined();
+      expect(configOf("pilot", environment).vars.POSTHOG_PROJECT_TOKEN).toBeUndefined();
+    }
+  });
   it("cover both Workers in every environment deploy.yml deploys, and development", () => {
     expect(configs.map(({ worker, environment }) => `${worker}:${environment}`)).toEqual([
       "pilot:development",
@@ -154,9 +168,11 @@ describe("the two Workers' configurations", () => {
   // Each deployed Worker answers on its workers.dev address, with no route and no preview URL,
   // because every hostname a Worker answers on is one more to reason about (Access on the admin
   // Worker would cover a preview URL too). The one exception is the public website's domain on
-  // staging's pilot Worker, where src/site-host.ts answers only the website's paths.
+  // pilot Workers, where src/site-host.ts answers only the website's paths. Staging retains the
+  // current bridge's Origin permission until the protected production deploy and bridge cutover;
+  // removing it first would make the live waitlist reject every browser submission.
   it.each(DEPLOYED)(
-    "serve %s on workers.dev only, naming the website's domain on staging",
+    "serve %s on workers.dev only, allowing the website during the staged bridge cutover",
     (environment) => {
       for (const worker of ["pilot", "admin"] as const) {
         const config = configOf(worker, environment);
@@ -165,7 +181,7 @@ describe("the two Workers' configurations", () => {
         // The website's domain is in another Cloudflare account (the founder's own), so no Worker
         // here can declare it; it reaches the pilot through a proxy there (site-host.ts).
         expect(config.routes ?? [], worker).toEqual([]);
-        const site = worker === "pilot" && environment === "staging" ? "vela-light.com" : null;
+        const site = worker === "pilot" ? "vela-light.com" : null;
         expect(config.vars.SITE_HOST ?? null, worker).toBe(site);
       }
     },
@@ -356,11 +372,12 @@ describe("the two Workers' configurations", () => {
     },
   );
 
-  // Production speaks LINE only once the design's last step turns it on (05 §8, step 11): a real
-  // family's plan, the privacy notice's new version, and LY's terms first. That step changes this.
-  it("keep LINE off in production, in both Workers", () => {
-    expect(configOf("pilot", "production").vars.LINE_CHANNEL).toBe("off");
-    expect(configOf("admin", "production").vars.LINE_CHANNEL).toBe("off");
+  // The design's last step (05 §8, step 11), for the Taiwan test: production speaks LINE as the
+  // "Vela Light" Official Account, whose webhook is the production pilot Worker.
+  it("turn LINE on in production, in both Workers, as Vela Light", () => {
+    expect(configOf("pilot", "production").vars.LINE_CHANNEL).toBe("on");
+    expect(configOf("admin", "production").vars.LINE_CHANNEL).toBe("on");
+    expect(configOf("pilot", "production").vars.LINE_BOT_BASIC_ID).toBe("@675nhrpg");
   });
 
   // A LINE invite link from either Worker must open the account whose webhook the pilot serves;
@@ -476,6 +493,10 @@ describe("the pilot Worker's bindings", () => {
         ...inbound,
         `vela-dead-letter${suffix}`,
       ]);
+      // A family's chat message, her voice and its words each wait at most a second for a batch.
+      for (const consumer of consumers(pilot).slice(0, 3)) {
+        expect(consumer.max_batch_timeout, String(consumer.queue)).toBe(1);
+      }
       // Technical plan 2.7: dead jobs are kept for the founder, with nowhere further to go.
       expect(consumers(pilot).at(-1)).toEqual({
         queue: `vela-dead-letter${suffix}`,
@@ -553,12 +574,22 @@ describe("the pilot Worker's bindings", () => {
   // ADR-34: no environment sends a push until the founder has set up Expo (with Enhanced Push
   // Security and its access token), Firebase and, for iPhones, Apple, and production none before a
   // privacy notice names Expo, Apple and Google. The commit that turns one on changes this pin.
-  it("send no push in any environment, a switch the pilot Worker alone holds", () => {
+  it("enables approved notification controls only for development and staging", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.NOTIFICATION_CONTROLS,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // ADR-34: pushes through Expo on staging and production since the founder put the access token
+  // with enhanced push security on (2 Nov 2026); a laptop never reaches Expo.
+  it("send pushes on the deployed Workers only, a switch the pilot Worker alone holds", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.PUSH_SEND,
       ),
-    ).toEqual(["off", "off", "off"]);
+    ).toEqual(["off", "expo", "expo"]);
     for (const environment of ["development", ...DEPLOYED] as const) {
       expect(Object.keys(configOf("admin", environment).vars), environment).not.toContain(
         "PUSH_SEND",
@@ -586,6 +617,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-58: the family's photo box keeps photos beyond 30 days, which the live notice does not yet
+  // describe, so it is on only where test families are. The commit that turns it on changes this.
+  it("keep the family's photo box in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.PHOTO_BOX,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // ADR-48: the founder's reading and each organiser's feedback, on where only test families are, and
   // off in production until the founder has told the family it applies to. The commit that turns it
   // on changes this.
@@ -597,6 +638,17 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-59: the weekly read sent as soon as it is drafted, everywhere since privacy-notice.v13 says so
+  // (founder: "no need me to check", 2 Nov 2026). The weekly insight stays off in production (below)
+  // until an organiser can switch their own feedback off, as v13 promises the founder can.
+  it("send the weekly read without waiting for the founder in every environment", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.WEEKLY_READ_AUTO_SEND,
+      ),
+    ).toEqual(["on", "on", "on"]);
+  });
+
   // ADR-49: Vela's suggestion sent in an organiser's name, at their choice, everywhere since
   // privacy-notice.v5 and consent-script.v4 describe it (founder's approval, 17 Oct 2026).
   it("let an organiser send Vela's suggestion as them in every environment", () => {
@@ -605,6 +657,48 @@ describe("the pilot Worker's bindings", () => {
         (environment) => configOf("pilot", environment).vars.SEND_AS_ME,
       ),
     ).toEqual(["on", "on", "on"]);
+  });
+
+  // The check-in (ADR-54, ADR-55): on everywhere since privacy-notice.v12 describes it (founder's
+  // approval of 27 Oct 2026).
+  it("sends the check-in in every environment", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.CHECK_IN,
+      ),
+    ).toEqual(["on", "on", "on"]);
+  });
+
+  // Memories (privacy-notice v7 wording, approved 22 Oct 2026): on where only test families are, off
+  // in production until v7 is the live notice and families are told. The commit that turns it on
+  // changes this.
+  it("offer each person their own memories in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.RICH_MEMORIES,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // Memory suggestions send screened answers to an AI call: on where only test families are (founder,
+  // 23 Oct 2026, after the live eval run), off in production until privacy-notice v7 is live and
+  // families are told. The commit that turns it on in production changes this.
+  it("suggests memories in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY_DISCOVERY,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // Stories send her screened phrases to an AI call again (ADR-51): on where only test families are,
+  // off in production until the notice describes them. The commit that turns it on changes this.
+  it("gathers stories from memories in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.MEMORY_STORIES,
+      ),
+    ).toEqual(["on", "on", "off"]);
   });
 
   // Expo's access token is a secret only the founder puts, never a value in a committed file.
@@ -726,4 +820,26 @@ describe("the admin Worker's bindings", () => {
       );
     },
   );
+});
+
+it("keeps new report processing, purpose approval and family roster off everywhere until approved", () => {
+  for (const environment of ["development", ...DEPLOYED] as const) {
+    const vars = configOf("pilot", environment).vars;
+    expect(vars.WEEKLY_SUPPORT).toBe("off");
+    expect(vars.WEEKLY_SUPPORT_NOTICE).toBe("");
+    expect(vars.WEEKLY_SUPPORT_FAMILIES).toBe("");
+  }
+});
+
+describe("personal question test release", () => {
+  it("enables reviewed drafting only for the synthetic staging test app", () => {
+    expect(configOf("pilot", "development").vars.PERSONAL_QUESTION_DRAFTS).toBe("off");
+    expect(configOf("pilot", "staging").vars.PERSONAL_QUESTION_DRAFTS).toBe("on");
+    expect(configOf("pilot", "production").vars.PERSONAL_QUESTION_DRAFTS).toBe("off");
+  });
+  it("keeps private profile collection off everywhere pending notice approval", () => {
+    for (const environment of ["development", ...DEPLOYED] as const) {
+      expect(configOf("pilot", environment).vars.PERSONAL_QUESTION_PROFILES).toBe("off");
+    }
+  });
 });

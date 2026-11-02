@@ -255,6 +255,7 @@ const CASES: Case[] = [
     output: {
       lines: ["Mom usually answered around 08:30.", "The tomatoes were mentioned twice."],
       suggestion: "Mom, how are the tomatoes doing?",
+      suggestionDay: null,
     },
     run: (ai) => ai.weeklyRead(weeklyReadInput),
   },
@@ -599,7 +600,11 @@ describe("createClaudeAi line counts", () => {
   });
 
   it("accepts a weekly read with no lines, so a week with nothing to say is not a failure", async () => {
-    const empty = { lines: [], suggestion: "Mom, how was your first morning?" };
+    const empty = {
+      lines: [],
+      suggestion: "Mom, how was your first morning?",
+      suggestionDay: null,
+    };
     const { ai } = clientWith([jsonReply("claude-sonnet-5", empty)]);
 
     const outcome = await ai.weeklyRead({ ...weeklyReadInput, days: [], usualAnswerTime: null });
@@ -632,7 +637,7 @@ describe("createClaudeAi line counts", () => {
       expect(outcome).toMatchObject({
         ok: false,
         error: "schema_invalid",
-        value: { lines: [], suggestion },
+        value: { lines: [], suggestion, suggestionDay: null },
       });
       expect(WeeklyRead.safeParse(outcome.value).success).toBe(true);
     }

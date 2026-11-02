@@ -1,3 +1,4 @@
+import { createFakeAi } from "@vela/ai";
 import type {
   ApiComposedAsk,
   ApiCreatedFamily,
@@ -25,6 +26,8 @@ import {
   MemberChangeRefusedError,
   NearbyInviteRefusedError,
   NearbyRefusedError,
+  PhotoBoxRefusedError,
+  QuestionProfileChangedError,
   QuietUsefulRefusedError,
   ReplyRefusedError,
   type SessionIdentity,
@@ -291,7 +294,15 @@ function database(): VelaDatabase {
 function fixture(
   enableWrites = false,
   push?: boolean,
-  options: Pick<ApiRuntime, "admission" | "capabilities" | "parentConnection"> = {},
+  options: Pick<
+    ApiRuntime,
+    | "admission"
+    | "capabilities"
+    | "parentConnection"
+    | "notificationControls"
+    | "personalQuestions"
+    | "questionProfiles"
+  > = {},
 ) {
   const db = database();
   const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -304,16 +315,29 @@ function fixture(
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>().mockResolvedValue(LIGHTS),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>().mockResolvedValue(TODAY),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>().mockResolvedValue(FAMILY),
-    loadApiBook: vi
-      .fn<ApiReadServices["loadApiBook"]>()
-      .mockResolvedValue({ entries: [], coming: [], recipes: [] }),
+    loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({
+      entries: [],
+      coming: [],
+      recipes: [],
+      suggestions: [],
+      moments: [],
+      stories: [],
+    }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
+    loadApiPhotoBox: vi
+      .fn<ApiReadServices["loadApiPhotoBox"]>()
+      .mockResolvedValue({ photos: [], limit: 40, next: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
+    loadApiPlannedQuestions: vi.fn().mockResolvedValue({ questions: [] }),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>().mockResolvedValue(EXCHANGE_PAGE),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>().mockResolvedValue(QUIET_NOTICE),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>().mockResolvedValue(WEEKLY_READ),
+    listApiWeeklyReads: vi.fn<ApiReadServices["listApiWeeklyReads"]>().mockResolvedValue({
+      member_id: MEMBER_ID,
+      reads: [],
+    }),
     loadApiPrecision: vi.fn<ApiReadServices["loadApiPrecision"]>().mockResolvedValue(PRECISION),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>().mockResolvedValue(null),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>().mockResolvedValue([]),
@@ -359,6 +383,7 @@ function fixture(
           replayed: false,
         }),
       telegramBotUsername: "VelaTestBot",
+      lineBasicId: null as string | null,
     },
     verifyActiveSession: vi
       .fn<NonNullable<ApiRuntime["writes"]>["verifyActiveSession"]>()
@@ -431,6 +456,7 @@ function fixture(
           replayed: false,
         }),
       setApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
+      editApiAsk: vi.fn(),
       withdrawApiAsk: vi.fn().mockRejectedValue(new Error("no withdraw in these tests")),
       markApiDeceased: vi.fn().mockRejectedValue(new Error("no deceased in these tests")),
       endApiAway: vi.fn().mockRejectedValue(new Error("no away in these tests")),
@@ -456,9 +482,15 @@ function fixture(
         .mockRejectedValue(new Error("no voice upload in these tests")),
       createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      addToApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      changeApiPhotoBoxPhoto: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      removeFromApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      keepBoxPhotoStored: vi.fn().mockResolvedValue(true),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
+      keepApiAnswer: vi.fn().mockRejectedValue(new Error("no keeping in these tests")),
+      dismissApiSuggestion: vi.fn().mockRejectedValue(new Error("no suggestions in these tests")),
       askApiToLookIn: vi
         .fn<NonNullable<ApiRuntime["writes"]>["services"]["askApiToLookIn"]>()
         .mockResolvedValue({
@@ -544,6 +576,7 @@ describe("pilot capabilities and secure Telegram linking", () => {
     english_only: true,
     memory: false,
     book: false,
+    photo_box: false,
     parent_app: false,
     billing: false,
   };
@@ -615,6 +648,20 @@ describe("pilot capabilities and secure Telegram linking", () => {
       IDENTITY,
       "request-1",
     );
+  });
+
+  it("offers the same proof through Vela's LINE account where LINE is on (ADR-52)", async () => {
+    const f = fixture(true);
+    f.writes.links.lineBasicId = "@vela";
+    const response = await f.app.request(
+      writeRequest("POST", "/v1/me/link", "{}", { authorization: "Bearer good" }),
+    );
+    await expectResponse(response, 201, {
+      challenge_id: USER_ID,
+      expires_at: "2026-09-22T00:15:00.000Z",
+      telegram_url: `https://t.me/VelaTestBot?start=link_${USER_ID}`,
+      line_url: `https://line.me/R/oaMessage/%40vela/?%2Fstart%20link_${USER_ID}`,
+    });
   });
 
   it("completes through the proof service with the approved roster and honours replay", async () => {
@@ -811,7 +858,7 @@ describe("isolated API read routes", () => {
     await expectResponse(await f.app.request(request), 200, ME_BODY);
     expect(f.verifySession).toHaveBeenCalledExactlyOnceWith(request);
     expect(f.openDatabase).toHaveBeenCalledExactlyOnceWith();
-    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     expect(f.services.loadApiMe.mock.calls[0]?.[1]).toBe(IDENTITY);
     expect(f.services.authorizeFamilyAccess).not.toHaveBeenCalled();
     expect(f.services.loadApiFamilyPlan).not.toHaveBeenCalled();
@@ -873,7 +920,7 @@ describe("isolated API read routes", () => {
     expect(readJson).not.toHaveBeenCalled();
     expect(request.bodyUsed).toBe(false);
     if (path === "/v1/me") {
-      expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+      expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     } else {
       expect(f.services.authorizeFamilyAccess).toHaveBeenCalledExactlyOnceWith(
         f.db,
@@ -947,7 +994,7 @@ describe("isolated API read routes", () => {
     f.services.loadApiMe.mockResolvedValue(null);
 
     await expectResponse(await f.app.request("/v1/me"), 404, NOT_FOUND);
-    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY);
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, false);
     expect(f.services.authorizeFamilyAccess).not.toHaveBeenCalled();
     expect(f.services.loadApiFamilyPlan).not.toHaveBeenCalled();
     expect(f.close).toHaveBeenCalledOnce();
@@ -1945,7 +1992,62 @@ describe("the weekly read", () => {
       FAMILY_ID,
       MEMBER_ID,
       new Date("2026-09-22T00:00:00.000Z"),
+      {},
     );
+  });
+
+  it("opens one of her earlier weeks by id", async () => {
+    const f = fixture();
+    const earlier = "0199a6b0-0000-7000-8000-000000000042";
+    await expectResponse(
+      await f.app.request(`${WEEKLY_READ_PATH}&read=${earlier}`, {
+        headers: { authorization: "Bearer good" },
+      }),
+      200,
+      WEEKLY_READ,
+    );
+    expect(f.services.loadApiWeeklyRead).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+      new Date("2026-09-22T00:00:00.000Z"),
+      { readId: earlier },
+    );
+  });
+
+  it("lists her sent weeks to an organiser, and nothing to anyone else", async () => {
+    const f = fixture();
+    const list = {
+      member_id: MEMBER_ID,
+      reads: [
+        {
+          id: "0199a6b0-0000-7000-8000-000000000042",
+          week_start: "2026-09-14",
+          week_end: "2026-09-20",
+          sent_at: "2026-09-20T12:00:00.000Z",
+        },
+      ],
+    };
+    f.services.listApiWeeklyReads.mockResolvedValue(list);
+    const path = WEEKLY_READ_PATH.replace("/weekly-read?", "/weekly-reads?");
+    await expectResponse(
+      await f.app.request(path, { headers: { authorization: "Bearer good" } }),
+      200,
+      list,
+    );
+    f.services.listApiWeeklyReads.mockResolvedValue(null);
+    await expectResponse(
+      await f.app.request(path, { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind: "forbidden" });
+    const before = f.services.listApiWeeklyReads.mock.calls.length;
+    expect((await f.app.request(path, { headers: { authorization: "Bearer good" } })).status).toBe(
+      403,
+    );
+    expect(f.services.listApiWeeklyReads.mock.calls.length).toBe(before);
   });
 
   it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {
@@ -2180,6 +2282,85 @@ describe("composing an ask", () => {
     expect(writes.nudges.deliver).toHaveBeenCalledWith("group-row");
   });
 
+  it("acknowledges a committed message while its queue handoff is still waiting", async () => {
+    const { app, writes, close } = fixture(true);
+    let release: (() => void) | undefined;
+    const queued = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    writes.nudges.deliver.mockReturnValue(queued);
+    const background: Promise<unknown>[] = [];
+    let response: Response | undefined;
+    const request = Promise.resolve(
+      app.fetch(composeRequest(undefined, { authorization: "Bearer good" }), undefined, {
+        waitUntil: (work) => {
+          background.push(work);
+        },
+        passThroughOnException() {},
+        props: {},
+      }),
+    ).then((value) => {
+      response = value;
+    });
+    try {
+      await vi.waitFor(() => expect(response?.status).toBe(201));
+      expect(background).toHaveLength(1);
+      expect(writes.nudges.deliver).toHaveBeenCalledWith("group-row");
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      release?.();
+      await request;
+      await Promise.all(background);
+    }
+  });
+
+  it("still awaits the queue when no Worker lifetime is available", async () => {
+    const { app, writes } = fixture(true);
+    let release: (() => void) | undefined;
+    writes.nudges.deliver.mockReturnValue(
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    let settled = false;
+    const request = Promise.resolve(
+      app.request(composeRequest(undefined, { authorization: "Bearer good" })),
+    ).then((response) => {
+      settled = true;
+      return response;
+    });
+    try {
+      await vi.waitFor(() => expect(writes.nudges.deliver).toHaveBeenCalled());
+      expect(settled).toBe(false);
+    } finally {
+      release?.();
+    }
+    expect((await request).status).toBe(201);
+  });
+
+  it("keeps acceptance and safe failure reporting when a background queue handoff fails", async () => {
+    const { app, writes, logger } = fixture(true);
+    writes.nudges.deliver.mockRejectedValue(new Error("synthetic private content"));
+    const background: Promise<unknown>[] = [];
+    const response = await app.fetch(
+      composeRequest(undefined, { authorization: "Bearer good" }),
+      undefined,
+      {
+        waitUntil: (work) => {
+          background.push(work);
+        },
+        passThroughOnException() {},
+        props: {},
+      },
+    );
+    await Promise.all(background);
+    expect(response.status).toBe(201);
+    expect(logger.error).toHaveBeenCalledWith("api_after_commit_deliver_failed", {
+      outboundId: "group-row",
+    });
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain("synthetic private content");
+  });
+
   it("marks a replayed compose so the screen knows nothing new was written", async () => {
     const { app, writes } = fixture(true);
     writes.services.composeApiAsk.mockResolvedValue({
@@ -2275,6 +2456,17 @@ describe("replying to an exchange", () => {
     );
     // The path has no family, so no family middleware runs: the service authorizes by exchange.
     expect(services.authorizeFamilyAccess).not.toHaveBeenCalled();
+  });
+
+  it("answers 200 with the heart already there when the member gave this reaction before", async () => {
+    const { app, writes } = fixture(true);
+    writes.services.replyToApiExchange.mockResolvedValue({
+      response: { status: 200, body: REPLY },
+      replayed: false,
+    });
+    const response = await app.request(replyRequest({ reaction: "heart" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(REPLY);
   });
 
   it("answers 404 when the service cannot find the exchange for this caller", async () => {
@@ -3438,5 +3630,410 @@ describe("Telegram approval API", () => {
     );
     f.verifySession.mockResolvedValue(null);
     expect((await f.app.request(path)).status).toBe(401);
+  });
+});
+
+describe("planned question routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/questions`;
+  const editPath = `/v1/exchanges/${MEMBER_ID}/edit`;
+  const good = { authorization: "Bearer good" };
+  const input = { text: "Mom, how did the basil turn out?", date: "2026-09-25" };
+  it("authenticates schedule reads and keeps cross-family reads hidden", async () => {
+    const f = fixture(true);
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(path)).status).toBe(401);
+    expect(f.services.loadApiPlannedQuestions).not.toHaveBeenCalled();
+    await expectResponse(await f.app.request(path, { headers: good }), 200, { questions: [] });
+    expect(f.services.loadApiPlannedQuestions).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      FAMILY_ID,
+    );
+    f.services.loadApiPlannedQuestions.mockResolvedValue(null);
+    expect((await f.app.request(path, { headers: good })).status).toBe(404);
+  });
+  it("validates edits before invoking writes and passes the idempotency key", async () => {
+    const f = fixture(true);
+    f.verifySession.mockResolvedValueOnce(null);
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input)))).status,
+    ).toBe(401);
+    expect(
+      (
+        await f.app.request(
+          writeRequest("POST", editPath, JSON.stringify({ ...input, date: "bad" }), good),
+        )
+      ).status,
+    ).toBe(400);
+    expect(f.writes.services.editApiAsk).not.toHaveBeenCalled();
+    f.writes.services.editApiAsk.mockResolvedValue({
+      response: { status: 200, body: { id: MEMBER_ID, state: "composed" } },
+      replayed: true,
+    });
+    const response = await f.app.request(
+      writeRequest("POST", editPath, JSON.stringify(input), good),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Idempotency-Replayed")).toBe("true");
+    expect(f.writes.services.editApiAsk).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      MEMBER_ID,
+      input,
+    );
+  });
+  it("does not mount writes without the write capability and maps missing or occupied asks", async () => {
+    const without = fixture();
+    expect(
+      (await without.app.request(writeRequest("POST", editPath, JSON.stringify(input), good)))
+        .status,
+    ).toBe(404);
+    const f = fixture(true);
+    f.writes.services.editApiAsk.mockRejectedValue(
+      new VelaError("not_found", "Exchange not found"),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input), good))).status,
+    ).toBe(404);
+    f.writes.services.editApiAsk.mockRejectedValue(
+      new AskDayTakenError({ taken_by: "Sam", date_alternative: null }),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", editPath, JSON.stringify(input), good))).status,
+    ).toBe(409);
+  });
+});
+
+describe("individual notification controls wiring", () => {
+  it("reads the two choices only through the enabled server capability", async () => {
+    const f = fixture(false, false, { notificationControls: true });
+    const preferences = { replies: true, turns: false };
+    f.services.loadApiMe.mockResolvedValue({ ...ME, notification_preferences: preferences });
+    await expectResponse(
+      await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } }),
+      200,
+      { ...ME_BODY, notification_preferences: preferences },
+    );
+    expect(f.services.loadApiMe).toHaveBeenCalledExactlyOnceWith(f.db, IDENTITY, true);
+  });
+
+  it("passes the rollout gate to the idempotent account preference write", async () => {
+    const f = fixture(true, false, { notificationControls: true });
+    const response = await f.app.request(
+      writeRequest("PATCH", "/v1/me", JSON.stringify({ turn_reminders: false }), {
+        authorization: "Bearer good",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(f.writes.services.updateApiAccount).toHaveBeenCalledExactlyOnceWith(
+      { db: f.db, clock: f.writes.clock, notificationControls: true },
+      IDENTITY,
+      "request-1",
+      { turn_reminders: false },
+    );
+  });
+});
+
+describe("reviewed personal question route", () => {
+  const path = `/v1/families/${FAMILY_ID}/personal-question-drafts`;
+  const input = {
+    recipient_id: MEMBER_ID,
+    language: "en",
+    address_form: "Mom",
+    context: {
+      intent: "How is the garden?",
+      connection: "practical",
+      talking_rhythm: "rarely",
+      avoid_topics: [],
+      never_say: [],
+    },
+    writing_examples: [],
+  };
+  const request = (body: unknown = input, auth = "good") =>
+    writeRequest("POST", path, JSON.stringify(body), { authorization: `Bearer ${auth}` });
+  function enabled() {
+    const draft = vi
+      .fn<NonNullable<ApiRuntime["personalQuestions"]>["draft"]>()
+      .mockResolvedValue({ state: "review", text: "mom how is the garden?", language: "en" });
+    const personalQuestions = { draft, ai: createFakeAi(), config: {} };
+    return { ...fixture(true, undefined, { personalQuestions }), draft };
+  }
+  it("is absent and unadvertised by default", async () => {
+    const f = fixture(true);
+    expect((await f.app.request(request())).status).toBe(404);
+    expect(await (await f.app.request("/v1/capabilities")).json()).not.toHaveProperty(
+      "personal_questions",
+      true,
+    );
+  });
+  it("requires authentication, input validation, and an active session", async () => {
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(request(input, "bad"))).status).toBe(401);
+    expect((await f.app.request(request({ ...input, author_id: MEMBER_ID }))).status).toBe(400);
+    f.writes.verifyActiveSession.mockResolvedValueOnce(false);
+    expect((await f.app.request(request())).status).toBe(401);
+    expect(f.draft).not.toHaveBeenCalled();
+  });
+  it("returns an uncached review, passes verified identity, and never composes or sends", async () => {
+    const f = enabled();
+    const response = await f.app.request(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ state: "review" });
+    expect(f.draft).toHaveBeenCalledWith(
+      expect.objectContaining({ db: f.db }),
+      IDENTITY,
+      FAMILY_ID,
+      input,
+    );
+    expect(f.writes.services.composeApiAsk).not.toHaveBeenCalled();
+    expect(f.writes.nudges.deliver).not.toHaveBeenCalled();
+    expect(await (await f.app.request("/v1/capabilities")).json()).toHaveProperty(
+      "personal_questions",
+      true,
+    );
+  });
+});
+
+describe("the photo box (ADR-58)", () => {
+  const BOX_PATH = `/v1/families/${FAMILY_ID}/photo-box`;
+  const BOX_ID = "44444444-4444-7444-8444-444444444444";
+  const MEDIA_ID = "55555555-5555-7555-8555-555555555555";
+  const PHOTO = {
+    id: BOX_ID,
+    media_id: MEDIA_ID,
+    era: "old",
+    caption: "Our first flat",
+    width: 640,
+    height: 480,
+    added_by_name: "Mia",
+    can_change: true,
+    last_used_on: null,
+  } as const;
+  const boxOn = {
+    capabilities: {
+      pilot: false,
+      telegram_first: false,
+      english_only: false,
+      memory: false,
+      book: false,
+      photo_box: true,
+      parent_app: true,
+      billing: true,
+    },
+  };
+  const ADD = JSON.stringify({ media_id: MEDIA_ID, era: "old", caption: "Our first flat" });
+  const auth = { authorization: "Bearer good" };
+
+  it("is absent where the box is off, before any database or service", async () => {
+    const f = fixture(true);
+    expect((await f.app.request(BOX_PATH, { headers: auth })).status).toBe(404);
+    expect((await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth))).status).toBe(404);
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
+        .status,
+    ).toBe(404);
+    expect(f.services.loadApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.writes.services.addToApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it("answers the box to a member of the family", async () => {
+    const f = fixture(true, undefined, boxOn);
+    const next = {
+      member_id: "66666666-6666-7666-8666-666666666666",
+      name: "Mom",
+      type: "memory_photo" as const,
+      box_ids: [BOX_ID],
+      text: "An old photo from your family: “Our first flat”. What do you remember about that time?",
+      signature: "— Vela",
+    };
+    f.services.loadApiPhotoBox.mockResolvedValue({ photos: [PHOTO], limit: 40, next: [next] });
+    await expectResponse(await f.app.request(BOX_PATH, { headers: auth }), 200, {
+      photos: [PHOTO],
+      limit: 40,
+      next: [next],
+    });
+    expect(f.services.loadApiPhotoBox).toHaveBeenCalledWith(expect.anything(), IDENTITY, FAMILY_ID);
+  });
+
+  it.each(["not_found", "forbidden"] as const)("a %s family guard skips the read", async (kind) => {
+    const f = fixture(true, undefined, boxOn);
+    f.services.authorizeFamilyAccess.mockResolvedValue({ kind });
+    expect((await f.app.request(BOX_PATH, { headers: auth })).status).toBe(
+      kind === "not_found" ? 404 : 403,
+    );
+    expect(f.services.loadApiPhotoBox).not.toHaveBeenCalled();
+  });
+
+  it("adds a photo, answering 201", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.addToApiPhotoBox.mockResolvedValue({
+      response: { status: 201, body: PHOTO },
+      replayed: false,
+    });
+    const response = await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth));
+    await expectResponse(response, 201, PHOTO);
+    expect(response.headers.get("idempotency-replayed")).toBe("false");
+    expect(f.writes.services.addToApiPhotoBox).toHaveBeenCalledWith(
+      expect.anything(),
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      { media_id: MEDIA_ID, era: "old", caption: "Our first flat" },
+    );
+  });
+
+  it("refuses a body the contract does not allow before the service", async () => {
+    const f = fixture(true, undefined, boxOn);
+    const tooLong = JSON.stringify({ media_id: MEDIA_ID, era: "new", caption: "x".repeat(141) });
+    expect((await f.app.request(writeRequest("POST", BOX_PATH, tooLong, auth))).status).toBe(400);
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}`, "{}", auth))).status,
+    ).toBe(400);
+    expect(f.writes.services.addToApiPhotoBox).not.toHaveBeenCalled();
+    expect(f.writes.services.changeApiPhotoBoxPhoto).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["photo_missing", 404, "not_found", "That photo is no longer here."],
+    ["in_box", 409, "conflict", "That photo is already in the photo box."],
+    ["box_full", 409, "conflict", "The photo box is full."],
+  ] as const)("answers a %s refusal with %i", async (reason, status, code, message) => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.addToApiPhotoBox.mockRejectedValue(new PhotoBoxRefusedError(reason));
+    await expectResponse(await f.app.request(writeRequest("POST", BOX_PATH, ADD, auth)), status, {
+      error: { code, message, details: { reason } },
+    });
+    expect(f.logger.error).not.toHaveBeenCalled();
+  });
+
+  it("changes and removes a photo by its id", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.changeApiPhotoBoxPhoto.mockResolvedValue({
+      response: { status: 200, body: { ...PHOTO, caption: null } },
+      replayed: false,
+    });
+    f.writes.services.removeFromApiPhotoBox.mockResolvedValue({
+      response: { status: 200, body: { id: BOX_ID, removed: true } },
+      replayed: true,
+    });
+    await expectResponse(
+      await f.app.request(
+        writeRequest("POST", `/v1/photo-box/${BOX_ID}`, JSON.stringify({ caption: null }), auth),
+      ),
+      200,
+      { ...PHOTO, caption: null },
+    );
+    const removed = await f.app.request(
+      writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth),
+    );
+    await expectResponse(removed, 200, { id: BOX_ID, removed: true });
+    expect(removed.headers.get("idempotency-replayed")).toBe("true");
+  });
+
+  it("answers 404 for a photo the caller may not change", async () => {
+    const f = fixture(true, undefined, boxOn);
+    f.writes.services.removeFromApiPhotoBox.mockRejectedValue(
+      new VelaError("not_found", "Photo not found"),
+    );
+    expect(
+      (await f.app.request(writeRequest("POST", `/v1/photo-box/${BOX_ID}/remove`, "{}", auth)))
+        .status,
+    ).toBe(404);
+  });
+});
+
+describe("private question profile routes", () => {
+  const path = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/question-profile`;
+  const input = {
+    expected_revision: null,
+    notice_version: "question-profile.1",
+    settings: {
+      language: "en",
+      address_form: "dad",
+      context: {
+        connection: "practical",
+        talking_rhythm: "rarely",
+        avoid_topics: [],
+        never_say: [],
+      },
+      writing_examples: [],
+    },
+  };
+  function enabled(admitted = true) {
+    const load = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["load"]>()
+      .mockResolvedValue({ revision: null, profile: null, saving_available: false });
+    const save = vi.fn<NonNullable<ApiRuntime["questionProfiles"]>["save"]>().mockResolvedValue({
+      response: {
+        status: 200,
+        body: { saved: true, revision: MEMBER_ID, expires_at: "2026-11-30T00:00:00.000Z" },
+      },
+      replayed: false,
+    });
+    const forget = vi
+      .fn<NonNullable<ApiRuntime["questionProfiles"]>["forget"]>()
+      .mockResolvedValue({ response: { status: 200, body: { forgotten: true } }, replayed: false });
+    const permitsAccount = vi.fn().mockResolvedValue(admitted);
+    return {
+      ...fixture(true, undefined, {
+        questionProfiles: { saving: false, config: {}, load, save, forget },
+        admission: { config: { telegramUserIds: [] }, permitsAccount },
+      }),
+      load,
+      save,
+      forget,
+    };
+  }
+  const write = (suffix: string, body: unknown) =>
+    writeRequest("POST", `${path}/${suffix}`, JSON.stringify(body), {
+      authorization: "Bearer good",
+    });
+  it("is 404 when not mounted and requires authentication when mounted", async () => {
+    expect((await fixture(true).app.request(path)).status).toBe(404);
+    const f = enabled();
+    f.verifySession.mockResolvedValueOnce(null);
+    expect((await f.app.request(path)).status).toBe(401);
+  });
+  it("allows uncached own-data reads and forget while pilot admission refuses other work", async () => {
+    const f = enabled(false);
+    const read = await f.app.request(path, { headers: { authorization: "Bearer good" } });
+    expect(read.status).toBe(200);
+    expect(read.headers.get("cache-control")).toBe("no-store");
+    expect(f.load).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      FAMILY_ID,
+      MEMBER_ID,
+    );
+    const remove = await f.app.request(write("forget", {}));
+    expect(remove.status).toBe(200);
+    expect(f.forget).toHaveBeenCalledWith(
+      expect.objectContaining({ savingEnabled: false }),
+      IDENTITY,
+      "request-1",
+      FAMILY_ID,
+      MEMBER_ID,
+      {},
+    );
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    expect(f.save).not.toHaveBeenCalled();
+  });
+  it("validates ownership in the service and maps stale saves to a usable 409", async () => {
+    const f = enabled();
+    expect((await f.app.request(write("save", { ...input, author_id: USER_ID }))).status).toBe(400);
+    f.save.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("save", input))).status).toBe(404);
+    f.save.mockRejectedValueOnce(new QuestionProfileChangedError());
+    const conflict = await f.app.request(write("save", input));
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({
+      error: { code: "conflict", details: { reason: "question_profile_changed" } },
+    });
+    f.forget.mockRejectedValueOnce(new VelaError("not_found", "Not found"));
+    expect((await f.app.request(write("forget", {}))).status).toBe(404);
   });
 });

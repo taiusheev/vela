@@ -15,6 +15,7 @@ import type {
   DeadLetterRow,
   FailedOutboundRow,
   FamilyPage,
+  PilotFamilyEntry,
   QuietPrecisionMonth,
 } from "@vela/services";
 import { type Html, html, page, type Renderable } from "./html.ts";
@@ -331,12 +332,16 @@ const ROSTER_RESULTS: Record<string, string> = {
   already: "That id was already approved.",
   removed: "Removed. Their family's automatic work pauses; stop and deletion still answer them.",
   absent: "That id was not on the roster.",
+  approved: "Family approved. It takes part from its next message, on Telegram or LINE.",
+  unapproved:
+    "Approval removed. The family's automatic work pauses; stop and deletion still answer.",
 };
 
 /** The English trial's approved Telegram ids (ADR-45), with a form to add one and a button to remove. */
 export function renderRoster(
   entries: readonly { readonly telegramUserId: string; readonly addedAt: Date }[],
   result: string | null,
+  families: readonly PilotFamilyEntry[] = [],
 ): Response {
   const path = `${ADMIN_PATH}/roster`;
   const note = result === null ? null : ROSTER_RESULTS[result];
@@ -350,6 +355,15 @@ ${table(
   entries.map(
     (entry) =>
       html`<tr><td>${entry.telegramUserId}</td><td>${instant(entry.addedAt)}</td><td><form method="post" action="${path}/${entry.telegramUserId}/remove"><button type="submit">Remove</button></form></td></tr>`,
+  ),
+)}
+<h2>Families</h2>
+<p class="lede">With family approval on (ADR-52), an approved family takes part on Telegram or LINE with everyone who joins it by its invite. A family that is waiting gets nothing automatic, and her light does not start, until you approve it. Open a family to see who it is before approving.</p>
+${table(
+  ["Family", "Started (UTC)", "Language", "People", "Messenger", "Approved (UTC)", ""],
+  families.map(
+    (family) =>
+      html`<tr><td><a href="${familyHref(family.familyId)}">${family.familyId.slice(0, 8)}</a></td><td>${instant(family.createdAt)}</td><td>${family.language}</td><td>${family.members}</td><td>${family.messengers.length === 0 ? "none yet" : family.messengers.join(", ")}</td><td>${family.approvedAt === null ? "waiting" : instant(family.approvedAt)}</td><td><form method="post" action="${path}/families/${family.familyId}/${family.approvedAt === null ? "approve" : "unapprove"}"><button type="submit">${family.approvedAt === null ? "Approve" : "Remove approval"}</button></form></td></tr>`,
   ),
 )}`;
   return page("Trial roster · Vela admin", body);

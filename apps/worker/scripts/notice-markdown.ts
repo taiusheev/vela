@@ -288,7 +288,8 @@ export function renderNotices(sources: Readonly<Record<NoticeLang, string>>): Pr
   }
   return {
     en: { ...renderNotice(sources.en), version: en, language: "en" },
-    "zh-TW": { ...renderNotice(sources["zh-TW"]), version: zhTw, language: "en" },
+    // Since privacy-notice.v10 (ADR-52) the Chinese notice is written in Chinese.
+    "zh-TW": { ...renderNotice(sources["zh-TW"]), version: zhTw, language: "zh-TW" },
   };
 }
 

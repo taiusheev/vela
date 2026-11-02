@@ -61,6 +61,7 @@ export function toTodayLight(light: MemberLight): TodayLight {
     memberId: light.member_id,
     displayName: light.display_name,
     ...(light.tz === undefined ? {} : { timeZone: light.tz }),
+    ...(light.interests === undefined ? {} : { interests: light.interests }),
     ...(light.local_date === undefined ? {} : { localDate: light.local_date }),
     state: invited ? "resting" : (light.state as LightState),
     stateText: stateText(light),
@@ -84,6 +85,8 @@ function wordlessAnswer(answer: ApiTodayAnswer): string {
       return t`sent a heart`;
     case "fine":
       return t`said she is fine`;
+    case "not_okay":
+      return t`said she is not okay`;
     case "photo":
       return t`sent a photo`;
     case "photo_pick": {
@@ -222,6 +225,15 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
   return {
     lights: day.lights.map((light) => ({
       ...toTodayLight(light),
+      ...(() => {
+        const explicit = day.not_okay?.find((row) => row.member_id === light.member_id);
+        // Compatibility with an older server: its current morning can still carry the tap.
+        const answer = day.exchanges.find((row) => row.recipient_id === light.member_id)?.answer;
+        const at = explicit?.at ?? (answer?.kind === "not_okay" ? answer.at : undefined);
+        return at === undefined
+          ? {}
+          : { notOkayAt: timeOfDay(at, light.tz), stateText: t`said she is not okay` };
+      })(),
       ...(day.connection_days?.find((row) => row.member_id === light.member_id) === undefined
         ? {}
         : {
@@ -234,6 +246,10 @@ export function toToday(day: ApiToday, viewerMemberId?: string): Today {
       const light = day.lights.find((row) => row.member_id === exchange.recipient_id);
       return {
         ...toTodayExchange(exchange, light?.tz),
+        ...(viewerMemberId !== undefined &&
+        exchange.replies.some((reply) => reply.kind === "heart" && reply.from_id === viewerMemberId)
+          ? { heartedByMe: true as const }
+          : {}),
         ...(exchange.answer === null &&
         exchange.delivery_status !== "pending" &&
         exchange.delivery_status !== "failed"
@@ -271,7 +287,7 @@ export interface TodayView {
    */
   photos: boolean;
   updatedAt: number;
-  refresh(): void;
+  refresh(): Promise<void>;
   /**
    * Whether the API sends pushes (`ApiMe.push`, ADR-34). While it does not, nothing offers
    * notifications in passing, since none would come; You still shows this phone's state.
@@ -309,15 +325,16 @@ export function useToday(): TodayView {
     queryKey: ["today", familyId],
     enabled: enabled && familyId !== undefined,
     queryFn: async () => fetchToday(familyId ?? "", await account.token()),
-    refetchInterval: 30_000,
+    // Her answer should reach the open app soon after she sends it; only while the app is open.
+    refetchInterval: 15_000,
     refetchOnWindowFocus: "always",
   });
 
   const refetchMe = me.refetch;
   const refetchDay = day.refetch;
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (!enabled) return;
-    void refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchDay]));
+    await refreshReads(refetchMe, ...(familyId === undefined ? [] : [refetchDay]));
   }, [enabled, familyId, refetchMe, refetchDay]);
 
   if (!enabled) {

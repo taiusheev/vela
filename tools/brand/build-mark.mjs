@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import * as ot from "opentype.js";
 import { Resvg } from "@resvg/resvg-js";
+import { deflateSync } from "node:zlib";
 
 const parse = ot.parse ?? ot.default?.parse;
 const OUT = "design/brand";
@@ -103,6 +104,7 @@ writeFileSync(`${OUT}/vela-mark-small-mono.svg`, markSvg({ muntins: false, frame
 }
 
 // ---- 3. app icons (PNG via resvg)
+// The first icon (cream field, 2026-09-12); kept for the exploration sheet only.
 function iconSvg({ dark = false, simplified = false, mono = false } = {}) {
   const S = 1024, r = 0; // iOS masks its own corners; Android adaptive icons use the safe zone
   const bg = mono ? "#000000" : dark ? DARK : CREAM;
@@ -121,14 +123,102 @@ function png(svg, size, file, withText = false) {
   const r = new Resvg(svg, { fitTo: { mode: "width", value: size }, font });
   writeFileSync(file, r.render().asPng());
 }
-writeFileSync(`${OUT}/icons/app-icon.svg`, iconSvg());
-writeFileSync(`${OUT}/icons/app-icon-dark.svg`, iconSvg({ dark: true }));
-writeFileSync(`${OUT}/icons/app-icon-monochrome.svg`, iconSvg({ mono: true }));
-for (const s of [1024, 512, 192, 180]) png(iconSvg(), s, `${OUT}/icons/app-icon-${s}.png`);
-png(iconSvg({ dark: true }), 1024, `${OUT}/icons/app-icon-dark-1024.png`);
-png(iconSvg({ mono: true }), 1024, `${OUT}/icons/app-icon-monochrome-1024.png`);
-for (const s of [64, 48, 32, 16]) png(iconSvg({ simplified: true }), s, `${OUT}/icons/favicon-${s}.png`);
-writeFileSync(`${OUT}/icons/favicon.svg`, markSvg({ muntins: false, frameW: G.smallFrame }, { pad: 6 }));
+// The night window (2026-10-22, founder's choice "A"): the cream-framed window lit from inside on the
+// warm dark wall of the app's Today room. It fills ~63% of the tile so it reads at 29 px; the halo is the
+// only glow. Variants: light (also the store icon), dark, tinted (greyscale, iOS adds the tint),
+// Android foreground/background/monochrome inside the 66/108 safe circle, and a rounded web tile.
+const WALL_HI = "#3B2B1F", WALL_LO = "#1C1510", GLOW = "#F09A38", FRAME_LIT = "#FFF1DA", ICON_MUNTIN = 7;
+function nightDefs() {
+  return `<radialGradient id="wall" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="${WALL_HI}"/><stop offset="1" stop-color="${WALL_LO}"/></radialGradient>`
+    + `<radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${GLOW}" stop-opacity="0.42"/><stop offset="0.6" stop-color="${GLOW}" stop-opacity="0.1"/><stop offset="1" stop-color="${GLOW}" stop-opacity="0"/></radialGradient>`
+    + `<linearGradient id="pane" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#FFD98A"/><stop offset="0.45" stop-color="#F6B954"/><stop offset="1" stop-color="#E4902F"/></linearGradient>`
+    + `<radialGradient id="inner" cx="50%" cy="62%" r="62%"><stop offset="0" stop-color="#FFF3D6" stop-opacity="0.75"/><stop offset="0.55" stop-color="#FFE2A6" stop-opacity="0.18"/><stop offset="1" stop-color="#FFE2A6" stop-opacity="0"/></radialGradient>`;
+}
+// The window, its outer height `h` px, centred on (cx, cy); muntins thickened to 7 for small sizes.
+function nightWindow({ h, cx = 512, cy = 512, frame = FRAME_LIT, lit = true, pane = null, muntins = true }) {
+  const s = h / MARK_OUTER_H, f = G.frame / 2;
+  const tx = cx - (G.w / 2) * s, ty = cy - (G.h / 2) * s;
+  const inner = outline(f, G.topR, G.botR), m = ICON_MUNTIN / 2, y = G.h * G.transom;
+  const parts = [
+    `<path fill-rule="evenodd" d="${outline(-f, G.topR, G.botR)}${inner}" fill="${frame}"/>`,
+    lit ? `<path d="${inner}" fill="url(#pane)"/><path d="${inner}" fill="url(#inner)"/>` : pane ? `<path d="${inner}" fill="${pane.fill}" fill-opacity="${pane.opacity}"/>` : "",
+    muntins ? `<rect x="${r3(G.w / 2 - m)}" y="${f}" width="${ICON_MUNTIN}" height="${G.h - 2 * f}" fill="${frame}"/><rect x="${f}" y="${r3(y - m)}" width="${G.w - 2 * f}" height="${ICON_MUNTIN}" fill="${frame}"/>` : "",
+  ];
+  return `<g transform="translate(${r3(tx)},${r3(ty)}) scale(${r3(s)})">${parts.join("")}</g>`;
+}
+function nightIconSvg({ variant = "light", rounded = false, simplified = false } = {}) {
+  const S = 1024, rx = rounded ? 230 : 0, cy = 500;
+  const tile = (fill) => `<rect width="${S}" height="${S}" rx="${rx}" fill="${fill}"/>`;
+  let body;
+  if (variant === "tinted") {
+    // iOS 18+ tinted mode reads luminance: white window, half-white glass, on black.
+    body = tile("#000000") + nightWindow({ h: 640, cy, frame: WHITE, lit: false, pane: { fill: WHITE, opacity: 0.55 } });
+  } else if (variant === "android-background") {
+    body = tile("url(#wall)") + `<ellipse cx="512" cy="512" rx="440" ry="470" fill="url(#halo)"/>`;
+  } else if (variant === "android-foreground") {
+    body = nightWindow({ h: 470, cy: 512 });
+  } else if (variant === "android-monochrome") {
+    body = nightWindow({ h: 470, cy: 512, frame: WHITE, lit: false });
+  } else {
+    // dark mode sits the same window on a deeper wall with a smaller halo, so it settles into a dark screen
+    const halo = variant === "dark" ? `<ellipse cx="512" cy="${cy}" rx="380" ry="410" fill="url(#halo)" opacity="0.8"/>` : `<ellipse cx="512" cy="${cy}" rx="440" ry="470" fill="url(#halo)"/>`;
+    body = tile(variant === "dark" ? WALL_LO : "url(#wall)") + halo + nightWindow({ h: simplified ? 700 : 640, cy: simplified ? 512 : cy, muntins: !simplified });
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}"><defs>${nightDefs()}</defs>${body}</svg>`;
+}
+// The App Store refuses an icon with an alpha channel: re-encode resvg's RGBA as 8-bit RGB.
+function opaquePng(svg, size, file) {
+  const img = new Resvg(svg, { fitTo: { mode: "width", value: size }, font: { loadSystemFonts: false } }).render();
+  const { width: w, height: h, pixels } = img;
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, o = y * (w * 3 + 1) + 1 + x * 3;
+    raw[o] = pixels[i]; raw[o + 1] = pixels[i + 1]; raw[o + 2] = pixels[i + 2];
+  }
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td) >>> 0);
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw, { level: 9 })), chunk("IEND", Buffer.alloc(0))]));
+}
+function crc32(buf) {
+  let c = ~0;
+  for (const b of buf) { c ^= b; for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xEDB88320 : c >>> 1; }
+  return ~c;
+}
+writeFileSync(`${OUT}/icons/app-icon.svg`, nightIconSvg());
+writeFileSync(`${OUT}/icons/app-icon-dark.svg`, nightIconSvg({ variant: "dark" }));
+writeFileSync(`${OUT}/icons/app-icon-tinted.svg`, nightIconSvg({ variant: "tinted" }));
+writeFileSync(`${OUT}/icons/app-icon-monochrome.svg`, nightIconSvg({ variant: "android-monochrome" }));
+for (const s of [1024, 512, 192, 180]) opaquePng(nightIconSvg(), s, `${OUT}/icons/app-icon-${s}.png`);
+opaquePng(nightIconSvg({ variant: "dark" }), 1024, `${OUT}/icons/app-icon-dark-1024.png`);
+opaquePng(nightIconSvg({ variant: "tinted" }), 1024, `${OUT}/icons/app-icon-tinted-1024.png`);
+png(nightIconSvg({ variant: "android-monochrome" }), 1024, `${OUT}/icons/app-icon-monochrome-1024.png`);
+for (const s of [64, 48]) png(nightIconSvg({ rounded: true }), s, `${OUT}/icons/favicon-${s}.png`);
+for (const s of [32, 16]) png(nightIconSvg({ rounded: true, simplified: true }), s, `${OUT}/icons/favicon-${s}.png`);
+writeFileSync(`${OUT}/icons/favicon.svg`, nightIconSvg({ rounded: true }));
+
+// The app's own copies (apps/app/app.json) and the website's tab icons.
+{
+  const A = "apps/app/assets";
+  opaquePng(nightIconSvg(), 1024, `${A}/icon.png`);
+  opaquePng(nightIconSvg({ variant: "dark" }), 1024, `${A}/icon-dark.png`);
+  opaquePng(nightIconSvg({ variant: "tinted" }), 1024, `${A}/icon-tinted.png`);
+  png(nightIconSvg({ variant: "android-foreground" }), 1024, `${A}/adaptive-icon.png`);
+  opaquePng(nightIconSvg({ variant: "android-background" }), 1024, `${A}/adaptive-background.png`);
+  png(nightIconSvg({ variant: "android-monochrome" }), 1024, `${A}/adaptive-monochrome.png`);
+  png(nightIconSvg({ rounded: true }), 48, `${A}/favicon.png`);
+  // splash: the window alone, as the mark is used on each ground (charcoal frame on paper, cream on ink)
+  const splash = (frame) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs>${nightDefs()}</defs>${nightWindow({ h: 900, frame })}</svg>`;
+  png(splash(INK), 1024, `${A}/splash-icon.png`);
+  png(splash(FRAME_LIT), 1024, `${A}/splash-icon-dark.png`);
+  const W = "apps/worker/site-assets/site";
+  writeFileSync(`${W}/favicon.svg`, nightIconSvg({ rounded: true }).replace("<defs>", "<title>Vela</title><defs>") + "\n");
+  opaquePng(nightIconSvg(), 180, `${W}/apple-touch-icon.png`);
+}
 png(markSvg({}), 1024, `${OUT}/vela-mark-1024.png`);
 {
   // lockup PNG for decks and mail signatures

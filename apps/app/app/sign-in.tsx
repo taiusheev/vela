@@ -7,7 +7,6 @@ import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../src/accessibility/use-reduced-motion.ts";
 import { apiConfigured } from "../src/api/client.ts";
-import { englishTrialBuild } from "../src/api/trial.ts";
 import { accountsConfigured } from "../src/auth/clerk.tsx";
 import {
   clerkErrorCodes,
@@ -42,6 +41,7 @@ import {
 } from "../src/components/ui.tsx";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { readDraft, useOnboardingDraft } from "../src/data/onboarding-draft.ts";
+import { useCapabilities } from "../src/data/useCapabilities.ts";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
 
@@ -203,6 +203,8 @@ function CodeSignIn() {
     draft.step === "save" && draft.callName.trim().length > 0 ? draft.callName.trim() : null;
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
+  // The closed test's server says when Chinese is allowed (ADR-52); until then, English only.
+  const { englishOnly } = useCapabilities();
   const { t } = useLingui();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
@@ -349,6 +351,7 @@ function CodeSignIn() {
     try {
       // The two halves answer with different shapes, so each is asked on its own terms.
       let session: string | null;
+      let attemptStatus: string | null;
       if (joining) {
         const attempt = await within(
           strategy === "email_code"
@@ -361,23 +364,31 @@ function CodeSignIn() {
           setTrouble({ kind: "needs_more" });
           return;
         }
+        attemptStatus = attempt.status;
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       } else {
         const attempt = await within(signIn.attemptFirstFactor({ strategy, code: code.trim() }));
+        attemptStatus = attempt.status;
         session = attempt.status === "complete" ? attempt.createdSessionId : null;
       }
       if (session === null) {
-        setTrouble({ kind: "wrong_code" });
+        // Not a wrong code: Clerk took it but did not finish, so say which state it stopped in.
+        setTrouble({ kind: "wrong_code", codes: `status_${attemptStatus}` });
         return;
       }
       await within(setActive({ session }));
       router.replace(readDraft().step === "save" ? "/onboarding" : "/");
     } catch (error: unknown) {
       logClerkCodes("verify", error);
+      // "That code did not work" covers every refusal Clerk does not name more exactly, so its
+      // codes go under it: a mistyped code and a setting look the same otherwise.
+      const codes = codesOf(error).join(", ");
       setTrouble(
         error instanceof TookTooLong
           ? { kind: "code_took_too_long" }
-          : { kind: verificationFailure(error) },
+          : codes.length === 0
+            ? { kind: verificationFailure(error) }
+            : { kind: verificationFailure(error), codes },
       );
     } finally {
       inFlight.current = false;
@@ -696,7 +707,7 @@ function CodeSignIn() {
           </ScrollView>
         </Modal>
         {/* The app's language, before there is an account to keep it (build plan 3.1). */}
-        {step === "identifier" && !englishTrialBuild ? <LocaleChips /> : null}
+        {step === "identifier" && !englishOnly ? <LocaleChips /> : null}
         {/*
           Clerk's bot check for a new account mounts itself into an element of this name, and says
           so loudly when it cannot find one. On the web this renders that element; on a phone it is

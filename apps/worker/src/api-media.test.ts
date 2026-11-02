@@ -129,16 +129,26 @@ function fixture(options: FixtureOptions = {}) {
     loadApiLights: vi.fn<ApiReadServices["loadApiLights"]>(unused("the lights")),
     loadApiToday: vi.fn<ApiReadServices["loadApiToday"]>(unused("Today")),
     loadApiFamily: vi.fn<ApiReadServices["loadApiFamily"]>(unused("the family")),
-    loadApiBook: vi
-      .fn<ApiReadServices["loadApiBook"]>()
-      .mockResolvedValue({ entries: [], coming: [], recipes: [] }),
+    loadApiBook: vi.fn<ApiReadServices["loadApiBook"]>().mockResolvedValue({
+      entries: [],
+      coming: [],
+      recipes: [],
+      suggestions: [],
+      moments: [],
+      stories: [],
+    }),
     loadApiReminders: vi
       .fn<ApiReadServices["loadApiReminders"]>()
       .mockResolvedValue({ suggestions: [], reminders: [] }),
+    loadApiPhotoBox: vi
+      .fn<ApiReadServices["loadApiPhotoBox"]>()
+      .mockResolvedValue({ photos: [], limit: 40, next: [] }),
     loadApiExchange: vi.fn<ApiReadServices["loadApiExchange"]>().mockResolvedValue(null),
+    loadApiPlannedQuestions: vi.fn(unused("planned questions")),
     loadApiExchanges: vi.fn<ApiReadServices["loadApiExchanges"]>(unused("Exchanges")),
     loadApiQuiet: vi.fn<ApiReadServices["loadApiQuiet"]>(unused("the quiet notice")),
     loadApiWeeklyRead: vi.fn<ApiReadServices["loadApiWeeklyRead"]>(unused("the weekly read")),
+    listApiWeeklyReads: vi.fn<ApiReadServices["listApiWeeklyReads"]>(unused("the weekly reads")),
     loadApiPrecision: vi.fn<ApiReadServices["loadApiPrecision"]>(unused("how Vela is doing")),
     memberOfDeviceToken: vi.fn<ApiReadServices["memberOfDeviceToken"]>(unused("a device")),
     loadDeviceMessages: vi.fn<ApiReadServices["loadDeviceMessages"]>(unused("her messages")),
@@ -170,6 +180,7 @@ function fixture(options: FixtureOptions = {}) {
       pauseApiMember: vi.fn<Writes["services"]["pauseApiMember"]>(unused("pause")),
       leaveApiFamily: vi.fn<Writes["services"]["leaveApiFamily"]>(unused("leave")),
       setApiAway: vi.fn<Writes["services"]["setApiAway"]>(unused("away")),
+      editApiAsk: vi.fn(unused("edit question")),
       withdrawApiAsk: vi.fn<Writes["services"]["withdrawApiAsk"]>(unused("withdraw")),
       markApiDeceased: vi.fn<Writes["services"]["markApiDeceased"]>(unused("deceased")),
       endApiAway: vi.fn<Writes["services"]["endApiAway"]>(unused("away end")),
@@ -189,9 +200,15 @@ function fixture(options: FixtureOptions = {}) {
         .mockResolvedValue({ response: { status: 201, body: VOICE }, replayed: false }),
       createApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
       finishApiReminder: vi.fn().mockRejectedValue(new Error("no reminders in these tests")),
+      addToApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      changeApiPhotoBoxPhoto: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      removeFromApiPhotoBox: vi.fn().mockRejectedValue(new Error("no photo box in these tests")),
+      keepBoxPhotoStored: vi.fn().mockResolvedValue(true),
       removeApiBookEntry: vi
         .fn()
         .mockResolvedValue({ response: { status: 200, body: { removed: true } }, replayed: false }),
+      keepApiAnswer: vi.fn<Writes["services"]["keepApiAnswer"]>(unused("keep")),
+      dismissApiSuggestion: vi.fn<Writes["services"]["dismissApiSuggestion"]>(unused("dismiss")),
       askApiToLookIn: vi.fn<Writes["services"]["askApiToLookIn"]>(unused("ask to look in")),
       inviteApiNearby: vi.fn<Writes["services"]["inviteApiNearby"]>(unused("nearby invite")),
       markApiQuietUseful: vi.fn<Writes["services"]["markApiQuietUseful"]>(unused("useful")),

@@ -1,0 +1,19 @@
+url: ${APP_URL}
+name: An idea is editable and never sends itself
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/ask
+- assertVisible: "Your question for Mom"
+- tapOn: "Help me find a question"
+- assertVisible: "Ideas for Mom"
+- tapOn: "From Mom's own words"
+- assertVisible: "Your question for Mom"
+- tapOn:
+    id: "Say it the way you would say it"
+- eraseText: 48
+- inputText: "Mom, which seeds should I try growing?"
+- tapOn: "Save question"
+- assertVisible: "Question saved. You can adjust it below."
+- assertVisible: 'Mom, which seeds should I try growing\?'

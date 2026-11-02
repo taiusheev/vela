@@ -1,6 +1,6 @@
 import { ApiPrecision } from "@vela/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { monthLines, toPrecision } from "./precision.ts";
+import { monthLines, monthParts, toPrecision } from "./precision.ts";
 
 // The macros compile away when the app is bundled. Here they read as English: `t` joins its parts,
 // and `plural` takes the branch English would and puts the count where `#` is.
@@ -89,5 +89,24 @@ describe("toPrecision", () => {
     expect(precision.velaRule).toBe(
       "Vela shows a month once it has at least 10 notices from 3 families, so no one family's morning can be read out of it.",
     );
+  });
+});
+
+describe("monthParts", () => {
+  it("splits a month's bar by how its notices ended, leaving out what did not happen", () => {
+    const parts = monthParts({
+      month: "2026-09",
+      notices: 12,
+      open: 1,
+      outcomes: { ...NONE, answered_late: 7, away: 3, true_concern: 1 },
+      useful: { yes: 0, no: 0 },
+    });
+    expect(parts.map((part) => [part.kind, part.count])).toEqual([
+      ["answered_late", 7],
+      ["away", 3],
+      ["true_concern", 1],
+      ["open", 1],
+    ]);
+    expect(parts[0]?.label).toBe("Answered later");
   });
 });

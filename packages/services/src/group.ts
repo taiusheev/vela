@@ -33,6 +33,7 @@ import { errorLabel } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf } from "./gateway.ts";
 import { sha256Hex } from "./hash.ts";
+import { pilotSpeaks } from "./pilot-admission.ts";
 import { groupNoticeEvidence, subjectRef } from "./proofs.ts";
 import {
   familyById,
@@ -128,10 +129,8 @@ async function refuseLink(
     suffix: `not_linked:${event.eventId}`,
   });
   if (sender === null) {
-    const lang =
-      deps.config.pilotAdmission == null
-        ? languageOfSender(event.sender.languageCode, event.channel)
-        : "en";
+    const heard = languageOfSender(event.sender.languageCode, event.channel);
+    const lang = pilotSpeaks(deps.config.pilotAdmission, heard) ? heard : "en";
     await sendOutsideGateway(deps, {
       kind: "system",
       idempotencyKey,

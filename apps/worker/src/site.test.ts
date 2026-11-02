@@ -88,6 +88,7 @@ describe("the public website", () => {
       expect(body.match(/<script[^>]*>/g)).toEqual([
         '<script src="/site/boot.js">',
         '<script src="/site/site.js" defer>',
+        '<script src="/site/analytics.js" defer>',
         '<script type="application/json" id="vela-demo">',
       ]);
       expect(body).not.toContain("style=");
@@ -102,7 +103,9 @@ describe("the public website", () => {
       expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
       expect(body).toContain(`href="${SITE_PATHS[lang].precision}"`);
       expect(body).toContain('href="mailto:t.aiusheev@gmail.com"');
-      expect(body).toContain('<form class="waitlist" method="post" action="/waitlist">');
+      expect(body.match(/<form class="waitlist" method="post" action="\/waitlist"/g)).toHaveLength(
+        2,
+      );
       expect(fake.built()).toBe(0);
     },
   );
@@ -139,20 +142,64 @@ describe("the public website", () => {
     },
   );
 
-  // The founder's story order: the visitor's worry first, why nothing they have solves it, then Vela.
-  it.each(SITE_LANGS)("tells the worry before it names Vela (%s)", async (lang) => {
-    const fake = createFakePilotRuntime();
-    const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
-    const at = (id: string) => body.indexOf(`id="${id}"`);
-    const order = ["worry", "why", "meet", "screens", "different", "join"].map(at);
-    expect(order.every((index) => index > 0)).toBe(true);
-    expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(textOf(body.slice(body.indexOf("<h1"), body.indexOf("</h1>")))).not.toContain("Vela");
-  });
+  // Afterglow explains the problem, automatic routine, added value and care boundaries.
+  it.each(SITE_LANGS)(
+    "shows the approved story and real app previews before the waitlist (%s)",
+    async (lang) => {
+      const fake = createFakePilotRuntime();
+      const body = await (await send(fake, `${origin()}${SITE_PATHS[lang].home}`)).text();
+      const at = (id: string) => body.indexOf(`id="${id}"`);
+      const order = ["hero-title", "why", "how", "more", "care", "join"].map(at);
+      expect(order.every((index) => index > 0)).toBe(true);
+      expect(order).toEqual([...order].sort((a, b) => a - b));
+      expect(textOf(body)).toContain(
+        lang === "en" ? "Vela does. Every morning." : "Vela 記得。每天早上。",
+      );
+      expect(body).toContain("/site/img/app-current/today-portraits.jpg");
+      expect(body).toContain("/site/img/app-current/week-current.jpg");
+      expect(body).toContain("/site/img/story/parent-profile.jpg");
+      expect(body).toContain("/site/img/vela-logo.svg");
+      expect(body).toContain("/site/img/vela-logo-white.svg");
+      expect(textOf(body)).toContain(lang === "en" ? "You use Vela" : "你使用 Vela");
+      expect(textOf(body)).toContain(
+        lang === "en" ? "Even when you forget." : "忘了準備，問候也不會落下。",
+      );
+      expect(body.match(/data-morning="\d" disabled/g)).toHaveLength(3);
+      expect(body).toContain('id="morning-preview" class="ritual-preview" aria-live="polite"');
+      expect(body).toContain(
+        lang === "en"
+          ? "Personalized health advice is not available."
+          : "目前未提供個人化健康建議。",
+      );
+      expect(body).toContain(
+        lang === "en"
+          ? "A reply isn’t proof of health or safety."
+          : "收到回覆，不代表能確認健康或安全狀況。",
+      );
+      expect(body).not.toContain("Design preview");
+      expect(body).not.toContain("Telegram");
+      expect(body).not.toContain("hero-availability");
+    },
+  );
 
   it("embeds a demo script no string of which can close its element", () => {
     for (const lang of SITE_LANGS) {
       expect(JSON.stringify(siteDemo(lang))).not.toMatch(/<\/?script/i);
+    }
+  });
+
+  it.each(SITE_LANGS)("shows the current copyright on every %s website page", async (lang) => {
+    const fake = createFakePilotRuntime();
+    const expected = `© ${new Date().getUTCFullYear()} Vela. ${lang === "en" ? "All rights reserved." : "保留所有權利。"}`;
+    for (const path of [
+      SITE_PATHS[lang].home,
+      SITE_PATHS[lang].precision,
+      SITE_PATHS[lang].privacy,
+      ...LEGAL_PAGES.map((page) => legalPath(lang, page)),
+    ]) {
+      const response = await send(fake, `${origin()}${path}`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain(expected);
     }
   });
 
@@ -356,10 +403,10 @@ describe("the website's privacy notice", () => {
     expect(body).toContain(lang === "en" ? "within 15 days" : "15 日內");
     expect(body).toContain(lang === "en" ? "Singapore" : "新加坡");
     expect(body).toContain(`href="/privacy${lang === "en" ? "" : "/zh-TW"}"`);
-    expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(2);
+    expect(home.match(new RegExp(`href="${SITE_PATHS[lang].privacy}"`, "g"))).toHaveLength(3);
   });
 
-  it("promises no cookies, and the pages set none", async () => {
+  it("discloses optional counts and the pages set no cookies", async () => {
     const fake = createFakePilotRuntime();
     const at = origin();
 
@@ -368,7 +415,8 @@ describe("the website's privacy notice", () => {
       expect((await send(fake, `${at}${path}`)).headers.get("set-cookie")).toBeNull();
     }
 
-    expect(notice).toContain("We do not use cookies, analytics, advertising or tracking tools");
+    expect(notice).toContain("Optional usage counts are off until you choose Allow counts");
+    expect(notice).toContain("Turning it off clears the identifier here");
   });
 });
 
@@ -432,6 +480,64 @@ describe("the website's protections", () => {
     );
 
     expect([wrongType.status, tooBig.status]).toEqual([415, 413]);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("bounds a streamed form before reading the rest or opening the database", async () => {
+    const fake = createFakePilotRuntime();
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("x".repeat(2049)));
+        // Deliberately never close: the route must reject without waiting for more bytes.
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("does not save a valid-looking prefix when the form stream stalls", async () => {
+    const fake = createFakePilotRuntime();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("email=qa%40example.invalid&lang=en"));
+      },
+    });
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      }),
+    );
+    expect(response.status).toBe(408);
+    expect(namesOf(fake.calls)).toEqual([]);
+  });
+
+  it("counts UTF-8 bytes rather than characters in the form limit", async () => {
+    const fake = createFakePilotRuntime();
+    const response = await send(
+      fake,
+      new Request(`${origin()}/waitlist`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: `email=a@b.co&pad=${"光".repeat(700)}`,
+      }),
+    );
+    expect(response.status).toBe(413);
     expect(namesOf(fake.calls)).toEqual([]);
   });
 

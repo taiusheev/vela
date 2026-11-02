@@ -31,8 +31,11 @@ export class PortraitStore {
   remove(scope: string, family: string, member: string): void {
     this.files.remove(scope, portraitKey(family, member));
   }
-  clear(scope: string): void {
+  close(scope: string): void {
     this.closed.add(scope);
+  }
+  clear(scope: string): void {
+    this.close(scope);
     this.files.clear(scope);
   }
 }

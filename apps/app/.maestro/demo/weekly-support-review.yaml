@@ -1,0 +1,23 @@
+url: ${APP_URL}
+name: Week support review shows its source and removes withdrawn suggestions
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/weekly-support-preview
+- assertVisible: "Example report.*Dad.*"
+- assertVisible: ".*Could someone help carry my groceries home.*"
+- tapOn:
+    text: "Preview this offer"
+    index: 0
+- assertVisible: "I can help bring the groceries home.*"
+- scrollUntilVisible:
+    element: "Withdraw example permission"
+    direction: DOWN
+- tapOn: "Withdraw example permission"
+- assertVisible: "No suggestions are available from the messages currently shared."
+- tapOn: "Restore example permission"
+- scrollUntilVisible:
+    element: "Help with something Dad asked for"
+    direction: UP
+- assertVisible: ".*Could someone help carry my groceries home.*"

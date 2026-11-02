@@ -6,7 +6,7 @@
  *
  * | Action       | Payload                                   |
  * |--------------|-------------------------------------------|
- * | answer       | `a:<id>:f` (fine) · `a:<id>:h` (heart)    |
+ * | answer       | `a:<id>:f` (fine) · `a:<id>:h` (heart) · `a:<id>:n` (not okay) |
  * | chip         | `c:<id>:<index>`                          |
  * | pick         | `p:<id>:<index>`                          |
  * | vote         | `v:<id>:<index>`                          |
@@ -23,11 +23,24 @@
  */
 
 export type ButtonAction =
-  | { type: "answer"; exchangeId: string; answer: "fine" | "heart" }
+  /**
+   * Her one-tap answer: a heart, "I'm fine", or, on the check-in after a morning she has not
+   * answered (ADR-54), "Not okay", which tells her organisers at once.
+   */
+  | { type: "answer"; exchangeId: string; answer: "fine" | "heart" | "not_okay" }
   | { type: "chip"; exchangeId: string; index: number }
   | { type: "pick"; exchangeId: string; index: number }
   | { type: "vote"; exchangeId: string; index: number }
   | { type: "consent"; memberId: string; accept: boolean }
+  /**
+   * Her one tap on the single consent message (consent.request@3): her light and her health words
+   * together ("both"), her light with her health words kept private ("light"), or neither ("no").
+   */
+  | { type: "consent_both"; memberId: string; choice: "both" | "light" | "no" }
+  /** Her own yes or "not now" to memory suggestions, asked in her chat (consent.rich_memories@2). */
+  | { type: "memory_permission"; memberId: string; accept: boolean }
+  /** Her choice on one suggested memory in her chat: keep it, keep and share it, or leave it out. */
+  | { type: "memory_offer"; candidateId: string; choice: "keep" | "share" | "leave" }
   /** Her answer to the separate health-words question sent after her yes (flows §3.2). */
   | { type: "health_words"; memberId: string; accept: boolean }
   | { type: "quiet_fine"; quietEventId: string }
@@ -48,6 +61,8 @@ export type ButtonAction =
   | { type: "recipe_keep"; recipeId: string; keep: boolean };
 
 export const BUTTON_DATA_MAX_BYTES = 64;
+
+const ANSWER_TAILS = { fine: "f", heart: "h", not_okay: "n" } as const;
 
 /**
  * Indexes are one digit. An arrival shows at most three chips, two photos, and as many vote options
@@ -97,7 +112,7 @@ function indexField(index: number): string {
 export function encodeButton(action: ButtonAction): string {
   switch (action.type) {
     case "answer":
-      return `a:${compactId(action.exchangeId, "exchangeId")}:${action.answer === "fine" ? "f" : "h"}`;
+      return `a:${compactId(action.exchangeId, "exchangeId")}:${ANSWER_TAILS[action.answer]}`;
     case "chip":
       return `c:${compactId(action.exchangeId, "exchangeId")}:${indexField(action.index)}`;
     case "pick":
@@ -108,6 +123,12 @@ export function encodeButton(action: ButtonAction): string {
       return `k:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
     case "health_words":
       return `h:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
+    case "memory_permission":
+      return `m:${compactId(action.memberId, "memberId")}:${action.accept ? "y" : "n"}`;
+    case "memory_offer":
+      return `u:${compactId(action.candidateId, "candidateId")}:${action.choice === "keep" ? "k" : action.choice === "share" ? "s" : "l"}`;
+    case "consent_both":
+      return `j:${compactId(action.memberId, "memberId")}:${action.choice === "both" ? "b" : action.choice === "light" ? "l" : "n"}`;
     case "quiet_fine":
       return `q:${compactId(action.quietEventId, "quietEventId")}:f`;
     case "quiet_wait":
@@ -165,6 +186,7 @@ export function decodeButton(data: string): ButtonAction | null {
     case "a":
       if (tail === "f") return { type: "answer", exchangeId: id, answer: "fine" };
       if (tail === "h") return { type: "answer", exchangeId: id, answer: "heart" };
+      if (tail === "n") return { type: "answer", exchangeId: id, answer: "not_okay" };
       return null;
     case "c":
     case "p":
@@ -184,6 +206,20 @@ export function decodeButton(data: string): ButtonAction | null {
     case "h":
       if (tail === "y") return { type: "health_words", memberId: id, accept: true };
       if (tail === "n") return { type: "health_words", memberId: id, accept: false };
+      return null;
+    case "m":
+      if (tail === "y") return { type: "memory_permission", memberId: id, accept: true };
+      if (tail === "n") return { type: "memory_permission", memberId: id, accept: false };
+      return null;
+    case "u":
+      if (tail === "k") return { type: "memory_offer", candidateId: id, choice: "keep" };
+      if (tail === "s") return { type: "memory_offer", candidateId: id, choice: "share" };
+      if (tail === "l") return { type: "memory_offer", candidateId: id, choice: "leave" };
+      return null;
+    case "j":
+      if (tail === "b") return { type: "consent_both", memberId: id, choice: "both" };
+      if (tail === "l") return { type: "consent_both", memberId: id, choice: "light" };
+      if (tail === "n") return { type: "consent_both", memberId: id, choice: "no" };
       return null;
     case "n":
       return tail === "r" ? { type: "notice_read", familyChannelId: id } : null;

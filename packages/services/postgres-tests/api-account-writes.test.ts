@@ -322,3 +322,43 @@ describe("account writes on independent PostgreSQL connections", () => {
     expect(await pg.receipts(identity.authSubject)).toEqual([]);
   });
 });
+
+describe("independent notification choices on two phones", () => {
+  it("keeps both choices when two phones update different switches at once", async () => {
+    await seedAccount();
+    const blocker = await pg.client("notification-blocker");
+    const first = await pg.client("notification-replies");
+    const second = await pg.client("notification-turns");
+    const lock = await pg.holdActorLock(blocker, identity.authSubject);
+    const replies = (
+      await queue(first, blocker, () =>
+        pg.track(
+          updateApiAccount({ ...first.deps, notificationControls: true }, identity, "replies-off", {
+            reply_notifications: false,
+          }),
+        ),
+      )
+    ).operation;
+    const turns = (
+      await queue(second, blocker, () =>
+        pg.track(
+          updateApiAccount({ ...second.deps, notificationControls: true }, identity, "turns-off", {
+            turn_reminders: false,
+          }),
+        ),
+      )
+    ).operation;
+    lock.release();
+    await pg.finish("notification blocker", lock.done);
+    await pg.finish("both notification saves", Promise.all([replies, turns]));
+    const [account] = await first.db
+      .select()
+      .from(users)
+      .where(eq(users.authSubject, identity.authSubject));
+    expect(account).toMatchObject({
+      replyNotifications: false,
+      turnReminders: false,
+      oneMomentADay: false,
+    });
+  });
+});

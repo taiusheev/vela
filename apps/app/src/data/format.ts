@@ -79,12 +79,28 @@ export function weekday(instant: string): string {
   return at === null ? "" : at.toLocaleDateString(dateLocale(), { weekday: "long" });
 }
 
+/** "Tuesday 21 October", or "10月21日 星期二": a day as a book prints it, in the reader's zone. */
+export function longDate(instant: string): string {
+  const at = valid(instant);
+  return at === null
+    ? ""
+    : at.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
+}
+
 /** A local date as the day it names, for copy that must not say "tomorrow" about Thursday. */
 export function dayName(date: string): string {
   const day = valid(`${date}T00:00:00Z`);
   return day === null
     ? date
     : day.toLocaleDateString(dateLocale(), { weekday: "long", timeZone: "UTC" });
+}
+
+/** A scheduled date's month on its own, over a calendar: "October", or "10月". */
+export function localMonth(date: string): string {
+  const day = valid(`${date}T00:00:00Z`);
+  return day === null
+    ? date
+    : day.toLocaleDateString(dateLocale(), { month: "long", timeZone: "UTC" });
 }
 
 /** A local date as its short weekday, under each of a week's seven lights: "Mon", "週一". */

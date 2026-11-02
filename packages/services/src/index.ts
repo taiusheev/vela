@@ -8,6 +8,7 @@
  * including the helpers these call themselves, is a flow's own business. The test harness is not
  * here: it lives behind `@vela/services/testing`, so production code cannot reach it.
  */
+
 export {
   cancelAccountLink,
   completeAccountLink,
@@ -99,7 +100,12 @@ export {
   removeApiDevice,
   setUpApiDevice,
 } from "./api-device.ts";
-export { type ApiExchangePageQuery, loadApiExchange, loadApiExchanges } from "./api-exchanges.ts";
+export {
+  type ApiExchangePageQuery,
+  loadApiExchange,
+  loadApiExchanges,
+  loadApiPlannedQuestions,
+} from "./api-exchanges.ts";
 export { AlreadyOrganiserError, type ApiFamilyDeps, createApiFamily } from "./api-families.ts";
 export { loadApiFamily } from "./api-family.ts";
 export {
@@ -121,6 +127,7 @@ export { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-
 export { loadApiMorningPreferences, setApiMorningPreferences } from "./api-morning-preferences.ts";
 export { addApiNearby, NearbyRefusedError, removeApiNearby } from "./api-nearby.ts";
 export { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
+export { draftApiPersonalQuestion } from "./api-personal-questions.ts";
 export {
   loadApiPrecision,
   loadPublicPrecision,
@@ -139,8 +146,12 @@ export { ReplyRefusedError, replyToApiExchange } from "./api-replies.ts";
 export { loadApiToday } from "./api-today.ts";
 export { startApiTrial, TrialRefusedError } from "./api-trial.ts";
 export { MAX_VOICE_BYTES, MAX_VOICES_PER_ACCOUNT_DAY, uploadApiVoice } from "./api-voice.ts";
-export { loadApiWeeklyRead, openApiWeeklyRead } from "./api-weekly-read.ts";
-export { WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
+export {
+  listApiWeeklyReads,
+  loadApiWeeklyRead,
+  openApiWeeklyRead,
+} from "./api-weekly-read.ts";
+export { editApiAsk, WithdrawTooLateError, withdrawApiAsk } from "./api-withdraw.ts";
 export { type ApiBookEntry, loadApiBook, removeApiBookEntry } from "./book.ts";
 export {
   claimDeadLetterReplays,
@@ -187,7 +198,34 @@ export { errorLabel, VelaError } from "./errors.ts";
 export { type DeliveryResult, deliverOutbound } from "./gateway.ts";
 export { handleInbound } from "./inbound/router.ts";
 export { ingestExchangeMedia, storeInboundCopy } from "./inbound-media-copy.ts";
+export { lineInviteLink } from "./invites.ts";
 export { applyRetention, rollupMetrics } from "./jobs.ts";
+export {
+  type ApiKeepSuggestion,
+  dismissApiSuggestion,
+  keepApiAnswer,
+} from "./memories.ts";
+export { withdrawOwnMemoryConsent } from "./memory-consent.ts";
+export {
+  keepMemoryCandidate,
+  loadKeptMemories,
+  loadOwnKeptMemoriesForExport,
+  loadSharedKeptMemories,
+  removeKeptMemory,
+} from "./memory-keeps.ts";
+export {
+  answerMemoryPermission,
+  loadMemoryPermission,
+  loadMemoryPermissionPresentation,
+  prepareMemoryPermission,
+} from "./memory-permission.ts";
+export {
+  confirmMemorySharing,
+  createMemorySharingPresentation,
+  loadMemorySharingPresentation,
+  loadMemorySharingView,
+  stopSharingMemory,
+} from "./memory-sharing.ts";
 export { askApiToLookIn, LookInRefusedError } from "./nearby-ask.ts";
 export { inviteApiNearby, NearbyInviteRefusedError } from "./nearby-consent.ts";
 export {
@@ -200,25 +238,45 @@ export {
   watchPeer,
 } from "./ops.ts";
 export {
+  addToApiPhotoBox,
+  changeApiPhotoBoxPhoto,
+  keepBoxPhotoStored,
+  loadApiPhotoBox,
+  PhotoBoxRefusedError,
+  removeFromApiPhotoBox,
+} from "./photo-box.ts";
+export {
   type PilotAdmission,
-  pilotAllowsInbound,
+  pilotAdmitsInbound,
   pilotAllowsTelegram,
   pilotApiAccountAllowed,
+  pilotApprovesFamily,
   pilotCanActivate,
   pilotFamilyAllowed,
   pilotMemberAllowed,
+  pilotSpeaks,
 } from "./pilot-admission.ts";
 export {
   addToRoster,
   admissionWithRoster,
+  approveFamily,
+  loadPilotFamilies,
   loadRoster,
+  type PilotFamilyEntry,
   type RosterEntry,
   removeFromRoster,
   rosterIds,
   TelegramUserId,
+  unapproveFamily,
 } from "./pilot-roster.ts";
 export { ingestAnswerMedia, understandAnswer } from "./pipeline.ts";
 export type { DeviceAlerts } from "./push-devices.ts";
+export {
+  forgetApiQuestionProfile,
+  loadApiQuestionProfile,
+  QuestionProfileChangedError,
+  saveApiQuestionProfile,
+} from "./question-profiles.ts";
 export { type BilledChannel, type ChannelQuotaSnapshot, recordChannelQuota } from "./quota.ts";
 export {
   createApiReminder,
@@ -226,6 +284,12 @@ export {
   finishApiReminder,
   loadApiReminders,
 } from "./reminders.ts";
+export {
+  dismissMemoryCandidate,
+  loadMemoryCandidates,
+  proposeMemoryCandidate,
+} from "./rich-memories.ts";
+export { type ApiMemoryStory, type ApiMoment, loadMemories, weaveStories } from "./stories.ts";
 export {
   BANK_PROMPT_VERSION,
   pickBankItem,
@@ -246,3 +310,4 @@ export {
   type WaitlistLang,
   type WaitlistRole,
 } from "./waitlist.ts";
+export * from "./weekly-support-live.ts";

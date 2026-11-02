@@ -40,6 +40,7 @@ const STAGING_CONFIG: ApiConfig = {
   lineBasicId: null,
   regions: ["apac"],
   pushSend: "off",
+  notificationControls: true,
   pilotAdmission: null,
   privacyNoticeUrls: {
     en: "https://vela.vela.example/privacy",
@@ -342,6 +343,25 @@ describe("the API's host on the pilot Worker", () => {
     expect(build).toHaveBeenCalledOnce();
   });
 
+  it("forwards each request's Worker lifetime to the retained API app", async () => {
+    const fetch = vi.fn<ApiApp["fetch"]>().mockResolvedValue(new Response(null, { status: 204 }));
+    const handler = createApiHandler(() => ({ fetch }));
+    const first = {
+      waitUntil: vi.fn(),
+      passThroughOnException() {},
+      props: {},
+    } as unknown as ExecutionContext;
+    const second = {
+      waitUntil: vi.fn(),
+      passThroughOnException() {},
+      props: {},
+    } as unknown as ExecutionContext;
+    const request = apiRequest("/v1/me");
+    await handler(request, stagingEnv(), first);
+    await handler(request, stagingEnv(), second);
+    expect(fetch.mock.calls.map((call) => call[2])).toEqual([first, second]);
+  });
+
   it("builds the app again when the secret key or the issuer changes", async () => {
     const build = vi.fn<Build>(stubApp);
     const handler = createApiHandler(build);
@@ -562,6 +582,36 @@ describe("the API as staging serves it", () => {
 // authentication, and a write that reaches the limit, the nudges or the database needs a token
 // Clerk signed.
 describe("the runtime staging's API app runs on", () => {
+  it.each(["development", "staging", "production"] as const)(
+    "never wires the new sharing or author memory routes in %s with RICH_MEMORIES off, even with legacy memory on",
+    (environment) => {
+      const runtime = apiRuntimeFor(
+        stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "off" }),
+        {
+          ...STAGING_CONFIG,
+          environment,
+        },
+      );
+      expect(runtime.memorySharing).toBeUndefined();
+      expect(runtime.memories).toBeUndefined();
+    },
+  );
+  it.each(["development", "staging"] as const)(
+    "offers the author memory routes in %s only when RICH_MEMORIES is on, never sharing",
+    (environment) => {
+      const off = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "off" }), {
+        ...STAGING_CONFIG,
+        environment,
+      });
+      expect(off.memories).toBeUndefined();
+      const on = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on", RICH_MEMORIES: "on" }), {
+        ...STAGING_CONFIG,
+        environment,
+      });
+      expect(on.memories?.config).toEqual({ richMemories: true });
+      expect(on.memorySharing).toBeUndefined();
+    },
+  );
   it("publishes closed trial capabilities without opening a database", async () => {
     const runtime = apiRuntimeFor(stagingEnv({ MEMORY: "on", BOOK: "on" }), {
       ...STAGING_CONFIG,
@@ -573,6 +623,8 @@ describe("the runtime staging's API app runs on", () => {
       english_only: true,
       memory: false,
       book: true,
+      // Staging keeps the photo box on (ADR-58); production's pin is in wrangler-config.test.ts.
+      photo_box: true,
       parent_app: false,
       billing: false,
     });
@@ -580,7 +632,10 @@ describe("the runtime staging's API app runs on", () => {
     expect(runtime.writes?.links?.telegramBotUsername).toBe("VelaStagingBot");
     const response = await createApiApp(runtime).request("/v1/capabilities");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(runtime.capabilities);
+    expect(await response.json()).toEqual({
+      ...runtime.capabilities,
+      personal_question_profiles: true,
+    });
   });
   let network: Mock<typeof fetch>;
 
@@ -985,5 +1040,34 @@ describe("the per-account write limit", () => {
         fields: { error: "ApiIdempotencyError:unavailable" },
       },
     ]);
+  });
+});
+
+describe("private report configuration", () => {
+  it("requires explicit purpose approval and a bounded valid family list", async () => {
+    const { weeklySupportConfig } = await import("./api-runtime.ts");
+    const family = "00000000-0000-4000-8000-000000000001";
+    expect(weeklySupportConfig({}).enabled).toBe(false);
+    expect(
+      weeklySupportConfig({ WEEKLY_SUPPORT: "on", WEEKLY_SUPPORT_FAMILIES: family }).enabled,
+    ).toBe(false);
+    expect(
+      weeklySupportConfig({
+        WEEKLY_SUPPORT: "on",
+        WEEKLY_SUPPORT_NOTICE: "weekly-support-private-test@1",
+        WEEKLY_SUPPORT_FAMILIES: family,
+      }),
+    ).toEqual({
+      enabled: true,
+      noticeVersion: "weekly-support-private-test@1",
+      familyIds: [family],
+    });
+    expect(
+      weeklySupportConfig({
+        WEEKLY_SUPPORT: "on",
+        WEEKLY_SUPPORT_NOTICE: "weekly-support-private-test@1",
+        WEEKLY_SUPPORT_FAMILIES: "bad",
+      }),
+    ).toMatchObject({ enabled: false, familyIds: [] });
   });
 });

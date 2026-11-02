@@ -11,7 +11,7 @@ The mark is **The Kept Light**: a window seen from the street at dusk with the l
 | Bottom corners | radius 14 |
 | Frame | 11 units, warm charcoal `#1E1A16` |
 | Muntins | 6 units; vertical mullion centred, transom at 40% of the height, so the four panes are unequal and read as a sash window, never as a plus sign |
-| Panes | amber `#E9A23B`, flat (the app icon alone uses one soft radial and a halo) |
+| Panes | amber `#E9A23B`, flat (the app icon alone uses a lamp-light gradient and a halo) |
 | Small mark | under 32 px: no muntins, frame 16, one solid amber pane; this is also the light glyph inside the app |
 
 ## Files
@@ -26,10 +26,13 @@ The mark is **The Kept Light**: a window seen from the street at dusk with the l
 | `vela-lockup.svg`, `-mono`, `-reversed` | horizontal lockup: mark, then wordmark with its cap height at 58% of the mark, gap 30%, baseline 5% above the mark's foot |
 | `vela-lockup-vertical.svg`, `-reversed` | mark above the wordmark, centred |
 | `vela-lockup-2400.png`, `vela-lockup-reversed-2400.png`, `vela-lockup-vertical-1200.png`, `vela-mark-1024.png` | rasters for decks, mail, stores |
-| `icons/app-icon.svg` and `app-icon-{1024,512,192,180}.png` | app icon, light: cream field, halo, radial panes; iOS and Android mask the corners |
-| `icons/app-icon-dark.svg`, `app-icon-dark-1024.png` | dark app icon |
-| `icons/app-icon-monochrome.svg`, `-1024.png` | Android 13+ themed icon layer, white on black |
-| `icons/favicon.svg`, `favicon-{64,48,32,16}.png` | favicons, simplified mark |
+| `icons/app-icon.svg` and `app-icon-{1024,512,192,180}.png` | app icon, "night window" (2026-10-22): cream-framed lit window filling ~63% of the tile, on the warm dark wall of the Today room, with one halo; opaque, iOS and Android mask the corners |
+| `icons/app-icon-dark.svg`, `app-icon-dark-1024.png` | iOS dark-mode icon: deeper wall, smaller halo |
+| `icons/app-icon-tinted.svg`, `app-icon-tinted-1024.png` | iOS tinted-mode icon: white window, half-white glass, on black (iOS adds the tint) |
+| `icons/app-icon-monochrome.svg`, `-1024.png` | Android 13+ themed icon layer, white window on transparent |
+| `icons/favicon.svg`, `favicon-{64,48,32,16}.png` | favicons: the icon as a rounded tile; 32 and 16 drop the muntins |
+
+The same script writes the app's copies (`apps/app/assets`: icon, icon-dark, icon-tinted, Android foreground/background/monochrome, splash on paper and on ink, web favicon) and the website's `favicon.svg` and `apple-touch-icon.png`. Icon muntins are 7 units, not 6, so they survive at 29 px. Without its frame the arched window with a cross reads as a church window or a gravestone: the icon never drops the frame.
 | `logo-soft-arch.svg`, `.png` | the exploration sheet and the locked geometry |
 | `logo-round2.svg` | the verdict sheet from the founder's first generated round |
 | `logo-prompt.md` | prompts and the round-by-round record |
@@ -40,7 +43,7 @@ The mark is **The Kept Light**: a window seen from the street at dusk with the l
 - Clear space around the mark and the lockup: half the mark's height on every side.
 - Minimum size: 32 px with muntins, 16 px simplified. Never scale the full mark below 32 px.
 - Amber is the light, never the frame and never text. The frame is charcoal on light grounds, cream on dark grounds.
-- No gradients on the frame, no drop shadows, no glow larger than the window, no outline-only wordmark, no other fonts for the wordmark, no flame, bulb, candle, shield, or radar anywhere near it.
+- No gradients on the frame, no drop shadows, no glow larger than the window (the app icon's halo is the one exception), no outline-only wordmark, no other fonts for the wordmark, no flame, bulb, candle, shield, or radar anywhere near it.
 - The name ships as "Vela Light" for the paid layer until the clearance search on "Vela" is done; the lockup stays "Vela".
 
 ## Regenerate

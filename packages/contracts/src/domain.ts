@@ -135,6 +135,8 @@ export const ANSWER_KINDS = [
   "text",
   "photo",
   "fine",
+  /** "Not okay" on the check-in after a morning she has not answered (ADR-54): she answered, unwell. */
+  "not_okay",
   "sticker",
   /** Any other content (video, document, location, contact): still a sign of life. */
   "other",
@@ -235,6 +237,8 @@ export const CONSENT_KINDS = [
   "privacy_notice",
   "pilot",
   "health_words",
+  "rich_memories",
+  "memory_keep",
 ] as const;
 export const ConsentKind = z.enum(CONSENT_KINDS);
 export type ConsentKind = z.infer<typeof ConsentKind>;
@@ -279,6 +283,9 @@ export const ADMIN_ACTIONS = [
   /** The trial roster (ADR-45): a Telegram identity approved, or no longer approved, for the pilot. */
   "roster_add",
   "roster_remove",
+  /** The closed test's families (ADR-52): a family approved, or no longer approved, to take part. */
+  "family_approve",
+  "family_unapprove",
 ] as const;
 export const AdminAction = z.enum(ADMIN_ACTIONS);
 export type AdminAction = z.infer<typeof AdminAction>;
@@ -355,22 +362,26 @@ export type PushPermission = z.infer<typeof PushPermission>;
 /**
  * The ordinary pushes (spec §15): at most one of each per member per local day, held by the same
  * budget index as every other channel (`outbound_budget_idx`), and never sent while the reader's
- * "One moment a day" is off. The weekly read joins them when it is pushed.
+ * "One moment a day" is off. The weekly read is pushed only to an organiser it reached in the app
+ * alone, since one sent on their messenger already holds that day's budget.
  */
 export const ORDINARY_PUSH_KINDS = [
   "answer_receipt",
   "turn_prompt",
+  "weekly_read",
 ] as const satisfies readonly BudgetedOutboundKind[];
 export type OrdinaryPushKind = (typeof ORDINARY_PUSH_KINDS)[number];
 
 /**
  * The pushes that are never budgeted and never stopped by "One moment a day": that her morning has
- * gone quiet, and that it is settled. A flag is not pushed yet (her words must not travel through
- * Apple or Google, and the app has no screen for it), so it is not here.
+ * gone quiet, that it is settled, and that she tapped "Not okay" on her check-in (a `flag`, ADR-57).
+ * Only that flag is pushed, and in words that say nothing about her health: a flag raised from her
+ * words is not, since her words must not travel through Apple or Google.
  */
 export const PUSH_EXCEPTION_KINDS = [
   "quiet_notice",
   "quiet_resolved",
+  "flag",
 ] as const satisfies readonly OutboundKind[];
 export type PushExceptionKind = (typeof PUSH_EXCEPTION_KINDS)[number];
 

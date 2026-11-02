@@ -11,15 +11,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { Platform, Text } from "react-native";
+import { Platform } from "react-native";
 import { ApiError, apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
 import { requiresEnglish } from "../api/trial.ts";
 import { useAccount } from "../auth/clerk.tsx";
+import { Text } from "../components/scaled-text.tsx";
 import { useCapabilities } from "../data/useCapabilities.ts";
 import { readSetting, readSettingNow, writeSetting } from "../storage/flags.ts";
 import { activate, i18n } from "./i18n.ts";
-import { type AppLocale, fromDevice, fromLang, isAppLocale } from "./locale.ts";
+import { type AppLocale, fromDevice, fromLang, isAppLocale, startingLocale } from "./locale.ts";
 
 /** Kept as `vela.locale`: the language the account last gave, or the reader last chose. */
 const SETTING = "locale";
@@ -82,7 +83,8 @@ function PlainText({ children }: TransRenderProps) {
  */
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const account = useAccount();
-  const { englishOnly } = useCapabilities();
+  const { englishOnly, isPending } = useCapabilities();
+  const capabilitiesPending = apiConfigured() && isPending;
   const queries = useQueryClient();
   const keyFor = useIdempotencyKey("language");
   const [locale, setLocale] = useState<AppLocale>(currentLocale);
@@ -101,13 +103,20 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     void readSetting(SETTING).then((remembered) => {
       if (!current) return;
       if (englishOnly) apply("en", false);
-      else if (isAppLocale(remembered) && !fromAccount.current) apply(remembered, false);
-      setSettled(true);
+      else if (!fromAccount.current)
+        apply(startingLocale({ englishOnly, remembered, device: getLocales() }), false);
+      // Held under the splash until the server has said which languages it allows, so a Chinese
+      // phone never flashes English first; a server that does not answer within 3 s lets it go.
+      if (!capabilitiesPending) setSettled(true);
     });
     return () => {
       current = false;
     };
-  }, [apply, englishOnly]);
+  }, [apply, englishOnly, capabilitiesPending]);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 3_000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // The same query as Today's, so react-query makes the one request for both.
   const enabled = apiConfigured() && account.ready && account.signedIn;

@@ -1,12 +1,14 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { VoicePlayback } from "../../audio/VoicePlayback.tsx";
 import type { ChatMessage, ChatReactionKind } from "../../data/chat.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { hitSlop, radius, space, type } from "../../theme/tokens.ts";
+import { BrandIcon } from "../brand/icon.tsx";
 import { ExchangePhotos, ReplyPhoto } from "../family-photo.tsx";
 import { Light } from "../light.tsx";
+import { Text } from "../scaled-text.tsx";
 import { Words } from "../ui.tsx";
 
 const EMOJI: Record<ChatReactionKind, string> = { heart: "❤️", laugh: "😂", hug: "🤗" };
@@ -37,13 +39,15 @@ export function DayChip({ label }: { label: string }) {
 
 /**
  * One message. Hers on the left in Literata, as her words read everywhere in the app; the reader's
- * on the right in the action teal; the rest of the family on the left with their name; Vela's own
+ * on the right in the action colour; everyone else on the left with their name over each group; Vela's own
  * hello centred, since nobody in the family sent it. An ask that went into her morning says so.
  */
 export function ChatBubble({
   message,
   first,
   last,
+  showTime,
+  showStatus,
   familyId,
   onReact,
   reacting,
@@ -53,6 +57,10 @@ export function ChatBubble({
   first: boolean;
   /** The last of a group: the time and the status show under it. */
   last: boolean;
+  /** The conversation pauses after this message, so its time shows (`showsTime`). */
+  showTime: boolean;
+  /** "Seen" or "Delivered" is said here, or the message is still sending or failed (`showsStatus`). */
+  showStatus: boolean;
   familyId: string | undefined;
   /** Reactions are given on her messages only. */
   onReact?: (kind: ChatReactionKind) => void;
@@ -62,6 +70,8 @@ export function ChatBubble({
   const { t } = useLingui();
   const { fontScale } = useWindowDimensions();
   const [picking, setPicking] = useState(false);
+  // Tapping her message shows its time with the hearts, as messengers show a time on demand.
+  const [timeOpen, setTimeOpen] = useState(false);
   const side = message.side;
   const mine = side === "me";
   const hers = side === "her";
@@ -112,16 +122,21 @@ export function ChatBubble({
       ? t`Sending…`
       : message.status === "failed"
         ? t`Not delivered`
-        : message.status === "seen"
-          ? t`Seen`
-          : message.status === "delivered"
-            ? t`Delivered`
-            : undefined;
+        : message.status === "sent"
+          ? t`Sent`
+          : message.status === "seen"
+            ? t`Seen`
+            : message.status === "delivered"
+              ? t`Delivered`
+              : undefined;
+  // "written by Vela" (ADR-49) always shows on its message; the time only at a pause or on a tap.
   const footer = [
-    message.morning === true ? t`Her morning` : undefined,
-    time,
-    message.draftedByVela === true ? t`written by Vela` : undefined,
-    status,
+    (last && showTime) || timeOpen ? time : undefined,
+    last && message.draftedByVela === true ? t`written by Vela` : undefined,
+    // A message still sending or not delivered says so wherever it sits in its group.
+    (last || message.status === "sending" || message.status === "failed") && showStatus
+      ? status
+      : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -196,11 +211,15 @@ export function ChatBubble({
         alignSelf: mine ? "flex-end" : "flex-start",
         alignItems: mine ? "flex-end" : "flex-start",
         maxWidth: fontScale > 1.3 ? "100%" : "84%",
-        marginTop: first ? space.m : 2,
+        // A new speaker starts well clear of the last message's time, so each time reads as the
+        // message above it and never floats between two (Refactoring UI: more space around a group
+        // than inside it).
+        marginTop: first ? space.xl : 2,
         gap: space.xs,
       }}
     >
-      {first && side === "family" ? (
+      {/* In a family chat every voice but the reader's is named, hers included, as a group chat does. */}
+      {first && (side === "family" || hers) ? (
         <Text style={[type.caption, { color: palette.ink2, paddingHorizontal: space.s }]}>
           {from}
         </Text>
@@ -210,8 +229,15 @@ export function ChatBubble({
           accessibilityRole="button"
           accessibilityLabel={label}
           accessibilityHint={t`Shows hearts, laughs and hugs to send`}
-          onPress={() => setPicking((open) => !open)}
-          onLongPress={() => setPicking(true)}
+          onPress={() => {
+            const open = !picking;
+            setPicking(open);
+            setTimeOpen(open);
+          }}
+          onLongPress={() => {
+            setPicking(true);
+            setTimeOpen(true);
+          }}
           style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
         >
           {body}
@@ -221,8 +247,16 @@ export function ChatBubble({
           {body}
         </View>
       )}
-      {message.reactions.length === 0 ? null : (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.xs }}>
+      {message.reactions.length === 0 && footer.length === 0 ? null : (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: mine ? "flex-end" : "flex-start",
+            gap: space.xs,
+          }}
+        >
           {message.reactions.map((reaction) => {
             const giver = reaction.from;
             return (
@@ -248,13 +282,36 @@ export function ChatBubble({
                   paddingVertical: 2,
                 }}
               >
-                <Text style={{ fontSize: 14 }}>{EMOJI[reaction.kind]}</Text>
+                {reaction.kind === "heart" ? (
+                  // The heart is the app's own, amber like a lit window, as on Today.
+                  <BrandIcon
+                    name="heart"
+                    color={palette.lightDeep}
+                    fill={palette.light}
+                    size={14}
+                  />
+                ) : (
+                  <Text style={{ fontSize: 14 }}>{EMOJI[reaction.kind]}</Text>
+                )}
                 <Text style={[type.caption, { color: palette.ink2 }]}>
                   {reaction.mine ? t`You` : reaction.from}
                 </Text>
               </View>
             );
           })}
+          {footer.length === 0 ? null : (
+            <Text
+              style={[
+                type.caption,
+                {
+                  color: message.status === "failed" ? palette.error : palette.ink3,
+                  paddingHorizontal: space.s,
+                },
+              ]}
+            >
+              {footer}
+            </Text>
+          )}
         </View>
       )}
       {picking && onReact !== undefined ? (
@@ -306,20 +363,7 @@ export function ChatBubble({
           })}
         </View>
       ) : null}
-      {last ? (
-        <Text
-          style={[
-            type.caption,
-            {
-              color: message.status === "failed" ? palette.error : palette.ink3,
-              paddingHorizontal: space.s,
-            },
-          ]}
-        >
-          {footer}
-        </Text>
-      ) : null}
-      {last && message.status === "failed" ? (
+      {message.status === "failed" ? (
         <Words variant="caption" tone="ink2">
           <Trans>Her messenger did not take it. Her daily morning is unchanged.</Trans>
         </Words>

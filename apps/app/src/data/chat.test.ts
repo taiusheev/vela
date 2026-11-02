@@ -1,7 +1,17 @@
 import { i18n } from "@lingui/core";
 import type { ApiExchangeSummary, ApiTodayAnswer } from "@vela/contracts";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { type ChatMessage, dayLabel, startsGroup, toChat } from "./chat.ts";
+import {
+  type ChatMessage,
+  dayLabel,
+  newestMine,
+  type PendingChatMessage,
+  pendingHasArrived,
+  showsStatus,
+  showsTime,
+  startsGroup,
+  toChat,
+} from "./chat.ts";
 import { weekWindows } from "./week-windows.ts";
 
 // The macros compile away when the app is bundled; here `t` reads the English as written.
@@ -154,7 +164,7 @@ describe("the chat with a parent", () => {
     const chat = toChat([sending, hello, dad], MOM, { id: MIA });
     expect(chat.map((message) => [message.side, message.status])).toEqual([
       ["vela", undefined],
-      ["me", "sending"],
+      ["me", "sent"],
     ]);
   });
 
@@ -185,6 +195,52 @@ describe("the chat with a parent", () => {
     expect(dayLabel("2026-10-17", "2026-10-17")).toBe("Today");
     expect(dayLabel("2026-10-16", "2026-10-17")).toBe("Yesterday");
     expect(dayLabel("2026-10-12", "2026-10-17")).toBe("Monday 12 Oct");
+  });
+});
+
+describe("how much the chat says around each message", () => {
+  const MINUTE = 60_000;
+  const base = Date.parse("2026-10-17T00:00:00.000Z");
+  function message(key: string, over: Partial<ChatMessage> = {}): ChatMessage {
+    return {
+      key,
+      exchangeId: "x1",
+      side: "her",
+      from: "Mom",
+      at: base,
+      day: "2026-10-17",
+      time: "08:00",
+      text: key,
+      reactions: [],
+      ...over,
+    };
+  }
+
+  it("shows a time after the last message, at a new day and after a pause of half an hour", () => {
+    const first = message("a");
+    expect(showsTime(first, undefined)).toBe(true);
+    expect(showsTime(first, message("b", { day: "2026-10-18", at: base + 5 * MINUTE }))).toBe(true);
+    expect(showsTime(first, message("b", { at: base + 30 * MINUTE }))).toBe(true);
+    expect(showsTime(first, message("b", { at: base + 17 * MINUTE }))).toBe(false);
+  });
+
+  it("says Seen or Delivered once, under the reader's newest message", () => {
+    const chat = [
+      message("ask", { side: "me", from: "Mia", status: "seen" }),
+      message("hers", { at: base + MINUTE }),
+      message("later", { side: "me", from: "Mia", status: "seen", at: base + 2 * MINUTE }),
+    ];
+    const newest = newestMine(chat);
+    expect(newest).toBe("later");
+    expect(showsStatus(chat[0] as ChatMessage, newest)).toBe(false);
+    expect(showsStatus(chat[2] as ChatMessage, newest)).toBe(true);
+    expect(newestMine([message("hers")])).toBeUndefined();
+  });
+
+  it("always says when a message is still sending or was not delivered", () => {
+    expect(showsStatus(message("a", { side: "me", status: "sending" }), "b")).toBe(true);
+    expect(showsStatus(message("a", { side: "me", status: "failed" }), "b")).toBe(true);
+    expect(showsStatus(message("a", { side: "me" }), "a")).toBe(false);
   });
 });
 
@@ -227,5 +283,42 @@ describe("this week's windows", () => {
     expect(week[0]).toEqual({ date: "2026-10-19", hasMessage: true, ahead: false, today: true });
     expect(week.filter((day) => day.hasMessage)).toHaveLength(1);
     expect(week.slice(1).every((day) => day.ahead)).toBe(true);
+  });
+});
+
+describe("outgoing message reconciliation", () => {
+  const pending: PendingChatMessage = {
+    localId: "local",
+    text: "Hello",
+    since: 100_000,
+    status: "sending",
+    existingIds: ["old"],
+  };
+  const message = (exchangeId: string, text = "Hello", side: "me" | "her" = "me") => ({
+    key: `${exchangeId}:ask`,
+    exchangeId,
+    side,
+    text,
+    at: 100_000,
+    from: "Mia",
+    day: "2026-10-23",
+    time: "08:00",
+    reactions: [],
+  });
+  it("hides the local copy when polling beats the send acknowledgement", () => {
+    expect(pendingHasArrived(pending, [message("new")])).toBe(true);
+  });
+  it("never matches an earlier identical message or the parent's words", () => {
+    expect(pendingHasArrived(pending, [message("old"), message("new", "Hello", "her")])).toBe(
+      false,
+    );
+  });
+  it("uses the accepted exchange ID after acknowledgement, even for repeated words", () => {
+    const accepted = { ...pending, status: "sent" as const, exchangeId: "accepted" };
+    expect(pendingHasArrived(accepted, [message("other")])).toBe(false);
+    expect(pendingHasArrived(accepted, [message("accepted", "server words")])).toBe(true);
+  });
+  it("does not discard a delayed send just because time passed", () => {
+    expect(pendingHasArrived({ ...pending, since: 1 }, [])).toBe(false);
   });
 });

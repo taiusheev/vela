@@ -1,6 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { apiConfigured } from "../../api/client.ts";
 import { accountsConfigured } from "../../auth/clerk.tsx";
 import { chatFixture, toChat } from "../../data/chat.ts";
@@ -11,6 +11,7 @@ import { useToday } from "../../data/useToday.ts";
 import { usePalette } from "../../theme/theme.tsx";
 import { radius, space, type } from "../../theme/tokens.ts";
 import { BrandIcon } from "../brand/icon.tsx";
+import { Text } from "../scaled-text.tsx";
 
 /**
  * The way into the chat from Today, as a messenger lists a conversation: her name, the last thing

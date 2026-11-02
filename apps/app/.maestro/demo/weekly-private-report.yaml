@@ -1,0 +1,28 @@
+url: ${APP_URL}
+name: Parent can read a reviewed report, stop it and decline permission
+tags:
+  - demo
+---
+- launchApp
+- openLink: ${APP_URL}/weekly-report
+- assertVisible: "Example private report.*"
+- assertVisible: ".*Could someone help me sort the old photos.*"
+- tapOn: "View as parent"
+- assertNotVisible: "Edit an offer before sending"
+- scrollUntilVisible:
+    element: "Stop reports about me"
+    direction: DOWN
+- tapOn: "Stop reports about me"
+- assertNotVisible: ".*Could someone help me sort the old photos.*"
+- tapOn: "Review who can read my report"
+- scrollUntilVisible:
+    element: "I agree for these named people"
+    direction: DOWN
+- assertVisible: "People who can read this report"
+- tapOn: "No, keep reports off"
+- assertNotVisible: ".*Could someone help me sort the old photos.*"
+- scrollUntilVisible:
+    element: "View as family organiser"
+    direction: UP
+- tapOn: "View as family organiser"
+- assertVisible: "This report needs the parent's own permission.*"

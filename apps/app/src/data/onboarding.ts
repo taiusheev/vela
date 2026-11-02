@@ -22,8 +22,9 @@ export interface CountryChoice {
 }
 
 export const countries: CountryChoice[] = [
-  { code: "VN", label: msg`Vietnam`, zones: [{ label: msg`Vietnam`, zone: "Asia/Ho_Chi_Minh" }] },
+  // Taiwan first: the families Vela is starting with (the LINE test, Traditional Chinese).
   { code: "TW", label: msg`Taiwan`, zones: [{ label: msg`Taiwan`, zone: "Asia/Taipei" }] },
+  { code: "VN", label: msg`Vietnam`, zones: [{ label: msg`Vietnam`, zone: "Asia/Ho_Chi_Minh" }] },
   {
     code: "US",
     label: msg`United States`,

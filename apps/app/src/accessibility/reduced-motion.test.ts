@@ -7,6 +7,7 @@ function setup() {
   let change!: (enabled: boolean) => void;
   const remove = vi.fn();
   const update = vi.fn();
+  const unavailable = vi.fn();
   const preferences: MotionPreferences = {
     isReduceMotionEnabled: () =>
       new Promise<boolean>((yes, no) => {
@@ -18,8 +19,8 @@ function setup() {
       return { remove };
     },
   };
-  const stop = watchReducedMotion(preferences, update);
-  return { resolve, reject, change, remove, update, stop };
+  const stop = watchReducedMotion(preferences, update, unavailable);
+  return { resolve, reject, change, remove, update, unavailable, stop };
 }
 
 it("reads the startup preference and follows subsequent changes", async () => {
@@ -55,7 +56,16 @@ it("retains the safe default on read failure and still accepts a later event", a
   state.reject(new Error("Preference unavailable"));
   await Promise.resolve();
   expect(state.update).not.toHaveBeenCalled();
+  expect(state.unavailable).toHaveBeenCalledOnce();
   state.change(false);
   expect(state.update).toHaveBeenCalledWith(false);
   state.stop();
+});
+
+it("does not report a failed startup read once a live change has arrived", async () => {
+  const state = setup();
+  state.change(false);
+  state.reject(new Error("Preference unavailable"));
+  await Promise.resolve();
+  expect(state.unavailable).not.toHaveBeenCalled();
 });

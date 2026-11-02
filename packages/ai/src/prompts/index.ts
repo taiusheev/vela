@@ -2,13 +2,16 @@ import type { AiCallName } from "../types.ts";
 import * as chips from "./chips.v1.ts";
 import * as flag from "./flag.v2.ts";
 import * as hello from "./hello.v4.ts";
+import * as memoryPick from "./memory_pick.v1.ts";
 import * as readback from "./readback.v1.ts";
 import * as recipe from "./recipe.v1.ts";
-import * as suggest from "./suggest.v4.ts";
+import * as storyWeave from "./story_weave.v1.ts";
+import * as personalSuggest from "./suggest.personal.v2.ts";
+import * as suggest from "./suggest.v5.ts";
 import * as translate from "./translate.v2.ts";
 import * as understand from "./understand.v6.ts";
 import * as weeklyInsight from "./weekly_insight.v2.ts";
-import * as weeklyRead from "./weekly_read.v5.ts";
+import * as weeklyRead from "./weekly_read.v6.ts";
 
 export interface Prompt {
   readonly version: string;
@@ -27,7 +30,20 @@ export const PROMPTS: Readonly<Record<AiCallName, Prompt>> = {
   weekly_read: weeklyRead,
   recipe,
   weekly_insight: weeklyInsight,
+  memory_pick: memoryPick,
+  story_weave: storyWeave,
 };
+
+/** The new reviewed experiment cannot change the existing nightly drafting prompt. */
+export function promptFor(call: AiCallName, input: unknown): Prompt {
+  return call === "suggest" &&
+    typeof input === "object" &&
+    input !== null &&
+    "personalization" in input &&
+    input.personalization !== undefined
+    ? personalSuggest
+    : PROMPTS[call];
+}
 
 /** The tag pair every system prompt names as the boundary of untrusted family content. */
 export const INPUT_OPEN_TAG = "<vela_input>";

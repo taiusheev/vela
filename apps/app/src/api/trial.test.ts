@@ -29,9 +29,12 @@ describe("English trial language", () => {
     expect(requiresEnglish(true, undefined, false)).toBe(true);
     expect(requiresEnglish(true, true, false)).toBe(true);
   });
-  it("allows other languages only after an explicit non-trial server declaration", () => {
+  it("allows other languages only after an explicit server declaration, in the trial build too", () => {
     expect(requiresEnglish(true, false, false)).toBe(false);
-    expect(requiresEnglish(true, false, true)).toBe(true);
+    // ADR-52: the closed test's server allows Chinese once its notice does.
+    expect(requiresEnglish(true, false, true)).toBe(false);
+    expect(requiresEnglish(true, undefined, true)).toBe(true);
+    expect(requiresEnglish(true, true, true)).toBe(true);
     expect(requiresEnglish(false, undefined, true)).toBe(true);
     expect(requiresEnglish(false, undefined, false)).toBe(false);
   });

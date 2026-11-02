@@ -35,7 +35,7 @@ import type { Deps } from "../src/deps.ts";
 import { deliverOutbound, enqueueOutbound, insertOutbound } from "../src/gateway.ts";
 import { sha256Hex } from "../src/hash.ts";
 import { checkPushReceipts } from "../src/push.ts";
-import { answerReceiptPush } from "../src/push-messages.ts";
+import { answerReceiptPush, turnPromptPush } from "../src/push-messages.ts";
 import { openQuiet } from "../src/quiet.ts";
 import { createFakePush, pushFailureFor } from "../src/testing/fake-push.ts";
 import { createFakeTelegram } from "../src/testing/fake-telegram.ts";
@@ -324,5 +324,44 @@ describe("a phone's quiet notice dropped with every phone gone, as the round's T
         suffix: `quiet_nobody_told:${quiet?.id}:0:${miaId}`,
       }),
     ]);
+  });
+});
+
+describe("the account-wide turn-reminder slot", () => {
+  it("queues only one reminder when two parents claim the same account day concurrently", async () => {
+    const family = await seedFamily(seeder.db, {
+      now: NOW,
+      organiserExternalId: "5001",
+      memberExternalId: "5002",
+    });
+    const request = (seed: SeededFamily) =>
+      turnPromptPush({
+        now: NOW,
+        holder: { member: { ...seed.organiser, userId: scope.miaUser }, userId: scope.miaUser },
+        familyId: seed.family.id,
+        recipientId: seed.member.id,
+        herName: "Synthetic parent",
+        forDate: "2026-09-15",
+      });
+    const first = await pg.client("reminder-first");
+    const second = await pg.client("reminder-second");
+    const inserted = pg.latch("first reminder inserted");
+    const settle = pg.latch("first reminder can commit");
+    const firstRun = pg.track(
+      first.db.transaction(async (tx) => {
+        const result = await insertOutbound(first.deps, tx, request(scope.family));
+        inserted.release();
+        await settle.wait();
+        return result;
+      }),
+    );
+    await pg.reach("first reminder insert", inserted, firstRun);
+    const racing = pg.track(insertOutbound(second.deps, second.db, request(family)));
+    await pg.waitForRowLockWait(second, [first], racing);
+    settle.release();
+    expect(await pg.finish("first reminder", firstRun)).toHaveProperty("outboundId");
+    expect(await pg.finish("racing reminder", racing)).toEqual({ duplicate: true });
+    const rows = await seeder.db.select().from(outbound).where(eq(outbound.kind, "turn_prompt"));
+    expect(rows).toHaveLength(1);
   });
 });
