@@ -127,7 +127,8 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.developer.usernotifications.time-sensitive": true
+        "com.apple.developer.usernotifications.time-sensitive": true,
+        "com.apple.security.application-groups": ["group.family.vela.light"]
       }
     },
     "android": {
@@ -179,7 +180,8 @@
         {
           "microphonePermission": "Vela uses your microphone when you choose to record a voice message for your family."
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true

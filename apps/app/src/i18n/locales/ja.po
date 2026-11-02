@@ -2860,6 +2860,7 @@ msgstr ""
 
 #: src/data/today.ts
 #: src/data/useToday.ts
+#: src/device/widget.ts
 msgid "No word yet today"
 msgstr ""
 
@@ -3173,6 +3174,10 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "Open Today to see it."
+msgstr ""
+
+#: src/device/widget.ts
+msgid "Open Vela"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx

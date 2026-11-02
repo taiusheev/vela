@@ -52,6 +52,7 @@ import { useCallingNumber } from "../src/data/useCallingNumber.ts";
 import { useExchanges } from "../src/data/useExchanges.ts";
 import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { useToday } from "../src/data/useToday.ts";
+import { tapLanded, tapLight } from "../src/device/haptics.ts";
 import { clearShownAbout } from "../src/push/notifications.ts";
 import { useDraft } from "../src/storage/useDraft.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -175,6 +176,7 @@ function Conversation() {
       following.current = true;
     },
     onSuccess: async (accepted, { text: words, localId }) => {
+      tapLanded();
       // Vela has it now: say so at once, and read the conversation again without waiting on it.
       setPending((current) =>
         current.map((message) =>
@@ -233,6 +235,7 @@ function Conversation() {
       );
     },
     onSuccess: async (_done, { exchangeId, kind }) => {
+      tapLight();
       if (demo) {
         setDemoReactions((earlier) => ({
           ...earlier,

@@ -50,6 +50,7 @@ import { useFamily } from "../../src/data/useFamily.ts";
 import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
 import { useQuiet } from "../../src/data/useQuiet.ts";
 import { type TodayView, useToday } from "../../src/data/useToday.ts";
+import { widgetSnapshot, writeWidget } from "../../src/device/widget.ts";
 import { usePush } from "../../src/push/provider.tsx";
 import { readFlag, writeFlag } from "../../src/storage/flags.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
@@ -148,6 +149,12 @@ export default function TodayScreen() {
 
 function FamilyToday({ day }: { day: TodayView }) {
   const pull = usePullRefresh(day.refresh);
+  // The home screen widget follows the lights each time the real day arrives.
+  const widgetLights = day.today.lights;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: written once per fetched day, not per render.
+  useEffect(() => {
+    if (day.live) writeWidget(widgetSnapshot(widgetLights, new Date()));
+  }, [day.live, day.updatedAt]);
   const palette = usePalette();
   const { t } = useLingui();
   const askedLine = useAskedLine();

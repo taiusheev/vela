@@ -4,6 +4,7 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { RequestInterrupted, sessionRequests } from "../api/request-session.ts";
 import { clearAudioCache } from "../audio/cache.ts";
 import { clearPhotoCache } from "../data/photos.ts";
+import { writeWidget } from "../device/widget.ts";
 import { activatePrivateSession, clearSessionDrafts } from "../storage/drafts.ts";
 import { activatePortraitSession, clearPortraitSession } from "../storage/portraits.ts";
 import { signedInToken } from "./session.ts";
@@ -66,6 +67,8 @@ function ClerkAccount({ children }: { children: ReactNode }) {
         if (sessionId == null) throw new RequestInterrupted("session");
         sessionRequests.end(scope);
         clearPhotoCache();
+        // The home screen widget shows this family's lights: it goes dark with the account.
+        writeWidget(null);
         void clearAudioCache().catch(() => {});
         try {
           clearPortraitSession(scope);

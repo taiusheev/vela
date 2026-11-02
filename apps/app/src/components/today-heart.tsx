@@ -6,6 +6,7 @@ import { useMotionPreference } from "../accessibility/use-reduced-motion.ts";
 import { apiConfigured, replyRefusal, replyTo } from "../api/client.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { demoDataAllowed } from "../data/live-state.ts";
+import { tapLanded } from "../device/haptics.ts";
 import { useDraft } from "../storage/useDraft.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, space } from "../theme/tokens.ts";
@@ -49,6 +50,7 @@ export function TodayHeart({
       await replyTo(id, await draft.keyFor(body), body, await account.token());
     },
     onSuccess: () => {
+      tapLanded();
       // Keep the accepted identity: remounting/retrying can only replay this same heart.
       if (!demo) {
         void queries.invalidateQueries({ queryKey: ["today"] });
