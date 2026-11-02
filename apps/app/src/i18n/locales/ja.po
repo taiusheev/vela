@@ -477,6 +477,10 @@ msgstr ""
 msgid "{relation} · asked after setup"
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "{sentTo} signs in with a password."
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "{someone} nearby, for quiet days"
 msgstr ""
@@ -1601,6 +1605,10 @@ msgstr ""
 
 #: app/sign-in.tsx
 msgid "Enter your code to continue to your family."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "Enter your password"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3264,6 +3272,10 @@ msgstr ""
 msgid "Parents"
 msgstr ""
 
+#: app/sign-in.tsx
+msgid "Password"
+msgstr ""
+
 #: app/settings.tsx
 #: src/audio/voice-bar.tsx
 msgid "Pause"
@@ -4500,6 +4512,10 @@ msgstr ""
 
 #: app/legal.tsx
 msgid "That page could not open. Write to Vela support instead."
+msgstr ""
+
+#: app/sign-in.tsx
+msgid "That password did not work. Check it and try again."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
