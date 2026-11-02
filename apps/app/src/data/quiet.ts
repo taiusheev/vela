@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import { exampleNames } from "./example-names.ts";
 
 /**
  * What the quiet notice needs (spec §14.1 A11, §8). The API route that will carry it does not
@@ -48,14 +49,14 @@ export const quietFixtureFor = (name: string): QuietNotice => ({
   contacts: [
     {
       id: "c1",
-      name: "Lena",
+      name: exampleNames().lena,
       relation: t({ comment: "who a nearby contact is to her", message: "neighbour" }),
       consented: true,
       canAsk: true,
     },
     {
       id: "c2",
-      name: "Petro",
+      name: exampleNames().petro,
       relation: t({ comment: "who a nearby contact is to her", message: "downstairs" }),
       consented: false,
     },
