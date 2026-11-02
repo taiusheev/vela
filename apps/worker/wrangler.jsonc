@@ -568,7 +568,9 @@
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",
-        "WEEKLY_READ_AUTO_SEND": "off",
+        // ADR-59: the weekly read goes out as drafted since privacy-notice.v13 no longer promises the
+        // founder checks it first (founder: "no need me to check", 2 November 2026).
+        "WEEKLY_READ_AUTO_SEND": "on",
         "WEEKLY_SUPPORT": "off",
         "WEEKLY_SUPPORT_NOTICE": "",
         "WEEKLY_SUPPORT_FAMILIES": "",

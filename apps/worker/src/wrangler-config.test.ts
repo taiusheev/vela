@@ -636,15 +636,15 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
-  // The weekly read sent as soon as it is drafted (founder's choice, 2 Nov 2026), on where only test
-  // families are, and off in production while the privacy notice says the founder checks each read
-  // before anything is sent. The commit that turns it on changes this, with the new notice.
-  it("send the weekly read without waiting for the founder in development and staging only", () => {
+  // ADR-59: the weekly read sent as soon as it is drafted, everywhere since privacy-notice.v13 says so
+  // (founder: "no need me to check", 2 Nov 2026). The weekly insight stays off in production (below)
+  // until an organiser can switch their own feedback off, as v13 promises the founder can.
+  it("send the weekly read without waiting for the founder in every environment", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.WEEKLY_READ_AUTO_SEND,
       ),
-    ).toEqual(["on", "on", "off"]);
+    ).toEqual(["on", "on", "on"]);
   });
 
   // ADR-49: Vela's suggestion sent in an organiser's name, at their choice, everywhere since
