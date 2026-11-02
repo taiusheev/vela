@@ -1025,6 +1025,10 @@ msgstr "在 LINE 上問{who}"
 msgid "Ask {who} on Telegram"
 msgstr "在 Telegram 上問{who}"
 
+#: src/components/quiet-notice.tsx
+msgid "Ask {who} to look in"
+msgstr "請{who}過去看看"
+
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "提問和回覆 · 免費"
@@ -1036,10 +1040,6 @@ msgstr "問問媽媽明年春天想留哪些種子。"
 #: src/components/story-day.tsx
 msgid "Ask it on Sunday"
 msgstr "週日問這個"
-
-#: src/components/quiet-notice.tsx
-msgid "Ask them to look in"
-msgstr "請對方過去看看"
 
 #: src/components/weekly-support.tsx
 msgid "Ask what would help"

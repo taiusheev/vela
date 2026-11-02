@@ -212,18 +212,13 @@ export function QuietNoticeSheet({
                           {askedLine(contact.name, contact.asked)}
                         </Words>
                       ) : contact.canAsk === true && onAskToLookIn !== undefined ? (
-                        <Pressable
-                          accessibilityRole="button"
-                          hitSlop={hitSlop}
+                        // The one thing someone nearby is here for, so it looks like a button
+                        // (Refactoring UI: actions by importance), named for the person it asks.
+                        <SecondaryButton
+                          label={asking ? t`Asking…` : askToLookIn(contact.name)}
                           disabled={asking || settling}
-                          accessibilityState={{ disabled: asking || settling, busy: asking }}
-                          style={{ minHeight: 44, justifyContent: "center" }}
                           onPress={() => onAskToLookIn(contact.id)}
-                        >
-                          <Words variant="button" tone="action">
-                            {asking ? t`Asking…` : t`Ask them to look in`}
-                          </Words>
-                        </Pressable>
+                        />
                       ) : contact.consented ? null : (
                         <Words variant="caption" tone="ink3">
                           <Trans>Has not said yes yet</Trans>
@@ -272,6 +267,11 @@ export function QuietNoticeSheet({
       </View>
     </Modal>
   );
+}
+
+/** The button that asks one person nearby, named for them. */
+function askToLookIn(who: string): string {
+  return t`Ask ${who} to look in`;
 }
 
 /** How this morning's ask to look in stands, in one line with their name. */

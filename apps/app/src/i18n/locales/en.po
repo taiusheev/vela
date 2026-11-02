@@ -1024,6 +1024,10 @@ msgstr "Ask {who} on LINE"
 msgid "Ask {who} on Telegram"
 msgstr "Ask {who} on Telegram"
 
+#: src/components/quiet-notice.tsx
+msgid "Ask {who} to look in"
+msgstr "Ask {who} to look in"
+
 #: src/data/family.ts
 msgid "Ask and reply · free"
 msgstr "Ask and reply · free"
@@ -1035,10 +1039,6 @@ msgstr "Ask her which seeds she wants to keep for next spring."
 #: src/components/story-day.tsx
 msgid "Ask it on Sunday"
 msgstr "Ask it on Sunday"
-
-#: src/components/quiet-notice.tsx
-msgid "Ask them to look in"
-msgstr "Ask them to look in"
 
 #: src/components/weekly-support.tsx
 msgid "Ask what would help"
