@@ -295,6 +295,11 @@ export const members = pgTable(
     turnsIn: boolean("turns_in").notNull().default(true),
     primarySurface: text("primary_surface", { enum: SURFACES }).notNull().default("app"),
     lightOn: boolean("light_on").notNull().default(false),
+    /**
+     * Whether this organiser's weekly read carries feedback on their own messages (ADR-48). The
+     * founder turns it off when they ask (privacy-notice v13, "Your choices").
+     */
+    weeklyFeedback: boolean("weekly_feedback").notNull().default(true),
     lightConsentedAt: timestamptz("light_consented_at"),
     /** Version of the consent copy she agreed to. */
     lightConsentText: text("light_consent_text"),

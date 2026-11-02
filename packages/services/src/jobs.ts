@@ -590,6 +590,23 @@ export async function tuneQuietAfter(deps: Deps, member: Member): Promise<void> 
 }
 
 /**
+ * The organisers a week's feedback is drafted for (ADR-48): those the read reaches, on their
+ * messenger or in the app, less any who asked the founder for none (`members.weekly_feedback`).
+ */
+async function feedbackOrganiserIds(db: Queryable, familyId: string): Promise<Set<string>> {
+  const reached = new Set([
+    ...(await activeOrganisersWithLinks(db, familyId, MESSENGER)).map((o) => o.member.id),
+    ...(await activeAppOrganiserIds(db, familyId)),
+  ]);
+  const off = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(and(eq(members.familyId, familyId), eq(members.weeklyFeedback, false)));
+  for (const row of off) reached.delete(row.id);
+  return reached;
+}
+
+/**
  * Drafts the read for the week ending `weekEnd` (a Sunday): the counts into `weekly_reads.stats`,
  * the lines and the suggestion from `ai.weeklyRead` given only the days she answered (its safe
  * default, no lines and a generic suggestion, when the call fails or AI is off), and one
@@ -707,13 +724,8 @@ export async function draftWeeklyRead(
           family,
           weekStart,
           weekEnd,
-          // Organisers the read reaches: on their messenger, or in the app.
-          new Set([
-            ...(await activeOrganisersWithLinks(deps.db, family.id, MESSENGER)).map(
-              (organiser) => organiser.member.id,
-            ),
-            ...(await activeAppOrganiserIds(deps.db, family.id)),
-          ]),
+          // Organisers the read reaches, on their messenger or in the app, who still want feedback.
+          await feedbackOrganiserIds(deps.db, family.id),
         )
       : null;
   const insightOutcome =

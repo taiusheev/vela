@@ -56,6 +56,7 @@ import {
   type SetAwayInput,
   sendWeeklyRead,
   setAway,
+  setWeeklyFeedback,
   type TestWeekReport,
   type TrialOverview,
   type TrialReport,
@@ -120,6 +121,11 @@ export interface AdminServices {
   endAway(deps: AdminDeps, ctx: AdminContext, awayPeriodId: string): Promise<void>;
   markLeft(deps: AdminDeps, ctx: AdminContext, memberId: string): Promise<MarkLeftResult>;
   markDeceased(deps: AdminDeps, ctx: AdminContext, memberId: string): Promise<void>;
+  setWeeklyFeedback(
+    deps: AdminDeps,
+    ctx: AdminContext,
+    input: { memberId: string; on: boolean },
+  ): Promise<"changed" | "same">;
   deleteFamily(deps: AdminDeps, ctx: AdminContext, familyId: string): Promise<void>;
   sendWeeklyRead(
     deps: AdminDeps,
@@ -255,6 +261,7 @@ const services: AdminServices = {
   endAway: (deps, ctx, awayPeriodId) => endAway(servicesDeps(deps), ctx, awayPeriodId),
   markLeft: (deps, ctx, memberId) => markLeft(servicesDeps(deps), ctx, memberId),
   markDeceased: (deps, ctx, memberId) => markDeceased(servicesDeps(deps), ctx, memberId),
+  setWeeklyFeedback: (deps, ctx, input) => setWeeklyFeedback(servicesDeps(deps), ctx, input),
   deleteFamily: (deps, ctx, familyId) => deleteFamily(servicesDeps(deps), ctx, familyId),
   sendWeeklyRead: (deps, ctx, input) => sendWeeklyRead(servicesDeps(deps), ctx, input),
   createInvite: (deps, ctx, input) => createInvite(servicesDeps(deps), ctx, input),
