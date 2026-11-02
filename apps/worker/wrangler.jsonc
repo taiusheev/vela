@@ -412,8 +412,9 @@
         "LINE_BOT_BASIC_ID": "@661oqjkt",
         // This Worker's origin, which the media URLs LINE fetches start with once LINE is on.
         "PILOT_PUBLIC_URL": "https://vela.vela-light-staging.workers.dev",
-        // Off until the founder has set up Expo and put EXPO_ACCESS_TOKEN (ADR-34).
-        "PUSH_SEND": "off",
+        // On since the founder enabled Expo's enhanced push security and put EXPO_ACCESS_TOKEN on
+        // this Worker (ADR-34, 2 November 2026).
+        "PUSH_SEND": "expo",
         "NOTIFICATION_CONTROLS": "on",
         // On: staging holds test families only (spec §12).
         "MEMORY": "on",
@@ -552,9 +553,10 @@
         "LINE_CHANNEL": "on",
         "LINE_BOT_BASIC_ID": "@675nhrpg",
         "PILOT_PUBLIC_URL": "https://vela.vela-light.workers.dev",
-        // Off, and pinned off by src/wrangler-config.test.ts: its API is off, and no family gets a
-        // push before a privacy notice names Expo, Apple and Google (ADR-34).
-        "PUSH_SEND": "off",
+        // On since privacy-notice v13 names Expo, Apple and Google for notifications and the founder
+        // put EXPO_ACCESS_TOKEN on this Worker with enhanced push security on (ADR-34, 2 November
+        // 2026). Pinned by src/wrangler-config.test.ts.
+        "PUSH_SEND": "expo",
         "NOTIFICATION_CONTROLS": "off",
         // Off, and pinned off by src/wrangler-config.test.ts: no family's plans are kept before the
         // privacy notice names memory and counsel has answered on health words (data map row 29).

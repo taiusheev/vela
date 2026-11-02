@@ -582,12 +582,14 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
-  it("send no push in any environment, a switch the pilot Worker alone holds", () => {
+  // ADR-34: pushes through Expo on staging and production since the founder put the access token
+  // with enhanced push security on (2 Nov 2026); a laptop never reaches Expo.
+  it("send pushes on the deployed Workers only, a switch the pilot Worker alone holds", () => {
     expect(
       (["development", ...DEPLOYED] as const).map(
         (environment) => configOf("pilot", environment).vars.PUSH_SEND,
       ),
-    ).toEqual(["off", "off", "off"]);
+    ).toEqual(["off", "expo", "expo"]);
     for (const environment of ["development", ...DEPLOYED] as const) {
       expect(Object.keys(configOf("admin", environment).vars), environment).not.toContain(
         "PUSH_SEND",
