@@ -520,6 +520,13 @@ async function runAction(
       // `nobody_to_tell` when that was the last organiser who could be told: the founder hears it
       // here, as the one acting, since this Worker holds no chat to send it to (flows §3.17).
       return services.markLeft(deps, ctx, field(form, "memberId"));
+    case "weekly_feedback_off":
+    case "weekly_feedback_on":
+      await services.setWeeklyFeedback(deps, ctx, {
+        memberId: field(form, "memberId"),
+        on: action === "weekly_feedback_on",
+      });
+      return "done";
     case "mark_deceased":
       await services.markDeceased(deps, ctx, field(form, "memberId"));
       return "done";

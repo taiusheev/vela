@@ -286,6 +286,9 @@ export const ADMIN_ACTIONS = [
   /** The closed test's families (ADR-52): a family approved, or no longer approved, to take part. */
   "family_approve",
   "family_unapprove",
+  /** An organiser's weekly feedback on their own messages, off at their request or back on (ADR-48). */
+  "weekly_feedback_off",
+  "weekly_feedback_on",
 ] as const;
 export const AdminAction = z.enum(ADMIN_ACTIONS);
 export type AdminAction = z.infer<typeof AdminAction>;

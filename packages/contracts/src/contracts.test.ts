@@ -324,6 +324,8 @@ describe("ADMIN_ACTIONS", () => {
       "roster_remove",
       "family_approve",
       "family_unapprove",
+      "weekly_feedback_off",
+      "weekly_feedback_on",
     ]);
     expect(AdminAction.safeParse("export_family").success).toBe(false);
   });
@@ -350,6 +352,8 @@ describe("ADMIN_ACTIONS", () => {
       // Approval is the founder's, about the whole family: the admin log is its whole record.
       family_approve: [],
       family_unapprove: [],
+      weekly_feedback_off: [],
+      weekly_feedback_on: [],
     };
     for (const [action, names] of Object.entries(recorded)) {
       for (const name of names) {

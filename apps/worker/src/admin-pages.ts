@@ -427,6 +427,25 @@ ${actionForm(
 ${consentFields()}`,
   "Record consent",
 )}
+<h3>Weekly feedback</h3>
+<p class="muted">Feedback on an organiser's own messages in their weekly read (ADR-48). Turn it off when they ask; the next weekly read carries none for them, in their chat or the app.</p>
+${data.members
+  .filter(({ member }) => member.role === "organiser" && member.leftAt === null)
+  .map(({ member }) =>
+    member.weeklyFeedback
+      ? actionForm(
+          data.family.id,
+          "weekly_feedback_off",
+          hidden("memberId", member.id),
+          `Stop ${member.displayName}'s feedback`,
+        )
+      : actionForm(
+          data.family.id,
+          "weekly_feedback_on",
+          hidden("memberId", member.id),
+          `Resume ${member.displayName}'s feedback`,
+        ),
+  )}
 <h3>Mark a member left</h3>
 <p class="muted">They leave the turn rotation, and retention deletes them 30 days on. Someone with the member role who takes part in the group again becomes active.</p>
 ${leavingOthers.map((entry) => markLeftForm(data.family.id, entry))}

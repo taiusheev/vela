@@ -735,6 +735,12 @@ export function createFakeAdminRuntime(options: FakeAdminRuntimeOptions = {}): F
       note("markDeceased", ctx, memberId);
       await given.markDeceased?.(deps, ctx, memberId);
     },
+    async setWeeklyFeedback(deps, ctx, input) {
+      note("setWeeklyFeedback", ctx, input);
+      return given.setWeeklyFeedback === undefined
+        ? "changed"
+        : given.setWeeklyFeedback(deps, ctx, input);
+    },
     async deleteFamily(deps, ctx, familyId) {
       note("deleteFamily", ctx, familyId);
       await given.deleteFamily?.(deps, ctx, familyId);
@@ -866,6 +872,7 @@ export function memberFixture(overrides: Partial<Member> = {}): FamilyPage["memb
       turnsIn: true,
       primarySurface: "telegram",
       lightOn: false,
+      weeklyFeedback: true,
       lightConsentedAt: null,
       lightConsentText: null,
       lightStartsOn: null,
