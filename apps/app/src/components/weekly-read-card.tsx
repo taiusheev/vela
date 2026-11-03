@@ -1,6 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { router } from "expo-router";
 import { Pressable, View } from "react-native";
+import { quoted } from "../data/format.ts";
 import type { WeeklyRead } from "../data/weekly.ts";
 import { linkHitSlop, radius, space, type } from "../theme/tokens.ts";
 import { Light } from "./light.tsx";
@@ -78,7 +79,7 @@ export function WeeklyReadCard({
               </Text>
               {source.summary === null ? null : (
                 <Text style={[type.body, { color: room.ink, fontStyle: "italic" }]}>
-                  “{source.summary}”
+                  {quoted(source.summary)}
                 </Text>
               )}
               {live ? (

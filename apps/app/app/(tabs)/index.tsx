@@ -95,7 +95,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
         <>
           <Words variant="voice">{tomorrow.asked.text}</Words>
           <Words variant="caption" tone="ink3">
-            <Trans>Into her morning.</Trans>
+            <Trans>Into {recipient}'s morning.</Trans>
           </Words>
           {tomorrow.asked.withdrawableId === undefined ? null : (
             <WithdrawLink exchangeId={tomorrow.asked.withdrawableId} />
@@ -106,7 +106,7 @@ function TomorrowCard({ tomorrow }: { tomorrow: TomorrowTurn }) {
           {/* Vela's, as on Ask: without it a suggestion reads like an ask already on its way. */}
           <Words variant="caption" tone="ink2">
             {suggestion.fromHerWords ? (
-              <Trans>Vela suggests · from her own words</Trans>
+              <Trans>Vela suggests · from {recipient}'s own words</Trans>
             ) : (
               <Trans>Vela suggests</Trans>
             )}

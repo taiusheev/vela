@@ -491,7 +491,7 @@ function AskComposer({
           }}
         >
           <Words variant="title">
-            <Trans>Into her morning.</Trans>
+            <Trans>Into {name}'s morning.</Trans>
           </Words>
           <PushOffer
             reason={t`Hear it on this phone when ${name} answers.`}
