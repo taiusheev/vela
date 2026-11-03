@@ -16,7 +16,7 @@ msgstr ""
 
 #: app/photo-box.tsx
 msgid "— Vela"
-msgstr "—— 家人的小幫手 Vela"
+msgstr "— 家人的小幫手 Vela"
 
 #: src/components/keepsake.tsx
 msgid "“{text}”"
@@ -669,7 +669,7 @@ msgstr "每位父母的照片"
 
 #: src/data/exchanges.ts
 msgid "A photo of the street where you grew up — do you remember the shop on the corner?"
-msgstr "您從小長大的那條街的照片——還記得街角那家店嗎？"
+msgstr "您從小長大的那條街的照片，還記得街角那家店嗎？"
 
 #: src/components/onboarding/questions.tsx
 msgid "A preview for {name}"

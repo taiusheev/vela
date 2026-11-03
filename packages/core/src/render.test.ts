@@ -473,7 +473,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expect(paragraphs(arrival)).toEqual([
       "家人的回覆：\n小明：奶奶的湯很好喝",
       "不好意思，這則訊息晚到了。\n陳奶奶，早安。",
-      "今天煮了什麼？\n—— 小美",
+      "今天煮了什麼？\n— 小美",
       "用語音回覆最好；在忙的話，按 ❤️ 就好。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
@@ -497,7 +497,7 @@ describe("renderArrival in Traditional Chinese", () => {
       t(lang, "arrival.repeat"),
       `${t(lang, "arrival.photo_choice")}\n${t(lang, "arrival.signed_on_behalf", { asker: "小美", child: "小寶" })}`,
     ]);
-    expect(paragraphs(arrival)[1]).toBe("選哪一張呢？請按 1 或 2。\n—— 小美（替小寶問）");
+    expect(paragraphs(arrival)[1]).toBe("選哪一張呢？請按 1 或 2。\n— 小美（替小寶問）");
     expect(labels(arrival)).toEqual([
       ["1", "2"],
       ["❤️", "我很好"],
@@ -544,7 +544,7 @@ describe("renderArrival in Traditional Chinese", () => {
     const arrival = render({ lang, address: "陳奶奶", ask: { type: "hello" } });
     expect(paragraphs(arrival)).toEqual([
       "陳奶奶，早安。",
-      "您早上過得好嗎？\n—— 家人的小幫手 Vela",
+      "您早上過得好嗎？\n— 家人的小幫手 Vela",
       "用語音回覆最好；在忙的話，按 ❤️ 就好。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
@@ -561,7 +561,7 @@ describe("renderArrival in Traditional Chinese", () => {
         voteOptions: ["六點", "七點"],
       }),
     });
-    expect(paragraphs(arrival)[1]).toBe("星期天幾點視訊？\n請按一個選項。\n—— 小美");
+    expect(paragraphs(arrival)[1]).toBe("星期天幾點視訊？\n請按一個選項。\n— 小美");
     expect(labels(arrival)).toEqual([["六點"], ["七點"], ["❤️", "我很好"]]);
   });
 });

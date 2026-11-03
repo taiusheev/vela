@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createCompiledCatalog } from "@lingui/cli/api";
 import {
+  DOUBLED_DASH,
   FORBIDDEN_ZH_TW,
   LATIN_TOUCHING_HAN,
   MAINLAND_TERMS,
@@ -292,6 +293,7 @@ describe("the Traditional Chinese messages", () => {
       failures(translated, (item) => {
         const text = translationOf(item);
         if (SIMPLIFIED_ONLY.test(text)) return "a Simplified character";
+        if (DOUBLED_DASH.test(text)) return "a doubled dash";
         return MAINLAND_TERMS.test(text) ? "a mainland word" : null;
       }),
     ).toEqual([]);
