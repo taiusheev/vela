@@ -2,6 +2,7 @@ import { MVP_LANGS, TimeZone } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import { catalogs, type MessageKey } from "./index.ts";
 import {
+  DOUBLED_DASH,
   FORBIDDEN_ZH_TW,
   GENDERED_PRONOUNS,
   LATIN_TOUCHING_HAN,
@@ -681,6 +682,12 @@ describe("Traditional Chinese wording", () => {
     for (const key of englishKeys) {
       expect(zhTW[key], key).not.toMatch(SIMPLIFIED_ONLY);
       expect(zhTW[key], key).not.toMatch(MAINLAND_TERMS);
+    }
+  });
+
+  it("never doubles a dash", () => {
+    for (const key of englishKeys) {
+      expect(zhTW[key], key).not.toMatch(DOUBLED_DASH);
     }
   });
 

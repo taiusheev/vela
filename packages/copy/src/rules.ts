@@ -28,6 +28,12 @@ export const SIMPLIFIED_ONLY =
  */
 export const MAINLAND_TERMS = /信息|用戶|設置|視頻|群聊|默認|點擊|短信|早上好/;
 
+/**
+ * The doubled dash ——: families read it as machine-written in a message from their child, so
+ * Taiwanese copy uses a comma or one dash (founder, 3 Nov 2026).
+ */
+export const DOUBLED_DASH = /——|--/;
+
 /** A Chinese character directly against a Latin letter or a digit, with no space between. */
 export const LATIN_TOUCHING_HAN = /\p{Script=Han}[A-Za-z0-9]|[A-Za-z0-9]\p{Script=Han}/u;
 

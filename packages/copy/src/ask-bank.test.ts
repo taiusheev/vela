@@ -9,6 +9,7 @@ import {
   askBankText,
 } from "./ask-bank.ts";
 import {
+  DOUBLED_DASH,
   FORBIDDEN_ZH_TW,
   GENDERED_PRONOUNS,
   HEALTH_CHECK,
@@ -200,6 +201,7 @@ describe("the question bank", () => {
       expect(text, entry.id).not.toMatch(FORBIDDEN_ZH_TW);
       expect(text, entry.id).not.toMatch(SIMPLIFIED_ONLY);
       expect(text, entry.id).not.toMatch(MAINLAND_TERMS);
+      expect(text, entry.id).not.toMatch(DOUBLED_DASH);
       expect(text, entry.id).not.toMatch(LATIN_TOUCHING_HAN);
       expect(text, entry.id).not.toMatch(HEALTH_CHECK["zh-TW"]);
     }
