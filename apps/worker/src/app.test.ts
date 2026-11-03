@@ -801,6 +801,44 @@ describe("bounded request bodies", () => {
     expect(sent).toEqual([]);
   });
 
+  it("refuses her phone's writes over the per-address limit before reading a body", async () => {
+    const fake = createFakePilotRuntime();
+    const keys: string[] = [];
+    const limited: PilotEnv = {
+      ...testEnv,
+      API_IP_LIMIT: {
+        limit: async ({ key }: { key: string }) => {
+          keys.push(key);
+          return { success: false };
+        },
+      } as RateLimit,
+    };
+    const token = `Device ${"t".repeat(43)}`;
+    for (const [path, type] of [
+      ["/device/messages", "application/json"],
+      ["/device/voice", "audio/mp4"],
+    ] as const) {
+      const body = streamOf(4 * 1024 * 1024);
+      const response = await send(
+        fake,
+        new Request(`${ORIGIN}${path}`, {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "content-type": type,
+            "cf-connecting-ip": "203.0.113.9",
+          },
+          body: body.stream,
+        }),
+        limited,
+      );
+      expect(response.status).toBe(429);
+      expect(body.pulled()).toBeLessThanOrEqual(1);
+    }
+    expect(keys).toEqual(["device:203.0.113.9", "device:203.0.113.9"]);
+    expect(fake.built()).toBe(0);
+  });
+
   it("refuses her phone's message past 64 KiB, and a recording past 3 MiB with no length given", async () => {
     const fake = createFakePilotRuntime();
     const token = `Device ${"t".repeat(43)}`;

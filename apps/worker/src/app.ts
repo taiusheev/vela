@@ -84,6 +84,21 @@ function pilotDeviceRefusal(c: Context<PilotAppEnv>): Response | null {
   }
 }
 
+/**
+ * Her phone's writes, counted per address before any body is read or token looked up (security
+ * review of November 2026): a device token is unguessable, but without a count anyone could make
+ * the Worker read 3 MiB and query the database for every guess. The same best-effort limit as the
+ * API's, under its own key; 120 a minute is far above what one phone sends.
+ */
+async function deviceAddressRefusal(c: Context<PilotAppEnv>): Promise<Response | null> {
+  const key = `device:${addressOf(c.req.raw)}`;
+  if (await addressAdmitted(c.env.API_IP_LIMIT, key, createLogger(c.env))) return null;
+  return c.json({ error: "rate_limited" }, 429, {
+    "cache-control": "no-store",
+    "retry-after": "60",
+  });
+}
+
 /** The largest body a webhook may send (Telegram's and LINE's are a few kilobytes). */
 export const MAX_WEBHOOK_BYTES = 1024 * 1024;
 /** The largest body her phone's tap or words may send. */
@@ -160,7 +175,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    * logged. Her phone reads what Vela sent it from the API (`GET /v1/device/messages`).
    */
   app.post("/device/messages", async (c) => {
-    const refused = pilotDeviceRefusal(c);
+    const refused = pilotDeviceRefusal(c) ?? (await deviceAddressRefusal(c));
     if (refused !== null) return refused;
     const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
     if (presented === null) return c.json({ error: "unauthorized" }, 401);
@@ -210,7 +225,7 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
    * day's recordings, 404 where nothing is stored, and 401 for an unknown token.
    */
   app.post("/device/voice", async (c) => {
-    const refused = pilotDeviceRefusal(c);
+    const refused = pilotDeviceRefusal(c) ?? (await deviceAddressRefusal(c));
     if (refused !== null) return refused;
     const presented = DEVICE_AUTHORIZATION.exec(c.req.header("Authorization") ?? "");
     if (presented === null) return c.json({ error: "unauthorized" }, 401);

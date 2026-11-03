@@ -84,3 +84,50 @@ test("write endpoints reject foreign or missing origins and wrong methods before
     assert.equal((await worker.fetch(new Request("https://vela-light.com/analytics/config", {method:"POST"}))).status, 405);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test("each visitor's writes are limited by their own address before upstream fetch", async () => {
+  const originalFetch = globalThis.fetch;
+  const counts = new Map();
+  const limiter = (limit) => ({
+    async limit({ key }) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      return { success: counts.get(key) <= limit };
+    },
+  });
+  const env = { WAITLIST_LIMIT: limiter(2), ANALYTICS_LIMIT: limiter(100) };
+  let forwarded = 0;
+  try {
+    globalThis.fetch = async () => { forwarded++; return new Response(null, { status: 200 }); };
+    const signUp = (address) => worker.fetch(new Request("https://vela-light.com/waitlist", {
+      method: "POST", body: "email=a%40example.com",
+      headers: { origin: "https://vela-light.com", "cf-connecting-ip": address },
+    }), env);
+    assert.equal((await signUp("203.0.113.7")).status, 200);
+    assert.equal((await signUp("203.0.113.7")).status, 200);
+    const refused = await signUp("203.0.113.7");
+    assert.equal(refused.status, 429);
+    assert.equal(refused.headers.get("retry-after"), "60");
+    // Another visitor keeps their own count.
+    assert.equal((await signUp("198.51.100.4")).status, 200);
+    assert.equal(forwarded, 3);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("a failing limiter admits the sign-up", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(null, { status: 200 });
+    const env = { WAITLIST_LIMIT: { async limit() { throw new Error("limiter down"); } } };
+    const result = await worker.fetch(new Request("https://vela-light.com/waitlist", {
+      method: "POST", body: "email=a%40example.com", headers: { origin: "https://vela-light.com" },
+    }), env);
+    assert.equal(result.status, 200);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("the deployed configuration binds both write limits", async () => {
+  const { readFileSync } = await import("node:fs");
+  const config = readFileSync(new URL("./wrangler.jsonc", import.meta.url), "utf8");
+  assert.match(config, /"name": "WAITLIST_LIMIT"[^\n]*"limit": 5, "period": 60/);
+  assert.match(config, /"name": "ANALYTICS_LIMIT"[^\n]*"period": 60/);
+});
