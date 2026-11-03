@@ -571,11 +571,11 @@
         "PHOTO_BOX": "off",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
+        // Off, and pinned off, until the families have been told that Vela may ask the people
+        // nearby itself (ADR-60; privacy-notice.v14 and nearby-consent.v5/v6 say so).
+        "NEARBY_AUTO_ASK": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
-        // Off until privacy-notice.v14 and the contacts' new consent text say Vela may ask them
-        // itself (ADR-60).
-        "NEARBY_AUTO_ASK": "off",
         "WEEKLY_INSIGHT": "off",
         // ADR-59: the weekly read goes out as drafted since privacy-notice.v13 no longer promises the
         // founder checks it first (founder: "no need me to check", 2 November 2026).
