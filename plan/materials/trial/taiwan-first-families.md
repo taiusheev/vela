@@ -34,7 +34,7 @@ Pick first the families whose parent already reads and answers LINE, and whose o
 
 1. **Send the organiser message below** (in your own chat with them, LINE or other).
 2. **The organiser sets up** in the private chat with Vela Light: `/start`, then about two minutes of questions. They get her invite link at the end, and keep it.
-3. **You approve the family** on the admin page, **Trial roster** (`/admin/roster`): the newest family waiting, one click. **Always before the organiser sends her the link.** If she taps yes before your approval, nothing starts: she reads "您的燈還沒亮起", and you get a Telegram message "… tapped yes, but the light cannot start yet". Approve the family, then ask the organiser to have her tap **兩個都好** again on the same message; that tap counts. If the list shows a family you do not know, leave it unapproved.
+3. **You approve the family** on the admin page, **Trial roster** (`/admin/roster`): the newest family waiting, one click. **Always before the organiser sends her the link.** Setup tells the organiser to keep the link until then, and your click sends them 「您的家庭已經確認了。現在可以打電話跟媽媽說明，再把…連結傳過去。」 If she taps yes before your approval, nothing starts: she reads "您的燈還沒亮起", and you get a Telegram message "… tapped yes, but the light cannot start yet". Approve the family, then ask the organiser to have her tap **兩個都好** again on the same message; that tap counts. If the list shows a family you do not know, leave it unapproved.
 4. **The organiser makes the family group** in LINE, without her, and invites Vela Light. Each adult taps **我看過了**.
 5. **The organiser calls her**, using the [Chinese consent script](../pilot/consent-script.zh-TW.md), then sends her the invite link. She taps it, presses **傳送**, then chooses **兩個都好** or **好，健康的話不分享**. Her first morning comes the next day.
    - If she sees "您的燈還沒亮起", the family is not approved yet, or the organiser has not added Vela Light as a friend.
@@ -51,7 +51,7 @@ Pick first the families whose parent already reads and answers LINE, and whose o
 > 開始的步驟，大概 10 分鐘：
 > 1. 加「Vela Light」為 LINE 好友：https://line.me/R/ti/p/@675nhrpg
 > 2. 在跟 Vela Light 的聊天裡傳「/start」，回答幾個簡單的問題。最後會收到一個邀請連結，先留著，不要馬上傳出去。
-> 3. 跟我說一聲，我這邊確認後會告訴你。
+> 3. 跟我說一聲。我這邊確認後，Vela Light 會在聊天裡通知你「您的家庭已經確認了」。
 > 4. 開一個家人的 LINE 群組（先不要加爸媽），把 Vela Light 邀請進來。
 > 5. 打電話跟爸媽說明，再把邀請連結傳給他們。我會給你一份通話時可以照著說的稿子。
 >

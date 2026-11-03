@@ -382,6 +382,10 @@ export const en = {
   "onboarding.invalid_time": "Please send a time like 07:30.",
   "onboarding.done":
     "All set. Send this link to {name}: {link} Then start a new group for the family, without {name}, and add me to it, so the family can take turns asking.",
+  "onboarding.done_wait":
+    "All set. This is {name}'s link, but please keep it for now: {link} I'll write here as soon as the Vela team has confirmed your family, usually within a day. Then call {name} and send the link. If others in the family would like to ask too, start a new group without {name} and add me to it.",
+  "organiser.family_approved":
+    "Your family is confirmed. You can now call {name} and send the link you got at the end of setup. {name}'s first morning comes the day after the yes.",
   "admin.weekly_read_draft": "Weekly read draft for {family} is ready: {link}",
   "admin.weekly_read_sent": "Weekly read for {family} was sent to the family: {link}",
   "admin.flag": "Flag in {family}. Open: {link}",
