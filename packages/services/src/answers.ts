@@ -58,6 +58,7 @@ import { type EnqueueResult, enqueueOutbound, finishArrivalEffects, replyOf } fr
 import { answerReceiptPush, notOkayPush, ordinaryPushReader } from "./push-messages.ts";
 import { resolveQuietOnAnswer } from "./quiet.ts";
 import {
+  childOf,
   deviceFileForGroup,
   exchangesByIds,
   familyById,
@@ -316,10 +317,40 @@ async function lightTheLight(deps: Deps, input: AnswerInput): Promise<Lit | null
  * same (product week: a daily ritual that repeats itself word for word wears thin).
  */
 const THANKS = ["ack.thanks", "ack.thanks_2", "ack.thanks_3", "ack.thanks_4"] as const;
+/** The same four, naming whoever will hear her instead of "the family" (founder, 3 Nov 2026). */
+const THANKS_NAMED = [
+  "ack.thanks_named",
+  "ack.thanks_named_2",
+  "ack.thanks_named_3",
+  "ack.thanks_named_4",
+] as const;
 
 export function thanksKeyFor(date: LocalDate): (typeof THANKS)[number] {
+  return THANKS[dayTurn(date, THANKS.length)] ?? "ack.thanks";
+}
+
+export function namedThanksKeyFor(date: LocalDate): (typeof THANKS_NAMED)[number] {
+  return THANKS_NAMED[dayTurn(date, THANKS_NAMED.length)] ?? "ack.thanks_named";
+}
+
+function dayTurn(date: LocalDate, count: number): number {
   const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
-  return THANKS[((day % THANKS.length) + THANKS.length) % THANKS.length] ?? "ack.thanks";
+  return ((day % count) + count) % count;
+}
+
+/**
+ * Who her thanks names: whoever asked, when a family member did, else her child (`childOf`), else
+ * nobody, and the thanks says "the family".
+ */
+async function hearerOf(deps: Deps, input: AnswerInput): Promise<string | null> {
+  const { member, exchange } = input;
+  if (exchange.askerId !== null && exchange.askerId !== member.id) {
+    const asker = await memberById(deps.db, exchange.askerId);
+    if (asker !== null && asker.familyId === member.familyId && asker.leftAt === null) {
+      return asker.displayName;
+    }
+  }
+  return (await childOf(deps.db, member))?.displayName ?? null;
 }
 
 /**
@@ -339,13 +370,13 @@ async function tapThanks(deps: Deps, input: AnswerInput): Promise<string | null>
   if (asker !== null && asker.familyId === member.familyId) {
     return t(member.language, "ack.tap_asker", { address, asker: asker.displayName });
   }
-  return t(
-    member.language,
-    exchange.type === "hello" && (exchange.text?.trim() ?? "") === ""
-      ? "ack.tap_hello"
-      : "ack.tap_question",
-    { address },
-  );
+  if (exchange.type === "hello" && (exchange.text?.trim() ?? "") === "") {
+    const child = await childOf(deps.db, member);
+    return child === null
+      ? t(member.language, "ack.tap_hello", { address })
+      : t(member.language, "ack.tap_hello_named", { address, child: child.displayName });
+  }
+  return t(member.language, "ack.tap_question", { address });
 }
 
 /**
@@ -467,6 +498,9 @@ async function sendAck(
   const lang = member.language;
   const tapped =
     told !== null ? notOkayThanks(member, told) : kept ? null : await tapThanks(deps, input);
+  const hearer = tapped === null && !kept ? await hearerOf(deps, input) : null;
+  const address = member.addressForm ?? member.displayName;
+  const today = localDateOf(now, member.tz);
   await enqueueOutbound(deps, deps.db, {
     kind: "ack",
     idempotencyKey: outboundKey("ack", { memberId: member.id, date: localDateOf(now, member.tz) }),
@@ -493,9 +527,9 @@ async function sendAck(
       : {
           text:
             tapped ??
-            t(lang, thanksKeyFor(localDateOf(now, member.tz)), {
-              address: member.addressForm ?? member.displayName,
-            }),
+            (hearer === null
+              ? t(lang, thanksKeyFor(today), { address })
+              : t(lang, namedThanksKeyFor(today), { address, asker: hearer })),
         }),
   });
 }

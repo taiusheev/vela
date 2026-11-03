@@ -71,6 +71,12 @@ export interface RenderArrivalInput {
    * fine", and its hint asks for her words. Absent means off.
    */
   checkIn?: boolean;
+  /**
+   * Her child, by name: whoever invited her, while they are still in her family. Vela's own mornings
+   * and the hint name them, so her morning reads as from the person who misses her rather than from
+   * a service; absent or null keeps "the family".
+   */
+  child?: string | null;
 }
 
 export interface RenderedArrival {
@@ -140,7 +146,12 @@ export function greetingKeyFor(date: LocalDate): (typeof GREETINGS)[number] {
  * lost its photos, to retention or to her channel: it says so, and asks how she is, so her morning
  * still asks her something. A photo choice short of two arrives here as a question.
  */
-function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text: string): string[] {
+function askLines(
+  lang: Lang,
+  ask: Exclude<ArrivalAsk, { type: "hello" }>,
+  text: string,
+  child: string | null,
+): string[] {
   const asker = ask.askerName;
   if (text.length === 0) {
     if (ask.type === "voice_note") {
@@ -157,9 +168,8 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
     lines.push(t(lang, "arrival.vote"));
   }
   if (ask.byVela === true) {
-    if (ask.type !== "photo_choice")
-      lines[lines.length - 1] += ` ${t(lang, "arrival.hello_question")}`;
-    lines.push(t(lang, "arrival.hello_signature"));
+    if (ask.type !== "photo_choice") lines[lines.length - 1] += ` ${helloQuestion(lang, child)}`;
+    lines.push(helloSignature(lang, child));
     return lines;
   }
   lines.push(
@@ -172,13 +182,45 @@ function askLines(lang: Lang, ask: Exclude<ArrivalAsk, { type: "hello" }>, text:
 
 /**
  * The fallback: Vela's question when there is one, with an invitation to answer it by voice, else the
- * plain hello; always signed by Vela, as a short text reads, never under a header.
+ * plain hello; always signed by Vela, for her child when Vela knows who, as a short text reads,
+ * never under a header. Vela never speaks as "I": her voice goes to her child, not to a service.
  */
-function helloLines(lang: Lang, ask: Extract<ArrivalAsk, { type: "hello" }>): string[] {
+function helloLines(
+  lang: Lang,
+  ask: Extract<ArrivalAsk, { type: "hello" }>,
+  child: string | null,
+): string[] {
   const question = ask.question?.trim() ?? "";
   return question.length === 0
-    ? [t(lang, "arrival.hello"), t(lang, "arrival.hello_signature")]
-    : [`${question} ${t(lang, "arrival.hello_question")}`, t(lang, "arrival.hello_signature")];
+    ? [t(lang, "arrival.hello"), helloSignature(lang, child)]
+    : [`${question} ${helloQuestion(lang, child)}`, helloSignature(lang, child)];
+}
+
+function helloQuestion(lang: Lang, child: string | null): string {
+  return child === null
+    ? t(lang, "arrival.hello_question")
+    : t(lang, "arrival.hello_question_named", { child });
+}
+
+function helloSignature(lang: Lang, child: string | null): string {
+  return child === null
+    ? t(lang, "arrival.hello_signature")
+    : t(lang, "arrival.hello_signature_named", { child });
+}
+
+/**
+ * How to answer, for her first mornings, naming who will hear her: whoever asked, or her child on a
+ * morning Vela asked; else the plain line.
+ */
+function hintLine(input: RenderArrivalInput, child: string | null): string {
+  const { lang, ask } = input;
+  const who = ask.type !== "hello" && ask.byVela !== true ? ask.askerName : child;
+  if (who === null) {
+    return t(lang, input.checkIn === true ? "arrival.hint_words" : "arrival.hint");
+  }
+  return t(lang, input.checkIn === true ? "arrival.hint_words_named" : "arrival.hint_named", {
+    child: who,
+  });
 }
 
 /**
@@ -211,8 +253,12 @@ function composeText(
   askText: string,
 ): string {
   const { lang, ask } = input;
+  const child = input.child?.trim() || null;
   const paragraphs: string[][] = [];
-  if (readBack.length > 0) {
+  // One reply names its sender in its own line ("Mia: …"), so it needs no heading over it.
+  if (readBack.length === 1) {
+    paragraphs.push([...readBack]);
+  } else if (readBack.length > 1) {
     paragraphs.push([t(lang, "arrival.readback_heading"), ...readBack]);
   }
 
@@ -227,9 +273,11 @@ function composeText(
   if (!input.repeat) opening.push(t(lang, greetingKeyFor(input.date), { address: input.address }));
   paragraphs.push(opening);
 
-  paragraphs.push(ask.type === "hello" ? helloLines(lang, ask) : askLines(lang, ask, askText));
+  paragraphs.push(
+    ask.type === "hello" ? helloLines(lang, ask, child) : askLines(lang, ask, askText, child),
+  );
   if (input.hint && !input.repeat) {
-    paragraphs.push([t(lang, input.checkIn === true ? "arrival.hint_words" : "arrival.hint")]);
+    paragraphs.push([hintLine(input, child)]);
   }
   return paragraphs.map((lines) => lines.join("\n")).join("\n\n");
 }
@@ -290,10 +338,16 @@ export function renderCheckIn(input: {
   lang: Lang;
   address: string;
   exchangeId: string;
+  /** Her child, by name, as `RenderArrivalInput.child`: they are the one who wants to know. */
+  child?: string | null;
 }): RenderedArrival {
   const { lang, exchangeId } = input;
+  const child = input.child?.trim() || null;
   return {
-    text: t(lang, "checkin.text", { address: input.address }),
+    text:
+      child === null
+        ? t(lang, "checkin.text", { address: input.address })
+        : t(lang, "checkin.text_named", { address: input.address, child }),
     buttons: [
       [button(t(lang, "button.okay"), { type: "answer", exchangeId, answer: "fine" })],
       [button(t(lang, "button.not_okay"), { type: "answer", exchangeId, answer: "not_okay" })],

@@ -16,6 +16,7 @@ import {
   type FamilyChannel,
   families,
   familyChannels,
+  invites,
   type Media,
   type Member,
   type MessageRef,
@@ -277,6 +278,29 @@ export async function keptLightMembersOfFamily(db: Queryable, familyId: string):
 export async function memberById(db: Queryable, memberId: string): Promise<Member | null> {
   const rows = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Her child, as her messages name them (founder, 3 November 2026: she should feel she is talking to
+ * her child, not to a bot): whoever sent her latest invite, while they are an active or paused member
+ * of her family other than her. Null when that person has left, so Vela says "the family" instead
+ * of naming someone gone.
+ */
+export async function childOf(db: Queryable, member: Member): Promise<Member | null> {
+  const [invite] = await db
+    .select({ invitedBy: invites.invitedBy })
+    .from(invites)
+    .where(eq(invites.forMemberId, member.id))
+    .orderBy(desc(invites.createdAt), desc(invites.id))
+    .limit(1);
+  if (invite === undefined || invite.invitedBy === member.id) return null;
+  const child = await memberById(db, invite.invitedBy);
+  return child !== null &&
+    child.familyId === member.familyId &&
+    child.leftAt === null &&
+    (child.status === "active" || child.status === "paused")
+    ? child
+    : null;
 }
 
 export async function familyById(db: Queryable, familyId: string): Promise<Family | null> {

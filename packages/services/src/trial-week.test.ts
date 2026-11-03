@@ -219,7 +219,9 @@ describe("a family's first trial mornings", () => {
     });
     const morning16 = lastTo(HER).message.text;
     expect(morning16).toContain("Sam: Yum!");
-    expect(morning16).toContain(`${question16} ${t("en", "arrival.hello_question")}`);
+    expect(morning16).toContain(
+      `${question16} ${t("en", "arrival.hello_question_named", { child: "Mia" })}`,
+    );
     expect(morning16).not.toContain(t("en", "arrival.hello"));
 
     h.clock.set(at("2026-09-16", "08:30"));

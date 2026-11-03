@@ -86,7 +86,7 @@ describe("renderArrival in English", () => {
       "From your family:\nSam: The borscht turned out well.\nAnna and Sam sent ❤️",
       "Good morning, Mrs Chen.",
       "What did you cook today?\n— Mia",
-      "A voice message is the nicest reply. Busy? Tap ❤️.",
+      "Mia loves hearing your voice. Busy? Just tap ❤️.",
     ]);
     // A question has no answers to tap: she answers in her own words, or taps the heart.
     expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
@@ -102,7 +102,7 @@ describe("renderArrival in English", () => {
   it("apologises for a late arrival before the greeting", () => {
     const arrival = render({ late: true, readBack: ["Sam: Hello"] });
     expect(paragraphs(arrival).slice(0, 2)).toEqual([
-      "From your family:\nSam: Hello",
+      "Sam: Hello",
       "Sorry this is late.\nGood morning, Mrs Chen.",
     ]);
   });
@@ -198,7 +198,7 @@ describe("renderArrival in English", () => {
     expect(paragraphs(arrival)).toEqual([
       "Good morning, Mrs Chen.",
       "Mia sent you a voice message.",
-      "A voice message is the nicest reply. Busy? Tap ❤️.",
+      "Mia loves hearing your voice. Busy? Just tap ❤️.",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
     expect(paragraphs(render({ ask: question({ type: "voice_note", text: "  " }) }))[1]).toBe(
@@ -236,7 +236,7 @@ describe("renderArrival in English", () => {
         expect(paragraphs(arrival)).toEqual([
           "Good morning, Mrs Chen.",
           gone,
-          "A voice message is the nicest reply. Busy? Tap ❤️.",
+          "Mia loves hearing your voice. Busy? Just tap ❤️.",
         ]);
         expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
         expectSendable(arrival, "en");
@@ -249,7 +249,7 @@ describe("renderArrival in English", () => {
   it("sends the fallback hello signed by Vela with only the heart and I'm fine", () => {
     const arrival = render({ ask: { type: "hello" }, readBack: ["Sam: See you Sunday"] });
     expect(paragraphs(arrival)).toEqual([
-      "From your family:\nSam: See you Sunday",
+      "Sam: See you Sunday",
       "Good morning, Mrs Chen.",
       "How are you this morning?\n— Vela",
       "A voice message is the nicest reply. Busy? Tap ❤️.",
@@ -271,7 +271,7 @@ describe("renderArrival of Vela's picture morning (ADR-58)", () => {
       }),
     });
     expect(paragraphs(arrival)[1]).toBe(
-      "An old photo from your family. What do you remember about it? Tell me in a voice message, and I'll pass it on to the family.\n— Vela",
+      "An old photo from your family. What do you remember about it? Send a voice message, and the family will hear it.\n— Vela",
     );
     expectSendable(arrival, "en");
   });
@@ -300,7 +300,7 @@ describe("renderArrival with the check-in on (ADR-54)", () => {
     expect(paragraphs(arrival)).toEqual([
       "Good morning, Mrs Chen.",
       "What did you cook today?\n— Mia",
-      "Reply with a voice message, or write a few words.",
+      "Mia would love a voice message, or a few words.",
     ]);
     expect(arrival.buttons).toEqual([]);
     expectSendable(arrival, "en");
@@ -312,6 +312,65 @@ describe("renderArrival with the check-in on (ADR-54)", () => {
       ask: question({ type: "photo_choice", text: "Which one should I frame?", imageCount: 2 }),
     });
     expect(labels(arrival)).toEqual([["1", "2"]]);
+  });
+});
+
+describe("renderArrival naming her child (founder, 3 November 2026)", () => {
+  it("signs Vela's hello for her child, never as I, and names them in the hint", () => {
+    const arrival = render({
+      ask: { type: "hello", question: "What was your first job?" },
+      child: "Mia",
+    });
+    expect(paragraphs(arrival)).toEqual([
+      "Good morning, Mrs Chen.",
+      "What was your first job? Send a voice message, and Mia will hear it.\n— Vela, for Mia",
+      "Mia loves hearing your voice. Busy? Just tap ❤️.",
+    ]);
+    expect(arrival.text).not.toMatch(/\bI('ll| will)\b/);
+    expectSendable(arrival, "en");
+  });
+
+  it("does the same in Traditional Chinese", () => {
+    const arrival = render({
+      lang: "zh-TW",
+      address: "陳奶奶",
+      ask: { type: "hello" },
+      child: "小美",
+    });
+    expect(paragraphs(arrival)).toEqual([
+      "陳奶奶，早安。",
+      "您早上過得好嗎？\n— Vela（代小美問候）",
+      "小美最喜歡聽您的聲音；在忙的話，按 ❤️ 就好。",
+    ]);
+    expectSendable(arrival, "zh-TW");
+  });
+
+  it("names whoever asked in the hint, not her child, on a family member's ask", () => {
+    const arrival = render({ ask: question({ askerName: "Sam" }), child: "Mia" });
+    expect(paragraphs(arrival).at(-1)).toBe("Sam loves hearing your voice. Busy? Just tap ❤️.");
+  });
+
+  it("keeps the family's wording when Vela does not know her child", () => {
+    const arrival = render({ ask: { type: "hello" }, child: null });
+    expect(paragraphs(arrival)[1]).toBe("How are you this morning?\n— Vela");
+    expect(paragraphs(arrival)[2]).toBe("A voice message is the nicest reply. Busy? Tap ❤️.");
+  });
+
+  it("asks the check-in for her child", () => {
+    const named = renderCheckIn({
+      lang: "en",
+      address: "Mrs Chen",
+      exchangeId: EXCHANGE,
+      child: "Mia",
+    });
+    expect(named.text).toBe("Mrs Chen, Mia wants to know how you are today.");
+    const zh = renderCheckIn({
+      lang: "zh-TW",
+      address: "陳奶奶",
+      exchangeId: EXCHANGE,
+      child: "小美",
+    });
+    expect(zh.text).toBe("陳奶奶，小美想知道您今天好不好。");
   });
 });
 
@@ -339,7 +398,7 @@ describe("renderArrival on a morning nobody asked, with Vela's question", () => 
     });
     expect(paragraphs(arrival)).toEqual([
       "Good morning, Mrs Chen.",
-      "What was your very first job? Tell me in a voice message, and I'll pass it on to the family.\n— Vela",
+      "What was your very first job? Send a voice message, and the family will hear it.\n— Vela",
       "A voice message is the nicest reply. Busy? Tap ❤️.",
     ]);
     expect(actions(arrival)).toEqual([FINAL_ACTIONS]);
@@ -401,7 +460,7 @@ describe("renderArrival with more words than one message holds", () => {
     expect(paragraphs(arrival).slice(1)).toEqual([
       "Good morning, Mrs Chen.",
       "What did you cook today?\n— Mia",
-      "A voice message is the nicest reply. Busy? Tap ❤️.",
+      "Mia loves hearing your voice. Busy? Just tap ❤️.",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "I'm fine"]]);
   });
@@ -425,7 +484,7 @@ describe("renderArrival with more words than one message holds", () => {
     const rest = paragraphs(arrival).slice(1);
     expect(rest[0]).toBe("Sorry this is late.\nGood morning, Mrs Chen.");
     expect(rest[1]).toMatch(/^Which day 🌷.*…\nTap one\.\n— Mia$/u);
-    expect(rest[2]).toBe("A voice message is the nicest reply. Busy? Tap ❤️.");
+    expect(rest[2]).toBe("Mia loves hearing your voice. Busy? Just tap ❤️.");
     expect(labels(arrival)).toEqual([["Sat"], ["Sun"], ["❤️", "I'm fine"]]);
   });
 
@@ -471,10 +530,10 @@ describe("renderArrival in Traditional Chinese", () => {
       ask: question({ askerName: "小美", text: "今天煮了什麼？" }),
     });
     expect(paragraphs(arrival)).toEqual([
-      "家人的回覆：\n小明：奶奶的湯很好喝",
+      "小明：奶奶的湯很好喝",
       "不好意思，這則訊息晚到了。\n陳奶奶，早安。",
       "今天煮了什麼？\n— 小美",
-      "用語音回覆最好；在忙的話，按 ❤️ 就好。",
+      "小美最喜歡聽您的聲音；在忙的話，按 ❤️ 就好。",
     ]);
     expect(labels(arrival)).toEqual([["❤️", "我很好"]]);
     expectSendable(arrival, lang);
@@ -514,7 +573,7 @@ describe("renderArrival in Traditional Chinese", () => {
     expect(paragraphs(voice)).toEqual([
       "陳奶奶，早安。",
       "小美傳了一則語音訊息給您。",
-      "用語音回覆最好；在忙的話，按 ❤️ 就好。",
+      "小美最喜歡聽您的聲音；在忙的話，按 ❤️ 就好。",
     ]);
     expectSendable(voice, lang);
     const photo = render({

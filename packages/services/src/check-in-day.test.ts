@@ -202,7 +202,9 @@ describe("a morning with the check-in on", () => {
     expect(lastTo(HER)).toBe(morning);
     await runSchedulerUntil(her.id, at("2026-09-15", "10:00"));
     const checkIn = lastTo(HER);
-    expect(checkIn.message.text).toBe(t("en", "checkin.text", { address: "Mrs Chen" }));
+    expect(checkIn.message.text).toBe(
+      t("en", "checkin.text_named", { address: "Mrs Chen", child: "Mia" }),
+    );
     expect(checkIn.message.buttons?.map((row) => row.map((button) => button.label))).toEqual([
       [t("en", "button.okay")],
       [t("en", "button.not_okay")],

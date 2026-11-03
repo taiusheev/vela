@@ -239,7 +239,9 @@ describe("a Taiwan family on LINE, in Chinese, with family approval on", () => {
     const sentAt = new Date(morning.at ?? h.clock.now());
     await runSchedulerUntil(mom.id, new Date(sentAt.getTime() + 2 * 60 * 60 * 1000 + 60_000));
     const checkIn = lastTo(HER);
-    expect(checkIn.message.text).toBe(t("zh-TW", "checkin.text", { address: "陳太太" }));
+    expect(checkIn.message.text).toBe(
+      t("zh-TW", "checkin.text_named", { address: "陳太太", child: "小美" }),
+    );
     expect(checkIn.message.buttons?.flat().map((button) => button.label)).toEqual([
       t("zh-TW", "button.okay"),
       t("zh-TW", "button.not_okay"),
