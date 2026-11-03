@@ -1,5 +1,5 @@
 /**
- * The rubric judge without Promptfoo: each rubric criterion of a case is one GPT-5 judgement, made
+ * The rubric judge without Promptfoo: each rubric criterion of a case is one `JUDGE_MODEL` judgement, made
  * with the same grading text Promptfoo's `llm-rubric` assertion receives (`judgeRubric` in
  * `suite.ts`, which holds the call's standards and the case input as escaped data). Used by
  * `quick.ts` when `EVAL_JUDGE=on`, so the founder's network, which cannot fetch Promptfoo, can still
@@ -10,12 +10,22 @@
  * failed or errored case output, so it cannot move flag recall.
  */
 import { z } from "zod";
-import { OPENAI_CHAT_URL, OPENAI_SNAPSHOT_FOR, openAiPriceFor } from "../src/openai.ts";
+import {
+  OPENAI_CHAT_URL,
+  OPENAI_SNAPSHOT_FOR,
+  type OpenAiModel,
+  type OpenAiUsage,
+  openAiCostUsd,
+  openAiPriceFor,
+} from "../src/openai.ts";
 import type { EvalCase } from "./cases.ts";
 import { judgeRubric } from "./suite.ts";
 
-/** The model Promptfoo's OpenAI config names for the judge (`openai:chat:gpt-5`). */
-export const JUDGE_MODEL = "gpt-5";
+/**
+ * The model Promptfoo's OpenAI config names for the judge (`openai:chat:gpt-6.1-sol`). It is a
+ * stronger model than any Vela routes a call to, so no model grades its own drafts.
+ */
+export const JUDGE_MODEL: OpenAiModel = "gpt-6.1-sol";
 
 const JUDGE_TIMEOUT_MS = 90_000;
 const JUDGE_RETRIES = 2;
@@ -80,6 +90,8 @@ export function createJudge(options: JudgeOptions): Judge {
       store: false,
       max_completion_tokens: JUDGE_MAX_TOKENS,
       reasoning_effort: "low",
+      // Each criterion's prompt is used once, so nothing is worth a cache write.
+      prompt_cache_options: { mode: "explicit" },
       messages: [
         { role: "developer", content: `${judgeRubric(evalCase, criterion)}\n${INSTRUCTION}` },
         { role: "user", content: judgedOutput(output) },
@@ -160,19 +172,14 @@ export function createJudge(options: JudgeOptions): Judge {
 interface Completion {
   model?: string;
   choices?: Array<{ finish_reason?: string | null; message?: { content?: string | null } }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    prompt_tokens_details?: { cached_tokens?: number | null } | null;
-  };
+  usage?: OpenAiUsage;
 }
 
 function costOf(completion: Completion): number {
-  const price = openAiPriceFor(completion.model ?? JUDGE_MODEL, JUDGE_MODEL);
-  const prompt = completion.usage?.prompt_tokens ?? 0;
-  const cached = Math.min(prompt, completion.usage?.prompt_tokens_details?.cached_tokens ?? 0);
-  const out = completion.usage?.completion_tokens ?? 0;
-  return ((prompt - cached) * price.input + cached * price.cachedInput + out * price.output) / 1e6;
+  return openAiCostUsd(
+    openAiPriceFor(completion.model ?? JUDGE_MODEL, JUDGE_MODEL),
+    completion.usage ?? {},
+  );
 }
 
 function parseJson(text: string): unknown {

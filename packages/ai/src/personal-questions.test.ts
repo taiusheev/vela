@@ -37,7 +37,7 @@ describe("reviewed personalization provider contract", () => {
   it("uses the isolated prompt and chosen Chinese register without the old forced 您 reminder", async () => {
     const { fetch, requests } = createRecordingFetch([
       jsonResponse({
-        model: "gpt-5-mini-2025-08-07",
+        model: "gpt-5.6-terra",
         choices: [
           {
             finish_reason: "stop",
@@ -60,8 +60,8 @@ describe("reviewed personalization provider contract", () => {
     expect(outcome.record?.promptVersion).toBe("suggest.personal.v2");
     const body = JSON.parse(requests[0]?.text ?? "{}");
     expect(body.store).toBe(false);
-    expect(body.messages[0].content).toContain("not automatically formalize");
-    expect(body.messages[0].content).not.toContain("Use 您 for the elder in Chinese");
+    expect(body.messages[0].content[0].text).toContain("not automatically formalize");
+    expect(body.messages[0].content[0].text).not.toContain("Use 您 for the elder in Chinese");
     expect(body.messages[1].content).toContain("金錢");
     expect(body.messages[1].content).toContain("practical");
   });

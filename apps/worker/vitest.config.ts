@@ -192,7 +192,7 @@ export default defineConfig({
             throw new Error("Unexpected outbound request in Worker tests");
           }
           return Response.json({
-            model: "gpt-5-2025-08-07",
+            model: "gpt-6.1-terra",
             choices: [
               {
                 finish_reason: "stop",

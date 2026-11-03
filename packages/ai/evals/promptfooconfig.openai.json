@@ -1,5 +1,5 @@
 {
-  "description": "Vela AI golden set on OpenAI: each case runs through createOpenAiAi (EVAL_PROVIDER=openai) with the shipped prompts and output schemas; deterministic checks run as javascript assertions and rubric criteria as llm-rubric assertions graded by GPT-5. Run with pnpm --filter @vela/ai eval:openai.",
+  "description": "Vela AI golden set on OpenAI: each case runs through createOpenAiAi (EVAL_PROVIDER=openai) with the shipped prompts and output schemas; deterministic checks run as javascript assertions and rubric criteria as llm-rubric assertions graded by GPT-6.1 Sol. Run with pnpm --filter @vela/ai eval:openai.",
   "prompts": ["{{call}} {{caseId}}"],
   "providers": [
     {
@@ -10,7 +10,7 @@
   "defaultTest": {
     "options": {
       "provider": {
-        "id": "openai:chat:gpt-5"
+        "id": "openai:chat:gpt-6.1-sol"
       }
     }
   },

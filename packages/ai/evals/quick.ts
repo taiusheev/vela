@@ -4,20 +4,26 @@
  * with `evaluateCheck`, and the results are written in the shape `gate.ts check` reads, so the same
  * gate (flag recall against `baseline.json`) decides. This is the run for when Promptfoo cannot be
  * fetched (it pulls several hundred megabytes) or a quick answer is enough. Run with
- * `pnpm --filter @vela/ai eval:quick`. With `EVAL_JUDGE=on` on OpenAI (`eval:openai:judged`), GPT-5
- * also judges every rubric criterion through `judge.ts`; a failed criterion is listed for review
- * like a failed check, and never moves flag recall.
+ * `pnpm --filter @vela/ai eval:quick`. With `EVAL_JUDGE=on` on OpenAI (`eval:openai:judged`), the
+ * judge model also judges every rubric criterion through `judge.ts`; a failed criterion is listed
+ * for review like a failed check, and never moves flag recall. `EVAL_OPENAI_MODELS` tries other
+ * routes without changing the shipped ones (`parseModelRoutes`).
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createClaudeAi } from "../src/claude.ts";
-import { createOpenAiAi } from "../src/openai.ts";
-import type { Ai } from "../src/types.ts";
+import {
+  createOpenAiAi,
+  OPENAI_MODEL_FOR,
+  OPENAI_MODELS,
+  type OpenAiModel,
+} from "../src/openai.ts";
+import type { Ai, AiCallName } from "../src/types.ts";
 import { type EvalCase, listCaseFiles, readCaseFile } from "./cases.ts";
 import { evaluateCheck } from "./checks.ts";
 import { evalProviderOf, requireApiKey } from "./env.ts";
 import { RESULTS_FILE } from "./gate.ts";
-import { createJudge, type Judge } from "./judge.ts";
+import { createJudge, JUDGE_MODEL, type Judge } from "./judge.ts";
 import { createEvalProvider, type EvalProvider } from "./provider.ts";
 import { CALL_CHECKS } from "./suite.ts";
 
@@ -33,6 +39,8 @@ export interface QuickRow {
   /** Rubric criteria judged, when the judge ran. */
   readonly judged?: { readonly passed: number; readonly failed: number };
   readonly cost: number;
+  /** The case's own call, without the judge: what the shipped route would cost. */
+  readonly callCost?: number;
 }
 
 /** Promptfoo's code for an errored call (gate.ts reads it the same way). */
@@ -61,6 +69,7 @@ export async function runCase(
       response: { error: response.error },
       failedChecks: [],
       cost,
+      callCost: cost,
     };
   }
   const failedChecks = [...evalCase.checks, ...CALL_CHECKS[evalCase.call]]
@@ -93,6 +102,7 @@ export async function runCase(
           },
         }),
     cost: cost + (judged?.cost ?? 0),
+    callCost: cost,
   };
 }
 
@@ -123,9 +133,50 @@ export async function runAll(
   return rows;
 }
 
+/** The calls the shipped routes give the larger model; `strong=` and `small=` name them together. */
+const STRONG_CALLS: readonly AiCallName[] = [
+  "flag",
+  "understand",
+  "translate",
+  "readback",
+  "weekly_read",
+  "recipe",
+  "weekly_insight",
+];
+
+/**
+ * `EVAL_OPENAI_MODELS`, such as `strong=gpt-6.1-terra,small=gpt-6-luna,flag=gpt-5.6-sol`: routes
+ * for this run only, read left to right so a call named later wins over its group.
+ */
+export function parseModelRoutes(
+  value: string | undefined,
+): Partial<Record<AiCallName, OpenAiModel>> {
+  const routes: Partial<Record<AiCallName, OpenAiModel>> = {};
+  for (const part of (value ?? "").split(",").map((item) => item.trim())) {
+    if (part === "") continue;
+    const [key = "", model = ""] = part.split("=").map((item) => item.trim());
+    if (!(OPENAI_MODELS as readonly string[]).includes(model)) {
+      throw new Error(`EVAL_OPENAI_MODELS: ${JSON.stringify(model)} is not in OPENAI_MODELS.`);
+    }
+    const calls =
+      key === "strong"
+        ? STRONG_CALLS
+        : key === "small"
+          ? (Object.keys(OPENAI_MODEL_FOR) as AiCallName[]).filter((c) => !STRONG_CALLS.includes(c))
+          : Object.hasOwn(OPENAI_MODEL_FOR, key)
+            ? [key as AiCallName]
+            : null;
+    if (calls === null) throw new Error(`EVAL_OPENAI_MODELS: unknown call ${JSON.stringify(key)}.`);
+    for (const call of calls) routes[call] = model as OpenAiModel;
+  }
+  return routes;
+}
+
 function aiFor(env: NodeJS.ProcessEnv): Ai {
   const apiKey = requireApiKey(env);
-  return evalProviderOf(env) === "openai" ? createOpenAiAi({ apiKey }) : createClaudeAi({ apiKey });
+  return evalProviderOf(env) === "openai"
+    ? createOpenAiAi({ apiKey, models: parseModelRoutes(env.EVAL_OPENAI_MODELS) })
+    : createClaudeAi({ apiKey });
 }
 
 /** `EVAL_JUDGE=on` asks for the rubric judge, which runs on OpenAI only. */
@@ -135,7 +186,9 @@ export function judgeFor(env: NodeJS.ProcessEnv): Judge | undefined {
   if (wanted !== "on")
     throw new Error(`EVAL_JUDGE must be on or off, not ${JSON.stringify(wanted)}.`);
   if (evalProviderOf(env) !== "openai") {
-    throw new Error("EVAL_JUDGE=on judges with GPT-5: set EVAL_PROVIDER=openai, or use Promptfoo.");
+    throw new Error(
+      "EVAL_JUDGE=on judges with OpenAI: set EVAL_PROVIDER=openai, or use Promptfoo.",
+    );
   }
   return createJudge({ apiKey: requireApiKey(env) });
 }
@@ -155,7 +208,7 @@ async function main(): Promise<number> {
   mkdirSync(new URL("./", resultsUrl), { recursive: true });
 
   const cases = listCaseFiles().flatMap(readCaseFile);
-  const judging = judge === undefined ? "" : ", rubric judged by GPT-5";
+  const judging = judge === undefined ? "" : `, rubric judged by ${JUDGE_MODEL}`;
   console.log(`Running ${cases.length} cases on ${evalProviderOf(process.env)}${judging}…`);
   const rows = await runAll(
     createEvalProvider(ai),

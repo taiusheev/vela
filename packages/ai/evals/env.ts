@@ -3,7 +3,7 @@
  * fails in the first second with an instruction rather than as a provider error on every case.
  *
  * `EVAL_PROVIDER` picks the `Ai` the golden set runs through: `anthropic` (the default,
- * `createClaudeAi`, judged by Claude) or `openai` (`createOpenAiAi`, judged by GPT-5; founder
+ * `createClaudeAi`, judged by Claude) or `openai` (`createOpenAiAi`, judged by `JUDGE_MODEL`; founder
  * decision of 6 October 2026), each with its own key.
  */
 export type EvalProvider = "anthropic" | "openai";
