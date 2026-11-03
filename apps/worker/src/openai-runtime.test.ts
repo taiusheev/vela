@@ -18,6 +18,6 @@ it("uses native Worker fetch for OpenAI without losing its receiver", async () =
   expect(result).toMatchObject({
     ok: true,
     value: { flag: false },
-    record: { ok: true, model: "gpt-5-2025-08-07", tokensIn: 20, tokensOut: 10 },
+    record: { ok: true, model: "gpt-6.1-terra", tokensIn: 20, tokensOut: 10 },
   });
 });

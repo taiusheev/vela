@@ -36,7 +36,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 pnpm --filter @vela/ai eval
 ```
 
-**On OpenAI** (founder decision of 6 October 2026: Vela's AI runs on OpenAI): `EVAL_PROVIDER=openai` runs every case through `createOpenAiAi` instead, and `evals/promptfooconfig.openai.json` has GPT-5 judge the rubric criteria. The founder starts it with `infra/scripts/run-ai-evals.command`, which reads the key at a hidden prompt; from a shell:
+**On OpenAI** (founder decision of 6 October 2026: Vela's AI runs on OpenAI): `EVAL_PROVIDER=openai` runs every case through `createOpenAiAi` instead, and `evals/promptfooconfig.openai.json` has GPT-6.1 Sol judge the rubric criteria (GPT-5 judged until it was retired in November 2026; a judge stronger than every routed model, so no model grades its own drafts). The founder starts it with `infra/scripts/run-ai-evals.command`, which reads the key at a hidden prompt; from a shell:
 
 ```sh
 export OPENAI_API_KEY=sk-...
@@ -45,7 +45,9 @@ pnpm --filter @vela/ai eval:openai
 
 The gate and the baseline are the same: flag recall must stay at `1` on either provider.
 
-**Without Promptfoo** (the founder's network cannot fetch it): `eval:openai:quick` runs every case and its deterministic checks (including the call's `CALL_CHECKS`) through `evals/quick.ts`, writes results in Promptfoo's shape, and `gate.ts check` decides as usual. `eval:openai:judged` adds `EVAL_JUDGE=on`: `evals/judge.ts` asks GPT-5 one question per rubric criterion, with the same grading text Promptfoo's `llm-rubric` receives (`judgeRubric`), the output passed as escaped data, `store: false`, and a strict `{reason, pass}` answer. A failed criterion is listed for review as `judge: …` and never moves flag recall; a criterion the judge could not answer (timeout, HTTP error, bad JSON) is counted as not judged, not as failed. The founder runs it with `infra/scripts/run-ai-evals-from-keychain.sh --judge`.
+**Without Promptfoo** (the founder's network cannot fetch it): `eval:openai:quick` runs every case and its deterministic checks (including the call's `CALL_CHECKS`) through `evals/quick.ts`, writes results in Promptfoo's shape, and `gate.ts check` decides as usual. `eval:openai:judged` adds `EVAL_JUDGE=on`: `evals/judge.ts` asks the judge model (`JUDGE_MODEL`, GPT-6.1 Sol) one question per rubric criterion, with the same grading text Promptfoo's `llm-rubric` receives (`judgeRubric`), the output passed as escaped data, `store: false`, and a strict `{reason, pass}` answer. A failed criterion is listed for review as `judge: …` and never moves flag recall; a criterion the judge could not answer (timeout, HTTP error, bad JSON) is counted as not judged, not as failed. The founder runs it with `infra/scripts/run-ai-evals-from-keychain.sh --judge`.
+
+**Trying other models.** `EVAL_OPENAI_MODELS` routes calls to other models for one run without changing the shipped routes: `strong=` names the judgement calls (flag, understand, translate, readback, weekly read, recipe, weekly insight), `small=` the drafting calls, and a call's own name wins over its group, for example `EVAL_OPENAI_MODELS=strong=gpt-6.1-terra,small=gpt-6-luna`. Each result row keeps `callCost`, the case's own call without the judge, so a run also measures what a route costs.
 
 The script does three things, stopping at the first failure:
 

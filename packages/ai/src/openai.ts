@@ -19,45 +19,66 @@ export interface OpenAiOptions {
   fetch?: typeof fetch;
   /** The wait before retry n is `retryBaseMs * 2^n`; tests set it to zero. */
   retryBaseMs?: number;
+  /** Routes that replace `OPENAI_MODEL_FOR` for some calls; only the evals set it, to compare models. */
+  models?: Partial<Record<AiCallName, OpenAiModel>>;
 }
 
 /** The one host the key is ever sent to. */
 export const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-export const OPENAI_MODELS = ["gpt-5", "gpt-5-mini"] as const;
+/**
+ * The models Vela may route to or compare in the evals. `gpt-5` and `gpt-5-mini` shut down on
+ * 11 December 2026 (OpenAI deprecations of 11 June 2026), so they are no longer listed.
+ */
+export const OPENAI_MODELS = [
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-6.1-sol",
+  "gpt-6.1-terra",
+  "gpt-6-luna",
+] as const;
 export type OpenAiModel = (typeof OPENAI_MODELS)[number];
 
 /**
- * The dated snapshot each model is asked for (technical plan 4.5), so OpenAI moving the alias to a
- * newer model never changes what Vela says without the golden set judging it first. Change a
- * snapshot only together with an eval run on it (`eval:openai:judged`), recorded in the change.
+ * The model id each model is asked for (technical plan 4.5). Earlier models had dated snapshots
+ * (`gpt-5-2025-08-07`); the GPT-5.6 and GPT-6 families publish none, so the id is the model's own
+ * and `ai_calls.model` keeps the id OpenAI says served each call. Change a route only together with
+ * an eval run on it (`eval:openai:judged`), recorded in the change.
  */
 export const OPENAI_SNAPSHOT_FOR: Readonly<Record<OpenAiModel, string>> = {
-  "gpt-5": "gpt-5-2025-08-07",
-  "gpt-5-mini": "gpt-5-mini-2025-08-07",
+  "gpt-5.6-sol": "gpt-5.6-sol",
+  "gpt-5.6-terra": "gpt-5.6-terra",
+  "gpt-5.6-luna": "gpt-5.6-luna",
+  "gpt-6.1-sol": "gpt-6.1-sol",
+  "gpt-6.1-terra": "gpt-6.1-terra",
+  "gpt-6-luna": "gpt-6-luna",
 };
 
 /**
  * The same routing idea as `MODEL_FOR` (ADR-15): a missed health or safety signal is the expensive
  * failure, so `flag` and the judgment calls run on the stronger model; templated drafting runs on
- * the small one.
+ * the small one. Chosen 3 November 2026 from judged golden-set runs against gpt-5 / gpt-5-mini and
+ * OpenAI's suggested gpt-5.6-sol / gpt-5.6-terra: GPT-6.1 Terra and GPT-6 Luna kept flag recall at
+ * 100%, passed more cases and Chinese cases than either, and cost about an eighth of gpt-5's mix.
  */
 export const OPENAI_MODEL_FOR: Record<AiCallName, OpenAiModel> = {
-  flag: "gpt-5",
-  understand: "gpt-5",
-  translate: "gpt-5",
-  readback: "gpt-5",
-  weekly_read: "gpt-5",
-  recipe: "gpt-5",
-  weekly_insight: "gpt-5",
-  chips: "gpt-5-mini",
-  suggest: "gpt-5-mini",
-  hello: "gpt-5-mini",
-  memory_pick: "gpt-5-mini",
-  story_weave: "gpt-5-mini",
+  flag: "gpt-6.1-terra",
+  understand: "gpt-6.1-terra",
+  translate: "gpt-6.1-terra",
+  readback: "gpt-6.1-terra",
+  weekly_read: "gpt-6.1-terra",
+  recipe: "gpt-6.1-terra",
+  weekly_insight: "gpt-6.1-terra",
+  chips: "gpt-6-luna",
+  suggest: "gpt-6-luna",
+  hello: "gpt-6-luna",
+  memory_pick: "gpt-6-luna",
+  story_weave: "gpt-6-luna",
 };
 
-export type OpenAiReasoningEffort = "minimal" | "low" | "medium";
+/** GPT-5.6 and GPT-6 dropped `minimal`; `none` is the lowest, and the Sol models of GPT-6 lack it. */
+export type OpenAiReasoningEffort = "none" | "low" | "medium";
 
 export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   flag: "low",
@@ -67,12 +88,14 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   weekly_read: "medium",
   recipe: "low",
   weekly_insight: "medium",
-  chips: "minimal",
-  suggest: "minimal",
-  hello: "minimal",
+  chips: "none",
+  suggest: "none",
+  hello: "none",
   memory_pick: "low",
   story_weave: "low",
 };
+
+const WITHOUT_NONE: ReadonlySet<OpenAiModel> = new Set(["gpt-6.1-sol"]);
 
 /** Date precedence needs deliberation; ordinary rotation drafting keeps its existing budget. */
 export function openAiEffortFor(call: AiCallName, input: unknown): OpenAiReasoningEffort {
@@ -92,21 +115,69 @@ export function openAiEffortFor(call: AiCallName, input: unknown): OpenAiReasoni
   return OPENAI_EFFORT_FOR[call];
 }
 
-/** US dollars per million tokens; cached input is billed at its own rate. */
+/** The call's effort, raised to `low` on a model that has no `none`. */
+export function openAiEffortOn(
+  model: OpenAiModel,
+  call: AiCallName,
+  input: unknown,
+): OpenAiReasoningEffort {
+  const effort = openAiEffortFor(call, input);
+  return effort === "none" && WITHOUT_NONE.has(model) ? "low" : effort;
+}
+
+/**
+ * US dollars per million tokens, standard tier, prompts under 272K tokens. Cached input (a cache
+ * read) and a 30-minute cache write are billed at their own rates instead of the input rate.
+ */
 export interface OpenAiPrice {
   readonly input: number;
   readonly cachedInput: number;
+  readonly cacheWrite: number;
   readonly output: number;
 }
 
+/**
+ * From developers.openai.com/api/docs/pricing, read 3 November 2026. GPT-5.6 Sol's $4/$20 is a
+ * promotion "at least through November 21, 2026"; its list price was $5/$30.
+ */
 export const OPENAI_PRICES: Readonly<Record<OpenAiModel, OpenAiPrice>> = {
-  "gpt-5": { input: 1.25, cachedInput: 0.125, output: 10 },
-  "gpt-5-mini": { input: 0.25, cachedInput: 0.025, output: 2 },
+  "gpt-5.6-sol": { input: 4, cachedInput: 0.4, cacheWrite: 5, output: 20 },
+  "gpt-5.6-terra": { input: 2, cachedInput: 0.2, cacheWrite: 2.5, output: 12 },
+  "gpt-5.6-luna": { input: 0.2, cachedInput: 0.02, cacheWrite: 0.25, output: 1.2 },
+  "gpt-6.1-sol": { input: 2, cachedInput: 0.1, cacheWrite: 2.5, output: 10 },
+  "gpt-6.1-terra": { input: 1, cachedInput: 0.05, cacheWrite: 1.25, output: 5 },
+  "gpt-6-luna": { input: 0.1, cachedInput: 0.01, cacheWrite: 0.125, output: 0.5 },
 };
 
+/** The billed token counts of a Chat Completions `usage`: reads and writes are disjoint shares. */
+export interface OpenAiUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  prompt_tokens_details?: {
+    cached_tokens?: number | null;
+    cache_write_tokens?: number | null;
+  } | null;
+}
+
+/** Rounded to the micro-dollar, the precision `ai_calls.cost_usd` stores. */
+export function openAiCostUsd(price: OpenAiPrice, usage: OpenAiUsage): number {
+  const prompt = usage.prompt_tokens ?? 0;
+  const cached = Math.min(prompt, usage.prompt_tokens_details?.cached_tokens ?? 0);
+  const written = Math.min(prompt - cached, usage.prompt_tokens_details?.cache_write_tokens ?? 0);
+  const output = usage.completion_tokens ?? 0;
+  return (
+    Math.round(
+      (prompt - cached - written) * price.input +
+        cached * price.cachedInput +
+        written * price.cacheWrite +
+        output * price.output,
+    ) / 1_000_000
+  );
+}
+
 /**
- * A response names a dated snapshot (`gpt-5-2025-08-07`), so it is priced by its family; an unknown
- * id is priced at the routed model rather than logged as free.
+ * A response may name a dated snapshot of a model, so it is priced by its family; an unknown id is
+ * priced at the routed model rather than logged as free.
  */
 export function openAiPriceFor(servedModel: string, routedModel: OpenAiModel): OpenAiPrice {
   const family = [...OPENAI_MODELS]
@@ -157,19 +228,13 @@ function systemFor(
       };
 }
 
-interface ChatUsage {
-  prompt_tokens?: number;
-  completion_tokens?: number;
-  prompt_tokens_details?: { cached_tokens?: number | null } | null;
-}
-
 interface ChatCompletion {
   model?: string;
   choices?: Array<{
     finish_reason?: string | null;
     message?: { content?: string | null; refusal?: string | null };
   }>;
-  usage?: ChatUsage;
+  usage?: OpenAiUsage;
 }
 
 interface CallSpec<K extends AiCallName> {
@@ -193,6 +258,7 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
     // as client.fetch() throws before the request leaves the Worker; Node does not catch this.
     fetch: options.fetch ?? ((input, init) => fetch(input, init)),
     retryBaseMs: options.retryBaseMs ?? 500,
+    models: { ...OPENAI_MODEL_FOR, ...options.models },
   };
   return {
     understand: (input) =>
@@ -215,6 +281,7 @@ interface Client {
   readonly apiKey: string;
   readonly fetch: typeof fetch;
   readonly retryBaseMs: number;
+  readonly models: Readonly<Record<AiCallName, OpenAiModel>>;
 }
 
 /** The JSON Schema OpenAI is asked to answer in; the Zod schema still checks what comes back. */
@@ -231,16 +298,24 @@ async function invoke<K extends AiCallName>(
   // Invalid input is a bug in the caller, not a provider failure, so it throws before any request.
   const input = INPUT_SCHEMAS[spec.call].parse(rawInput);
   const outputSchema: z.ZodType<AiCallTypes[K]["output"]> = OUTPUT_SCHEMAS[spec.call];
-  const model = OPENAI_MODEL_FOR[spec.call];
+  const model = client.models[spec.call];
   const prompt = systemFor(spec.call, input);
 
   const body = JSON.stringify({
     model: OPENAI_SNAPSHOT_FOR[model],
     store: false,
     max_completion_tokens: MAX_TOKENS_FOR[spec.call],
-    reasoning_effort: openAiEffortFor(spec.call, input),
+    reasoning_effort: openAiEffortOn(model, spec.call, input),
+    // Only Vela's own instructions may be cached: the implicit breakpoint would end after the
+    // family's words and bill them as a cache write (1.25x input) that no other request reuses.
+    prompt_cache_options: { mode: "explicit" },
     messages: [
-      { role: "developer", content: prompt.text },
+      {
+        role: "developer",
+        content: [
+          { type: "text", text: prompt.text, prompt_cache_breakpoint: { mode: "explicit" } },
+        ],
+      },
       { role: "user", content: renderUserTurn(input) },
     ],
     response_format: {
@@ -276,25 +351,17 @@ async function invoke<K extends AiCallName>(
 
   const usage = completion.usage ?? {};
   const promptTokens = usage.prompt_tokens ?? 0;
-  const cached = Math.min(promptTokens, usage.prompt_tokens_details?.cached_tokens ?? 0);
-  const outputTokens = usage.completion_tokens ?? 0;
   const servedModel = completion.model ?? model;
-  const price = openAiPriceFor(servedModel, model);
   const record: AiCallRecord = {
     call: spec.call,
     promptVersion: prompt.version,
     model: servedModel,
     ok: true,
     tokensIn: promptTokens,
-    tokensOut: outputTokens,
-    tokensCached: cached,
+    tokensOut: usage.completion_tokens ?? 0,
+    tokensCached: Math.min(promptTokens, usage.prompt_tokens_details?.cached_tokens ?? 0),
     latencyMs: elapsedSince(started),
-    costUsd:
-      Math.round(
-        (promptTokens - cached) * price.input +
-          cached * price.cachedInput +
-          outputTokens * price.output,
-      ) / 1_000_000,
+    costUsd: openAiCostUsd(openAiPriceFor(servedModel, model), usage),
   };
 
   // A refusal or a truncation can leave partial text that is not the answer, so the finish reason

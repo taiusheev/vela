@@ -31,7 +31,7 @@ import {
 import { createJudge, judgedOutput } from "../evals/judge.ts";
 import * as providerModule from "../evals/provider.ts";
 import { createEvalProvider, PROVIDER_ID } from "../evals/provider.ts";
-import { formatJudgeSummary, judgeFor, runCase } from "../evals/quick.ts";
+import { formatJudgeSummary, judgeFor, parseModelRoutes, runCase } from "../evals/quick.ts";
 import * as suiteModule from "../evals/suite.ts";
 import {
   CALL_CHECKS,
@@ -1064,7 +1064,17 @@ describe("eval provider", () => {
     expect(report).toMatchObject({ passed: false, missed: [flagCase.id] });
   });
 
-  it("judges every rubric criterion with GPT-5 and lists failures without moving flag recall", async () => {
+  it("reads trial routes by group and by call, a named call winning over its group", () => {
+    const routes = parseModelRoutes("strong=gpt-6.1-terra, small=gpt-6-luna, flag=gpt-5.6-sol");
+    expect(routes.flag).toBe("gpt-5.6-sol");
+    expect(routes.understand).toBe("gpt-6.1-terra");
+    expect(routes.chips).toBe("gpt-6-luna");
+    expect(parseModelRoutes(undefined)).toEqual({});
+    expect(() => parseModelRoutes("flag=gpt-5")).toThrow(/OPENAI_MODELS/);
+    expect(() => parseModelRoutes("flags=gpt-6-luna")).toThrow(/unknown call/);
+  });
+
+  it("judges every rubric criterion on the judge model and lists failures without moving flag recall", async () => {
     const [flagCase] = listCaseFiles()
       .flatMap(readCaseFile)
       .filter((evalCase) => mustFlag(evalCase) === true && evalCase.rubric.length >= 1);
@@ -1077,7 +1087,7 @@ describe("eval provider", () => {
       const verdict = verdicts[(bodies.length - 1) % verdicts.length];
       if (verdict === null) return new Response("busy", { status: 400 });
       return Response.json({
-        model: "gpt-5-2025-08-07",
+        model: "gpt-6.1-sol",
         choices: [
           {
             finish_reason: "stop",
@@ -1104,7 +1114,7 @@ describe("eval provider", () => {
     );
     expect(bodies).toHaveLength(3);
     const [first] = bodies;
-    expect(first).toMatchObject({ model: "gpt-5-2025-08-07", store: false });
+    expect(first).toMatchObject({ model: "gpt-6.1-sol", store: false });
     const messages = first?.messages as Array<{ role: string; content: string }>;
     expect(messages[0]?.content).toContain("criterion one is long enough");
     expect(messages[1]?.content).toBe(judgedOutput(output));
@@ -1170,7 +1180,7 @@ describe("eval provider", () => {
     const config = JSON.parse(
       readFileSync(new URL("../evals/promptfooconfig.openai.json", import.meta.url), "utf8"),
     );
-    expect(config.defaultTest.options.provider.id).toBe("openai:chat:gpt-5");
+    expect(config.defaultTest.options.provider.id).toBe("openai:chat:gpt-6.1-sol");
     expect(config.env.EVAL_PROVIDER).toBe("openai");
     expect(config.tests).toEqual(readPromptfooConfig().tests);
   });

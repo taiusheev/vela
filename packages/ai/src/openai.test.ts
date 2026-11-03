@@ -3,9 +3,12 @@ import {
   createOpenAiAi,
   OPENAI_MODEL_FOR,
   OPENAI_MODELS,
+  OPENAI_PRICES,
   OPENAI_REMINDERS,
   OPENAI_SNAPSHOT_FOR,
+  openAiCostUsd,
   openAiEffortFor,
+  openAiEffortOn,
   openAiPriceFor,
   responseSchema,
 } from "./openai.ts";
@@ -68,7 +71,7 @@ function completion(
   overrides: { model?: string; finish?: string; refusal?: string | null; content?: string } = {},
 ): Response {
   return jsonResponse({
-    model: overrides.model ?? "gpt-5-2025-08-07",
+    model: overrides.model ?? OPENAI_MODEL_FOR.understand,
     choices: [
       {
         finish_reason: overrides.finish ?? "stop",
@@ -105,13 +108,18 @@ describe("createOpenAiAi request shape", () => {
     expect(request?.headers.get("authorization")).toBe("Bearer test-key");
     const body = JSON.parse(request?.text ?? "");
     expect(body.model).toBe(OPENAI_SNAPSHOT_FOR[OPENAI_MODEL_FOR.understand]);
-    expect(body.model).toBe("gpt-5-2025-08-07");
     expect(body.store).toBe(false);
     expect(body.reasoning_effort).toBe("low");
     expect(body.messages).toEqual([
       {
         role: "developer",
-        content: `${PROMPTS.understand.system}\n\nReminders (they repeat rules above; follow them exactly):\n${OPENAI_REMINDERS.understand}`,
+        content: [
+          {
+            type: "text",
+            text: `${PROMPTS.understand.system}\n\nReminders (they repeat rules above; follow them exactly):\n${OPENAI_REMINDERS.understand}`,
+            prompt_cache_breakpoint: { mode: "explicit" },
+          },
+        ],
       },
       { role: "user", content: renderUserTurn(understandInput) },
     ]);
@@ -129,6 +137,17 @@ describe("createOpenAiAi request shape", () => {
     }
   });
 
+  // A cache write costs 1.25x input; the family's words are never reused, so only the prompt is cached.
+  it("marks the end of Vela's prompt as the only cache point, never the family's words", async () => {
+    const { ai, requests } = clientWith([completion(understanding)]);
+
+    await ai.understand(understandInput);
+
+    const body = JSON.parse(requests[0]?.text ?? "");
+    expect(body.prompt_cache_options).toEqual({ mode: "explicit" });
+    expect(body.messages[1]).toEqual({ role: "user", content: renderUserTurn(understandInput) });
+  });
+
   it("leaves the flag check's prompt exactly as Claude gets it, with no reminder", async () => {
     const { ai, requests } = clientWith([
       completion({ flag: false, category: null, severity: null, evidenceQuote: null }),
@@ -136,21 +155,30 @@ describe("createOpenAiAi request shape", () => {
 
     const outcome = await ai.flag(flagInput);
 
-    expect(JSON.parse(requests[0]?.text ?? "").messages[0].content).toBe(PROMPTS.flag.system);
+    expect(JSON.parse(requests[0]?.text ?? "").messages[0].content[0].text).toBe(
+      PROMPTS.flag.system,
+    );
     expect(outcome.record?.promptVersion).toBe(PROMPTS.flag.version);
   });
 
   it("routes the flag check to the stronger model and drafting to the small one", () => {
-    expect(OPENAI_MODEL_FOR.flag).toBe("gpt-5");
-    expect(OPENAI_MODEL_FOR.chips).toBe("gpt-5-mini");
+    expect(OPENAI_MODEL_FOR.flag).toBe("gpt-6.1-terra");
+    expect(OPENAI_MODEL_FOR.chips).toBe("gpt-6-luna");
   });
 
-  // Technical plan 4.5: an alias OpenAI moves never changes what Vela says unjudged.
-  it("asks for a dated snapshot of every model, never a moving alias", () => {
-    for (const snapshot of Object.values(OPENAI_SNAPSHOT_FOR)) {
-      expect(snapshot).toMatch(/-\d{4}-\d{2}-\d{2}$/);
+  // Technical plan 4.5: GPT-5.6 and GPT-6 publish no dated snapshots, so each model is asked for by
+  // its own id, never by a family alias such as `gpt-5.6` that OpenAI may point elsewhere.
+  it("asks for each model by its own id and prices every model it can route to", () => {
+    for (const model of OPENAI_MODELS) {
+      expect(OPENAI_SNAPSHOT_FOR[model]).toBe(model);
+      expect(OPENAI_PRICES[model].cacheWrite).toBeCloseTo(OPENAI_PRICES[model].input * 1.25);
     }
     expect(Object.keys(OPENAI_SNAPSHOT_FOR).sort()).toEqual([...OPENAI_MODELS].sort());
+  });
+
+  it("asks a model without a none effort for low instead", () => {
+    expect(openAiEffortOn("gpt-6.1-sol", "chips", chipsInput)).toBe("low");
+    expect(openAiEffortOn("gpt-6.1-terra", "chips", chipsInput)).toBe("none");
   });
 });
 
@@ -160,23 +188,35 @@ describe("createOpenAiAi usage and cost", () => {
 
     const outcome = await ai.understand(understandInput);
 
-    // gpt-5: 600 uncached × $1.25 + 400 cached × $0.125 + 200 out × $10, per million.
+    // gpt-6.1-terra: 600 uncached × $1 + 400 cached × $0.05 + 200 out × $5, per million.
     expect(outcome.record).toMatchObject({
       call: "understand",
       promptVersion: `${PROMPTS.understand.version}+openai.5`,
-      model: "gpt-5-2025-08-07",
+      model: "gpt-6.1-terra",
       ok: true,
       tokensIn: 1_000,
       tokensOut: 200,
       tokensCached: 400,
-      costUsd: 0.0028,
+      costUsd: 0.00162,
     });
   });
 
+  it("bills cache writes at their own rate, apart from reads and plain input", () => {
+    // 1,000 in = 300 plain + 400 read + 300 written; at gpt-6.1-terra rates, per million:
+    // 300 × $1 + 400 × $0.05 + 300 × $1.25 + 200 out × $5.
+    expect(
+      openAiCostUsd(OPENAI_PRICES["gpt-6.1-terra"], {
+        prompt_tokens: 1_000,
+        completion_tokens: 200,
+        prompt_tokens_details: { cached_tokens: 400, cache_write_tokens: 300 },
+      }),
+    ).toBe(0.001695);
+  });
+
   it("prices a dated snapshot by its family and an unknown id at the routed model", () => {
-    expect(openAiPriceFor("gpt-5-mini-2025-08-07", "gpt-5").input).toBe(0.25);
-    expect(openAiPriceFor("gpt-5-2025-08-07", "gpt-5-mini").input).toBe(1.25);
-    expect(openAiPriceFor("something-new", "gpt-5-mini").input).toBe(0.25);
+    expect(openAiPriceFor("gpt-6-luna-2026-12-01", "gpt-6.1-terra").input).toBe(0.1);
+    expect(openAiPriceFor("gpt-6.1-terra", "gpt-6-luna").input).toBe(1);
+    expect(openAiPriceFor("something-new", "gpt-6-luna").input).toBe(0.1);
   });
 });
 
@@ -255,7 +295,7 @@ describe("createOpenAiAi failures", () => {
       ok: false,
       error: "http_500",
       value: { summary: "answered", away: null },
-      record: { model: "gpt-5", ok: false, tokensIn: 0, costUsd: 0 },
+      record: { model: OPENAI_MODEL_FOR.understand, ok: false, tokensIn: 0, costUsd: 0 },
     });
   });
 
@@ -325,11 +365,11 @@ describe("createOpenAiAi failures", () => {
 
 describe("date-sensitive suggestion effort", () => {
   it.each([
-    ["2026-09-17", "minimal"],
+    ["2026-09-17", "none"],
     ["2026-09-18", "low"],
     ["2026-09-19", "low"],
     ["2026-09-20", "low"],
-    ["2026-09-21", "minimal"],
+    ["2026-09-21", "none"],
   ])("uses the appropriate budget for the supplied event on %s", async (date, effort) => {
     const { ai, requests } = clientWith([
       completion({
@@ -351,7 +391,7 @@ describe("date-sensitive suggestion effort", () => {
     expect(JSON.parse(requests[0]?.text ?? "{}").reasoning_effort).toBe(effort);
   });
   it("preserves other call budgets", () => {
-    expect(openAiEffortFor("hello", understandInput)).toBe("minimal");
+    expect(openAiEffortFor("hello", understandInput)).toBe("none");
     expect(openAiEffortFor("understand", understandInput)).toBe("low");
   });
 });
