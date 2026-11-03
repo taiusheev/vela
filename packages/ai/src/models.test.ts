@@ -25,6 +25,7 @@ describe("MODEL_FOR", () => {
       hello: "claude-haiku-4-5",
       memory_pick: "claude-haiku-4-5",
       story_weave: "claude-haiku-4-5",
+      photo_question: "claude-sonnet-5",
     });
   });
 
@@ -51,6 +52,7 @@ describe("EFFORT_FOR", () => {
       hello: null,
       memory_pick: null,
       story_weave: null,
+      photo_question: "low",
     });
   });
 

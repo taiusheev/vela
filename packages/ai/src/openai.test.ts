@@ -96,6 +96,38 @@ function clientWith(replies: readonly Reply[]) {
 }
 
 describe("createOpenAiAi request shape", () => {
+  it("sends a photo question's photo as an image beside the JSON, never inside it", async () => {
+    const input = {
+      lang: "en" as const,
+      askerName: "Anna",
+      addressForm: "Mom",
+      era: "new" as const,
+      caption: null,
+      askerExamples: [],
+      image: { mime: "image/jpeg" as const, base64: "QUJDRA==" },
+    };
+    const { ai, requests } = clientWith([
+      completion({ questions: ["What would you cook with these?"] }, { model: "gpt-6.1-terra" }),
+    ]);
+
+    const outcome = await ai.photoQuestion(input);
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      value: { questions: ["What would you cook with these?"] },
+    });
+    const body = JSON.parse(requests[0]?.text ?? "");
+    expect(body.model).toBe("gpt-6.1-terra");
+    const [text, image] = body.messages[1].content;
+    expect(text).toEqual({ type: "text", text: renderUserTurn(input) });
+    expect(text.text).not.toContain("QUJDRA==");
+    expect(text.text).not.toContain("image");
+    expect(image).toEqual({
+      type: "image_url",
+      image_url: { url: "data:image/jpeg;base64,QUJDRA==" },
+    });
+  });
+
   it("sends the call's routed model, its prompt, schema, effort, and asks OpenAI not to store it", async () => {
     const { ai, requests } = clientWith([completion(understanding)]);
 

@@ -28,6 +28,7 @@ async function main(): Promise<void> {
       "answers.flag_reason",
       "replies.text",
       "photo_box.caption",
+      "photo_box.question",
       "exchanges.text",
       "translations.text",
       "suggestions.text",

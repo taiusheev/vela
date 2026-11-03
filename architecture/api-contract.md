@@ -408,6 +408,7 @@ An ask can carry a **voice hello** the same way (spec §4): `voice_hello_id` in 
 | POST | /families/:id/photo-box | Built: put a photo the caller uploaded into the box |
 | POST | /photo-box/:id | Built: change a box photo's era or line |
 | POST | /photo-box/:id/remove | Built: take a photo out of the box |
+| POST | /families/:id/photo-box/question-drafts | Built (3 November 2026): Vela's questions about a photo, where `PHOTO_QUESTION_AI` is on (ADR-61) |
 
 ### The family book (3 October 2026, spec §10, A10, ADR-39)
 
@@ -453,7 +454,11 @@ Served only where the Worker's `PHOTO_BOX` is `on` (development and staging; pro
 
 `POST /v1/families/:familyId/photo-box` with `{media_id, era, caption?}` (`AddToPhotoBox`; a caption is trimmed, at most 140 characters, and an empty one is none) and an `Idempotency-Key` puts a photo the caller uploaded into the box, through `runApiMutation` (operation `photo_box.add:v1`). It answers 201 `ApiPhotoBoxPhoto`. The photo then has no deletion date, and its object is moved out of `asks/` after the commit. Refusals, in `details.reason`: 404 `photo_missing` (not an app image the caller uploaded to this family, no longer stored, or past its deletion date), 409 `in_box`, 409 `box_full`. A family not the caller's is 404.
 
-`POST /v1/photo-box/:boxId` with `{era?, caption?}` (`ChangePhotoBoxPhoto`, at least one; a null or empty caption clears it) changes a photo (operation `photo_box.change:v1`) and answers 200 `ApiPhotoBoxPhoto`. `POST /v1/photo-box/:boxId/remove` with an empty body takes it out (operation `photo_box.remove:v1`), gives the photo its deletion date now, and answers 200 `ApiPhotoBoxRemoved` (`id`, `removed: true`). Both are 404 for a photo the caller may not change, or one already gone.
+Every `ApiPhotoBoxPhoto` also carries `question`: the adder's own question about it (ADR-61), or null. `AddToPhotoBox` takes an optional `question` (trimmed, at most 200 characters, an empty one is none); her picture morning of that photo asks it signed with the adder's name, and `next` shows that text and signature.
+
+`POST /v1/families/:familyId/photo-box/question-drafts` with `{media_id, era, caption?}` (`DraftPhotoQuestions`) and an `Idempotency-Key` answers 200 `ApiPhotoQuestionDrafts`, `{questions}`: up to three questions about what the photo shows, in her language, written as the caller would ask, `Cache-Control: no-store`. Nothing is stored. It exists only where `PHOTO_QUESTION_AI` and `PHOTO_BOX` are on (capability `photo_question_ai`); elsewhere 404. The photo must be an app image the caller uploaded to this family, or a box photo the caller may change; else 404. With no parent to ask, a photo over 5 MB or of a type the model cannot read, or a failed call, it answers no questions.
+
+`POST /v1/photo-box/:boxId` with `{era?, caption?, question?}` (`ChangePhotoBoxPhoto`, at least one; a null or empty caption or question clears it) changes a photo (operation `photo_box.change:v1`) and answers 200 `ApiPhotoBoxPhoto`. `POST /v1/photo-box/:boxId/remove` with an empty body takes it out (operation `photo_box.remove:v1`), gives the photo its deletion date now, and answers 200 `ApiPhotoBoxRemoved` (`id`, `removed: true`). Both are 404 for a photo the caller may not change, or one already gone.
 
 ## 7. Weekly read, settings, billing
 

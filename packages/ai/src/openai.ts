@@ -3,7 +3,7 @@ import { normaliseFlag, normaliseUnderstanding } from "./claude.ts";
 import { SAFE_DEFAULTS } from "./defaults.ts";
 import { MAX_RETRIES, MAX_TOKENS_FOR, TIMEOUT_MS_FOR } from "./models.ts";
 import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
-import { promptFor, renderUserTurn } from "./prompts/index.ts";
+import { imageOf, promptFor, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -75,6 +75,8 @@ export const OPENAI_MODEL_FOR: Record<AiCallName, OpenAiModel> = {
   hello: "gpt-6-luna",
   memory_pick: "gpt-6-luna",
   story_weave: "gpt-6-luna",
+  // It looks at the photo: GPT-6.1 Terra reads images and writes Chinese best of the routed models.
+  photo_question: "gpt-6.1-terra",
 };
 
 /** GPT-5.6 and GPT-6 dropped `minimal`; `none` is the lowest, and the Sol models of GPT-6 lack it. */
@@ -93,6 +95,7 @@ export const OPENAI_EFFORT_FOR: Record<AiCallName, OpenAiReasoningEffort> = {
   hello: "none",
   memory_pick: "low",
   story_weave: "low",
+  photo_question: "low",
 };
 
 const WITHOUT_NONE: ReadonlySet<OpenAiModel> = new Set(["gpt-6.1-sol"]);
@@ -273,8 +276,20 @@ export function createOpenAiAi(options: OpenAiOptions): Ai {
     recipe: (input) => invoke(client, { call: "recipe" }, input),
     memoryPick: (input) => invoke(client, { call: "memory_pick" }, input),
     storyWeave: (input) => invoke(client, { call: "story_weave" }, input),
+    photoQuestion: (input) => invoke(client, { call: "photo_question" }, input),
     weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
+}
+
+/** The user turn: the JSON alone, or the JSON with the photo the call looks at. */
+function userContent(input: unknown): string | Array<Record<string, unknown>> {
+  const text = renderUserTurn(input);
+  const image = imageOf(input);
+  if (image === null) return text;
+  return [
+    { type: "text", text },
+    { type: "image_url", image_url: { url: `data:${image.mime};base64,${image.base64}` } },
+  ];
 }
 
 interface Client {
@@ -316,7 +331,7 @@ async function invoke<K extends AiCallName>(
           { type: "text", text: prompt.text, prompt_cache_breakpoint: { mode: "explicit" } },
         ],
       },
-      { role: "user", content: renderUserTurn(input) },
+      { role: "user", content: userContent(input) },
     ],
     response_format: {
       type: "json_schema",

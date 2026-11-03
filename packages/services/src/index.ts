@@ -317,4 +317,5 @@ export {
   type WaitlistLang,
   type WaitlistRole,
 } from "./waitlist.ts";
+export * from "./photo-questions.ts";
 export * from "./weekly-support-live.ts";

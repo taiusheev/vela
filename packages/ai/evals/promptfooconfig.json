@@ -19,6 +19,7 @@
           "cases/flag.json",
           "cases/hello.json",
           "cases/memory_pick.json",
+          "cases/photo_question.json",
           "cases/readback.json",
           "cases/recipe.json",
           "cases/story_weave.json",

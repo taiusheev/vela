@@ -253,6 +253,13 @@
       "when": 1793637806890,
       "tag": "0035_nearby_auto_ask",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793692081911,
+      "tag": "0036_photo_box_question",
+      "breakpoints": true
     }
   ]
 }

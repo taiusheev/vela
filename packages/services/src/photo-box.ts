@@ -8,8 +8,12 @@
  * no deletion date and its object lives under `book/`, the prefix no bucket rule clears (data map
  * 21). Taking it out gives it its deletion date again, now, so the next retention run deletes it
  * wherever an exchange still names it. A photo whose adder is no longer a live member of the family
- * is taken out by retention (`releaseBoxPhotosOfLeavers`). The AI never sees a box photo: the
- * morning's words are the family's line inside a fixed sentence in her language.
+ * is taken out by retention (`releaseBoxPhotosOfLeavers`).
+ *
+ * The morning's words (ADR-61): the adder's own question, when they gave one, sent as theirs and
+ * signed with their name; else the family's line inside a fixed sentence in her language, signed by
+ * Vela. The adder may ask Vela to draft questions by looking at the photo (`draftPhotoQuestions`,
+ * `PHOTO_QUESTION_AI`); the drafts are only offered to them, never sent, and never stored.
  */
 import type {
   ApiMutationResponse,
@@ -153,7 +157,10 @@ export async function loadApiPhotoBox(
       type: plan.type,
       box_ids: plan.chosen.map((c) => c.boxId),
       text: plan.text,
-      signature: t(parent.language, "arrival.hello_signature"),
+      signature:
+        plan.asker === null
+          ? t(parent.language, "arrival.hello_signature")
+          : t(parent.language, "arrival.signed", { asker: plan.asker.name }),
     });
   }
   return {
@@ -163,6 +170,7 @@ export async function loadApiPhotoBox(
       media_id: box.mediaId,
       era: box.era,
       caption: box.caption,
+      question: box.question,
       width: file.width,
       height: file.height,
       added_by_name: adder,
@@ -188,6 +196,7 @@ function toApiPhoto(
     media_id: box.mediaId,
     era: box.era,
     caption: box.caption,
+    question: box.question,
     width: file.width,
     height: file.height,
     added_by_name: adder,
@@ -273,6 +282,7 @@ export async function addToApiPhotoBox(
             mediaId: file.id,
             era: add.era,
             caption: add.caption ?? null,
+            question: add.question ?? null,
             addedBy: access.memberId,
             createdAt: now,
           })
@@ -319,7 +329,9 @@ async function lockBoxPhoto(
   return { box, file };
 }
 
-/** Change a box photo's era or line (`POST /v1/photo-box/:boxId`, 200 `ApiPhotoBoxPhoto`). */
+/**
+ * Change a box photo's era, line or question (`POST /v1/photo-box/:boxId`, 200 `ApiPhotoBoxPhoto`).
+ */
 export async function changeApiPhotoBoxPhoto(
   deps: Pick<Deps, "db" | "clock">,
   identity: SessionIdentity,
@@ -345,6 +357,7 @@ export async function changeApiPhotoBoxPhoto(
           .set({
             ...(change.era === undefined ? {} : { era: change.era }),
             ...(change.caption === undefined ? {} : { caption: change.caption }),
+            ...(change.question === undefined ? {} : { question: change.question }),
           })
           .where(eq(photoBox.id, box.id))
           .returning();
@@ -583,6 +596,9 @@ interface Candidate {
   mediaId: string;
   era: "new" | "old";
   caption: string | null;
+  question: string | null;
+  /** Who added it, while they are a live member of her family other than her. */
+  adder: { id: string; name: string } | null;
 }
 
 /**
@@ -633,11 +649,24 @@ async function candidatesFor(tx: Queryable, member: Member): Promise<Candidate[]
       mediaId: photoBox.mediaId,
       era: photoBox.era,
       caption: photoBox.caption,
+      question: photoBox.question,
+      adderId: members.id,
+      adderName: members.displayName,
       last: lastShown.last,
     })
     .from(photoBox)
     .innerJoin(media, eq(media.id, photoBox.mediaId))
     .leftJoin(lastShown, eq(lastShown.boxId, photoBox.id))
+    .leftJoin(
+      members,
+      and(
+        eq(members.id, photoBox.addedBy),
+        eq(members.familyId, member.familyId),
+        inArray(members.status, ["active", "paused"]),
+        isNull(members.leftAt),
+        sql`${members.id} <> ${member.id}`,
+      ),
+    )
     .where(
       and(
         eq(photoBox.familyId, member.familyId),
@@ -648,7 +677,10 @@ async function candidatesFor(tx: Queryable, member: Member): Promise<Candidate[]
       ),
     )
     .orderBy(sql`${lastShown.last} asc nulls first`, desc(photoBox.createdAt), desc(photoBox.id));
-  return rows.map(({ last: _last, ...row }) => row);
+  return rows.map(({ last: _last, adderId, adderName, ...row }) => ({
+    ...row,
+    adder: adderId === null || adderName === null ? null : { id: adderId, name: adderName },
+  }));
 }
 
 /** The kind of her `n`th picture morning, walked forward to one the box can make. */
@@ -680,11 +712,15 @@ function pictureText(lang: Member["language"], kind: PictureKind, caption: strin
     : t(lang, "photo_box.story_caption", { caption });
 }
 
-/** What a picture morning shows and says: its kind, its type, its photos in order, its words. */
+/**
+ * What a picture morning shows and says: its kind, its type, its photos in order, its words, and
+ * who asks it: the adder, when the words are their own question, else nobody (Vela signs).
+ */
 export interface PicturePlan {
   type: "question" | "memory_photo" | "photo_choice";
   chosen: Candidate[];
   text: string;
+  asker: { id: string; name: string } | null;
 }
 
 /**
@@ -705,10 +741,15 @@ function planFrom(
       : candidates.filter((c) => c.era === "new").slice(0, kind === "choice" ? 2 : 1);
   const first = chosen[0];
   if (first === undefined) return null;
+  const type = kind === "story" ? "memory_photo" : kind === "choice" ? "photo_choice" : "question";
+  if (kind !== "choice" && first.question !== null && first.adder !== null) {
+    return { type, chosen, text: first.question, asker: first.adder };
+  }
   return {
-    type: kind === "story" ? "memory_photo" : kind === "choice" ? "photo_choice" : "question",
+    type,
     chosen,
     text: pictureText(member.language, kind, kind === "choice" ? null : first.caption),
+    asker: null,
   };
 }
 
@@ -735,8 +776,9 @@ export async function nextPictureMorning(
 
 /**
  * Her free morning of `date` made from the photo box, when it is one of her picture mornings and
- * the box has a photo for it: the exchange, scheduled, asked by nobody and drafted by Vela, so it
- * is signed by Vela; and a use of each photo it shows. Null leaves the morning to the question
+ * the box has a photo for it: the exchange, scheduled, asked by the adder in their own words when
+ * they gave the photo a question, else asked by nobody and drafted by Vela, so it is signed by
+ * Vela; and a use of each photo it shows. Null leaves the morning to the question
  * bank. Called by `prepareDay` inside its transaction, holding her member row; the chosen photos'
  * rows are taken `for share` before her exchange (media before exchanges, as compose and retention
  * take them), and one taken out of the box meanwhile is passed over.
@@ -778,7 +820,7 @@ export async function takePictureMorning(
     .values({
       familyId: member.familyId,
       recipientId: member.id,
-      askerId: null,
+      askerId: plan.asker?.id ?? null,
       type,
       state: "scheduled",
       text: plan.text,
@@ -786,7 +828,8 @@ export async function takePictureMorning(
       whenRule: "date",
       scheduledFor: date,
       mediaIds: chosen.map((c) => c.mediaId),
-      draftedByVela: true,
+      draftedByVela: plan.asker === null,
+      options: { photo_box: true },
       createdAt: now,
     })
     .returning();
@@ -803,6 +846,18 @@ export async function takePictureMorning(
     })),
   );
   return exchange;
+}
+
+/**
+ * Whether an exchange is a morning made from the photo box (ADR-58), Vela's or in the adder's own
+ * words (ADR-61): either asks about the photo it shows.
+ */
+export function isBoxPictureMorning(
+  exchange: Pick<Exchange, "askerId" | "draftedByVela" | "options">,
+): boolean {
+  if (isVelaPictureMorning(exchange)) return true;
+  const options = exchange.options;
+  return typeof options === "object" && options !== null && "photo_box" in options;
 }
 
 /** Whether an exchange is one of Vela's picture mornings: asked by nobody, with photos. */

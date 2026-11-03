@@ -156,6 +156,13 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly PHOTO_BOX?: string;
   /**
+   * `PHOTO_QUESTION_AI` (ADR-61): "on" lets Vela look at a photo going into the box and draft
+   * questions about it for the person adding it. Absent or "off" does not. On in development and
+   * staging, off in production until the privacy notice says the AI sees box photos; pinned in
+   * src/wrangler-config.test.ts.
+   */
+  readonly PHOTO_QUESTION_AI?: string;
+  /**
    * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
    * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.
    */

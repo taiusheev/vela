@@ -119,6 +119,11 @@ export const ApiCapabilities = z.strictObject({
   personal_question_profiles: z.boolean().optional(),
   /** The family's photo box (ADR-58): photos Vela turns into her free mornings. */
   photo_box: z.boolean().default(false),
+  /**
+   * Whether Vela may look at a photo going into the box and draft questions about it for the person
+   * adding it to choose from (ADR-61). Without it they write their own question, or none.
+   */
+  photo_question_ai: z.boolean().optional(),
   parent_app: z.boolean(),
   billing: z.boolean(),
 });
@@ -1490,6 +1495,17 @@ const PhotoBoxCaption = z
   .max(PHOTO_BOX_CAPTION_MAX)
   .transform((caption) => (caption.length === 0 ? null : caption));
 
+/**
+ * The question the person adding a photo asks her about it, in their words: Vela sends it as theirs,
+ * signed with their name. Picked from Vela's drafts or written by hand.
+ */
+export const PHOTO_BOX_QUESTION_MAX = 200;
+const PhotoBoxQuestion = z
+  .string()
+  .trim()
+  .max(PHOTO_BOX_QUESTION_MAX)
+  .transform((question) => (question.length === 0 ? null : question));
+
 /** How many photos a family's box holds at once. */
 export const PHOTO_BOX_LIMIT = 40;
 
@@ -1500,6 +1516,8 @@ export const ApiPhotoBoxPhoto = z.object({
   media_id: z.uuid(),
   era: PhotoBoxEra,
   caption: z.string().nullable(),
+  /** The adder's own question about it, which her morning asks signed with their name. */
+  question: z.string().nullable().optional(),
   width: z.number().int().positive().nullable(),
   height: z.number().int().positive().nullable(),
   added_by_name: z.string().nullable(),
@@ -1537,14 +1555,42 @@ export const AddToPhotoBox = z.strictObject({
   media_id: z.uuid(),
   era: PhotoBoxEra,
   caption: PhotoBoxCaption.optional(),
+  question: PhotoBoxQuestion.optional(),
 });
 export type AddToPhotoBox = z.infer<typeof AddToPhotoBox>;
 
-/** Change a box photo's era or its line; a null or empty caption clears the line. */
+/** Change a box photo's era, line or question; a null or empty one clears it. */
 export const ChangePhotoBoxPhoto = z
-  .strictObject({ era: PhotoBoxEra.optional(), caption: PhotoBoxCaption.nullable().optional() })
-  .refine((change) => change.era !== undefined || change.caption !== undefined);
+  .strictObject({
+    era: PhotoBoxEra.optional(),
+    caption: PhotoBoxCaption.nullable().optional(),
+    question: PhotoBoxQuestion.nullable().optional(),
+  })
+  .refine(
+    (change) =>
+      change.era !== undefined || change.caption !== undefined || change.question !== undefined,
+  );
 export type ChangePhotoBoxPhoto = z.infer<typeof ChangePhotoBoxPhoto>;
+
+/**
+ * Ask Vela for questions about a photo the caller uploaded, before or after it goes into the box
+ * (`POST /v1/families/:familyId/photo-box/question-drafts`, ADR-61).
+ */
+export const DraftPhotoQuestions = z.strictObject({
+  media_id: z.uuid(),
+  era: PhotoBoxEra,
+  caption: PhotoBoxCaption.optional(),
+});
+export type DraftPhotoQuestions = z.infer<typeof DraftPhotoQuestions>;
+
+/**
+ * Up to three questions about what the photo shows, written as the caller would ask her, in her
+ * language. None when drafting is off or failed: the caller writes their own.
+ */
+export const ApiPhotoQuestionDrafts = z.object({
+  questions: z.array(z.string().min(1).max(PHOTO_BOX_QUESTION_MAX)).max(3),
+});
+export type ApiPhotoQuestionDrafts = z.infer<typeof ApiPhotoQuestionDrafts>;
 
 /** Take a photo out of the box: no body, the photo is in the path. */
 export const RemovePhotoBoxPhoto = z.strictObject({});

@@ -301,6 +301,7 @@ function fixture(
     | "parentConnection"
     | "notificationControls"
     | "personalQuestions"
+    | "photoQuestions"
     | "questionProfiles"
   > = {},
 ) {
@@ -3828,6 +3829,75 @@ describe("the photo box (ADR-58)", () => {
   };
   const ADD = JSON.stringify({ media_id: MEDIA_ID, era: "old", caption: "Our first flat" });
   const auth = { authorization: "Bearer good" };
+
+  describe("question drafts (ADR-61)", () => {
+    const DRAFTS_PATH = `${BOX_PATH}/question-drafts`;
+    const DRAFT = JSON.stringify({ media_id: MEDIA_ID, era: "new" });
+    function draftsOn() {
+      const draft = vi
+        .fn<NonNullable<ApiRuntime["photoQuestions"]>["draft"]>()
+        .mockResolvedValue({ questions: ["What would you cook with these?"] });
+      const photoQuestions = { draft, ai: createFakeAi() };
+      return {
+        ...fixture(true, undefined, {
+          ...boxOn,
+          capabilities: { ...boxOn.capabilities, photo_question_ai: true },
+          photoQuestions,
+        }),
+        draft,
+      };
+    }
+
+    it("is absent where drafting is off, before any database or service", async () => {
+      const f = fixture(true, undefined, boxOn);
+      expect((await f.app.request(writeRequest("POST", DRAFTS_PATH, DRAFT, auth))).status).toBe(
+        404,
+      );
+      expect(f.openDatabase).not.toHaveBeenCalled();
+    });
+
+    it("requires a session and a valid body", async () => {
+      const f = draftsOn();
+      f.verifySession.mockResolvedValueOnce(null);
+      expect(
+        (
+          await f.app.request(
+            writeRequest("POST", DRAFTS_PATH, DRAFT, { authorization: "Bearer bad" }),
+          )
+        ).status,
+      ).toBe(401);
+      expect(
+        (
+          await f.app.request(
+            writeRequest("POST", DRAFTS_PATH, JSON.stringify({ media_id: MEDIA_ID }), auth),
+          )
+        ).status,
+      ).toBe(400);
+      expect(f.draft).not.toHaveBeenCalled();
+    });
+
+    it("answers the drafts uncached and stores nothing", async () => {
+      const f = draftsOn();
+      const response = await f.app.request(writeRequest("POST", DRAFTS_PATH, DRAFT, auth));
+      await expectResponse(response, 200, { questions: ["What would you cook with these?"] });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(f.draft).toHaveBeenCalledWith(
+        expect.objectContaining({ db: f.db, config: { photoQuestionAi: true } }),
+        IDENTITY,
+        FAMILY_ID,
+        { media_id: MEDIA_ID, era: "new" },
+      );
+      expect(f.writes.services.addToApiPhotoBox).not.toHaveBeenCalled();
+    });
+
+    it("is 404 for a photo the caller may not use", async () => {
+      const f = draftsOn();
+      f.draft.mockRejectedValue(new VelaError("not_found", "Photo not found"));
+      expect((await f.app.request(writeRequest("POST", DRAFTS_PATH, DRAFT, auth))).status).toBe(
+        404,
+      );
+    });
+  });
 
   it("is absent where the box is off, before any database or service", async () => {
     const f = fixture(true);

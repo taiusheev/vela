@@ -627,6 +627,16 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "off"]);
   });
 
+  // ADR-61: the AI looks at box photos only where test families are, until the privacy notice says
+  // so (v15). The commit that turns it on changes this.
+  it("let Vela draft photo questions from the photo in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.PHOTO_QUESTION_AI,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
   // ADR-60: Vela asks the people nearby itself only where test families are, until the families
   // have been told (privacy-notice.v14 and the contacts' new text already say it may). The commit
   // that turns it on changes this.

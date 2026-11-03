@@ -51,7 +51,7 @@ import {
 import { storedCopyOf } from "./media-copy.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { readsStoredMedia, uploadsStoredMedia } from "./outbound-media.ts";
-import { isVelaPictureMorning, takePictureMorning } from "./photo-box.ts";
+import { isBoxPictureMorning, isVelaPictureMorning, takePictureMorning } from "./photo-box.ts";
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
   channelLinkOfMember,
@@ -524,11 +524,11 @@ export async function loadAsk(
   } else if (type === "photo_choice") {
     attached = images;
   }
-  // Vela's picture morning (ADR-58) asks about the photo it shows: with none left to show (taken
-  // out of the box after the morning was made, or gone), it is the plain hello instead, and a
-  // choice left with one photo asks about that one.
+  // A picture morning from the box (ADR-58, ADR-61) asks about the photo it shows: with none left
+  // to show (taken out of the box after the morning was made, or gone), it is the plain hello
+  // instead, and Vela's choice left with one photo asks about that one.
   let text = exchange.text;
-  if (isVelaPictureMorning(exchange)) {
+  if (isBoxPictureMorning(exchange)) {
     if (!attached.some((file) => file.kind === "image")) {
       deps.logger.warn("picture_morning_without_photo", { exchangeId: exchange.id });
       return { ask: { type: "hello", question: null }, media: [] };

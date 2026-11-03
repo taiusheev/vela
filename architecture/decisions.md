@@ -1023,3 +1023,23 @@ Needs before production: privacy-notice wording (the notice said "Vela never con
 Rejected: asking at the first notice (the organiser deserves the first move); asking contacts who agreed to the old text (their yes did not cover it); a per-family setting now (one switch is enough for ten families; revisit if a family wants it off).
 
 Revisit if: a person nearby is asked on a morning the family was in fact handling it; or families want a shorter or longer wait than the two-hour reminder.
+
+
+## ADR-61 · A box photo's question in the adder's words, with drafts from Vela that looks at the photo
+
+3 November 2026. Accepted (founder: "approve all, use the better one"). Off in production until privacy-notice v15 is approved and the families are told.
+
+Context: the photo box (ADR-58) asked about every photo with a fixed sentence holding the family's line, signed by Vela. The founder found the questions generic: they did not match the photo and repeated its line back. The model never saw the photo.
+
+Decision:
+
+- **The adder's question.** A box photo may carry a question (`photo_box.question`, sealed, ADR-38; migration 0036), set when it is added or changed. Her picture morning of that photo asks it as the adder's own (`exchanges.asker_id` the adder, `drafted_by_vela` false, `options.photo_box` true), signed with their name. Without one, or once the adder is no longer a live member of her family, the morning is Vela's fixed sentence as before. A choice of two photos keeps Vela's words. A morning whose photo was taken out before it was sent is the plain hello either way (`isBoxPictureMorning`).
+- **Drafts.** `POST /v1/families/:familyId/photo-box/question-drafts` sends the photo (as an image, never inside the JSON), the adder's line, their name, how they call her, and up to three of their own earlier asks to her, to the `photo_question` call, which drafts up to three questions in her language. Code keeps one question each, no repeat of the line, no health-check, surveillance or gendered word (`acceptedQuestions`). Nothing is stored but the AI call's counts; only the adder sees the drafts, and only what they save is ever sent.
+- **Model.** `gpt-5.6-terra` on OpenAI (the founder chose quality over the cheaper tier; about US$0.007 a photo, about US$0.10 a family a month), `claude-sonnet-5` on Anthropic. The OpenAI model has no dated snapshot, so it is named as published (`OPENAI_UNDATED_MODELS`).
+- **Switch.** `PHOTO_QUESTION_AI`, on in development and staging, off in production and pinned; capability `photo_question_ai`. Without it the app offers only the adder's own question, which needs no notice change beyond v15's photo box text.
+
+Needs before production: the founder's yes on `privacy-notice.v15-photo-questions-draft.md` (it replaces the approved box text's "No AI" promise), that wording in the live notice, families told, and the commit that turns `PHOTO_QUESTION_AI` on changes the pin.
+
+Rejected: drafting every morning from the photo with no person choosing (the founder wants the parent to hear the child, and a person picks the final words, as with send-as-me in ADR-49); keeping the drafts (nothing needs them after the choice); the cheapest model (Chinese quality matters more than the few cents).
+
+Revisit if: adders mostly keep the first draft unchanged (then fewer drafts may do), or drafts guess at people in the photo.

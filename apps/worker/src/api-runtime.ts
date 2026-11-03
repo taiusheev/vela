@@ -53,6 +53,7 @@ import {
   dismissApiSuggestion,
   dismissMemoryCandidate,
   draftApiPersonalQuestion,
+  draftPhotoQuestions,
   editApiAsk,
   endApiAway,
   errorLabel,
@@ -135,6 +136,7 @@ import {
   readPersonalQuestionDrafts,
   readPersonalQuestionProfiles,
   readPhotoBox,
+  readPhotoQuestionAi,
   readRichMemories,
   secret,
 } from "./config.ts";
@@ -433,6 +435,14 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }
       : {}),
+    ...(readPhotoQuestionAi(env)
+      ? {
+          photoQuestions: {
+            draft: draftPhotoQuestions,
+            ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
+          },
+        }
+      : {}),
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
     // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development
@@ -448,6 +458,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
       photo_box: readPhotoBox(env),
+      photo_question_ai: readPhotoQuestionAi(env),
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
     },

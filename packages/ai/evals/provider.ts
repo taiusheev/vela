@@ -71,6 +71,8 @@ function runCall(ai: Ai, call: AiCallName, input: unknown): Promise<AiOutcome<un
       return ai.storyWeave(INPUT_SCHEMAS.story_weave.parse(input));
     case "weekly_insight":
       return ai.weeklyInsight(INPUT_SCHEMAS.weekly_insight.parse(input));
+    case "photo_question":
+      return ai.photoQuestion(INPUT_SCHEMAS.photo_question.parse(input));
   }
 }
 

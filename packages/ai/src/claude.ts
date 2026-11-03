@@ -21,7 +21,7 @@ import {
   TIMEOUT_MS_FOR,
 } from "./models.ts";
 import { normaliseSuggestion, suggestionDateGrounded } from "./normalise-suggestion.ts";
-import { promptFor, renderUserTurn } from "./prompts/index.ts";
+import { imageOf, promptFor, renderUserTurn } from "./prompts/index.ts";
 import {
   type Ai,
   type AiCallName,
@@ -86,6 +86,7 @@ export function createClaudeAi(options: ClaudeAiOptions): Ai {
     recipe: (input) => invoke(client, { call: "recipe" }, input),
     memoryPick: (input) => invoke(client, { call: "memory_pick" }, input),
     storyWeave: (input) => invoke(client, { call: "story_weave" }, input),
+    photoQuestion: (input) => invoke(client, { call: "photo_question" }, input),
     weeklyInsight: (input) => invoke(client, { call: "weekly_insight" }, input),
   };
 }
@@ -108,7 +109,7 @@ async function invoke<K extends AiCallName>(
     model,
     max_tokens: MAX_TOKENS_FOR[spec.call],
     system: [{ type: "text", text: prompt.system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: renderUserTurn(input) }],
+    messages: [{ role: "user", content: userContent(input) }],
     output_config: {
       format: { type: format.type, schema: format.schema },
       ...(capabilities.effort && effort !== null ? { effort } : {}),
@@ -255,6 +256,24 @@ function providerFailureCode(error: unknown): string | null {
     return error.status === undefined ? "api_error" : `http_${error.status}`;
   }
   return null;
+}
+
+/** The user turn: the JSON alone, or the JSON with the photo the call looks at. */
+function userContent(input: unknown): MessageCreateParamsNonStreaming["messages"][number]["content"] {
+  const text = renderUserTurn(input);
+  const image = imageOf(input);
+  if (image === null) return text;
+  return [
+    { type: "text", text },
+    {
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: image.mime as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+        data: image.base64,
+      },
+    },
+  ];
 }
 
 function elapsedSince(started: number): number {
