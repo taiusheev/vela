@@ -141,7 +141,7 @@ describe("draftPhotoQuestions", () => {
         record: {
           call: "photo_question",
           promptVersion: "photo_question.v1",
-          model: "gpt-5.6-terra",
+          model: "gpt-6.1-terra",
           ok: false,
           tokensIn: 0,
           tokensOut: 0,
