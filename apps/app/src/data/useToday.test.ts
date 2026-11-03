@@ -7,7 +7,13 @@ import {
 } from "@vela/contracts";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { AppLocale } from "../i18n/locale.ts";
-import { toToday, toTodayExchange, toTodayLight, toTomorrowTurn } from "./useToday.ts";
+import {
+  todayTrouble,
+  toToday,
+  toTodayExchange,
+  toTodayLight,
+  toTomorrowTurn,
+} from "./useToday.ts";
 
 // The Lingui macros compile away as the app is bundled, and nothing compiles them here. `t` stands
 // in for what the macro compiles to: in English the words as written, and in Traditional Chinese
@@ -588,5 +594,40 @@ describe("explicit Not okay follow-up", () => {
       });
       expect(toToday(day).lights[0]?.notOkayAt).toBe(kind === "not_okay" ? "10:12" : undefined);
     }
+  });
+});
+
+describe("Today's trouble", () => {
+  const ok = { failed: false, held: true };
+  it("keeps the day shown, marked stale, when a refresh fails after it arrived", () => {
+    expect(todayTrouble({ me: ok, day: { failed: true, held: true }, noAccount: false })).toEqual({
+      trouble: false,
+      stale: true,
+    });
+    expect(todayTrouble({ me: { failed: true, held: true }, day: ok, noAccount: false })).toEqual({
+      trouble: false,
+      stale: true,
+    });
+  });
+  it("is trouble only when the day never arrived", () => {
+    expect(
+      todayTrouble({ me: ok, day: { failed: true, held: false }, noAccount: false }).trouble,
+    ).toBe(true);
+    expect(
+      todayTrouble({
+        me: { failed: true, held: false },
+        day: { failed: false, held: false },
+        noAccount: false,
+      }).trouble,
+    ).toBe(true);
+  });
+  it("is never trouble for an account that is still being set up", () => {
+    expect(
+      todayTrouble({
+        me: { failed: true, held: false },
+        day: { failed: false, held: false },
+        noAccount: true,
+      }),
+    ).toEqual({ trouble: false, stale: false });
   });
 });

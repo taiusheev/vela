@@ -271,6 +271,8 @@ export interface TodayView {
   loading: boolean;
   /** Set when the API is configured but would not answer, so the screen can say so plainly. */
   trouble: boolean;
+  /** The day shown is the last one that arrived: a refresh since then failed and will be retried. */
+  stale?: boolean;
   /** Signed in, but the API knows no account here yet: a first run, not a failure. */
   noAccount: boolean;
   /** Signed in with an account that belongs to no family yet: onboarding's turn (spec A1). */
@@ -371,7 +373,11 @@ export function useToday(): TodayView {
     loading: me.isPending || (familyId !== undefined && day.isPending),
     updatedAt: day.dataUpdatedAt,
     refresh,
-    trouble: (me.isError && !noAccount) || day.isError,
+    ...todayTrouble({
+      me: { failed: me.isError, held: me.data !== undefined },
+      day: { failed: day.isError, held: day.data !== undefined },
+      noAccount,
+    }),
     noAccount,
     noFamily: me.data !== undefined && me.data.memberships.length === 0,
     organiser: membership?.role === "organiser",
@@ -380,6 +386,24 @@ export function useToday(): TodayView {
     live,
     photos: me.data?.photos === true,
     pushSent: me.data?.push === true,
+  };
+}
+
+/**
+ * Whether Today has trouble to show. A refresh that fails while Today already holds the family's
+ * day (coming back to the app before the phone's connection wakes, or a 15-second refresh on a weak
+ * signal) keeps what is shown, marked as the last confirmed update, and tries again on its own; only
+ * a day that never arrived is trouble. A missing account is setup, never trouble.
+ */
+export function todayTrouble(reads: {
+  me: { failed: boolean; held: boolean };
+  day: { failed: boolean; held: boolean };
+  noAccount: boolean;
+}): { trouble: boolean; stale: boolean } {
+  const { me, day } = reads;
+  return {
+    trouble: (me.failed && !me.held && !reads.noAccount) || (day.failed && !day.held),
+    stale: (me.failed && me.held) || (day.failed && day.held),
   };
 }
 

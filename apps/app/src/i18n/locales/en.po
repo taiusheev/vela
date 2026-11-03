@@ -1644,10 +1644,6 @@ msgstr "Enter your code to continue to your family."
 msgid "Enter your password"
 msgstr "Enter your password"
 
-#: app/sign-in.tsx
-msgid "Error code: {code}"
-msgstr "Error code: {code}"
-
 #: src/components/onboarding/questions.tsx
 msgid "Every morning starts with it."
 msgstr "Every morning starts with it."

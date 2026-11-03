@@ -426,7 +426,7 @@ function FamilyToday({ day }: { day: TodayView }) {
               : {})}
             askDisabled={apiConfigured() && !live}
             {...(focused.state === "quiet" && mayOpen ? { onQuiet: () => openQuiet(focused) } : {})}
-            stale={trouble}
+            stale={trouble || day.stale === true}
           />
         )}
         {/* What she said is coming up (a doctor's visit, a trip), right under her answer: it is this
