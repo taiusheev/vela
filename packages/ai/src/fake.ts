@@ -128,6 +128,18 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         ],
       };
     }),
+    // Questions that name the era and the caller's line, so tests can see what flowed through.
+    photoQuestion: method("photo_question", overrides.photoQuestion, (input) => ({
+      questions:
+        input.lang === "zh-TW"
+          ? ["這是在哪裡呢？", input.era === "old" ? "那天發生了什麼事？" : "您會怎麼做呢？"]
+          : [
+              input.caption === null
+                ? "Where is this?"
+                : `What do you see here, ${input.addressForm}?`,
+              input.era === "old" ? "What happened that day?" : "What would you do with this?",
+            ],
+    })),
     // Her answers as the steps, as she said them, so tests can see what flowed through.
     recipe: method("recipe", overrides.recipe, (input) => ({
       title: input.ask ?? "Recipe",

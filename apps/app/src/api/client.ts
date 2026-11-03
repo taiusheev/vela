@@ -31,6 +31,7 @@ import type {
   ApiPhotoBox,
   ApiPhotoBoxPhoto,
   ApiPhotoBoxRemoved,
+  ApiPhotoQuestionDrafts,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -55,6 +56,7 @@ import type {
   ComposeReply,
   CreateFamily,
   DraftPersonalQuestion,
+  DraftPhotoQuestions,
   EditAsk,
   KeptMemoryPage,
   MemoryCandidatePage,
@@ -184,6 +186,8 @@ export interface ApiCapabilities {
   book: boolean;
   /** The family's photo box (ADR-58); absent from a server that has none. */
   photo_box?: boolean;
+  /** Vela may look at a box photo and draft questions about it (ADR-61); absent means not. */
+  photo_question_ai?: boolean;
   parent_app: boolean;
   billing: boolean;
 }
@@ -384,7 +388,25 @@ export function addToPhotoBox(
   });
 }
 
-/** Changes a box photo's era or line; a null caption clears the line. */
+/**
+ * Vela's questions about a photo the caller uploaded (ADR-61), for them to pick, change or ignore;
+ * nothing is stored. Only where `photo_question_ai` is on.
+ */
+export function draftPhotoQuestions(
+  familyId: string,
+  input: DraftPhotoQuestions,
+  key: string,
+  token: string | null,
+): Promise<ApiPhotoQuestionDrafts> {
+  return call<ApiPhotoQuestionDrafts>({
+    path: `/v1/families/${familyId}/photo-box/question-drafts`,
+    token,
+    key,
+    body: input,
+  });
+}
+
+/** Changes a box photo's era, line or question; a null one clears it. */
 export function changePhotoBoxPhoto(
   boxId: string,
   change: ChangePhotoBoxPhoto,

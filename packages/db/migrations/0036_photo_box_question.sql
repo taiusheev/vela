@@ -1,0 +1,1 @@
+ALTER TABLE "photo_box" ADD COLUMN "question" text;

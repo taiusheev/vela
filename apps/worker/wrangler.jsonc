@@ -282,6 +282,8 @@
     // On: her stories are kept in the family book (ADR-39).
     "BOOK": "on",
     "PHOTO_BOX": "on",
+    // On: Vela looks at a photo going into the box and drafts questions for the adder (ADR-61).
+    "PHOTO_QUESTION_AI": "on",
     "PERSONAL_QUESTION_DRAFTS": "off",
     "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
@@ -423,6 +425,8 @@
         // On: staging holds test families only (ADR-39).
         "BOOK": "on",
         "PHOTO_BOX": "on",
+        // On: Vela looks at a photo going into the box and drafts questions for the adder (ADR-61).
+        "PHOTO_QUESTION_AI": "on",
         "PERSONAL_QUESTION_DRAFTS": "on",
         "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
@@ -569,6 +573,8 @@
         // book comes later in the pilot, so no story is kept before a notice describes it.
         "BOOK": "off",
         "PHOTO_BOX": "off",
+        // Off, and pinned off, until the privacy notice says the AI sees box photos (ADR-61, v15).
+        "PHOTO_QUESTION_AI": "off",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off, until the families have been told that Vela may ask the people

@@ -31,6 +31,7 @@ export const AI_CALL_NAMES = [
   "weekly_insight",
   "memory_pick",
   "story_weave",
+  "photo_question",
 ] as const;
 export const AiCallName = z.enum(AI_CALL_NAMES);
 export type AiCallName = z.infer<typeof AiCallName>;
@@ -648,6 +649,33 @@ export const StoryWeave = z.object({
 });
 export type StoryWeave = z.infer<typeof StoryWeave>;
 
+// photo_question -----------------------------------------------------------------------------------
+
+/** The image types both providers read; the app's uploads are JPEG or PNG. */
+export const PHOTO_QUESTION_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
+/**
+ * A photo going into the family's box (ADR-61), with who is adding it and how they call her, in
+ * her language. The photo goes to the model as an image, never inside the JSON (`renderUserTurn`).
+ */
+export const PhotoQuestionInput = z.object({
+  lang: Lang,
+  askerName: Name,
+  addressForm: Name,
+  era: z.enum(["new", "old"]),
+  caption: ShortText.nullable(),
+  /** Up to three of the asker's own recent asks to her, so the drafts sound like them. */
+  askerExamples: z.array(ShortText).max(3),
+  image: z.object({ mime: z.enum(PHOTO_QUESTION_MIMES), base64: z.string().min(1) }),
+});
+export type PhotoQuestionInput = z.infer<typeof PhotoQuestionInput>;
+
+/** Up to three short questions about what the photo shows, each one question in her language. */
+export const PhotoQuestions = z.object({
+  questions: z.array(z.string().min(1).max(200)).max(3),
+});
+export type PhotoQuestions = z.infer<typeof PhotoQuestions>;
+
 // ports --------------------------------------------------------------------------------------------
 
 /** The input and output types of each call, keyed by call name. */
@@ -664,6 +692,7 @@ export interface AiCallTypes {
   weekly_insight: { input: WeeklyInsightInput; output: WeeklyInsight };
   memory_pick: { input: MemoryPickInput; output: MemoryPicks };
   story_weave: { input: StoryWeaveInput; output: StoryWeave };
+  photo_question: { input: PhotoQuestionInput; output: PhotoQuestions };
 }
 
 /** Each call's input schema; every `Ai`, the fake included, parses its input with it. */
@@ -680,6 +709,7 @@ export const INPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes[
   weekly_insight: WeeklyInsightInput,
   memory_pick: MemoryPickInput,
   story_weave: StoryWeaveInput,
+  photo_question: PhotoQuestionInput,
 };
 
 /** Each call's output schema, which is also the structured-output format sent to Claude. */
@@ -696,6 +726,7 @@ export const OUTPUT_SCHEMAS: { readonly [K in AiCallName]: z.ZodType<AiCallTypes
   weekly_insight: WeeklyInsight,
   memory_pick: MemoryPicks,
   story_weave: StoryWeave,
+  photo_question: PhotoQuestions,
 };
 
 /**
@@ -717,6 +748,7 @@ export interface Ai {
   weeklyInsight(input: WeeklyInsightInput): Promise<AiOutcome<WeeklyInsight>>;
   memoryPick(input: MemoryPickInput): Promise<AiOutcome<MemoryPicks>>;
   storyWeave(input: StoryWeaveInput): Promise<AiOutcome<StoryWeave>>;
+  photoQuestion(input: PhotoQuestionInput): Promise<AiOutcome<PhotoQuestions>>;
 }
 
 export interface TranscribeInput {

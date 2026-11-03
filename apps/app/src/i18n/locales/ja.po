@@ -7,7 +7,17 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: ja\n"
 
+#: src/components/photo-box.tsx
+msgid "— {adder}"
+msgstr ""
+
 #: app/photo-box.tsx
+#: src/components/photo-box.tsx
+msgid "— {signer}"
+msgstr ""
+
+#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "— Vela"
 msgstr ""
 
@@ -1546,6 +1556,14 @@ msgstr ""
 msgid "e.g. Our first flat, 1982"
 msgstr ""
 
+#: src/components/photo-box.tsx
+msgid "e.g. What would you cook with these?"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "e.g. Who took this one?"
+msgstr ""
+
 #: src/components/onboarding/plan.tsx
 msgid "Each goes to {name} signed “— {you}”, one a morning, unless someone in the family writes that day. Take out any you would not send."
 msgstr ""
@@ -1888,6 +1906,10 @@ msgstr ""
 msgid "Have an idea? Turn it into a question that sounds like you."
 msgstr ""
 
+#: src/data/usePhotoBox.ts
+msgid "Have you seen these at your market?"
+msgstr ""
+
 #: src/data/onboarding.ts
 msgid "Hawaii"
 msgstr ""
@@ -1955,10 +1977,6 @@ msgstr ""
 
 #: app/away.tsx
 msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
-msgstr ""
-
-#: src/components/photo-box.tsx
-msgid "Her question"
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -2579,6 +2597,10 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
+#: src/components/photo-box.tsx
+msgid "Looking at the photo…"
+msgstr ""
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr ""
@@ -2621,6 +2643,10 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "Manage saved choices"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "Mark each one new or old. Then ask {name} your own question about it: it reaches {name} from you, signed with your name."
 msgstr ""
 
 #: src/components/photo-box.tsx
@@ -2844,6 +2870,10 @@ msgstr ""
 
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "No ideas for this one. Write your own, or leave it to Vela."
 msgstr ""
 
 #: app/(tabs)/exchanges.tsx
@@ -3878,10 +3908,6 @@ msgstr ""
 msgid "Say something short"
 msgstr ""
 
-#: src/components/photo-box.tsx
-msgid "Say whether each one is new or old, and add a line if it helps: who, where, or when. Vela puts your line in her question as you wrote it."
-msgstr ""
-
 #: app/(tabs)/exchanges.tsx
 msgid "Search memories"
 msgstr ""
@@ -4325,6 +4351,10 @@ msgstr ""
 msgid "Story of the week"
 msgstr ""
 
+#: src/components/photo-box.tsx
+msgid "Suggest questions from the photo"
+msgstr ""
+
 #: app/my-memories.tsx
 msgid "Suggested for you"
 msgstr ""
@@ -4381,6 +4411,10 @@ msgstr ""
 #: src/components/chat/chat-link.tsx
 #: src/components/today-glance.tsx
 msgid "Talk with {name}"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "Tap one to use it. You can change the words."
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -5561,6 +5595,10 @@ msgstr ""
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr ""
 
+#: src/components/photo-box.tsx
+msgid "What {name} will see"
+msgstr ""
+
 #: src/data/memories.ts
 msgid "What are you planting this year?"
 msgstr ""
@@ -5585,6 +5623,10 @@ msgstr ""
 
 #: app/personal-question.tsx
 msgid "What feels comfortable between you?"
+msgstr ""
+
+#: src/data/usePhotoBox.ts
+msgid "What happened that day?"
 msgstr ""
 
 #: src/data/memories.ts
@@ -5615,6 +5657,10 @@ msgstr ""
 #: app/weekly-support-preview.tsx
 #: src/components/weekly-support.tsx
 msgid "What would help this week?"
+msgstr ""
+
+#: src/data/usePhotoBox.ts
+msgid "What would you cook with these?"
 msgstr ""
 
 #: app/personal-question.tsx
@@ -5686,6 +5732,10 @@ msgstr ""
 msgid "Where is your family’s Vela chat?"
 msgstr ""
 
+#: src/data/usePhotoBox.ts
+msgid "Where was this?"
+msgstr ""
+
 #: src/data/photos.ts
 msgid "Which one do you like more?"
 msgstr ""
@@ -5693,6 +5743,10 @@ msgstr ""
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"
+msgstr ""
+
+#: src/data/usePhotoBox.ts
+msgid "Which one would you pick first?"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5713,6 +5767,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
+msgstr ""
+
+#: src/data/usePhotoBox.ts
+msgid "Who took this one?"
 msgstr ""
 
 #: src/components/photo-box.tsx
@@ -5824,7 +5882,9 @@ msgstr ""
 msgid "Yesterday"
 msgstr ""
 
+#: app/photo-box.tsx
 #: src/components/onboarding/questions.tsx
+#: src/components/photo-box.tsx
 msgid "you"
 msgstr ""
 
@@ -6115,6 +6175,10 @@ msgstr ""
 
 #: app/ask.tsx
 msgid "Your question for {name}"
+msgstr ""
+
+#: src/components/photo-box.tsx
+msgid "Your question for {name} (optional)"
 msgstr ""
 
 #: app/personal-question.tsx

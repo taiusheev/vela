@@ -594,6 +594,7 @@ CREATE TABLE "photo_box" (
 	"caption" text,
 	"added_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"question" text,
 	CONSTRAINT "photo_box_media_id_key" UNIQUE("media_id"),
 	CONSTRAINT "photo_box_era_check" CHECK ("era" in ('new', 'old'))
 );

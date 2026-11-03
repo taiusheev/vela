@@ -44,6 +44,7 @@ import {
   ApiPhotoBox,
   ApiPhotoBoxPhoto,
   ApiPhotoBoxRemoved,
+  ApiPhotoQuestionDrafts,
   ApiPlannedQuestions,
   ApiPrecision,
   ApiPushDevice,
@@ -76,6 +77,7 @@ import {
   DeviceWrite,
   DismissKeepSuggestion,
   DraftPersonalQuestion,
+  DraftPhotoQuestions,
   EditAsk,
   EndAway,
   FinishReminder,
@@ -164,6 +166,7 @@ import {
   type dismissApiSuggestion,
   type dismissMemoryCandidate,
   type draftApiPersonalQuestion,
+  type draftPhotoQuestions,
   type editApiAsk,
   type endApiAway,
   errorLabel,
@@ -357,6 +360,11 @@ export interface ApiRuntime {
     load: typeof loadApiQuestionProfile;
     save: typeof saveApiQuestionProfile;
     forget: typeof forgetApiQuestionProfile;
+  };
+  /** Vela's drafts of a question about a box photo (ADR-61), only where `PHOTO_QUESTION_AI` is on. */
+  photoQuestions?: {
+    draft: typeof draftPhotoQuestions;
+    ai: Parameters<typeof draftPhotoQuestions>[0]["ai"];
   };
   personalQuestions?: {
     draft: typeof draftApiPersonalQuestion;
@@ -2841,6 +2849,40 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         return c.json(ApiPhotoBoxPhoto.parse(result.response.body), 200);
       },
     );
+    // Vela's drafts of a question about a photo (ADR-61): nothing is stored, so no idempotency key;
+    // absent, the route is 404 and the app offers only the family's own question.
+    const photoQuestions = runtime.photoQuestions;
+    if (photoQuestions !== undefined) {
+      app.post(
+        "/v1/families/:familyId/photo-box/question-drafts",
+        authenticate,
+        photoBoxOn,
+        validateWrite(DraftPhotoQuestions, runtime.logger),
+        checkActivity,
+        withDatabase,
+        async (c) => {
+          const result = await photoQuestions.draft(
+            {
+              db: c.get("db"),
+              clock: writes.clock,
+              ai: photoQuestions.ai,
+              media: runtime.media?.store ?? null,
+              logger: {
+                info: () => {},
+                warn: (event, fields) => runtime.logger.error(event, fields),
+                error: (event, fields) => runtime.logger.error(event, fields),
+              },
+              config: { photoQuestionAi: true },
+            },
+            c.get("session"),
+            c.req.param("familyId"),
+            c.get("writeInput"),
+          );
+          c.header("Cache-Control", "no-store");
+          return c.json(ApiPhotoQuestionDrafts.parse(result), 200);
+        },
+      );
+    }
     app.post(
       "/v1/photo-box/:boxId/remove",
       authenticate,

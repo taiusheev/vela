@@ -28,7 +28,12 @@ import type { Deps, OutboundJob } from "./deps.ts";
 import { deliverOutbound } from "./gateway.ts";
 import { handleInbound } from "./inbound/router.ts";
 import { applyRetention } from "./jobs.ts";
-import { addToApiPhotoBox, loadApiPhotoBox, removeFromApiPhotoBox } from "./photo-box.ts";
+import {
+  addToApiPhotoBox,
+  changeApiPhotoBoxPhoto,
+  loadApiPhotoBox,
+  removeFromApiPhotoBox,
+} from "./photo-box.ts";
 import type { FakeTelegram } from "./testing/fake-telegram.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { testJpeg } from "./testing/jpeg.ts";
@@ -66,7 +71,12 @@ function on(extra: Partial<Deps["config"]> = {}): Deps {
 }
 
 let keys = 0;
-async function boxed(scan: number, era: "new" | "old" = "new", caption?: string) {
+async function boxed(
+  scan: number,
+  era: "new" | "old" = "new",
+  caption?: string,
+  question?: string,
+) {
   keys += 1;
   const upload = await uploadApiMedia(
     { db: h.db, clock: h.clock, random: h.random, store: h.media, logger: h.logger },
@@ -80,6 +90,7 @@ async function boxed(scan: number, era: "new" | "old" = "new", caption?: string)
     media_id: mediaId,
     era,
     ...(caption === undefined ? {} : { caption }),
+    ...(question === undefined ? {} : { question }),
   });
   return { mediaId, boxId: (added.response.body as { id: string }).id };
 }
@@ -353,5 +364,102 @@ describe("picture mornings through her day", () => {
 
     expect(row.askerId).toBeNull();
     expect(row.mediaIds).toHaveLength(1);
+  });
+});
+
+describe("picture mornings with the family's own question (ADR-61)", () => {
+  beforeEach(() => family());
+
+  it("asks the adder's own question as theirs, signed with their name, not by Vela", async () => {
+    await boxed(1, "new", "From the market", "What would you cook with these tomatoes?");
+
+    const row = await morning(on());
+
+    const [sent] = sentTo(h.telegram, seed.memberLink.externalId);
+    expect(row.askerId).toBe(seed.organiser.id);
+    expect(row.draftedByVela).toBe(false);
+    expect(row.mediaIds).toHaveLength(1);
+    expect(sent?.uploads).toHaveLength(1);
+    expect(sent?.message.text).toContain("What would you cook with these tomatoes?");
+    expect(sent?.message.text).toContain(t("en", "arrival.signed", { asker: "Mia" }));
+    expect(sent?.message.text).not.toContain(t("en", "arrival.hello_signature"));
+    expect(sent?.message.text).not.toContain("From the market");
+  });
+
+  it("asks in Chinese with the adder's words as written and their name, one dash", async () => {
+    await family({ memberLanguage: "zh-TW" });
+    await boxed(1, "old", "外婆家", "媽，這台腳踏車是誰的？");
+
+    await morning(on());
+
+    const [sent] = sentTo(h.telegram, seed.memberLink.externalId);
+    expect(sent?.message.text).toContain("媽，這台腳踏車是誰的？");
+    expect(sent?.message.text).toContain(t("zh-TW", "arrival.signed", { asker: "Mia" }));
+    expect(sent?.message.text).not.toContain(t("zh-TW", "arrival.hello_signature"));
+  });
+
+  it("shows the family the question and the adder's signature in the box's preview", async () => {
+    await boxed(1, "new", undefined, "Which one is ripest?");
+
+    const box = await loadApiPhotoBox(h.db, mia, seed.family.id);
+
+    expect(box?.photos[0]?.question).toBe("Which one is ripest?");
+    expect(box?.next[0]?.text).toBe("Which one is ripest?");
+    expect(box?.next[0]?.signature).toBe(t("en", "arrival.signed", { asker: "Mia" }));
+  });
+
+  it("a question cleared later goes back to Vela's sentence, signed by Vela", async () => {
+    const photo = await boxed(1, "new", undefined, "Which one is ripest?");
+    await changeApiPhotoBoxPhoto(h.deps, mia, "clear", photo.boxId, { question: "" });
+
+    const row = await morning(on());
+
+    expect(row.askerId).toBeNull();
+    expect(row.text).toBe(t("en", "photo_box.look"));
+  });
+
+  it("is Vela's again once the adder has left the family, never signed by someone gone", async () => {
+    await boxed(1, "new", undefined, "Which one is ripest?");
+    await h.db
+      .update(members)
+      .set({ leftAt: h.clock.now(), status: "left" } as never)
+      .where(eq(members.id, seed.organiser.id));
+
+    const row = await morning(on());
+
+    expect(row.askerId).toBeNull();
+    expect(row.text).toBe(t("en", "photo_box.look"));
+  });
+
+  it("a photo with a question taken out after her morning was made is the plain hello", async () => {
+    const photo = await boxed(1, "new", undefined, "Which one is ripest?");
+    h.clock.set(zonedInstant(MORNING, "07:00", TZ));
+    const { prepareDay } = await import("./arrivals.ts");
+    await prepareDay(on(), seed.member.id, MORNING);
+    await removeFromApiPhotoBox(h.deps, mia, "remove", photo.boxId, {});
+
+    await morning(on());
+
+    const [sent] = sentTo(h.telegram, seed.memberLink.externalId);
+    expect(sent?.uploads ?? []).toEqual([]);
+    expect(sent?.message.text).not.toContain("Which one is ripest?");
+  });
+
+  it("a choice of two photos keeps Vela's words even when one has a question", async () => {
+    await boxed(1, "new", undefined, "Which one is ripest?");
+    await boxed(2, "old");
+    await boxed(3, "new");
+    // The third picture morning in turn is the choice; two a week at most, so a week later.
+    const first = await morning(on(), MORNING);
+    const second = await morning(on(), addDays(MORNING, 2));
+    const third = await morning(on(), addDays(MORNING, 7));
+
+    expect([first.type, second.type, third.type]).toEqual([
+      "question",
+      "memory_photo",
+      "photo_choice",
+    ]);
+    expect(third.askerId).toBeNull();
+    expect(third.text).toBe(t("en", "photo_box.choice"));
   });
 });

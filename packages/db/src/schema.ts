@@ -1431,6 +1431,11 @@ export const photoBox = pgTable(
     era: text("era", { enum: PHOTO_BOX_ERAS }).notNull(),
     /** The family's one line about the photo, in their words; null when they wrote none. */
     caption: sealedText("photo_box.caption"),
+    /**
+     * The adder's own question about the photo, in their words (picked from Vela's drafts or written
+     * by hand, ADR-61); her morning asks it signed with their name. Null asks Vela's fixed sentence.
+     */
+    question: sealedText("photo_box.question"),
     addedBy: uuid("added_by").references(() => members.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },

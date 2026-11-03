@@ -623,6 +623,22 @@ export function readPhotoBox(env: { readonly PHOTO_BOX?: string }): boolean {
   return env.PHOTO_BOX === undefined ? false : readOnOff(env.PHOTO_BOX, "PHOTO_BOX");
 }
 
+/**
+ * The var `PHOTO_QUESTION_AI` (ADR-61): "on" lets Vela look at a photo going into the box and draft
+ * questions about it for the person adding it; absent or "off" does not; anything else is refused.
+ * It does nothing without `PHOTO_BOX`.
+ */
+export function readPhotoQuestionAi(env: {
+  readonly PHOTO_BOX?: string;
+  readonly PHOTO_QUESTION_AI?: string;
+}): boolean {
+  return (
+    readPhotoBox(env) &&
+    env.PHOTO_QUESTION_AI !== undefined &&
+    readOnOff(env.PHOTO_QUESTION_AI, "PHOTO_QUESTION_AI")
+  );
+}
+
 /** The var `CHECK_IN` (ADR-54): "on" or "off"; absent is off; anything else is refused. */
 export function readCheckIn(env: { readonly CHECK_IN?: string }): boolean {
   return env.CHECK_IN === undefined ? false : readOnOff(env.CHECK_IN, "CHECK_IN");
@@ -664,6 +680,7 @@ function readOnOff(
     | "WEEKLY_READ_AUTO_SEND"
     | "SEND_AS_ME"
     | "PHOTO_BOX"
+    | "PHOTO_QUESTION_AI"
     | "CHECK_IN"
     | "RICH_MEMORIES"
     | "MEMORY_DISCOVERY"
@@ -822,6 +839,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     weeklyReadAutoSend: readWeeklyReadAutoSend(env),
     sendAsMe: readSendAsMe(env),
     photoBox: readPhotoBox(env),
+    photoQuestionAi: readPhotoQuestionAi(env),
     checkIn: readCheckIn(env),
     richMemories: readRichMemories(env),
     memoryDiscovery: readMemoryDiscovery(env),

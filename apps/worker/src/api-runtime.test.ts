@@ -625,6 +625,8 @@ describe("the runtime staging's API app runs on", () => {
       book: true,
       // Staging keeps the photo box on (ADR-58); production's pin is in wrangler-config.test.ts.
       photo_box: true,
+      // And Vela's photo question drafts (ADR-61), pinned off in production the same way.
+      photo_question_ai: true,
       parent_app: false,
       billing: false,
     });

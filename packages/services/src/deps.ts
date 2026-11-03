@@ -220,6 +220,12 @@ export interface Config {
    */
   photoBox?: boolean;
   /**
+   * Whether Vela may look at a photo going into the box and draft questions about it for the person
+   * adding it (ADR-61, `PHOTO_QUESTION_AI`). Absent means not; off in production until the privacy
+   * notice says the AI sees box photos.
+   */
+  photoQuestionAi?: boolean;
+  /**
    * Whether her morning carries no buttons and an unanswered morning gets the check-in, whose "Not
    * okay" tells her organisers at once (ADR-54, `CHECK_IN`). Absent means not.
    */

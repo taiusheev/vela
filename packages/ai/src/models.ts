@@ -22,6 +22,7 @@ export const MODEL_FOR: Record<AiCallName, ClaudeModel> = {
   weekly_insight: "claude-sonnet-5",
   memory_pick: "claude-haiku-4-5",
   story_weave: "claude-haiku-4-5",
+  photo_question: "claude-sonnet-5",
 };
 
 export type Effort = "low" | "medium" | "high";
@@ -40,6 +41,7 @@ export const EFFORT_FOR: Record<AiCallName, Effort | null> = {
   weekly_insight: "medium",
   memory_pick: null,
   story_weave: null,
+  photo_question: "low",
 };
 
 /**
@@ -59,6 +61,7 @@ export const MAX_TOKENS_FOR: Record<AiCallName, number> = {
   weekly_insight: 16000,
   memory_pick: 2000,
   story_weave: 2000,
+  photo_question: 4000,
 };
 
 /**
@@ -81,6 +84,7 @@ export const TIMEOUT_MS_FOR: Record<AiCallName, number> = {
   weekly_insight: 180_000,
   memory_pick: 30_000,
   story_weave: 30_000,
+  photo_question: 45_000,
 };
 
 /** Retries after a failed attempt (a timeout, a connection error, a 408, 409, 429, or 5xx). */

@@ -62,4 +62,6 @@ export const SAFE_DEFAULTS: {
   memory_pick: () => ({ picks: [] }),
   // No story: her moments stay as they are, which is always safe.
   story_weave: () => ({ stories: [] }),
+  // No drafts: the person adding the photo writes their own question, or none.
+  photo_question: () => ({ questions: [] }),
 };
