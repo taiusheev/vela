@@ -235,6 +235,8 @@ export const zhTW: Record<keyof typeof en, string> = {
     "您好，我是 Vela。如果家人傳了邀請給您，請現在打開。想為自己的家人設定 Vela，請傳「開始設定」或 /start。",
   "nearby.request":
     "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，{organiser}可以透過 Vela 請您過去看看嗎？Vela 不會自己傳訊息給您：任何請求都來自{organiser}。如果您同意，Vela 會保存您的名字和這個 Telegram 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
+  "nearby.request_line":
+    "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，{organiser}可以透過 Vela 請您過去看看嗎？Vela 不會自己傳訊息給您：任何請求都來自{organiser}。如果您同意，Vela 會保存您的名字和這個 LINE 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
   "nearby.yes": "好，我願意",
   "nearby.no": "不用了，謝謝",
   "nearby.accepted":

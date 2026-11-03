@@ -236,8 +236,11 @@ export function youFixture(): YouFamily {
       line: t`Ask and reply · free`,
     },
     nearby: {
-      names: nearbyNames(["Lena", "Petro"]),
-      line: [consentLine("Lena", "yes"), consentLine("Petro", "waiting")].join(" · "),
+      names: nearbyNames([exampleNames().lena, exampleNames().petro]),
+      line: [
+        consentLine(exampleNames().lena, "yes"),
+        consentLine(exampleNames().petro, "waiting"),
+      ].join(" · "),
     },
   };
 }

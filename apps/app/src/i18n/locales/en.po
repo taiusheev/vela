@@ -1017,8 +1017,16 @@ msgid "Ask {recipient} something"
 msgstr "Ask {recipient} something"
 
 #: src/components/nearby-editor.tsx
+msgid "Ask {who} on LINE"
+msgstr "Ask {who} on LINE"
+
+#: src/components/nearby-editor.tsx
 msgid "Ask {who} on Telegram"
 msgstr "Ask {who} on Telegram"
+
+#: src/components/quiet-notice.tsx
+msgid "Ask {who} to look in"
+msgstr "Ask {who} to look in"
 
 #: src/data/family.ts
 msgid "Ask and reply · free"
@@ -1031,14 +1039,6 @@ msgstr "Ask her which seeds she wants to keep for next spring."
 #: src/components/story-day.tsx
 msgid "Ask it on Sunday"
 msgstr "Ask it on Sunday"
-
-#: src/components/nearby-editor.tsx
-msgid "Ask on Telegram"
-msgstr "Ask on Telegram"
-
-#: src/components/quiet-notice.tsx
-msgid "Ask them to look in"
-msgstr "Ask them to look in"
 
 #: src/components/weekly-support.tsx
 msgid "Ask what would help"
@@ -2093,8 +2093,8 @@ msgid "If {name} says yes today"
 msgstr "If {name} says yes today"
 
 #: src/components/nearby-editor.tsx
-msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
-msgstr "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
+msgid "If {sharedWithName} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWithName} to add you, or send the invite by text message instead."
+msgstr "If {sharedWithName} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWithName} to add you, or send the invite by text message instead."
 
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
@@ -2445,6 +2445,10 @@ msgstr "Leaving…"
 #: app/my-memories.tsx
 msgid "Left out. Your chat has not changed."
 msgstr "Left out. Your chat has not changed."
+
+#: src/data/example-names.ts
+msgid "Lena"
+msgstr "Lena"
 
 #: src/components/telegram-family-link.tsx
 msgid "Let’s find your family."
@@ -3323,6 +3327,10 @@ msgstr "Personal drafts are not available here yet."
 msgid "Perth"
 msgstr "Perth"
 
+#: src/data/example-names.ts
+msgid "Petro"
+msgstr "Petro"
+
 #: src/auth/phone.ts
 msgid "Philippines"
 msgstr "Philippines"
@@ -3931,6 +3939,10 @@ msgstr "Send {name} the invitation."
 #: src/components/telegram-family-link.tsx
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
+
+#: app/nearby.tsx
+msgid "Send each one a link. Vela writes to them only once they open it, in your name."
+msgstr "Send each one a link. Vela writes to them only once they open it, in your name."
 
 #: src/components/onboarding/story.tsx
 msgid "Send her a morning question"
@@ -4652,8 +4664,8 @@ msgid "The first page is waiting."
 msgstr "The first page is waiting."
 
 #: src/components/nearby-editor.tsx
-msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
-msgstr "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
+msgid "The invite could not be shared. Try again; nobody has been contacted."
+msgstr "The invite could not be shared. Try again; nobody has been contacted."
 
 #: app/morning-settings.tsx
 msgid "The language applies to future messages. Messages already sent stay as they are."
@@ -4666,6 +4678,10 @@ msgstr "The last step is {name}’s"
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
 msgstr "The link could not be prepared. Your family is unchanged. Try again or get help."
+
+#: src/components/nearby-editor.tsx
+msgid "The link opens a chat with Vela Light. Tap Send there."
+msgstr "The link opens a chat with Vela Light. Tap Send there."
 
 #: src/data/memories.ts
 msgid "The little tomato plants are as tall as my hand now."
@@ -5209,8 +5225,8 @@ msgid "Until she's back"
 msgstr "Until she's back"
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
-msgstr "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
+msgid "Up to two people near {name} who could look in if a morning goes quiet."
+msgstr "Up to two people near {name} who could look in if a morning goes quiet."
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -5228,6 +5244,10 @@ msgstr "Use a different email"
 msgid "Use a private connection code instead"
 msgstr "Use a private connection code instead"
 
+#: src/components/nearby-editor.tsx
+msgid "Use LINE instead"
+msgstr "Use LINE instead"
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "Use my email instead"
@@ -5235,6 +5255,10 @@ msgstr "Use my email instead"
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
 msgstr "Use only your own words to this person. Leave out private details and other people's messages."
+
+#: src/components/nearby-editor.tsx
+msgid "Use Telegram instead"
+msgstr "Use Telegram instead"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
@@ -5300,6 +5324,10 @@ msgstr "Vela does not send notifications from here yet."
 #: app/story/[id].tsx
 msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 msgstr "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
+
+#: src/components/nearby-editor.tsx
+msgid "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
+msgstr "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
 
 #: src/data/family.ts
 msgid "Vela Light · payment due"

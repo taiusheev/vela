@@ -27,4 +27,5 @@ tags:
 - tapOn: "Add them"
 - assertVisible: "Wei"
 - assertVisible: "Has not said yes yet"
-- assertVisible: "Ask on Telegram"
+- assertVisible: "Ask Wei on Telegram"
+- assertVisible: "Use LINE instead"

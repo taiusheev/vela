@@ -1018,8 +1018,16 @@ msgid "Ask {recipient} something"
 msgstr "問{recipient}一件事"
 
 #: src/components/nearby-editor.tsx
+msgid "Ask {who} on LINE"
+msgstr "在 LINE 上問{who}"
+
+#: src/components/nearby-editor.tsx
 msgid "Ask {who} on Telegram"
 msgstr "在 Telegram 上問{who}"
+
+#: src/components/quiet-notice.tsx
+msgid "Ask {who} to look in"
+msgstr "請{who}過去看看"
 
 #: src/data/family.ts
 msgid "Ask and reply · free"
@@ -1032,14 +1040,6 @@ msgstr "問問媽媽明年春天想留哪些種子。"
 #: src/components/story-day.tsx
 msgid "Ask it on Sunday"
 msgstr "週日問這個"
-
-#: src/components/nearby-editor.tsx
-msgid "Ask on Telegram"
-msgstr "在 Telegram 上問"
-
-#: src/components/quiet-notice.tsx
-msgid "Ask them to look in"
-msgstr "請對方過去看看"
 
 #: src/components/weekly-support.tsx
 msgid "Ask what would help"
@@ -2094,8 +2094,8 @@ msgid "If {name} says yes today"
 msgstr "如果{name}今天答應"
 
 #: src/components/nearby-editor.tsx
-msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
-msgstr "如果{sharedWith}點不開連結，是因為你不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWith}先把你加為聯絡人，或改用簡訊傳送邀請。"
+msgid "If {sharedWithName} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWithName} to add you, or send the invite by text message instead."
+msgstr "如果{sharedWithName}點不開連結，是因為你不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWithName}先把你加為聯絡人，或改用簡訊傳送邀請。"
 
 #: src/data/notifications.ts
 msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
@@ -2446,6 +2446,10 @@ msgstr "正在離開…"
 #: app/my-memories.tsx
 msgid "Left out. Your chat has not changed."
 msgstr "已略過。你的聊天內容沒有改變。"
+
+#: src/data/example-names.ts
+msgid "Lena"
+msgstr "王阿姨"
 
 #: src/components/telegram-family-link.tsx
 msgid "Let’s find your family."
@@ -3324,6 +3328,10 @@ msgstr "目前還無法在這裡準備個人化草稿。"
 msgid "Perth"
 msgstr "伯斯"
 
+#: src/data/example-names.ts
+msgid "Petro"
+msgstr "陳伯伯"
+
 #: src/auth/phone.ts
 msgid "Philippines"
 msgstr "菲律賓"
@@ -3932,6 +3940,10 @@ msgstr "把邀請傳給{name}。"
 #: src/components/telegram-family-link.tsx
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr "請在你自己的 Vela 聊天傳送 /start，並按照指引設定。然後回到這裡連結家人。"
+
+#: app/nearby.tsx
+msgid "Send each one a link. Vela writes to them only once they open it, in your name."
+msgstr "傳連結給每一位。只有在對方打開連結後，Vela 才會以你的名義傳訊息給對方。"
 
 #: src/components/onboarding/story.tsx
 msgid "Send her a morning question"
@@ -4653,8 +4665,8 @@ msgid "The first page is waiting."
 msgstr "第一頁正等著被寫下。"
 
 #: src/components/nearby-editor.tsx
-msgid "The invite could not be shared. Try Ask on Telegram again; nobody has been contacted."
-msgstr "無法分享邀請。請再試一次「在 Telegram 上問」；目前沒有聯絡任何人。"
+msgid "The invite could not be shared. Try again; nobody has been contacted."
+msgstr "無法分享邀請。請再試一次；目前沒有聯絡任何人。"
 
 #: app/morning-settings.tsx
 msgid "The language applies to future messages. Messages already sent stay as they are."
@@ -4667,6 +4679,10 @@ msgstr "最後一步交給{name}"
 #: src/components/parent-link-settings.tsx
 msgid "The link could not be prepared. Your family is unchanged. Try again or get help."
 msgstr "暫時無法取得連結。您的家庭設定沒有變更。請重試或取得協助。"
+
+#: src/components/nearby-editor.tsx
+msgid "The link opens a chat with Vela Light. Tap Send there."
+msgstr "點開連結會打開和 Vela Light 的聊天，在那裡按「傳送」就好。"
 
 #: src/data/memories.ts
 msgid "The little tomato plants are as tall as my hand now."
@@ -5210,8 +5226,8 @@ msgid "Until she's back"
 msgstr "直到回來"
 
 #: app/nearby.tsx
-msgid "Up to two people who live close to {name} and could look in if a morning goes quiet. Send each one a link with Ask on Telegram: Vela writes to them only once they open it, and asks them in your name. Until they say yes, you can call them yourself."
-msgstr "最多兩位住在{name}附近、如果哪天早上比較安靜可以過去看看的人。用「在 Telegram 上問」傳連結給每一位：只有在對方打開連結後，Vela 才會以你的名義傳訊息問對方。在對方同意之前，你可以自己打電話給對方。"
+msgid "Up to two people near {name} who could look in if a morning goes quiet."
+msgstr "最多兩位住在{name}附近的人，哪天早上比較安靜時，可以過去看看。"
 
 #: src/components/photo-slots.tsx
 msgid "Uploading {percent}%"
@@ -5229,6 +5245,10 @@ msgstr "使用其他電子郵件"
 msgid "Use a private connection code instead"
 msgstr "改用私人連結碼"
 
+#: src/components/nearby-editor.tsx
+msgid "Use LINE instead"
+msgstr "改用 LINE"
+
 #: app/sign-in.tsx
 msgid "Use my email instead"
 msgstr "改用我的電子郵件"
@@ -5236,6 +5256,10 @@ msgstr "改用我的電子郵件"
 #: app/personal-question.tsx
 msgid "Use only your own words to this person. Leave out private details and other people's messages."
 msgstr "只填你自己會對這個人說的話，請不要加入隱私細節或別人的訊息。"
+
+#: src/components/nearby-editor.tsx
+msgid "Use Telegram instead"
+msgstr "改用 Telegram"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
@@ -5301,6 +5325,10 @@ msgstr "Vela 目前還不會從這裡傳送通知。"
 #: app/story/[id].tsx
 msgid "Vela gathered these words because they are about the same thing. Every word is {name}'s own, exactly as said; nothing is added or changed."
 msgstr "Vela 把這些話放在一起，是因為說的是同一件事。每個字都是{name}自己說的，一字不改，沒有增加任何內容。"
+
+#: src/components/nearby-editor.tsx
+msgid "Vela isn’t on LINE here yet. Use Telegram instead; nobody has been contacted."
+msgstr "這裡的 Vela 還沒開放 LINE。請改用 Telegram；目前沒有聯絡任何人。"
 
 #: src/data/family.ts
 msgid "Vela Light · payment due"

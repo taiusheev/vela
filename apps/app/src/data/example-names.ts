@@ -6,5 +6,13 @@ import { t } from "@lingui/core/macro";
  * active language applies.
  */
 export function exampleNames() {
-  return { mia: t`Mia`, anna: t`Anna`, sam: t`Sam`, igor: t`Igor` };
+  return {
+    mia: t`Mia`,
+    anna: t`Anna`,
+    sam: t`Sam`,
+    igor: t`Igor`,
+    // The two people nearby in the example family.
+    lena: t`Lena`,
+    petro: t`Petro`,
+  };
 }

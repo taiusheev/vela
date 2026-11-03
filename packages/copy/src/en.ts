@@ -319,6 +319,8 @@ export const en = {
     "Hello, I'm Vela. If someone in your family sent you an invitation, open it now. To set up Vela for your own family, send /start.",
   "nearby.request":
     "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nYou only hear from Vela when {organiser} asks. If you agree, Vela keeps your name and Telegram account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
+  "nearby.request_line":
+    "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nYou only hear from Vela when {organiser} asks. If you agree, Vela keeps your name and LINE account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
   "nearby.yes": "Yes, I'm happy to",
   "nearby.no": "No, thank you",
   "nearby.accepted":

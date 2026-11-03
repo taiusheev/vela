@@ -526,7 +526,7 @@ export const nearbyContacts = pgTable(
     phone: text("phone"),
     channel: text("channel", { enum: NEARBY_CONTACT_CHANNELS }),
     /**
-     * Their own Telegram account (the user id, which is also their private chat with the bot),
+     * Their own Telegram or LINE account (the user id, which is also their private chat with the bot),
      * stored with their yes to the message Vela sent in the organiser's name (ADR-36), so an
      * organiser can ask them to look in on a quiet day. Like the number, held exactly while that yes
      * stands.
@@ -552,10 +552,10 @@ export const nearbyContacts = pgTable(
       "nearby_contacts_reach_consented_check",
       sql`(${sql.identifier(t.phone.name)} is not null or ${sql.identifier(t.externalId.name)} is not null) = (${sql.identifier(t.consentedAt.name)} is not null and ${sql.identifier(t.declinedAt.name)} is null)`,
     ),
-    // An account is a Telegram account, so it is reached on Telegram.
+    // An account is a Telegram or LINE account, reached on the messenger it came from.
     check(
       "nearby_contacts_external_channel_check",
-      sql`${sql.identifier(t.externalId.name)} is null or ${sql.identifier(t.channel.name)} = 'telegram'`,
+      sql`${sql.identifier(t.externalId.name)} is null or ${sql.identifier(t.channel.name)} in ('telegram', 'line')`,
     ),
     // One person is near her once.
     uniqueIndex("nearby_contacts_member_external_idx")
