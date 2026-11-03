@@ -469,9 +469,18 @@ msgstr "{recipient} answered at {time}"
 msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 msgstr "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 
+#: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
+msgid "{recipient} has not answered yet, so there is nothing to reply to."
+msgstr "{recipient} has not answered yet, so there is nothing to reply to."
+
 #: app/(tabs)/index.tsx
 msgid "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
 msgstr "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
+
+#: app/exchange/[id].tsx
+msgid "{recipient} hears it in the read-back tomorrow morning."
+msgstr "{recipient} hears it in the read-back tomorrow morning."
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -2177,10 +2186,13 @@ msgstr "Include the country code, starting with +. For example, +84 for Vietnam.
 msgid "India"
 msgstr "India"
 
-#: app/(tabs)/index.tsx
 #: app/ask.tsx
-msgid "Into her morning."
-msgstr "Into her morning."
+msgid "Into {name}'s morning."
+msgstr "Into {name}'s morning."
+
+#: app/(tabs)/index.tsx
+msgid "Into {recipient}'s morning."
+msgstr "Into {recipient}'s morning."
 
 #: src/components/onboarding/finish.tsx
 msgid "Invitation sent"
@@ -4075,15 +4087,6 @@ msgstr "Sharing could not open. Select and copy the link below, then send it to 
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr "She answers when she likes: a few words, a photo, or her voice."
 
-#: app/exchange/[id].tsx
-#: src/components/today-heart.tsx
-msgid "She has not answered yet, so there is nothing to reply to."
-msgstr "She has not answered yet, so there is nothing to reply to."
-
-#: app/exchange/[id].tsx
-msgid "She hears it in her read-back tomorrow morning."
-msgstr "She hears it in her read-back tomorrow morning."
-
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
@@ -4644,8 +4647,8 @@ msgid "The family found {found} of {verdicts} useful."
 msgstr "The family found {found} of {verdicts} useful."
 
 #: app/exchange/[id].tsx
-msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
-msgstr "The family sees it here. She will not hear it: her mornings read back only her latest day."
+msgid "The family sees it here. {recipient} will not hear it: the morning read-back covers only the latest day."
+msgstr "The family sees it here. {recipient} will not hear it: the morning read-back covers only the latest day."
 
 #: src/components/onboarding/finish.tsx
 msgid "The family, the first week and everything you told us."
@@ -5406,8 +5409,8 @@ msgid "Vela suggests"
 msgstr "Vela suggests"
 
 #: app/(tabs)/index.tsx
-msgid "Vela suggests · from her own words"
-msgstr "Vela suggests · from her own words"
+msgid "Vela suggests · from {recipient}'s own words"
+msgstr "Vela suggests · from {recipient}'s own words"
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
@@ -5875,8 +5878,8 @@ msgid "You can explore an example family. No messages are sent."
 msgstr "You can explore an example family. No messages are sent."
 
 #: app/exchange/[id].tsx
-msgid "You can reply once she has answered."
-msgstr "You can reply once she has answered."
+msgid "You can reply once {recipient} has answered."
+msgstr "You can reply once {recipient} has answered."
 
 #: app/vela-light.tsx
 msgid "You choose whether to keep it. Nothing is charged unless you choose a plan."

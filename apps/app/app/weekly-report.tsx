@@ -26,7 +26,7 @@ import { SoftCard } from "../src/components/today-hero.tsx";
 import { PrimaryButton, SecondaryButton, TextButton, Words } from "../src/components/ui.tsx";
 import { WarmPage } from "../src/components/warm.tsx";
 import { exampleNames } from "../src/data/example-names.ts";
-import { localDayMonth } from "../src/data/format.ts";
+import { localDayMonth, quoted } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { usePullRefresh } from "../src/data/usePullRefresh.ts";
 import { useWeeklySupport } from "../src/data/useWeeklySupport.ts";
@@ -193,7 +193,7 @@ export function ReportPanel({
     return (
       <View style={{ gap: space.s }}>
         <Words variant="caption" tone="ink2">{t`${name}'s words · ${date}`}</Words>
-        <Text style={[type.story, { color: palette.ink }]}>{`“${source.quote}”`}</Text>
+        <Text style={[type.story, { color: palette.ink }]}>{quoted(source.quote)}</Text>
       </View>
     );
   };

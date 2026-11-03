@@ -1,7 +1,7 @@
 import { plural, t } from "@lingui/core/macro";
 import type { ApiWeeklyRead, WeekDayState } from "@vela/contracts";
 import type { LightState } from "../components/light.tsx";
-import { localDayMonth, shortDayName } from "./format.ts";
+import { localDayMonth, localShortDayWithDate, shortDayName } from "./format.ts";
 
 /**
  * The weekly read (spec §13, A9) in the screen's own idiom: seven small lights with their day names,
@@ -60,7 +60,7 @@ function sourceOf(
   if (source === null || source === undefined) return null;
   return {
     date: source.date,
-    dayLabel: `${shortDayName(source.date)}, ${localDayMonth(source.date)}`,
+    dayLabel: localShortDayWithDate(source.date),
     exchangeId: source.exchange_id,
     asker: source.asker_name,
     summary: source.summary,
@@ -168,7 +168,7 @@ export function weeklyFixture(): WeeklyRead {
       suggestion: t`Ask her which seeds she wants to keep for next spring.`,
       source: {
         date: "2026-09-24",
-        dayLabel: `${shortDayName("2026-09-24")}, ${localDayMonth("2026-09-24")}`,
+        dayLabel: localShortDayWithDate("2026-09-24"),
         exchangeId: "e1",
         asker: t`Mia`,
         summary: t`Planted the last tomato seeds by the fence.`,

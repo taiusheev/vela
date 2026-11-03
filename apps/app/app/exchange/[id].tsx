@@ -210,7 +210,7 @@ function ExchangeReader({ id }: { id: string }) {
   const refusal = post.isError ? replyRefusal(post.error) : null;
   const trouble =
     refusal === "not_answered"
-      ? t`She has not answered yet, so there is nothing to reply to.`
+      ? t`${recipient} has not answered yet, so there is nothing to reply to.`
       : refusal === "her_own"
         ? t`This is your own morning; replies are for the family.`
         : post.isError
@@ -225,8 +225,8 @@ function ExchangeReader({ id }: { id: string }) {
   // What the caption under the composer may promise, which depends on the day (API contract §4).
   const reach =
     exchange.repliesReachHer === true
-      ? t`She hears it in her read-back tomorrow morning.`
-      : t`The family sees it here. She will not hear it: her mornings read back only her latest day.`;
+      ? t`${recipient} hears it in the read-back tomorrow morning.`
+      : t`The family sees it here. ${recipient} will not hear it: the morning read-back covers only the latest day.`;
 
   return (
     <>
@@ -397,7 +397,7 @@ function ExchangeReader({ id }: { id: string }) {
           </View>
         ) : (
           <Words variant="body" tone="ink2">
-            <Trans>You can reply once she has answered.</Trans>
+            <Trans>You can reply once {recipient} has answered.</Trans>
           </Words>
         )}
 

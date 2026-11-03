@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { View } from "react-native";
 import { localDateIn } from "../data/chat.ts";
-import { localDayMonth } from "../data/format.ts";
+import { localDayMonth, quoted } from "../data/format.ts";
 import type { TodayLight } from "../data/today.ts";
 import { useExchanges } from "../data/useExchanges.ts";
 import { usePalette } from "../theme/theme.tsx";
@@ -72,7 +72,7 @@ export function FirstWeek({ light }: { light: TodayLight }) {
               <View style={{ gap: space.xs }}>
                 <Text style={[type.caption, { color: p.ink3 }]}>{exchange.day}</Text>
                 <Text numberOfLines={4} style={[type.preview, { color: p.ink }]}>
-                  {`“${exchange.answer?.text ?? ""}”`}
+                  {quoted(exchange.answer?.text ?? "")}
                 </Text>
               </View>
             </SoftCard>

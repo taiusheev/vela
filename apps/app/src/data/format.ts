@@ -129,6 +129,21 @@ export function listOf(items: readonly string[]): string {
   return items.join(chinese() ? "、" : ", ");
 }
 
+/** Someone's own words in quotation marks: “like this”, or 「像這樣」 as Taiwan writes them. */
+export function quoted(words: string): string {
+  return chinese() ? `「${words}」` : `“${words}”`;
+}
+
+/**
+ * A scheduled date with its short weekday: "Thu, 24 Sep", or "9月24日（週四）" as Taiwan writes it,
+ * never an English comma between Chinese words.
+ */
+export function localShortDayWithDate(date: string): string {
+  return chinese()
+    ? `${localDayMonth(date)}（${shortDayName(date)}）`
+    : `${shortDayName(date)}, ${localDayMonth(date)}`;
+}
+
 const MONTHS = [
   "January",
   "February",
