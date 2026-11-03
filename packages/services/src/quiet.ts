@@ -34,7 +34,7 @@ import { recordEvent } from "./events.ts";
 import { formatNearbyContacts, formatTime, medianTimeAround } from "./format.ts";
 import { directReplyOf, enqueueOutbound, type OutboundRequest } from "./gateway.ts";
 import { morningTimeOn } from "./morning-time.ts";
-import { lookInStandDowns } from "./nearby-ask.ts";
+import { askNearbyAutomatically, lookInStandDowns } from "./nearby-ask.ts";
 import { quietPushNotice } from "./push-messages.ts";
 import { closingNoticesFor, NOTICE_CHANNEL } from "./quiet-closing.ts";
 import {
@@ -378,6 +378,11 @@ export async function notifyQuiet(
       });
       if (alert !== null) {
         await enqueueOutbound(deps, tx, alert);
+      }
+      // Nobody acted on the first notice for two hours: the people nearby who said yes are asked
+      // too, where the switch allows it (ADR-60).
+      if (deps.config.nearbyAutoAsk === true) {
+        await askNearbyAutomatically(deps, tx, { quiet, her: ctx.member });
       }
     }
   });

@@ -82,3 +82,15 @@ Your details never appear in a notice, and they are deleted. In the pilot, Vela 
 - The organiser must be the one who knows the contact. Vela never recruits contacts.
 - Record the text version, the channel, the date and the contact's exact words in Vela's consent record, never in the Google Drive notes. If the contact asks a question the text does not answer, answer it before recording consent.
 - Changing this text in a way that changes its meaning needs a new version and a new yes from contacts already recorded.
+
+## Text B where Vela may also ask itself (`nearby-consent.v5` Telegram, `v6` LINE, draft, ADR-60)
+
+Sent instead of v3/v4 only where `NEARBY_AUTO_ASK` is on (development and staging; production after the founder's yes):
+
+> [Organiser] would like to ask you to look in on [Name] if they cannot reach them.
+>
+> Vela writes to you only on a morning [Name] hasn't answered: when [organiser] asks, or when nobody in the family has answered Vela's notice for two hours. If you agree, Vela keeps your name and Telegram account (LINE account, v6) until either of you removes it.
+>
+> You can say no, or send stop any time. Pilot run by Timur Aiusheev · Privacy: [link]
+
+After a yes: "Thank you. Vela will write to you only on a morning [Name] hasn't answered, when [organiser] asks or nobody in the family answers. Send stop at any time to be removed." Vela asks by itself only people whose yes was to v5 or v6.

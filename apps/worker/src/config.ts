@@ -577,6 +577,17 @@ export function readWeeklyInsight(env: { readonly WEEKLY_INSIGHT?: string }): bo
 }
 
 /**
+ * The var `NEARBY_AUTO_ASK` (ADR-60): "on" asks the people nearby who said yes to look in when
+ * nobody acted on a quiet morning's first notice; absent or "off" leaves every ask to an organiser;
+ * any other value is refused.
+ */
+export function readNearbyAutoAsk(env: { readonly NEARBY_AUTO_ASK?: string }): boolean {
+  return env.NEARBY_AUTO_ASK === undefined
+    ? false
+    : readOnOff(env.NEARBY_AUTO_ASK, "NEARBY_AUTO_ASK");
+}
+
+/**
  * The var `WEEKLY_READ_AUTO_SEND`: "on" sends the weekly read to the organisers as soon as it is
  * drafted; absent or "off" waits for the founder's send; any other value is refused.
  */
@@ -649,6 +660,7 @@ function readOnOff(
     | "MEMORY"
     | "BOOK"
     | "WEEKLY_INSIGHT"
+    | "NEARBY_AUTO_ASK"
     | "WEEKLY_READ_AUTO_SEND"
     | "SEND_AS_ME"
     | "PHOTO_BOX"
@@ -806,6 +818,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     memory: readMemory(env) && pilotAdmission === null,
     book: readBook(env),
     weeklyInsight: readWeeklyInsight(env),
+    nearbyAutoAsk: readNearbyAutoAsk(env),
     weeklyReadAutoSend: readWeeklyReadAutoSend(env),
     sendAsMe: readSendAsMe(env),
     photoBox: readPhotoBox(env),

@@ -48,6 +48,36 @@ import { activeOrganisersWithLinks, MESSENGER, type Queryable } from "./repo.ts"
 export const NEARBY_TEXT_VERSION = "nearby-consent.v3";
 /** Text B on LINE: the same request, keeping "this LINE account" (`nearby.request_line`). */
 export const NEARBY_LINE_TEXT_VERSION = "nearby-consent.v4";
+/**
+ * Text B where Vela may also ask them itself when nobody in the family answered its notice for two
+ * hours (ADR-60, `NEARBY_AUTO_ASK`), on Telegram and on LINE. Only a yes to one of these lets Vela
+ * ask on its own: a yes to v3 or v4 was a yes to "any request comes from the organiser".
+ */
+export const NEARBY_AUTO_TEXT_VERSION = "nearby-consent.v5";
+export const NEARBY_AUTO_LINE_TEXT_VERSION = "nearby-consent.v6";
+export const AUTO_ASK_TEXT_VERSIONS: ReadonlySet<string> = new Set([
+  NEARBY_AUTO_TEXT_VERSION,
+  NEARBY_AUTO_LINE_TEXT_VERSION,
+]);
+
+type RequestKey =
+  | "nearby.request"
+  | "nearby.request_line"
+  | "nearby.request_auto"
+  | "nearby.request_auto_line";
+
+const REQUEST_KEY_BY_VERSION: Readonly<Record<string, RequestKey>> = {
+  [NEARBY_TEXT_VERSION]: "nearby.request",
+  [NEARBY_LINE_TEXT_VERSION]: "nearby.request_line",
+  [NEARBY_AUTO_TEXT_VERSION]: "nearby.request_auto",
+  [NEARBY_AUTO_LINE_TEXT_VERSION]: "nearby.request_auto_line",
+};
+
+/** The request text a contact is sent now, by their messenger and whether Vela may ask itself. */
+function requestVersionOf(channel: ContactChannel, autoAsk: boolean): string {
+  if (autoAsk) return channel === "line" ? NEARBY_AUTO_LINE_TEXT_VERSION : NEARBY_AUTO_TEXT_VERSION;
+  return channel === "line" ? NEARBY_LINE_TEXT_VERSION : NEARBY_TEXT_VERSION;
+}
 
 /** The messengers a contact can answer on: where their link opens and where they are asked. */
 type ContactChannel = "telegram" | "line";
@@ -56,8 +86,11 @@ function contactChannelOf(channel: InboundEvent["channel"]): ContactChannel | nu
   return channel === "telegram" || channel === "line" ? channel : null;
 }
 
-function requestKeyOf(channel: ContactChannel): "nearby.request" | "nearby.request_line" {
-  return channel === "line" ? "nearby.request_line" : "nearby.request";
+function requestKeyOf(version: string, channel: ContactChannel): RequestKey {
+  return (
+    REQUEST_KEY_BY_VERSION[version] ??
+    (channel === "line" ? "nearby.request_line" : "nearby.request")
+  );
 }
 /** A contact's link: `n` and 24 random bytes, apart from a member's invite of 43 characters. */
 const NEARBY_START = /^n[A-Za-z0-9_-]{32}$/;
@@ -176,6 +209,7 @@ async function requestParams(
 export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promise<void> {
   const channel = contactChannelOf(event.channel);
   if (channel === null) return;
+  const version = requestVersionOf(channel, deps.config.nearbyAutoAsk === true);
   const token = event.startParam?.trim() ?? "";
   const conversationId = event.conversation.externalId;
   const lang = languageOfSender(event.sender.languageCode, event.channel);
@@ -213,8 +247,8 @@ export async function handleNearbyStart(deps: Deps, event: InboundEvent): Promis
     lang,
     // On LINE, Vela can answer someone who is not yet its friend only with the opened link's reply.
     ...replyFieldOf(event),
-    text: t(lang, requestKeyOf(channel), params),
-    consentTextVersion: channel === "line" ? NEARBY_LINE_TEXT_VERSION : NEARBY_TEXT_VERSION,
+    text: t(lang, requestKeyOf(version, channel), params),
+    consentTextVersion: version,
     buttons: [
       [
         {
@@ -317,11 +351,15 @@ export async function handleNearbyConsentButton(
     // The language the request was written in, which is what the tap answers.
     const lang = (sent.payload as { message?: { lang?: Lang } }).message?.lang ?? "en";
     const params = await requestParams(deps, tx, contact, lang);
+    const textVersion =
+      typeof sent.payload.consentTextVersion === "string"
+        ? sent.payload.consentTextVersion
+        : "nearby-consent.v2";
     const evidence = await chatConsentEvidence({
       chatId: conversationId,
       messageId: event.messageId,
       lang,
-      key: requestKeyOf(channel),
+      key: requestKeyOf(textVersion, channel),
       params,
     });
     const sentText = (sent.payload as { message?: { text?: string } }).message?.text;
@@ -330,10 +368,7 @@ export async function handleNearbyConsentButton(
       contactId: contact.id,
       subjectRef: subjectRef({ contactId: contact.id }),
       kind: "nearby" as const,
-      textVersion:
-        typeof sent.payload.consentTextVersion === "string"
-          ? sent.payload.consentTextVersion
-          : "nearby-consent.v2",
+      textVersion,
       lang,
       channel: event.channel,
       givenAt: now,
@@ -341,6 +376,7 @@ export async function handleNearbyConsentButton(
     };
     const words = {
       "nearby.accepted": { organiser: params.organiser ?? "", name: params.name ?? "" },
+      "nearby.accepted_auto": { organiser: params.organiser ?? "", name: params.name ?? "" },
       "nearby.declined": {},
       "nearby.already_listed": { name: params.name ?? "" },
     } as const;
@@ -394,7 +430,10 @@ export async function handleNearbyConsentButton(
         },
         now,
       );
-      await write(deps, tx, pending, reply("nearby.accepted"));
+      const accepted = AUTO_ASK_TEXT_VERSIONS.has(textVersion)
+        ? "nearby.accepted_auto"
+        : "nearby.accepted";
+      await write(deps, tx, pending, reply(accepted));
       await tellOrganisers(
         deps,
         tx,
@@ -403,7 +442,7 @@ export async function handleNearbyConsentButton(
         "organiser.nearby_yes",
         `nearby_yes:${contact.id}`,
       );
-      return { answered: t(lang, "nearby.accepted", words["nearby.accepted"]) };
+      return { answered: t(lang, accepted, words[accepted]) };
     }
 
     await tx.insert(consents).values({ ...proof, answer: "no" });

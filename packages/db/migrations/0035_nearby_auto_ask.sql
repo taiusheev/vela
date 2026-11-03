@@ -1,0 +1,2 @@
+ALTER TABLE "outbound" DROP CONSTRAINT "outbound_kind_check";--> statement-breakpoint
+ALTER TABLE "outbound" ADD CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'nearby_auto_ask', 'flag', 'consent', 'onboarding', 'system'));

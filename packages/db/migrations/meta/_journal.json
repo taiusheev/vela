@@ -246,6 +246,13 @@
       "when": 1793637159964,
       "tag": "0034_nearby_line",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793637806890,
+      "tag": "0035_nearby_auto_ask",
+      "breakpoints": true
     }
   ]
 }

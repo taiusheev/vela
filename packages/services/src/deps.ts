@@ -199,6 +199,11 @@ export interface Config {
    */
   weeklyInsight?: boolean;
   /**
+   * Whether Vela asks the people nearby who said yes to look in when nobody acted on a quiet
+   * morning's first notice for two hours (ADR-60, `NEARBY_AUTO_ASK`). Absent means not.
+   */
+  nearbyAutoAsk?: boolean;
+  /**
    * Whether the weekly read goes to the organisers as soon as it is drafted, without waiting for
    * the founder's send (`WEEKLY_READ_AUTO_SEND`). Absent means it waits. Off in production until
    * the privacy notice stops promising that the founder checks each read first.
