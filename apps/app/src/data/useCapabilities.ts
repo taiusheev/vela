@@ -8,6 +8,10 @@ export function useCapabilities() {
     enabled: apiConfigured(),
     queryFn: fetchCapabilities,
     staleTime: 60_000,
+    // Read once at sign-in and on opening the app, when the phone's connection may still be waking:
+    // tried again quietly, a few seconds apart, before anything says it could not be reached.
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1_000 * 2 ** attempt, 4_000),
   });
   return {
     ...query,

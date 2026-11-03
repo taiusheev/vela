@@ -62,22 +62,24 @@ function TelegramFirst({ waiting }: { waiting: boolean }) {
         }}
       >
         {waiting ? (
-          <>
-            {capabilities.isError ? (
+          capabilities.isError ? (
+            <>
               <Words variant="body" tone="ink2">
-                {t`Pilot setup could not be reached just now.`}
+                {t`Vela could not be reached. Check your internet connection, then try again.`}
               </Words>
-            ) : (
-              <LoadingLight label={t`Loading pilot setup…`} />
-            )}
-            <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
-          </>
+              <SecondaryButton label={t`Try again`} onPress={() => void capabilities.refetch()} />
+            </>
+          ) : (
+            <LoadingLight label={t`Getting your family ready…`} />
+          )
         ) : loading ? (
           <LoadingLight label={t`Loading your family…`} />
         ) : trouble ? (
           <>
             <Words variant="body" tone="ink2">
-              <Trans>Your account could not be loaded. Check your connection and try again.</Trans>
+              <Trans>
+                Vela could not be reached. Check your internet connection, then try again.
+              </Trans>
             </Words>
             <SecondaryButton label={t`Try again`} onPress={refresh} />
           </>

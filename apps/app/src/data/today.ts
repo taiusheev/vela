@@ -149,6 +149,27 @@ export interface Today {
  * The example day, in the language active when it is read. Its state line and receipt are the
  * messages `useToday` builds for a real day, so both read alike.
  */
+/**
+ * The example family on its first days, for trying the first-days guide in the demo: `invited`
+ * before she has said yes, else said yes with nothing asked or answered yet.
+ */
+export function firstDaysFixture(stage: "invited" | "yes"): Today {
+  return {
+    lights: [
+      {
+        memberId: "m1",
+        displayName: t`Mom`,
+        state: "resting",
+        stateText: stage === "invited" ? t`Invited` : t`No word yet today`,
+        ...(stage === "invited" ? { invited: true } : {}),
+        connectionDays: [],
+      },
+    ],
+    exchanges: [],
+    tomorrow: [],
+  };
+}
+
 export function todayFixture(): Today {
   const recipient = t`Mom`;
   const time = clockTime(8, 12);

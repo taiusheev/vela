@@ -8,6 +8,7 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
+import { FirstDaysGuide } from "../../src/components/first-days.tsx";
 import { LightOnMoment } from "../../src/components/light-on.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
 import { NotOkayFollowUp } from "../../src/components/not-okay-follow-up.tsx";
@@ -31,6 +32,7 @@ import { Card, Eyebrow, SecondaryButton, Words } from "../../src/components/ui.t
 import { StatusBand, useStatusBand } from "../../src/components/warm.tsx";
 import { useAskOutcome } from "../../src/data/ask-outcome.tsx";
 import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
+import { showsFirstDays } from "../../src/data/first-days.ts";
 import { localDayMonth } from "../../src/data/format.ts";
 import { lightOnKey, lightsToWelcome } from "../../src/data/light-on.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
@@ -360,6 +362,21 @@ function FamilyToday({ day }: { day: TodayView }) {
       : undefined;
   const portraitExchange = focusedExchange ?? waitingExchange;
   const target = focused ?? askRecipient(today.lights);
+  // Her family's first days (founder, 3 November 2026): until she has answered a first morning,
+  // Today leads with what happens next, not with empty rooms.
+  const answeredFirst =
+    target !== undefined &&
+    (target.connectionDays?.some((connection) => connection.hasMessage) === true ||
+      today.exchanges.some(
+        (exchange) => exchange.recipientId === target.memberId && exchange.answer !== undefined,
+      ));
+  const firstDays =
+    !day.loading &&
+    !trouble &&
+    !noAccount &&
+    !noFamily &&
+    target !== undefined &&
+    showsFirstDays({ invited: target.invited === true, answered: answeredFirst });
   const recipient = target?.displayName ?? t({ comment: "stands in for her name", message: "her" });
 
   return (
@@ -429,6 +446,26 @@ function FamilyToday({ day }: { day: TodayView }) {
             stale={trouble || day.stale === true}
           />
         )}
+        {/* Her family's first days lead, straight under her window: what happens next, and the one
+          thing to do now (founder, 3 November 2026). */}
+        {firstDays && target !== undefined ? (
+          <FirstDaysGuide
+            name={recipient}
+            invited={target.invited === true}
+            askedForTomorrow={today.tomorrow.some(
+              (turn) => turn.recipientId === target.memberId && turn.asked !== undefined,
+            )}
+            answered={answeredFirst}
+            onAsk={
+              canAsk(target) && !(apiConfigured() && !live)
+                ? () => router.push({ pathname: "/ask", params: { recipient: target.memberId } })
+                : undefined
+            }
+            onInvitation={() =>
+              router.push({ pathname: "/parent-settings", params: { member: target.memberId } })
+            }
+          />
+        ) : null}
         {/* What she said is coming up (a doctor's visit, a trip), right under her answer: it is this
           week's, and it asks the reader to act, so it leads the page instead of closing it
           (founder, 26 October 2026). Memories stays the keepsake shelf. */}
@@ -474,16 +511,14 @@ function FamilyToday({ day }: { day: TodayView }) {
             <SecondaryButton label={t`Dismiss`} onPress={() => feedback.remember(null)} />
           </Card>
         )}
-        {!day.loading && !trouble && !noAccount && !noFamily && today.exchanges.length === 0 ? (
+        {!day.loading &&
+        !trouble &&
+        !noAccount &&
+        !noFamily &&
+        !firstDays &&
+        today.exchanges.length === 0 ? (
           <Card>
-            {target?.invited === true ? (
-              <Words variant="body">
-                <Trans>
-                  {recipient} has been invited. Their mornings begin after they say yes in their own
-                  chat.
-                </Trans>
-              </Words>
-            ) : target?.state === "paused" ? (
+            {target?.state === "paused" ? (
               <Words variant="body">
                 <Trans>
                   {recipient} has paused their mornings. They can start again in Vela's chat when
@@ -538,27 +573,6 @@ function FamilyToday({ day }: { day: TodayView }) {
             />
           </View>
         )}
-        {/* The chat is where the day's words carry on (consumer flow rows 38–52). Her morning
-          settings live on You and in the chat's menu, never on the first screen. */}
-        {target !== undefined &&
-        (target.invited === true || target.connectionDays?.every((day) => !day.hasMessage)) ? (
-          <Card>
-            <Words variant="heading">
-              <Trans>Your first days</Trans>
-            </Words>
-            <Words tone="ink2">
-              <Trans>
-                Start with one question in your own words. Choose a morning that suits them.
-              </Trans>
-            </Words>
-            <Words tone="ink2">
-              <Trans>
-                When they answer, write back while it is on your mind. A quiet day does not erase
-                the moments you have shared.
-              </Trans>
-            </Words>
-          </Card>
-        ) : null}
         {today.tomorrow
           .filter((turn) => focused === undefined || turn.recipientId === focused.memberId)
           .map((turn) => (
