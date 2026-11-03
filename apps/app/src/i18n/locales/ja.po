@@ -236,6 +236,10 @@ msgstr ""
 msgid "{name} answered. The light is lit again."
 msgstr ""
 
+#: src/components/first-days.tsx
+msgid "{name} answers"
+msgstr ""
+
 #: src/components/onboarding/questions.tsx
 msgid "{name} answers there. No new app to learn."
 msgstr ""
@@ -341,10 +345,12 @@ msgstr ""
 msgid "{name} said no"
 msgstr ""
 
+#: src/components/first-days.tsx
 #: src/data/family.ts
 msgid "{name} said yes"
 msgstr ""
 
+#: src/components/first-days.tsx
 #: src/components/onboarding/finish.tsx
 msgid "{name} says yes"
 msgstr ""
@@ -467,10 +473,6 @@ msgstr ""
 #: src/components/today-feed.tsx
 #: src/components/today-glance.tsx
 msgid "{recipient} answered at {time}"
-msgstr ""
-
-#: app/(tabs)/index.tsx
-msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 msgstr ""
 
 #: app/exchange/[id].tsx
@@ -1053,6 +1055,10 @@ msgstr ""
 msgid "Ask it on Sunday"
 msgstr ""
 
+#: src/components/first-days.tsx
+msgid "Ask one thing in your own words for tomorrow morning. Ask nothing, and Vela sends a gentle hello."
+msgstr ""
+
 #: src/components/weekly-support.tsx
 msgid "Ask what would help"
 msgstr ""
@@ -1388,10 +1394,6 @@ msgid "Connection code"
 msgstr ""
 
 #: src/components/telegram-family-link.tsx
-msgid "Connection help reference: {supportReference}"
-msgstr ""
-
-#: src/components/telegram-family-link.tsx
 msgid "Connection reference: {connectionReference}"
 msgstr ""
 
@@ -1531,6 +1533,10 @@ msgstr ""
 
 #: src/components/reminders.tsx
 msgid "Done"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Done: {title}"
 msgstr ""
 
 #. who a nearby contact is to her
@@ -1848,6 +1854,10 @@ msgstr ""
 #: app/help.tsx
 #: app/settings.tsx
 msgid "Get help or request your data"
+msgstr ""
+
+#: app/onboarding.tsx
+msgid "Getting your family ready…"
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -2206,6 +2216,10 @@ msgstr ""
 msgid "Invitation sent"
 msgstr ""
 
+#: src/data/today.ts
+msgid "Invited"
+msgstr ""
+
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/kept-light.tsx
@@ -2422,6 +2436,10 @@ msgstr ""
 msgid "Last week"
 msgstr ""
 
+#: src/components/first-days.tsx
+msgid "Later: {title}"
+msgstr ""
+
 #: app/exchange/[id].tsx
 msgid "Laugh"
 msgstr ""
@@ -2530,10 +2548,6 @@ msgstr ""
 
 #: app/morning-settings.tsx
 msgid "Loading morning settings…"
-msgstr ""
-
-#: app/onboarding.tsx
-msgid "Loading pilot setup…"
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -2771,6 +2785,10 @@ msgstr ""
 
 #: app/morning-settings.tsx
 msgid "Morning time"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Mornings are on. {name} needs no app, only their usual chat."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -3065,6 +3083,10 @@ msgstr ""
 
 #: src/components/today-hero.tsx
 msgid "Notifications, something new"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Now: {title}"
 msgstr ""
 
 #: src/data/notifications.ts
@@ -3432,10 +3454,6 @@ msgstr ""
 msgid "Picked photo {number}"
 msgstr ""
 
-#: app/onboarding.tsx
-msgid "Pilot setup could not be reached just now."
-msgstr ""
-
 #: src/data/onboarding.ts
 msgid "Places & travel"
 msgstr ""
@@ -3579,6 +3597,10 @@ msgstr ""
 
 #: src/components/onboarding/finish.tsx
 msgid "Ready"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Ready for {name}'s morning, signed with your name."
 msgstr ""
 
 #: src/components/family-book.tsx
@@ -3919,6 +3941,10 @@ msgstr ""
 
 #: src/components/weekly-read-card.tsx
 msgid "See that morning"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "See the invitation"
 msgstr ""
 
 #: src/components/parent-photo-settings.tsx
@@ -4284,10 +4310,6 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Start a conversation with {name}."
-msgstr ""
-
-#: app/(tabs)/index.tsx
-msgid "Start with one question in your own words. Choose a morning that suits them."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -4686,8 +4708,16 @@ msgstr ""
 msgid "The first message waiting reaches {name} the moment they say yes; the rest come with their mornings."
 msgstr ""
 
+#: src/components/first-days.tsx
+msgid "The first morning question"
+msgstr ""
+
 #: src/components/family-book.tsx
 msgid "The first page is waiting."
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "The invitation is waiting in {name}'s chat. One tap, and their mornings begin."
 msgstr ""
 
 #: src/components/nearby-editor.tsx
@@ -4835,6 +4865,10 @@ msgstr ""
 #: src/components/nearby-editor.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Their name"
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Their window lights up here. Reply, listen to their voice, or send a heart."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5340,6 +5374,10 @@ msgstr ""
 msgid "Vela cannot reach {name} on {channel}"
 msgstr ""
 
+#: app/onboarding.tsx
+msgid "Vela could not be reached. Check your internet connection, then try again."
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
 msgstr ""
@@ -5708,10 +5746,6 @@ msgstr ""
 msgid "When should it arrive?"
 msgstr ""
 
-#: app/(tabs)/index.tsx
-msgid "When they answer, write back while it is on your mind. A quiet day does not erase the moments you have shared."
-msgstr ""
-
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
 msgstr ""
@@ -5827,6 +5861,10 @@ msgstr ""
 
 #: src/components/chat/chat-link.tsx
 msgid "Write something for when {name} says yes."
+msgstr ""
+
+#: src/components/first-days.tsx
+msgid "Write the first question"
 msgstr ""
 
 #: app/conversation.tsx
@@ -5983,10 +6021,6 @@ msgstr ""
 msgid "Your account could not be deleted just now. Nothing was changed. Try again."
 msgstr ""
 
-#: app/onboarding.tsx
-msgid "Your account could not be loaded. Check your connection and try again."
-msgstr ""
-
 #: src/components/app-privacy.tsx
 msgid "Your account could not be reached. Your privacy choice has not changed."
 msgstr ""
@@ -6075,8 +6109,8 @@ msgstr ""
 msgid "Your family’s settings and messages will stay as they are."
 msgstr ""
 
-#: app/(tabs)/index.tsx
-msgid "Your first days"
+#: src/components/first-days.tsx
+msgid "Your first days with {name}"
 msgstr ""
 
 #: src/components/onboarding/plan.tsx

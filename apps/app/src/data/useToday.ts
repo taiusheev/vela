@@ -20,6 +20,7 @@ import { demoDataAllowed } from "./live-state.ts";
 import { selectedMembership } from "./membership.ts";
 import { refreshReads } from "./query-refresh.ts";
 import {
+  firstDaysFixture,
   type Today,
   type TodayExchange,
   type TodayLight,
@@ -344,7 +345,7 @@ export function useToday(): TodayView {
   if (!enabled) {
     return {
       today: demoDataAllowed(apiConfigured(), accountsConfigured())
-        ? todayFixture()
+        ? (demoFirstDays() ?? todayFixture())
         : { lights: [], exchanges: [], tomorrow: [] },
       families: [],
       selectFamily,
@@ -405,6 +406,16 @@ export function todayTrouble(reads: {
     trouble: (me.failed && !me.held && !reads.noAccount) || (day.failed && !day.held),
     stale: (me.failed && me.held) || (day.failed && day.held),
   };
+}
+
+/**
+ * The example family's first days, asked for in the web demo's address (`?first=invited` or
+ * `?first=yes`), so the first-days guide can be tried; never on a phone or with an API.
+ */
+function demoFirstDays(): Today | null {
+  const search = typeof window === "undefined" ? "" : (window.location?.search ?? "");
+  const stage = /[?&]first=(invited|yes)\b/.exec(search)?.[1];
+  return stage === "invited" || stage === "yes" ? firstDaysFixture(stage) : null;
 }
 
 /** Each messenger's own name, the same in every language: a brand, never translated. */

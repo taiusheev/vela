@@ -234,12 +234,15 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
       restarting.current = false;
     }
   };
-  const failure = start.error ?? complete.error ?? cancel.error ?? status.error;
+  // The status check runs while the organiser is away in their messenger. One that fails, often
+  // just as they come back and the phone's connection wakes, is checked again on its own: it is a
+  // failure to show only when no check has answered and three in a row failed, or the API refused.
+  const statusFailure =
+    status.data === undefined && (status.failureCount >= 3 || isFinal(status.error))
+      ? status.error
+      : null;
+  const failure = start.error ?? complete.error ?? cancel.error ?? statusFailure;
   const signedOut = failure instanceof ApiError && failure.status === 401;
-  const supportReference =
-    failure === null
-      ? null
-      : `${start.error ? "START" : complete.error ? "FINISH" : cancel.error ? "CANCEL" : "CHECK"}-${failure instanceof ApiError ? failure.status : "NETWORK"}`;
   const busy = start.isPending || complete.isPending || cancel.isPending;
   const choosing = challenge?.line_url !== undefined && via === null && !stopped;
   const messenger = MESSENGER_NAME[via ?? FIRST_MESSENGER];
@@ -443,19 +446,21 @@ export function TelegramFamilyLink({ noAccount }: { noAccount: boolean }) {
               onPress={() => void begin(false, "code")}
             />
           ) : null}
-          <Words variant="caption" tone="ink2" selectable>
-            {t`Connection help reference: ${supportReference}`}
+          <Words variant="caption" tone="ink2">
+            <Trans>
+              If Vela cannot find your family, check you are using your own account. A family in the
+              earlier test version needs help moving to this version; deleting accounts will not
+              move it.
+            </Trans>
           </Words>
         </>
       ) : null}
-      <Words variant="caption" tone="ink2">
-        <Trans>
-          If Vela cannot find your family, check you are using your own account. A family in the
-          earlier test version needs help moving to this version; deleting accounts will not move
-          it.
-        </Trans>
-      </Words>
       <SetupHelp />
     </View>
   );
+}
+
+/** A refusal that checking again will not change: signed out, not allowed, or no such request. */
+function isFinal(error: unknown): boolean {
+  return error instanceof ApiError && [401, 403, 404].includes(error.status);
 }
