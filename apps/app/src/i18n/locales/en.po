@@ -996,8 +996,8 @@ msgid "Ask {name}"
 msgstr "Ask {name}"
 
 #: src/components/calling-number-editor.tsx
-msgid "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual Telegram chat still works without it."
-msgstr "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual Telegram chat still works without it."
+msgid "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual chat still works without it."
+msgstr "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual chat still works without it."
 
 #: src/components/reminders.tsx
 msgid "Ask {name} how {what} went"
@@ -1359,8 +1359,8 @@ msgid "Connect my family"
 msgstr "Connect my family"
 
 #: app/settings.tsx
-msgid "Connect your Telegram family"
-msgstr "Connect your Telegram family"
+msgid "Connect your family"
+msgstr "Connect your family"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connected {messenger} account: {linkedMemberName}"
@@ -1383,8 +1383,8 @@ msgid "Connection reference: {connectionReference}"
 msgstr "Connection reference: {connectionReference}"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
-msgstr "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
+msgid "Contact {name} using your usual phone call or chat. You can add their calling number in You → {name}, with their permission."
+msgstr "Contact {name} using your usual phone call or chat. You can add their calling number in You → {name}, with their permission."
 
 #: app/parent-photos.tsx
 #: app/sign-in.tsx
@@ -2097,16 +2097,16 @@ msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you a
 msgstr "If {sharedWith} can’t tap the link, Telegram is hiding it because you are not in their contacts. Ask {sharedWith} to add you, or send the invite by text message instead."
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
-msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
-msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
-msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet."
+msgstr "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet."
 
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
@@ -6076,8 +6076,8 @@ msgid "Your parent can ask “what does the family see” in their own chat. Hea
 msgstr "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 
 #: app/settings.tsx
-msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
-msgstr "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
+msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela on Telegram or LINE."
+msgstr "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela on Telegram or LINE."
 
 #: app/personal-question.tsx
 msgid "Your question"

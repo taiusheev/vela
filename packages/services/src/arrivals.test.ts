@@ -1,5 +1,6 @@
 import { createOffAi } from "@vela/ai";
 import type { LocalDate, LocalTime, OutboundKind } from "@vela/contracts";
+import { t } from "@vela/copy";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
   aiCalls,
@@ -1313,6 +1314,19 @@ describe("sendTurnPrompt", () => {
     await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
 
     expect(await h.db.select().from(suggestions)).toEqual([]);
+  });
+
+  it("tells a LINE group to quote the prompt, and offers no photo or voice note there", async () => {
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await seedLinkedGroup(h.db, seed, { now: h.clock.now(), channel: "line" });
+
+    await sendTurnPrompt(h.deps, seed.member.id, TOMORROW);
+
+    const [row] = await outboundRows("turn_prompt");
+    const payload = row?.payload as { message: { text: string } } | undefined;
+    expect(payload?.message.text).toBe(
+      t("en", "group.turn_prompt_line", { holder: "Mia", name: "Mom" }),
+    );
   });
 
   it("says first, once, when her answer today has no reply yet", async () => {

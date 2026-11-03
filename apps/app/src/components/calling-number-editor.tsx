@@ -33,8 +33,8 @@ export function CallingNumberEditor({
       <Words variant="body" tone="ink2">
         <Trans>
           Ask {name} for permission before saving their number. It stays encrypted on this iPhone,
-          is never uploaded to Vela, and is removed when you sign out. Your usual Telegram chat
-          still works without it.
+          is never uploaded to Vela, and is removed when you sign out. Your usual chat still works
+          without it.
         </Trans>
       </Words>
       <TextField

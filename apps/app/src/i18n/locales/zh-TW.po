@@ -997,8 +997,8 @@ msgid "Ask {name}"
 msgstr "問{name}"
 
 #: src/components/calling-number-editor.tsx
-msgid "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual Telegram chat still works without it."
-msgstr "儲存{name}的號碼前，請先徵得對方同意。號碼會加密保存在這支 iPhone 上，不會上傳到 Vela，登出時就會刪除。不存號碼，你平常的 Telegram 聊天也照樣能用。"
+msgid "Ask {name} for permission before saving their number. It stays encrypted on this iPhone, is never uploaded to Vela, and is removed when you sign out. Your usual chat still works without it."
+msgstr "儲存{name}的號碼前，請先徵得對方同意。號碼會加密保存在這支 iPhone 上，不會上傳到 Vela，登出時就會刪除。不存號碼，你平常的聊天也照樣能用。"
 
 #: src/components/reminders.tsx
 msgid "Ask {name} how {what} went"
@@ -1360,8 +1360,8 @@ msgid "Connect my family"
 msgstr "連結我的家人"
 
 #: app/settings.tsx
-msgid "Connect your Telegram family"
-msgstr "連結你在 Telegram 上的家庭"
+msgid "Connect your family"
+msgstr "連結你的家庭"
 
 #: src/components/telegram-family-link.tsx
 msgid "Connected {messenger} account: {linkedMemberName}"
@@ -1384,8 +1384,8 @@ msgid "Connection reference: {connectionReference}"
 msgstr "連結編號：{connectionReference}"
 
 #: src/components/quiet-notice.tsx
-msgid "Contact {name} using your usual phone call or Telegram chat. You can add their calling number in You → {name}, with their permission."
-msgstr "請使用平常的電話或 Telegram 對話聯絡{name}。經對方同意後，可以在「你」→「{name}」中新增聯絡電話。"
+msgid "Contact {name} using your usual phone call or chat. You can add their calling number in You → {name}, with their permission."
+msgstr "請用平常的電話或聊天聯絡{name}。經對方同意後，可以在「你」→「{name}」中新增聯絡電話。"
 
 #: app/parent-photos.tsx
 #: app/sign-in.tsx
@@ -2098,16 +2098,16 @@ msgid "If {sharedWith} can’t tap the link, Telegram is hiding it because you a
 msgstr "如果{sharedWith}點不開連結，是因為你不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWith}先把你加為聯絡人，或改用簡訊傳送邀請。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram，也沒有開啟 Vela 通知的手機。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，也沒有開啟 Vela 通知的手機。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram，也沒有開啟 Vela 通知的手機。在這支手機上開啟通知，就能在這裡收到。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，也沒有開啟 Vela 通知的手機。在這支手機上開啟通知，就能在這裡收到。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram link, and Vela does not send notifications to phones yet."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram，而 Vela 還不會傳送手機通知。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，而 Vela 還不會傳送手機通知。"
 
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
@@ -6077,8 +6077,8 @@ msgid "Your parent can ask “what does the family see” in their own chat. Hea
 msgstr "長輩可以在自己的聊天中問「家人看得到什麼」。是否分享健康相關的話，由長輩另外決定；說「停止」就會暫停燈光。"
 
 #: app/settings.tsx
-msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private Telegram chat."
-msgstr "試辦免費。安靜通知和重要訊息會送到發起人的 Telegram 私人聊天室。"
+msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela on Telegram or LINE."
+msgstr "試辦免費。安靜通知和重要訊息會送到發起人在 Telegram 或 LINE 上和 Vela 的私人聊天室。"
 
 #: app/personal-question.tsx
 msgid "Your question"
