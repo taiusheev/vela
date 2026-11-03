@@ -31,7 +31,7 @@ import { type AskType, composableType } from "../src/data/ask.ts";
 import { askRecipient, canAsk } from "../src/data/ask-target.ts";
 import { exampleNames } from "../src/data/example-names.ts";
 import { finishQuestionSave } from "../src/data/finish-question-save.ts";
-import { localDayMonth } from "../src/data/format.ts";
+import { localDayWithDate } from "../src/data/format.ts";
 import { demoDataAllowed, sessionScope } from "../src/data/live-state.ts";
 import { questionsFor } from "../src/data/onboarding.ts";
 import { askExtras } from "../src/data/photos.ts";
@@ -465,7 +465,7 @@ function AskComposer({
   const day = taken?.date_alternative == null ? null : dayName(taken.date_alternative);
   // "Tomorrow" with its weekday, in her zone, so nobody wonders which morning it is.
   const tomorrow = dayName(tomorrowIn(new Date(), recipient?.timeZone));
-  const plannedDay = `${dayName(date)}, ${localDayMonth(date)}`;
+  const plannedDay = localDayWithDate(date);
 
   const screenTitle = params.edit ? t`Edit question` : t`Ask ${name} something`;
   // Stack.Screen calls setOptions in a layout effect. Recreating its header callback on
@@ -521,7 +521,7 @@ function AskComposer({
       }}
     >
       <Words variant="caption" tone="ink2">
-        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "date" ? `${dayName(date)}, ${localDayMonth(date)}` : when === "another_day" ? t`${day} morning` : t`Next free morning`}`}
+        {`${name} · ${when === "tomorrow" ? t`Tomorrow morning, ${tomorrow}` : when === "date" ? localDayWithDate(date) : when === "another_day" ? t`${day} morning` : t`Next free morning`}`}
       </Words>
       <PrimaryButton
         label={compose.isPending ? t`Saving…` : params.edit ? t`Save changes` : t`Save question`}
