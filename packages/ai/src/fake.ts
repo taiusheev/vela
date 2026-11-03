@@ -134,7 +134,9 @@ export function createFakeAi(overrides: Partial<Ai> = {}): FakeAi {
         input.lang === "zh-TW"
           ? ["這是在哪裡呢？", input.era === "old" ? "那天發生了什麼事？" : "您會怎麼做呢？"]
           : [
-              input.caption === null ? "Where is this?" : `What do you see here, ${input.addressForm}?`,
+              input.caption === null
+                ? "Where is this?"
+                : `What do you see here, ${input.addressForm}?`,
               input.era === "old" ? "What happened that day?" : "What would you do with this?",
             ],
     })),

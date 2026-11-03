@@ -14,7 +14,17 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/photo-box.tsx
+msgid "— {adder}"
+msgstr "— {adder}"
+
 #: app/photo-box.tsx
+#: src/components/photo-box.tsx
+msgid "— {signer}"
+msgstr "— {signer}"
+
+#: app/photo-box.tsx
+#: src/components/photo-box.tsx
 msgid "— Vela"
 msgstr "—— 家人的小幫手 Vela"
 
@@ -1553,6 +1563,14 @@ msgstr "例如：Lily 在海邊"
 msgid "e.g. Our first flat, 1982"
 msgstr "例如：我們的第一個家，1982 年"
 
+#: src/components/photo-box.tsx
+msgid "e.g. What would you cook with these?"
+msgstr "例如：您會用這些煮什麼？"
+
+#: src/components/photo-box.tsx
+msgid "e.g. Who took this one?"
+msgstr "例如：這張是誰拍的？"
+
 #: src/components/onboarding/plan.tsx
 msgid "Each goes to {name} signed “— {you}”, one a morning, unless someone in the family writes that day. Take out any you would not send."
 msgstr "每天早上傳一則給{name}，署名「— {you}」；那天如果有家人自己寫，就先傳家人寫的。不想傳的可以先拿掉。"
@@ -1895,6 +1913,10 @@ msgstr "還沒有同意"
 msgid "Have an idea? Turn it into a question that sounds like you."
 msgstr "有個想法嗎？一起寫成你平常會問的一句話。"
 
+#: src/data/usePhotoBox.ts
+msgid "Have you seen these at your market?"
+msgstr "您常去的市場有賣這個嗎？"
+
 #: src/data/onboarding.ts
 msgid "Hawaii"
 msgstr "夏威夷"
@@ -1963,10 +1985,6 @@ msgstr "早安訊息在 {time} 送出。方便的話，打個電話給媽媽。"
 #: app/away.tsx
 msgid "Her mornings still come while she is away. Nobody is told her morning went quiet, and nothing is sent to her again later that day."
 msgstr "不在家的期間，早上的訊息照常送出；不會通知家人早上沒回應，當天也不會再補發訊息。"
-
-#: src/components/photo-box.tsx
-msgid "Her question"
-msgstr "長輩會收到的問題"
 
 #: src/components/onboarding/finish.tsx
 msgid "Hi {name}, it’s {you}. I’ve set up Vela for us: one small question from me each morning. Tap to see it, then decide. (An example invitation: nothing was sent.)"
@@ -2586,6 +2604,10 @@ msgstr "正在載入安排…"
 msgid "Loading…"
 msgstr "載入中…"
 
+#: src/components/photo-box.tsx
+msgid "Looking at the photo…"
+msgstr "正在看照片…"
+
 #: app/exchange/[id].tsx
 msgid "Looking for that exchange…"
 msgstr "正在找這則問答…"
@@ -2629,6 +2651,10 @@ msgstr "馬來西亞"
 #: app/personal-question.tsx
 msgid "Manage saved choices"
 msgstr "管理已儲存的設定"
+
+#: src/components/photo-box.tsx
+msgid "Mark each one new or old. Then ask {name} your own question about it: it reaches {name} from you, signed with your name."
+msgstr "標示每張是新照片還是老照片，再問{name}一個你自己的問題：{name}收到時會看到是你問的，並署上你的名字。"
 
 #: src/components/photo-box.tsx
 msgid "Mark them all"
@@ -2852,6 +2878,10 @@ msgstr "這次沒有留下草稿。可以換個話題，或自己寫個問題。
 #: app/weekly-report.tsx
 msgid "No eligible messages were shared after permission this week. Nothing needs to be invented."
 msgstr "本週同意之後，還沒有符合條件的訊息。不需要憑空補上內容。"
+
+#: src/components/photo-box.tsx
+msgid "No ideas for this one. Write your own, or leave it to Vela."
+msgstr "這張想不到問題。你可以自己寫，或交給 Vela。"
 
 #: app/(tabs)/exchanges.tsx
 msgid "No memories yet. When {who} tells you something worth remembering, it appears here."
@@ -3885,10 +3915,6 @@ msgstr "現在說點什麼，會馬上送到{name}的聊天室。"
 msgid "Say something short"
 msgstr "寫一句簡短的話"
 
-#: src/components/photo-box.tsx
-msgid "Say whether each one is new or old, and add a line if it helps: who, where, or when. Vela puts your line in her question as you wrote it."
-msgstr "請標示每張是新照片還是老照片；需要的話寫一句話：誰、在哪裡、什麼時候。Vela 會把這句話照原樣放進問題裡。"
-
 #: app/(tabs)/exchanges.tsx
 msgid "Search memories"
 msgstr "搜尋回憶"
@@ -4332,6 +4358,10 @@ msgstr "故事日・{name}・{day}"
 msgid "Story of the week"
 msgstr "本週的故事"
 
+#: src/components/photo-box.tsx
+msgid "Suggest questions from the photo"
+msgstr "看照片建議問題"
+
 #: app/my-memories.tsx
 msgid "Suggested for you"
 msgstr "為你建議"
@@ -4389,6 +4419,10 @@ msgstr "要拿出這張照片嗎？照片會在一天內刪除，Vela 不會再�
 #: src/components/today-glance.tsx
 msgid "Talk with {name}"
 msgstr "跟{name}聊聊"
+
+#: src/components/photo-box.tsx
+msgid "Tap one to use it. You can change the words."
+msgstr "點一個來用，也可以再改字。"
 
 #: src/components/family-book.tsx
 msgid "Tap the heart on a memory, and it is kept here, long after the chat has let it go."
@@ -5568,6 +5602,10 @@ msgstr "{name}跟家人說了什麼"
 msgid "What {name} told you this week, what came up twice, and something to ask her next. The first 30 days are free."
 msgstr "{name}這週跟你說了什麼、哪些事提了兩次，以及下次可以問{name}什麼。前 30 天免費。"
 
+#: src/components/photo-box.tsx
+msgid "What {name} will see"
+msgstr "{name}會看到"
+
 #: src/data/memories.ts
 msgid "What are you planting this year?"
 msgstr "今年要種什麼？"
@@ -5593,6 +5631,10 @@ msgstr "{name}喜歡聊什麼？"
 #: app/personal-question.tsx
 msgid "What feels comfortable between you?"
 msgstr "你們怎麼聊會比較自在？"
+
+#: src/data/usePhotoBox.ts
+msgid "What happened that day?"
+msgstr "那天發生了什麼事？"
 
 #: src/data/memories.ts
 msgid "What is the kitchen like in the morning?"
@@ -5623,6 +5665,10 @@ msgstr "Vela Light 多了什麼"
 #: src/components/weekly-support.tsx
 msgid "What would help this week?"
 msgstr "這週可以怎麼陪伴？"
+
+#: src/data/usePhotoBox.ts
+msgid "What would you cook with these?"
+msgstr "您會用這些煮什麼？"
 
 #: app/personal-question.tsx
 #: src/components/onboarding/questions.tsx
@@ -5693,6 +5739,10 @@ msgstr "{name}住在哪裡？"
 msgid "Where is your family’s Vela chat?"
 msgstr "你家人的 Vela 聊天室在哪裡？"
 
+#: src/data/usePhotoBox.ts
+msgid "Where was this?"
+msgstr "這是在哪裡？"
+
 #: src/data/photos.ts
 msgid "Which one do you like more?"
 msgstr "您比較喜歡哪一張？"
@@ -5701,6 +5751,10 @@ msgstr "您比較喜歡哪一張？"
 #: src/data/exchanges.ts
 msgid "Which one of us did you teach to make the pies?"
 msgstr "您當初是教我們哪一個做派的？"
+
+#: src/data/usePhotoBox.ts
+msgid "Which one would you pick first?"
+msgstr "您會先挑哪一個？"
 
 #: src/components/onboarding/questions.tsx
 msgid "Which part?"
@@ -5721,6 +5775,10 @@ msgstr "這個提問要傳給誰？"
 #: src/components/onboarding/questions.tsx
 msgid "Who lives close to {name}?"
 msgstr "誰住在{name}附近？"
+
+#: src/data/usePhotoBox.ts
+msgid "Who took this one?"
+msgstr "這張是誰拍的？"
 
 #: src/components/photo-box.tsx
 msgid "Whoever added this photo, or an organiser, can change it."
@@ -5831,7 +5889,9 @@ msgstr "有，很有幫助"
 msgid "Yesterday"
 msgstr "昨天"
 
+#: app/photo-box.tsx
 #: src/components/onboarding/questions.tsx
+#: src/components/photo-box.tsx
 msgid "you"
 msgstr "你"
 
@@ -6124,6 +6184,10 @@ msgstr "你問種子的那個問題，換來媽媽這週最長的回答。\n"
 #: app/ask.tsx
 msgid "Your question for {name}"
 msgstr "你想問{name}的問題"
+
+#: src/components/photo-box.tsx
+msgid "Your question for {name} (optional)"
+msgstr "你想問{name}的問題（可不填）"
 
 #: app/personal-question.tsx
 msgid "Your question will arrive with their morning message."

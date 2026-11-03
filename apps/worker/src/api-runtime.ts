@@ -415,6 +415,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const logger = createLogger(env);
   const { secretKey } = config;
   const photos = apiMediaFor(env, config, logger);
+  const photoQuestions = apiPhotoQuestionsFor(env, config, logger);
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
     questionProfiles: {
@@ -435,14 +436,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           },
         }
       : {}),
-    ...(readPhotoQuestionAi(env)
-      ? {
-          photoQuestions: {
-            draft: draftPhotoQuestions,
-            ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
-          },
-        }
-      : {}),
+    ...(photoQuestions === undefined ? {} : { photoQuestions }),
     ...photos,
     sendAsMe: env.SEND_AS_ME?.trim() === "on",
     // The author's own memories (privacy-notice v7). Only where RICH_MEMORIES is on: development
@@ -458,7 +452,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
       photo_box: readPhotoBox(env),
-      photo_question_ai: readPhotoQuestionAi(env),
+      photo_question_ai: photoQuestions !== undefined,
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
     },
@@ -577,6 +571,28 @@ function adminConversationOf(env: Pick<PilotEnv, "ADMIN_CONVERSATION_ID">): stri
  * by its label and leaves photos off with `media_storage_unavailable`: the rest of /v1 answers as
  * before, since a photo setting is no reason to close the whole API (ADR-29's isolation).
  */
+/**
+ * Vela's drafts of a question about a box photo (ADR-61), where `PHOTO_QUESTION_AI` is on and an AI
+ * provider can be built. One that cannot is logged as `api_config_refused` and leaves drafting off:
+ * the family still writes their own questions, and the rest of /v1 answers as before.
+ */
+export function apiPhotoQuestionsFor(
+  env: PilotEnv,
+  config: ApiConfig,
+  logger: Logger,
+): ApiRuntime["photoQuestions"] {
+  if (!readPhotoQuestionAi(env)) return undefined;
+  try {
+    return {
+      draft: draftPhotoQuestions,
+      ai: createAiPort(env, config.environment, "wrangler.jsonc", logger),
+    };
+  } catch (error) {
+    logger.error("api_config_refused", { error: errorLabel(error) });
+    return undefined;
+  }
+}
+
 export function apiMediaFor(
   env: PilotEnv,
   config: ApiConfig,

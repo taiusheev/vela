@@ -161,10 +161,7 @@ export async function draftPhotoQuestions(
  * The drafts worth offering: one question each, none that repeats the caller's line, none a check
  * on her or holding a word Vela never uses, and no two the same.
  */
-export function acceptedQuestions(
-  questions: readonly string[],
-  caption: string | null,
-): string[] {
+export function acceptedQuestions(questions: readonly string[], caption: string | null): string[] {
   const kept: string[] = [];
   const line = caption === null ? null : comparable(caption);
   for (const raw of questions) {

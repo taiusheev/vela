@@ -246,6 +246,7 @@ export {
   PhotoBoxRefusedError,
   removeFromApiPhotoBox,
 } from "./photo-box.ts";
+export * from "./photo-questions.ts";
 export {
   type PilotAdmission,
   pilotAdmitsInbound,
@@ -317,5 +318,4 @@ export {
   type WaitlistLang,
   type WaitlistRole,
 } from "./waitlist.ts";
-export * from "./photo-questions.ts";
 export * from "./weekly-support-live.ts";

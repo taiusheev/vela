@@ -1,11 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { PHOTO_BOX_CAPTION_MAX, type PhotoBoxEra } from "@vela/contracts";
+import { PHOTO_BOX_CAPTION_MAX, PHOTO_BOX_QUESTION_MAX, type PhotoBoxEra } from "@vela/contracts";
 import { type ReactNode, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "../accessibility/use-reduced-motion.ts";
 import { localDayMonth } from "../data/format.ts";
-import type { BoxPhoto, PendingPhoto } from "../data/usePhotoBox.ts";
+import type { BoxPhoto, Drafts, PendingPhoto } from "../data/usePhotoBox.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { hitSlop, linkHitSlop, radius, softShadow, space, type } from "../theme/tokens.ts";
 import { BrandIcon } from "./brand/icon.tsx";
@@ -89,20 +89,150 @@ export interface PreviewMorning {
 
 /**
  * The example family's preview, made on the phone (there is no server to plan it): a photo she
- * has not been shown, newest first, with the question its era asks.
+ * has not been shown, newest first, with its own question signed by whoever wrote it, or the
+ * question its era asks, signed by Vela.
  */
 export function examplePreview(
   photos: readonly BoxPhoto[],
   name: string,
   question: (photo: Pick<BoxPhoto, "era" | "caption">) => string,
-  signature: string,
+  signatures: { vela: string; self: string },
 ): PreviewMorning | undefined {
   const photo =
     photos.find((one) => one.last_used_on === null) ??
     [...photos].sort((a, b) => (a.last_used_on ?? "").localeCompare(b.last_used_on ?? ""))[0];
-  return photo === undefined
-    ? undefined
-    : { memberId: "example", name, photos: [photo], text: question(photo), signature };
+  if (photo === undefined) return undefined;
+  const own = photo.question ?? null;
+  return {
+    memberId: "example",
+    name,
+    photos: [photo],
+    text: own ?? question(photo),
+    signature: own === null ? signatures.vela : signatures.self,
+  };
+}
+
+/**
+ * The adder's own question about a photo (ADR-61): written, or picked from Vela's drafts when
+ * Vela may look at the photo, and shown as she will read it, signed with their name. Left empty,
+ * her morning is Vela's sentence, signed by Vela.
+ */
+export function QuestionField({
+  name,
+  selfName,
+  era,
+  caption,
+  value,
+  onChange,
+  onSuggest,
+  disabled,
+}: {
+  name: string;
+  selfName: string | undefined;
+  era: PhotoBoxEra;
+  caption: string | null;
+  value: string;
+  onChange: (question: string) => void;
+  /** Absent where Vela may not look at photos: the adder writes their own. */
+  onSuggest: (() => Promise<Drafts | null>) | undefined;
+  disabled: boolean;
+}) {
+  const palette = usePalette();
+  const { t } = useLingui();
+  const vela = useQuestionFor();
+  const [drafting, setDrafting] = useState(false);
+  const [drafts, setDrafts] = useState<string[]>();
+  const own = value.trim();
+  const signer = selfName ?? t`you`;
+  const suggest = async () => {
+    if (onSuggest === undefined) return;
+    setDrafting(true);
+    const answer = await onSuggest();
+    setDrafts(answer?.questions ?? []);
+    setDrafting(false);
+  };
+  return (
+    <View style={{ gap: space.m }}>
+      <TextField
+        label={t`Your question for ${name} (optional)`}
+        value={value}
+        onChangeText={onChange}
+        placeholder={
+          era === "old" ? t`e.g. Who took this one?` : t`e.g. What would you cook with these?`
+        }
+        maxLength={PHOTO_BOX_QUESTION_MAX}
+        multiline
+        disabled={disabled}
+      />
+      {onSuggest === undefined ? null : drafts === undefined ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={disabled || drafting}
+          hitSlop={linkHitSlop}
+          onPress={() => void suggest()}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.xs,
+            alignSelf: "flex-start",
+          }}
+        >
+          <BrandIcon name="photo" size={16} color={drafting ? palette.ink3 : palette.action} />
+          <Words variant="button" tone={disabled || drafting ? "ink3" : "action"}>
+            {drafting ? t`Looking at the photo…` : t`Suggest questions from the photo`}
+          </Words>
+        </Pressable>
+      ) : drafts.length === 0 ? (
+        <Words variant="caption" tone="ink3">
+          <Trans>No ideas for this one. Write your own, or leave it to Vela.</Trans>
+        </Words>
+      ) : (
+        <View style={{ gap: space.s }}>
+          <Words variant="caption" tone="ink2">
+            <Trans>Tap one to use it. You can change the words.</Trans>
+          </Words>
+          {drafts.map((draft) => {
+            const chosen = draft === own;
+            return (
+              <Pressable
+                key={draft}
+                accessibilityRole="button"
+                accessibilityState={{ selected: chosen }}
+                disabled={disabled}
+                onPress={() => onChange(draft)}
+                style={{
+                  paddingVertical: space.m,
+                  paddingHorizontal: space.l,
+                  borderRadius: radius.panel,
+                  borderWidth: chosen ? 2 : 1,
+                  borderColor: chosen ? palette.action : palette.rule,
+                  backgroundColor: chosen ? palette.surface2 : palette.surface,
+                }}
+              >
+                <Words variant="body">{draft}</Words>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      <View
+        style={{
+          padding: space.l,
+          gap: space.xs,
+          borderRadius: radius.panel,
+          backgroundColor: palette.surface2,
+        }}
+      >
+        <Words variant="caption" tone="ink3">
+          <Trans>What {name} will see</Trans>
+        </Words>
+        <Words variant="preview">{own.length > 0 ? own : vela({ era, caption })}</Words>
+        <Words variant="caption" tone="ink2">
+          {own.length > 0 ? t`— ${signer}` : t`— Vela`}
+        </Words>
+      </View>
+    </View>
+  );
 }
 
 /** Before there is a photo: the window waits, with the way to fill it. */
@@ -484,6 +614,8 @@ function Sheet({
  * that did not go in stay here, with why, to try again.
  */
 export function AddSheet({
+  name,
+  selfName,
   pending,
   adding,
   progress,
@@ -491,14 +623,22 @@ export function AddSheet({
   onEdit,
   onEditAll,
   onDrop,
+  onSuggest,
   onAdd,
   onClose,
 }: {
+  name: string;
+  selfName: string | undefined;
   pending: readonly PendingPhoto[];
   adding: boolean;
   progress: { done: number; total: number } | undefined;
   problem: string | undefined;
-  onEdit: (key: string, next: Partial<Pick<PendingPhoto, "era" | "caption">>) => void;
+  onEdit: (
+    key: string,
+    next: Partial<Pick<PendingPhoto, "era" | "caption" | "question" | "mediaId">>,
+  ) => void;
+  /** Vela's drafts for one chosen photo; absent where Vela may not look at photos. */
+  onSuggest: ((photo: PendingPhoto) => Promise<Drafts | null>) | undefined;
   /** Marks every chosen photo new or old at once. */
   onEditAll: (era: PhotoBoxEra) => void;
   onDrop: (key: string) => void;
@@ -539,10 +679,7 @@ export function AddSheet({
       }
     >
       <Words variant="body" tone="ink2">
-        <Trans>
-          Say whether each one is new or old, and add a line if it helps: who, where, or when. Vela
-          puts your line in her question as you wrote it.
-        </Trans>
+        {t`Mark each one new or old. Then ask ${name} your own question about it: it reaches ${name} from you, signed with your name.`}
       </Words>
       {count < 2 ? null : (
         <View style={{ gap: space.s }}>
@@ -602,6 +739,26 @@ export function AddSheet({
                 maxLength={PHOTO_BOX_CAPTION_MAX}
                 disabled={adding}
               />
+              <QuestionField
+                name={name}
+                selfName={selfName}
+                era={photo.era}
+                caption={photo.caption.trim().length === 0 ? null : photo.caption.trim()}
+                value={photo.question}
+                onChange={(question) => onEdit(photo.key, { question })}
+                onSuggest={
+                  onSuggest === undefined
+                    ? undefined
+                    : async () => {
+                        const drafts = await onSuggest(photo);
+                        if (drafts?.mediaId !== undefined) {
+                          onEdit(photo.key, { mediaId: drafts.mediaId });
+                        }
+                        return drafts;
+                      }
+                }
+                disabled={adding}
+              />
               <Pressable
                 accessibilityRole="button"
                 disabled={adding}
@@ -624,18 +781,29 @@ export function AddSheet({
 /** One box photo, opened: who added it, when she last saw it, its era and line, and taking it out. */
 export function PhotoSheet({
   familyId,
+  name,
+  selfName,
   photo,
   busy,
   problem,
   onSave,
+  onSuggest,
   onRemove,
   onClose,
 }: {
   familyId: string | undefined;
+  name: string;
+  selfName: string | undefined;
   photo: BoxPhoto;
   busy: boolean;
   problem: string | undefined;
-  onSave: (change: { era?: PhotoBoxEra; caption?: string | null }) => void;
+  onSave: (change: {
+    era?: PhotoBoxEra;
+    caption?: string | null;
+    question?: string | null;
+  }) => void;
+  /** Vela's drafts for this photo; absent where Vela may not look at photos. */
+  onSuggest: (() => Promise<Drafts | null>) | undefined;
   onRemove: () => void;
   onClose: () => void;
 }) {
@@ -644,9 +812,12 @@ export function PhotoSheet({
   const question = useQuestionFor();
   const [era, setEra] = useState(photo.era);
   const [caption, setCaption] = useState(photo.caption ?? "");
+  const [ask, setAsk] = useState(photo.question ?? "");
   const [confirming, setConfirming] = useState(false);
   const trimmed = caption.trim();
-  const changed = era !== photo.era || trimmed !== (photo.caption ?? "");
+  const asked = ask.trim();
+  const changed =
+    era !== photo.era || trimmed !== (photo.caption ?? "") || asked !== (photo.question ?? "");
   const adder = photo.added_by_name;
   const shownOn = photo.last_used_on === null ? "" : localDayMonth(photo.last_used_on);
   const meta = [
@@ -661,6 +832,7 @@ export function PhotoSheet({
       ...(trimmed === (photo.caption ?? "")
         ? {}
         : { caption: trimmed.length === 0 ? null : trimmed }),
+      ...(asked === (photo.question ?? "") ? {} : { question: asked.length === 0 ? null : asked }),
     });
   return (
     <Sheet
@@ -723,27 +895,40 @@ export function PhotoSheet({
             maxLength={PHOTO_BOX_CAPTION_MAX}
             disabled={busy}
           />
+          <QuestionField
+            name={name}
+            selfName={photo.added_by_name ?? selfName}
+            era={era}
+            caption={trimmed.length === 0 ? null : trimmed}
+            value={ask}
+            onChange={setAsk}
+            onSuggest={onSuggest}
+            disabled={busy}
+          />
         </>
       ) : (
-        <Words variant="caption" tone="ink3">
-          <Trans>Whoever added this photo, or an organiser, can change it.</Trans>
-        </Words>
+        <>
+          <Words variant="caption" tone="ink3">
+            <Trans>Whoever added this photo, or an organiser, can change it.</Trans>
+          </Words>
+          <View
+            style={{
+              padding: space.l,
+              gap: space.xs,
+              borderRadius: radius.panel,
+              backgroundColor: palette.surface2,
+            }}
+          >
+            <Words variant="caption" tone="ink3">
+              <Trans>What {name} will see</Trans>
+            </Words>
+            <Words variant="preview">{photo.question ?? question(photo)}</Words>
+            <Words variant="caption" tone="ink2">
+              {photo.question == null || adder === null ? t`— Vela` : t`— ${adder}`}
+            </Words>
+          </View>
+        </>
       )}
-      <View
-        style={{
-          padding: space.l,
-          gap: space.xs,
-          borderRadius: radius.panel,
-          backgroundColor: palette.surface2,
-        }}
-      >
-        <Words variant="caption" tone="ink3">
-          <Trans>Her question</Trans>
-        </Words>
-        <Words variant="preview">
-          {question({ era, caption: trimmed.length === 0 ? null : trimmed })}
-        </Words>
-      </View>
     </Sheet>
   );
 }

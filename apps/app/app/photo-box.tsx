@@ -45,6 +45,9 @@ export default function PhotoBoxScreen() {
   const { capabilities } = useCapabilities();
   const box = usePhotoBox(day.familyId, capabilities?.photo_box === true);
   const name = day.today.lights[0]?.displayName ?? t`Mom`;
+  // Vela looks at a photo only where the API allows it (ADR-61); the example family shows how.
+  const drafting = box.demo || capabilities?.photo_question_ai === true;
+  const signer = day.selfName ?? t`you`;
   const [pending, setPending] = useState<PendingPhoto[]>([]);
   const [addProblem, setAddProblem] = useState<string>();
   const [pageProblem, setPageProblem] = useState<string>();
@@ -61,9 +64,12 @@ export default function PhotoBoxScreen() {
   // family has no server, and is shown the photo's own question.
   const byId = new Map(box.photos.map((photo) => [photo.id, photo]));
   const previews: PreviewMorning[] = box.demo
-    ? [examplePreview(box.photos, name, question, t`— Vela`)].filter(
-        (preview): preview is PreviewMorning => preview !== undefined,
-      )
+    ? [
+        examplePreview(box.photos, name, question, {
+          vela: t`— Vela`,
+          self: t`— ${signer}`,
+        }),
+      ].filter((preview): preview is PreviewMorning => preview !== undefined)
     : box.next.flatMap((next) => {
         const photos = next.box_ids.flatMap((id) => {
           const photo = byId.get(id);
@@ -107,6 +113,7 @@ export default function PhotoBoxScreen() {
           key: photoKey(),
           era: "new" as const,
           caption: "",
+          question: "",
         })),
       );
     } catch {
@@ -218,6 +225,9 @@ export default function PhotoBoxScreen() {
 
       {pending.length === 0 ? null : (
         <AddSheet
+          name={name}
+          selfName={day.selfName}
+          onSuggest={drafting ? (photo) => box.suggest({ kind: "pending", photo }) : undefined}
           pending={pending}
           adding={box.adding}
           progress={box.progress}
@@ -241,6 +251,9 @@ export default function PhotoBoxScreen() {
         <PhotoSheet
           key={open.id}
           familyId={day.familyId}
+          name={name}
+          selfName={day.selfName}
+          onSuggest={drafting ? () => box.suggest({ kind: "box", photo: open }) : undefined}
           photo={open}
           busy={box.busy}
           problem={sheetProblem}

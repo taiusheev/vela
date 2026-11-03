@@ -82,7 +82,8 @@ describe("draftPhotoQuestions", () => {
       caption: "外婆家",
       image: { mime: "image/jpeg" },
     });
-    expect((call?.input as { image: { base64: string } }).image.base64.length).toBeGreaterThan(10);
+    const sent = call?.input as { image: { base64: string } } | undefined;
+    expect(sent?.image.base64.length).toBeGreaterThan(10);
     const [logged] = await h.db.select().from(aiCalls);
     expect(logged?.call).toBe("photo_question");
     expect(logged?.inputRef).toEqual({});

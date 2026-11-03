@@ -259,7 +259,9 @@ function providerFailureCode(error: unknown): string | null {
 }
 
 /** The user turn: the JSON alone, or the JSON with the photo the call looks at. */
-function userContent(input: unknown): MessageCreateParamsNonStreaming["messages"][number]["content"] {
+function userContent(
+  input: unknown,
+): MessageCreateParamsNonStreaming["messages"][number]["content"] {
   const text = renderUserTurn(input);
   const image = imageOf(input);
   if (image === null) return text;
