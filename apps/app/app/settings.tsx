@@ -140,13 +140,13 @@ function FamilyYou({ day }: { day: TodayView }) {
             <Words variant="body" tone="ink2">
               <Trans>
                 Your pilot is free. Quiet notices and important updates arrive in the organiser’s
-                private Telegram chat.
+                private chat with Vela on Telegram or LINE.
               </Trans>
             </Words>
           ) : null}
           {noAccount || day.noFamily ? (
             <SecondaryButton
-              label={t`Connect your Telegram family`}
+              label={t`Connect your family`}
               onPress={() => router.push("/onboarding")}
             />
           ) : null}

@@ -22,7 +22,7 @@ import {
   Words,
 } from "../../src/components/ui.tsx";
 import { WarmPage } from "../../src/components/warm.tsx";
-import { dayName, localDayMonth } from "../../src/data/format.ts";
+import { dayName, localDayWithDate } from "../../src/data/format.ts";
 import { demoDataAllowed } from "../../src/data/live-state.ts";
 import { questionDates } from "../../src/data/question-schedule.ts";
 import { selectedLight } from "../../src/data/selected-light.ts";
@@ -235,7 +235,7 @@ function MorningPlan({
 /** "Tomorrow · Sunday, 25 Oct": the chosen morning, named so nobody has to count. */
 function morningName(date: string | null, tomorrow: string, nextFree: string, soon: string) {
   if (date === null) return nextFree;
-  const named = `${dayName(date)}, ${localDayMonth(date)}`;
+  const named = localDayWithDate(date);
   return date === tomorrow ? `${soon} · ${named}` : named;
 }
 

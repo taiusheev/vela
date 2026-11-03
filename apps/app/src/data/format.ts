@@ -87,6 +87,16 @@ export function longDate(instant: string): string {
     : at.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
 }
 
+/**
+ * A scheduled date with its weekday: "Tuesday, 3 Nov", or "11月3日（星期二）" as Taiwan writes it,
+ * never an English comma between Chinese words.
+ */
+export function localDayWithDate(date: string): string {
+  return chinese()
+    ? `${localDayMonth(date)}（${dayName(date)}）`
+    : `${dayName(date)}, ${localDayMonth(date)}`;
+}
+
 /** A local date as the day it names, for copy that must not say "tomorrow" about Thursday. */
 export function dayName(date: string): string {
   const day = valid(`${date}T00:00:00Z`);

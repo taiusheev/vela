@@ -12,7 +12,7 @@ tags:
     visible: ${TEST_PARENT_NAME}
     timeout: 20000
 - assertVisible: "Updated .*"
-- assertNotVisible: "Connect your Telegram family"
+- assertNotVisible: "Connect your family"
 - assertNotVisible: "Start 30 free days"
 - tapOn: "Memories"
 - assertNotVisible: "Who are you keeping a light on for?"

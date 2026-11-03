@@ -545,6 +545,17 @@ describe("a follow and an unsend", () => {
     ]);
   });
 
+  it("starts onboarding when a stranger types 開始設定, as /start does, and leaves 開始 alone", async () => {
+    await scene();
+
+    await inbound(privately(STRANGER, { kind: "text", text: " 開始設定 " }));
+    expect(await h.db.select().from(onboardingSessions)).toHaveLength(1);
+
+    await h.db.delete(onboardingSessions);
+    await inbound(privately(STRANGER, { kind: "text", text: "開始設定吧" }));
+    expect(await h.db.select().from(onboardingSessions)).toEqual([]);
+  });
+
   it("tell a stranger who follows how to begin, without starting onboarding or keeping them", async () => {
     await scene();
     const before = await memberCount();
