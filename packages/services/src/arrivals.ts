@@ -55,6 +55,7 @@ import { isBoxPictureMorning, isVelaPictureMorning, takePictureMorning } from ".
 import { ordinaryPushReader, turnPromptPush } from "./push-messages.ts";
 import {
   channelLinkOfMember,
+  childOf,
   exchangeForLocalDate,
   familyById,
   isMessenger,
@@ -704,6 +705,7 @@ export async function deliverArrival(
   });
   const askFiles = askMedia.slice(0, MAX_MEDIA);
   const readBack = await loadReadBack(deps, member, date, link.channel, askFiles);
+  const child = await childOf(deps.db, member);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -715,6 +717,7 @@ export async function deliverArrival(
     date,
     hint: inFirstMornings(member, date),
     checkIn: deps.config.checkIn === true,
+    child: child?.displayName ?? null,
   });
   const attached = [...readBack.media, ...askFiles];
   const request: OutboundRequest = {
@@ -801,6 +804,7 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
       lang: member.language,
       address: member.addressForm ?? member.displayName,
       exchangeId: exchange.id,
+      child: (await childOf(deps.db, member))?.displayName ?? null,
     });
     await enqueueOutbound(deps, deps.db, {
       kind: "repeat",
@@ -832,6 +836,7 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     repeat: true,
     date,
     hint: inFirstMornings(member, date),
+    child: (await childOf(deps.db, member))?.displayName ?? null,
   });
   await enqueueOutbound(deps, deps.db, {
     kind: "repeat",

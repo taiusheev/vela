@@ -134,7 +134,9 @@ export const en = {
   "arrival.vote": "Tap one.",
   "arrival.hello": "How are you this morning?",
   "arrival.hello_signature": "— Vela",
-  "arrival.hello_question": "Tell me in a voice message, and I'll pass it on to the family.",
+  "arrival.hello_signature_named": "— Vela, for {child}",
+  "arrival.hello_question": "Send a voice message, and the family will hear it.",
+  "arrival.hello_question_named": "Send a voice message, and {child} will hear it.",
   "photo_box.look": "A new photo from your family. What does it make you think of?",
   "photo_box.look_caption":
     "A new photo from your family: “{caption}”. What does it make you think of?",
@@ -143,8 +145,11 @@ export const en = {
     "An old photo from your family: “{caption}”. What do you remember about that time?",
   "photo_box.choice": "Two new photos from your family. Which one do you like more?",
   "arrival.hint": "A voice message is the nicest reply. Busy? Tap ❤️.",
+  "arrival.hint_named": "{child} loves hearing your voice. Busy? Just tap ❤️.",
   "arrival.hint_words": "Reply with a voice message, or write a few words.",
+  "arrival.hint_words_named": "{child} would love a voice message, or a few words.",
   "checkin.text": "Hi {address}, just checking in. How are you today?",
+  "checkin.text_named": "{address}, {child} wants to know how you are today.",
   "button.okay": "🙂 I'm okay",
   "button.not_okay": "Not okay, tell my family",
   "button.fine": "I'm fine",
@@ -154,6 +159,10 @@ export const en = {
   "ack.thanks_2": "Thank you, {address}. It's on its way to the family.",
   "ack.thanks_3": "Thank you, {address}. Your family will have it in a moment.",
   "ack.thanks_4": "Thank you, {address}. Passing it on to the family now.",
+  "ack.thanks_named": "Thank you, {address}. {asker} will hear it.",
+  "ack.thanks_named_2": "Thank you, {address}. It's on its way to {asker}.",
+  "ack.thanks_named_3": "Thank you, {address}. {asker} will have it in a moment.",
+  "ack.thanks_named_4": "Thank you, {address}. Passing it on to {asker} now.",
   "ack.story": "Thank you, {address}. Your story is kept in the family book.",
   "ack.not_okay":
     "Thank you for telling me, {address}. I've let {names} know right now. If it's an emergency, call for help directly.",
@@ -167,6 +176,8 @@ export const en = {
     "Thank you, {address} ❤️ When you have a minute, tell the family your answer in a short voice message. They'd love to hear it.",
   "ack.tap_hello":
     "Thank you, {address} ❤️ What are you up to today? Send the family a short voice message if you like.",
+  "ack.tap_hello_named":
+    "Thank you, {address} ❤️ What are you up to today? {child} would love a short voice message.",
   "book.dont_keep": "Don't keep this one",
   "book.dropped": "That's fine. This story is no longer in the family book.",
   "recipe.offer":

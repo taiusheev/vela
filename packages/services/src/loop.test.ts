@@ -296,7 +296,7 @@ describe("the pilot loop", () => {
           "What are you cooking tonight?",
           t("en", "arrival.signed", { asker: "Mia" }),
           "",
-          t("en", "arrival.hint"),
+          t("en", "arrival.hint_named", { child: "Mia" }),
         ].join("\n"),
       ],
     ]);
@@ -347,15 +347,14 @@ describe("the pilot loop", () => {
       [
         HER,
         [
-          t("en", "arrival.readback_heading"),
           t("en", "readback.replied", { name: "Sam", text: "Sounds good, Mom!" }),
           "",
           t("en", "arrival.greeting", { address: "Mrs Chen" }),
           "",
           t("en", "arrival.hello"),
-          t("en", "arrival.hello_signature"),
+          t("en", "arrival.hello_signature_named", { child: "Mia" }),
           "",
-          t("en", "arrival.hint"),
+          t("en", "arrival.hint_named", { child: "Mia" }),
         ].join("\n"),
       ],
     ]);

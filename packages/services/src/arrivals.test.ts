@@ -747,7 +747,7 @@ describe("deliverArrival", () => {
           "From your family:\nSam: Looks great, Mom!\nMia sent a voice message.",
           "Sorry this is late.\nHello Mrs Chen, good morning.",
           "Which soup today?\n— Mia",
-          "A voice message is the nicest reply. Busy? Tap ❤️.",
+          "Mia loves hearing your voice. Busy? Just tap ❤️.",
         ].join("\n\n"),
         media: [
           { kind: "audio", providerFileId: "voice-mia" },
@@ -1104,7 +1104,7 @@ describe("deliverArrival", () => {
     for (const arrival of sent) {
       expect(arrival.message.text.split("\n\n").slice(1)).toEqual([
         "Mia wanted to show you a photo, but it is no longer available. How are you today?",
-        "A voice message is the nicest reply. Busy? Tap ❤️.",
+        "Mia loves hearing your voice. Busy? Just tap ❤️.",
       ]);
       expect(arrival.message.media).toBeUndefined();
       expect(arrival.message.buttons.map((buttonRow) => buttonRow.length)).toEqual([2]);
