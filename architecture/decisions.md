@@ -998,7 +998,7 @@ Decision: where `WEEKLY_READ_AUTO_SEND` is on, `draftWeeklyRead` delivers the dr
 
 Gate kept: `WEEKLY_INSIGHT` stays off in production. v13 says an organiser who would rather not get feedback can ask the founder to turn it off for them, and there is no per-organiser switch yet; turning the insight on in production needs that switch first.
 
-Numbering: the photo box's approved notice text (`privacy-notice.v13-photo-box-approved.en.md`, ADR-58) becomes v14 when it is merged into the live notice, on top of this one.
+Numbering: the photo box's approved notice text (`privacy-notice.v13-photo-box-approved.en.md`, ADR-58) becomes v15 when it is merged into the live notice (v14 is ADR-60's people nearby).
 
 Revisit if: a read goes out that a family finds wrong or unkind (the founder can still read every sent read on the admin page); or families ask to see the read before Sunday evening.
 
@@ -1016,7 +1016,9 @@ Decision:
 - **What.** `nearby.ask_auto`: her name, that she has not answered and the family has not been reached, and "I'll look in" / "Can't today", on the messenger their yes came from (new outbound kind `nearby_auto_ask`, migration 0035, since `nearby_ask` must name the organiser who tapped). Every organiser who was told of the quiet hears whom Vela asked (`organiser.nearby_auto_asked`), and hears the answer. The stand-down when the morning closes is unchanged. The ask is recorded in `ask_to_check` with `sent_by` `vela`.
 - **Once.** One ask per contact per quiet morning (`nearby_auto_ask` key per event and chat); a later round asks nobody again.
 
-Needs before production: privacy-notice wording (the notice says "Vela never contacts anyone on its own"; draft in `plan/materials/pilot/privacy-notice.nearby-auto-draft.{en,zh-TW}.md`), the founder's yes on the contacts' v5/v6 text, families told, and the commit that turns `NEARBY_AUTO_ASK` on changes the pin in `wrangler-config.test.ts`.
+Needs before production: privacy-notice wording (the notice said "Vela never contacts anyone on its own"), the founder's yes on the contacts' v5/v6 text, families told, and the commit that turns `NEARBY_AUTO_ASK` on changes the pin in `wrangler-config.test.ts`.
+
+**Update 3 November 2026.** The founder approved the contacts' v5/v6 text and the notice lines ("approved all"). They are `privacy-notice.v14` (English and Traditional Chinese): "In short", purpose 2 and "Who sees what". `NEARBY_AUTO_ASK` stays off in production until the families have been told; that commit changes the pin. The photo box's approved text (ADR-58) becomes v15.
 
 Rejected: asking at the first notice (the organiser deserves the first move); asking contacts who agreed to the old text (their yes did not cover it); a per-family setting now (one switch is enough for ten families; revisit if a family wants it off).
 

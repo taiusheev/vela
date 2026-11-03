@@ -19,9 +19,14 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the v13 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v13");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v13");
+  it("serves the v14 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v14");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v14");
+    // ADR-60: Vela may ask the people nearby itself, so neither notice says it never contacts anyone.
+    expect(PRIVACY_NOTICES.en.html).toContain("when nobody in the family has answered");
+    expect(PRIVACY_NOTICES.en.html).not.toContain("Vela never contacts anyone on its own");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("家人兩個小時都沒有回應 Vela 的通知");
+    expect(PRIVACY_NOTICES["zh-TW"].html).not.toContain("Vela 絕不會自行聯絡任何人");
     // ADR-59: the weekly read goes out as drafted, so neither notice promises a check before sending.
     expect(PRIVACY_NOTICES.en.html).toContain("sends it to the organisers straight away");
     expect(PRIVACY_NOTICES.en.html).not.toContain("the founder checks it before anything is sent");
