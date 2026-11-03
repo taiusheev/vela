@@ -2,7 +2,7 @@ import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { ApiExchangeAudio, ApiExchangeSummary, ApiTodayAnswer } from "@vela/contracts";
 import { exampleNames } from "./example-names.ts";
-import { clockTime, timeOfDay } from "./format.ts";
+import { clockTime, localShortDayWithDate, timeOfDay } from "./format.ts";
 import type { ExchangePhoto } from "./today.ts";
 
 /**
@@ -239,15 +239,17 @@ export function toChat(
     .map(({ message }) => message);
 }
 
-/** "Today", "Yesterday", or "Monday 14 Oct" for a day chip, from her local date. */
+/** "Today", "Yesterday", or "Monday 14 Oct" (10月14日（週一）) for a day chip, from her local date. */
 export function dayLabel(day: string, today: string): string {
   if (day === today) return t`Today`;
   const yesterday = new Date(Date.parse(`${today}T12:00:00Z`) - 86_400_000)
     .toISOString()
     .slice(0, 10);
   if (day === yesterday) return t`Yesterday`;
+  // 10月31日（週六）, as the calendar and the week write a day in Chinese.
+  if (i18n.locale === "zh-TW") return localShortDayWithDate(day);
   const date = new Date(`${day}T12:00:00Z`);
-  return date.toLocaleDateString(i18n.locale === "zh-TW" ? "zh-TW" : "en-GB", {
+  return date.toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "short",

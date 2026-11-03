@@ -195,6 +195,13 @@ describe("the chat with a parent", () => {
     expect(dayLabel("2026-10-17", "2026-10-17")).toBe("Today");
     expect(dayLabel("2026-10-16", "2026-10-17")).toBe("Yesterday");
     expect(dayLabel("2026-10-12", "2026-10-17")).toBe("Monday 12 Oct");
+    i18n.load({ "zh-TW": {} });
+    i18n.activate("zh-TW");
+    try {
+      expect(dayLabel("2026-10-12", "2026-10-17")).toBe("10月12日（週一）");
+    } finally {
+      i18n.activate("en");
+    }
   });
 });
 
