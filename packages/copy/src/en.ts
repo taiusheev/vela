@@ -233,6 +233,10 @@ export const en = {
     "Tomorrow is {holder}'s turn with {name}. Reply to this message with a question, a photo, or a voice note.",
   "group.turn_prompt_open":
     "Tomorrow, anyone can ask {name} something. Reply to this message with a question, a photo, or a voice note.",
+  "group.turn_prompt_line":
+    "Tomorrow is {holder}'s turn with {name}. Press and hold this message, tap Reply, and write a question.",
+  "group.turn_prompt_open_line":
+    "Tomorrow, anyone can ask {name} something. Press and hold this message, tap Reply, and write a question.",
   "group.turn_prompt_idea": "If you'd like an idea: “{idea}”",
   "group.turn_prompt_reply_first":
     "{name} answered this morning and nobody has replied yet. A reply to that answer is the first thing {name} gets tomorrow morning.",

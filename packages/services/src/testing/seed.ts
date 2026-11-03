@@ -171,21 +171,24 @@ export async function seedFamily(
 }
 
 /**
- * The family's Telegram group, linked by the organiser. No greeting was posted, so the hash it keeps
- * is of a stand-in text; a test about the greeting links the group through `handleBotAdded`.
+ * The family's group, on Telegram unless `channel` says LINE, linked by the organiser. No greeting
+ * was posted, so the hash it keeps is of a stand-in text; a test about the greeting links the group
+ * through `handleBotAdded`.
  */
 export async function seedLinkedGroup(
   db: VelaDatabase,
   seed: SeededFamily,
-  options: { now: Date; conversationId?: string },
+  options: { now: Date; conversationId?: string; channel?: "telegram" | "line" },
 ): Promise<FamilyChannel> {
-  const conversationId = options.conversationId ?? "-100500";
+  const channel = options.channel ?? "telegram";
+  const conversationId =
+    options.conversationId ?? (channel === "line" ? "C0000000000000000000000000000500" : "-100500");
   return only(
     await db
       .insert(familyChannels)
       .values({
         familyId: seed.family.id,
-        channel: "telegram",
+        channel,
         conversationId,
         kind: "group",
         linkedByMemberId: seed.organiser.id,

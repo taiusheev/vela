@@ -1,6 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { Pressable, View } from "react-native";
-import { dayName, localDayMonth, localMonth, shortDayName } from "../data/format.ts";
+import { localDayWithDate, localMonth, shortDayName } from "../data/format.ts";
 import { calendarWeeks } from "../data/question-schedule.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space, type } from "../theme/tokens.ts";
@@ -66,7 +66,7 @@ export function MorningCalendar({
             const mark = marks?.get(date);
             const chosen = inRange && date === selected;
             const blocked = disabled || mark === "taken";
-            const label = `${dayName(date)}, ${localDayMonth(date)}`;
+            const label = localDayWithDate(date);
             const named = date === tomorrow ? t`Tomorrow, ${label}` : label;
             if (!inRange)
               return (

@@ -8,7 +8,7 @@ tags:
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Connect your Telegram family"
+    visible: "Connect your family"
     timeout: 20000
 - assertNotVisible: "Who are you keeping a light on for?"
 - runFlow:

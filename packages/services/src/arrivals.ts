@@ -1023,10 +1023,18 @@ export async function sendTurnPrompt(
     }
     const holder = holderId === null ? null : await memberById(tx, holderId);
     const name = recipient.displayName;
+    // A LINE group takes only a quoted text as an ask (05-line-flows D3), and a quote there is a
+    // press-and-hold away, so its prompt says how and offers no photo or voice note.
+    const line = group.channel === "line";
     const prompt =
       holder === null
-        ? t(family.language, "group.turn_prompt_open", { name })
-        : t(family.language, "group.turn_prompt", { holder: holder.displayName, name });
+        ? t(family.language, line ? "group.turn_prompt_open_line" : "group.turn_prompt_open", {
+            name,
+          })
+        : t(family.language, line ? "group.turn_prompt_line" : "group.turn_prompt", {
+            holder: holder.displayName,
+            name,
+          });
     // Tomorrow's suggestion, so whoever holds the turn can ask in seconds instead of leaving her a
     // fallback hello (product week C3). The group already reads her answers, so a draft built on
     // something she mentioned may be shown here; push never carries one.

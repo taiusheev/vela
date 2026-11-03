@@ -180,7 +180,22 @@ async function route(deps: Deps, event: InboundEvent): Promise<void> {
 
 // the private chat ---------------------------------------------------------------------------------
 
-async function routePrivate(deps: Deps, event: InboundEvent): Promise<void> {
+/**
+ * Words an organiser may type instead of /start in a private chat. On LINE nobody types slash
+ * commands, so the Chinese help says 「開始設定」 (`help.private`, `help.followed`); a simplified form
+ * sits beside it because some phones type simplified characters by default. Only a whole message
+ * counts, as with her own commands, and neither word is one of hers (「開始」 alone resumes her).
+ */
+const SETUP_WORDS = new Set(["開始設定", "开始设定"]);
+
+function asSetupStart(event: InboundEvent): InboundEvent {
+  if (event.kind !== "text" || !SETUP_WORDS.has(event.text?.trim() ?? "")) return event;
+  const { text: _words, ...start } = event;
+  return { ...start, kind: "start" };
+}
+
+async function routePrivate(deps: Deps, received: InboundEvent): Promise<void> {
+  const event = asSetupStart(received);
   if (event.kind === "blocked" || event.kind === "unblocked") {
     const blocked = event.kind === "blocked";
     const now = deps.clock.now();
