@@ -68,6 +68,8 @@ export const OUTBOUND_KEY_SHAPES: Readonly<Record<OutboundKind, KeyShape>> = {
   ack: { parts: ["memberId", "date"], suffix: "none" },
   /** Per quiet event and the nearby contact's conversation (architecture §5). */
   nearby_ask: { parts: ["quietEventId", "conversationId"], suffix: "none" },
+  /** Vela's own ask, when nobody acted on the notice (ADR-60): one per quiet event and contact. */
+  nearby_auto_ask: { parts: ["quietEventId", "conversationId"], suffix: "none" },
   /** Per exchange and reader; the suffix is the flagged answer, as one exchange can take several. */
   flag: { parts: ["exchangeId", "conversationId"], suffix: "required" },
   /**

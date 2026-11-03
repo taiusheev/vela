@@ -237,13 +237,20 @@ export const zhTW: Record<keyof typeof en, string> = {
     "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，{organiser}可以透過 Vela 請您過去看看嗎？Vela 不會自己傳訊息給您：任何請求都來自{organiser}。如果您同意，Vela 會保存您的名字和這個 Telegram 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
   "nearby.request_line":
     "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，{organiser}可以透過 Vela 請您過去看看嗎？Vela 不會自己傳訊息給您：任何請求都來自{organiser}。如果您同意，Vela 會保存您的名字和這個 LINE 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
+  "nearby.request_auto":
+    "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，可以透過 Vela 請您過去看看嗎？只有在{name}早上一直沒有回覆時，Vela 才會傳訊息給您：可能是{organiser}請 Vela 問您，也可能是家人兩個小時都沒有回應 Vela 的通知，由 Vela 直接問您。如果您同意，Vela 會保存您的名字和這個 Telegram 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
+  "nearby.request_auto_line":
+    "{organiser}想問您：您住在{name}附近。如果哪天{name}一直沒有回覆，{organiser}又聯絡不上，可以透過 Vela 請您過去看看嗎？只有在{name}早上一直沒有回覆時，Vela 才會傳訊息給您：可能是{organiser}請 Vela 問您，也可能是家人兩個小時都沒有回應 Vela 的通知，由 Vela 直接問您。如果您同意，Vela 會保存您的名字和這個 LINE 帳號，直到您或{organiser}把它們移除。您可以說不，也可以隨時傳送「停」改變主意。Vela 是由 Timur Aiusheev 經營的試辦服務。您的資料會怎麼使用，請看： {notice}",
   "nearby.yes": "好，我願意",
   "nearby.no": "不用了，謝謝",
   "nearby.accepted":
     "謝謝您。只有在{organiser}請您過去看看{name}的時候，Vela 才會傳訊息給您。隨時傳送「停」就可以移除。",
+  "nearby.accepted_auto":
+    "謝謝您。只有在{name}早上一直沒有回覆、{organiser}請您幫忙或家人都沒有回應時，Vela 才會傳訊息給您。隨時傳送「停」就可以移除。",
   "nearby.declined": "沒關係。您的資料已經刪除，不會再有人問您。",
   "nearby.already_listed": "您已經列在{name}附近的人裡了，沒有任何變更。",
   "nearby.ask": "{organiser}想問您：今天可以過去看看{name}嗎？{name}今天早上還沒有回覆。",
+  "nearby.ask_auto": "{name}今天早上還沒有回覆，家人也還沒聯絡上。今天可以過去看看{name}嗎？",
   "nearby.ask_yes": "我會過去看看",
   "nearby.ask_no": "今天沒辦法",
   "nearby.thanks_yes": "謝謝您。{organiser}已經知道您會過去。",
@@ -254,6 +261,8 @@ export const zhTW: Record<keyof typeof en, string> = {
   "organiser.nearby_yes":
     "{contact}同意了。之後如果哪天早上比較安靜，您可以請{contact}過去看看{name}。",
   "organiser.nearby_no": "{contact}說不用了，所以{contact}已經不在{name}附近的人裡。",
+  "organiser.nearby_auto_asked":
+    "通知一直沒有人回應，所以 Vela 已經請{contacts}過去看看{name}。對方的回覆會傳到這裡。",
   "organiser.look_in_yes": "{contact}會過去看看{name}。",
   "organiser.look_in_no": "{contact}今天沒辦法。",
   "onboarding.welcome": "您好，我是 Vela。我們一起為一位家人留一盞燈吧。大約兩分鐘就能完成。",

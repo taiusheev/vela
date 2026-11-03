@@ -130,6 +130,12 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly WEEKLY_INSIGHT?: string;
   /**
+   * "on" or "off" (absent is "off"): whether Vela itself asks the people nearby who said yes to look
+   * in when nobody acted on a quiet morning's first notice (ADR-60). Production is "off" until the
+   * privacy notice and the contacts' consent say Vela may.
+   */
+  readonly NEARBY_AUTO_ASK?: string;
+  /**
    * "on" or "off" (absent is "off"): whether the weekly read goes to the organisers as soon as it is
    * drafted. Production is "off" while the privacy notice promises the founder checks each read.
    */

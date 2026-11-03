@@ -321,14 +321,22 @@ export const en = {
     "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nYou only hear from Vela when {organiser} asks. If you agree, Vela keeps your name and Telegram account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
   "nearby.request_line":
     "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nYou only hear from Vela when {organiser} asks. If you agree, Vela keeps your name and LINE account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
+  "nearby.request_auto":
+    "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nVela writes to you only on a morning {name} hasn't answered: when {organiser} asks, or when nobody in the family has answered Vela's notice for two hours. If you agree, Vela keeps your name and Telegram account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
+  "nearby.request_auto_line":
+    "{organiser} would like to ask you to look in on {name} if they cannot reach them.\n\nVela writes to you only on a morning {name} hasn't answered: when {organiser} asks, or when nobody in the family has answered Vela's notice for two hours. If you agree, Vela keeps your name and LINE account until either of you removes it.\n\nYou can say no, or send stop any time.\n\nPilot run by Timur Aiusheev · Privacy: {notice}",
   "nearby.yes": "Yes, I'm happy to",
   "nearby.no": "No, thank you",
   "nearby.accepted":
     "Thank you. Vela will write to you only if {organiser} asks you to look in on {name}. Send stop at any time to be removed.",
+  "nearby.accepted_auto":
+    "Thank you. Vela will write to you only on a morning {name} hasn't answered, when {organiser} asks or nobody in the family answers. Send stop at any time to be removed.",
   "nearby.declined": "That's fine. Your details have been deleted, and nobody will ask again.",
   "nearby.already_listed": "You are already listed near {name}. Nothing has changed.",
   "nearby.ask":
     "{organiser} asks: could you look in on {name} today? {name} hasn't answered this morning.",
+  "nearby.ask_auto":
+    "{name} hasn't answered this morning, and the family hasn't been reached yet. Could you look in on {name} today?",
   "nearby.ask_yes": "I'll look in",
   "nearby.ask_no": "Can't today",
   "nearby.thanks_yes": "Thank you. {organiser} knows you'll look in.",
@@ -340,6 +348,8 @@ export const en = {
   "organiser.nearby_yes":
     "{contact} said yes. On a quiet morning you can now ask {contact} to look in on {name}.",
   "organiser.nearby_no": "{contact} said no, so {contact} is no longer listed near {name}.",
+  "organiser.nearby_auto_asked":
+    "Nobody had answered the notice, so Vela asked {contacts} to look in on {name}. You'll hear their answer here.",
   "organiser.look_in_yes": "{contact} will look in on {name}.",
   "organiser.look_in_no": "{contact} can't today.",
   "onboarding.welcome":

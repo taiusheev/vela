@@ -286,6 +286,8 @@
     "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
     "WEEKLY_INSIGHT": "on",
+    // On: Vela asks the people nearby itself when nobody acted on a quiet notice (ADR-60).
+    "NEARBY_AUTO_ASK": "on",
     "WEEKLY_READ_AUTO_SEND": "on",
     "WEEKLY_SUPPORT": "off",
     "WEEKLY_SUPPORT_NOTICE": "",
@@ -425,6 +427,8 @@
         "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
         "WEEKLY_INSIGHT": "on",
+        // On: staging holds test families only (ADR-60).
+        "NEARBY_AUTO_ASK": "on",
         "WEEKLY_READ_AUTO_SEND": "on",
         "WEEKLY_SUPPORT": "off",
         "WEEKLY_SUPPORT_NOTICE": "",
@@ -567,6 +571,9 @@
         "PHOTO_BOX": "off",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
+        // Off, and pinned off, until the families have been told that Vela may ask the people
+        // nearby itself (ADR-60; privacy-notice.v14 and nearby-consent.v5/v6 say so).
+        "NEARBY_AUTO_ASK": "off",
         // Off, and pinned off by src/wrangler-config.test.ts, until the founder has told the family
         // it applies to (ADR-48): the founder's reading and each organiser's own feedback.
         "WEEKLY_INSIGHT": "off",

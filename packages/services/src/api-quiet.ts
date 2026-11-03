@@ -21,7 +21,7 @@ import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { insertOutbound } from "./gateway.ts";
-import { asksOf, canBeAsked } from "./nearby-ask.ts";
+import { asksOf, canBeAsked, VELA_ASKED } from "./nearby-ask.ts";
 import { resolveQuietAsFine, usualAnswerTime, waitOnQuiet } from "./quiet.ts";
 import {
   familyHasEnded,
@@ -71,7 +71,10 @@ async function noticeOf(db: Queryable, quiet: QuietEvent, her: Member): Promise<
     contacts: await Promise.all(
       contacts.map(async (contact) => {
         const ask = asks.find((entry) => entry.contact_id === contact.id);
-        const asker = ask === undefined ? null : await memberById(db, ask.sent_by);
+        const asker =
+          ask === undefined || ask.sent_by === VELA_ASKED
+            ? null
+            : await memberById(db, ask.sent_by);
         return {
           id: contact.id,
           name: contact.name,

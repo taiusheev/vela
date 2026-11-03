@@ -1,6 +1,6 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v13` · last updated 2 November 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
+Version `privacy-notice.v14` · last updated 3 November 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
 
 ## In short
 
@@ -10,7 +10,7 @@ Version `privacy-notice.v13` · last updated 2 November 2026 · This invitation-
 - On Sundays the organisers get a short weekly read. Each organiser's copy may also carry a few words, just for them, on how their own messages reached the person. The founder alone also sees a careful guess at what may lie beneath the week's words. See "The weekly read".
 - If the person the light is for has not answered their morning message a while after they usually do, Vela sends a short check-in with two buttons. A tap on "Not okay, tell my family" tells every organiser at once. See "The check-in".
 - An organiser can choose to have Vela send a question it wrote in their style, or one from Vela's own list worded as family members write, with their name on it, on a morning when nobody in the family wrote one. The person the light is for sees it as a question from that organiser; the family's app marks it "written by Vela". See "Questions Vela writes for an organiser".
-- Vela never contacts anyone on its own. Every message to a neighbour or friend is sent by a person in the family.
+- Vela contacts a neighbour or friend only if they agreed to it, and only on a morning the person has not answered: when someone in the family asks, or when nobody in the family has answered Vela's notice for two hours.
 - Vela is not a medical or emergency service.
 - Anyone can say stop at any time, and anyone can ask to see, correct or delete what we hold about them.
 
@@ -77,7 +77,7 @@ In the family's Vela group, Vela keeps only the messages meant for it: replies t
 ## Why we use it
 
 1. **To carry the exchange:** deliver each ask at the person's morning hour in their language, then bring the answer and the family's replies back.
-2. **To keep the light:** tell the family when the person has answered. Learn from their answer times when they usually answer, on each day of the week. When a morning is still unanswered a while after that, send them a short check-in; when they tap "Not okay", tell every organiser and the founder at once (see "The check-in"). When a day stays quiet, send the organiser the facts (when the morning message went out, when the person usually answers) and the names and numbers of the nearby contacts who have agreed, so the organiser can decide what to do.
+2. **To keep the light:** tell the family when the person has answered. Learn from their answer times when they usually answer, on each day of the week. When a morning is still unanswered a while after that, send them a short check-in; when they tap "Not okay", tell every organiser and the founder at once (see "The check-in"). When a day stays quiet, send the organiser the facts (when the morning message went out, when the person usually answers) and the names and numbers of the nearby contacts who have agreed, so the organiser can decide what to do. If nobody in the family has acted on that notice two hours later, Vela asks the nearby contacts who agreed to this whether they could look in, and tells the organisers whom it asked and what they answered.
 3. **To work across languages and voices:** turn voice into text, translate between English and Traditional Chinese when the family uses both.
 4. **To pass on words that matter:** if an answer mentions something like a fall, pain, a stranger at the door or a request for money, the organisers hear about it that day: with the person's own words if the person the light is for has agreed to that (see "Health words"), and otherwise in a short note, with none of their words, saying that something they said may be worth a call. Vela does not diagnose, and it does not send these words to anyone else.
 5. **To send the organiser a short weekly read** on Sunday: what the person told the family that week and what changed in how they answered, compared only with their own earlier weeks, and, with the separate yes under "Health words", their own health words that came up on two or more days. That account is never a score, a diagnosis or advice. Each organiser's copy may also carry feedback on their own messages, with one suggestion for the week ahead. The founder alone also sees a reading of what may lie beneath the week's words, to understand the family's week, and to judge whether readings like these are accurate and kind enough ever to share. Both are described under "The weekly read".
@@ -142,7 +142,7 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 - **The family in the Vela group** sees the asks, the answers with their transcripts and, where needed, translations, and the replies.
 - **The person the light is for** hears or reads the family's replies the next morning, and can ask "what does the family see" at any time.
 - **Organisers** also receive notices on quiet days, the words or notes passed on under purpose 4, the weekly read, with feedback on their own messages in their own copy only, and the details of the nearby contacts who have agreed.
-- **A nearby contact** sees only a message an organiser chooses to send them on a quiet day. They never see answers.
+- **A nearby contact** sees only a request to look in on a quiet day: one an organiser chose to send, or Vela's own when nobody in the family answered its notice. They never see answers.
 - **The founder** reads the family's exchanges during the pilot, to make sure Vela works as it should, and can read the weekly read after it is sent, and records whether each nearby contact agreed. On Sundays the founder also sees, on the admin page only, Vela's readings of what may lie beneath the week's words (see "The weekly read"), and shows them to no one. Every time the founder opens or changes a family's records, on Vela's admin page or directly in the database, it is logged, and you can ask to see that log. When something needs the founder's attention, such as a note under purpose 4 or a weekly read that has been sent, Vela tells the founder in a private Telegram chat with a link to the admin page; that chat never contains what anyone in the family wrote. Vela's software is built with the help of an AI coding assistant, which works with test data and never with your family's messages.
 - **Service providers** process information for us, only to provide Vela:
 
