@@ -7,7 +7,10 @@ import {
   dayName,
   listOf,
   localDayMonth,
+  localDayWithDate,
+  localShortDayWithDate,
   monthYear,
+  quoted,
   timeOfDay,
   weekday,
 } from "./format.ts";
@@ -125,5 +128,24 @@ describe("a scheduled parent's local date", () => {
       else process.env.TZ = previous;
       i18n.activate("en");
     }
+  });
+});
+
+describe("dates and quotes the Taiwan way", () => {
+  it("puts the weekday in brackets after the date in Chinese, never an English comma", () => {
+    expect(
+      inLocale("zh-TW", () => [
+        localDayWithDate("2026-11-03"),
+        localShortDayWithDate("2026-11-05"),
+      ]),
+    ).toEqual(["11月3日（星期二）", "11月5日（週四）"]);
+    expect(
+      inLocale("en", () => [localDayWithDate("2026-11-03"), localShortDayWithDate("2026-11-05")]),
+    ).toEqual(["Tuesday, 3 Nov", "Thu, 5 Nov"]);
+  });
+
+  it("quotes her words with 「」 in Chinese and curly quotes in English", () => {
+    expect(inLocale("zh-TW", () => quoted("番茄紅了"))).toBe("「番茄紅了」");
+    expect(inLocale("en", () => quoted("The tomatoes"))).toBe("“The tomatoes”");
   });
 });
