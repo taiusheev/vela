@@ -222,7 +222,7 @@ export function useBook(familyId: string | undefined): BookView {
     ]),
     demo,
     loading: live && read.isPending,
-    trouble: read.isError,
+    trouble: read.isError && read.data === undefined,
     refreshing: read.isRefetching,
     refresh,
     removeFailed: removing.isError,

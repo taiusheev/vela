@@ -110,6 +110,13 @@ export function AppPrivacy({
 
 const SLOW_ACCOUNT_MS = 10_000;
 
+/**
+ * A first read that fails is tried again this many times, after these waits, before the screen
+ * says the account could not be reached: just after sign-in, or on opening the app again, the
+ * phone's connection often needs a moment, and a family should not see an error for that.
+ */
+export const QUIET_ACCOUNT_RETRIES_MS = [1_000, 2_000, 4_000] as const;
+
 /** Server permission is authoritative; onboarding's explicit choice is saved without asking again. */
 export function AppPrivacyGate({ children }: { children: ReactNode }) {
   const account = useAccount();
@@ -138,15 +145,31 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     retry: false,
   });
   const missing = me.error instanceof ApiError && me.error.status === 404;
+  // A failed read is tried again quietly first; the screen goes on loading meanwhile.
+  const [quietTries, setQuietTries] = useState(0);
+  const quietWait = QUIET_ACCOUNT_RETRIES_MS[quietTries];
+  const retryingQuietly =
+    me.isError && !missing && me.data === undefined && quietWait !== undefined;
+  useEffect(() => {
+    if (!retryingQuietly || quietWait === undefined) return;
+    const timer = setTimeout(() => {
+      setQuietTries((tries) => tries + 1);
+      void retryAccountRead(queries);
+    }, quietWait);
+    return () => clearTimeout(timer);
+  }, [retryingQuietly, quietWait, queries]);
+  useEffect(() => {
+    if (me.data !== undefined) setQuietTries(0);
+  }, [me.data]);
   const knownMissing = useRef(false);
   if (missing) knownMissing.current = true;
   else if (me.data !== undefined || me.isError) knownMissing.current = false;
   const decision = privacyGateDecision({
     enabled,
     accepted: me.data?.privacy_accepted,
-    loading: me.isPending,
+    loading: me.isPending || retryingQuietly,
     missing,
-    failed: me.isError,
+    failed: me.isError && !retryingQuietly,
     localAccepted: draft.privacyAccepted,
     knownMissing: knownMissing.current,
   });

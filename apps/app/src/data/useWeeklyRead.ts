@@ -82,7 +82,7 @@ export function useWeeklyRead(requested?: string, readId?: string): WeeklyReadVi
       : { name: parent?.displayName ?? "", locked: false, week: null },
     live,
     loading: day.loading || (enabled && query.isPending),
-    trouble: day.trouble || query.isError,
+    trouble: day.trouble || (query.isError && query.data === undefined),
     refreshing: query.isRefetching,
     refresh,
     organiser: day.organiser,

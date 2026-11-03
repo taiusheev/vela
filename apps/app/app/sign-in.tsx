@@ -73,22 +73,22 @@ type Trouble = {
     | "rate_limited"
     | "network";
   /**
-   * Clerk's own error codes, shown small under a refusal the screen cannot word more exactly
-   * (founder, 18 October 2026: build 5 said only "That did not work"). Codes name what went wrong,
-   * never the person.
+   * Clerk's own error codes behind a refusal the screen cannot word more exactly. Kept with the
+   * trouble for tests and the development log; never shown (founder, 3 November 2026).
    */
   codes?: string;
 };
 
 /**
  * In development only, Clerk's error codes (such as `form_code_incorrect`) to the bundler's log, so
- * a sign-in that fails on a test phone can be read from the Mac. Never the message or the identifier,
- * which can name the person.
+ * a sign-in that fails on a test phone can be read from the Mac; the screen never shows them (founder,
+ * 3 November 2026: no logs or error codes at sign-in). Never the message or the identifier, which can
+ * name the person.
  */
 function logClerkCodes(step: "lookup" | "send" | "verify", error: unknown): void {
   if (!__DEV__) return;
   const codes = clerkErrorCodes(error);
-  console.warn(
+  console.log(
     `[sign-in] ${step} failed:`,
     codes.length === 0 ? String((error as Error)?.name) : codes.join(", "),
   );
@@ -96,6 +96,14 @@ function logClerkCodes(step: "lookup" | "send" | "verify", error: unknown): void
 
 function looksLikeEmail(identifier: string): boolean {
   return identifier.includes("@");
+}
+
+/**
+ * Whether Clerk refused because this phone is already signed in: coming back to the app, or a
+ * second tap after the first one finished. That is not a failure, so the screen just goes in.
+ */
+function alreadySignedIn(error: unknown): boolean {
+  return clerkErrorCodes(error).includes("session_exists");
 }
 
 /** Clerk's error codes, which name what went wrong without naming the person. */
@@ -228,6 +236,8 @@ function CodeSignIn() {
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [trouble, setTrouble] = useState<Trouble | undefined>();
+  // Into the app, or back to setup when sign-in came from the last step of onboarding.
+  const goIn = () => router.replace(readDraft().step === "save" ? "/onboarding" : "/");
   const [working, setWorking] = useState(false);
   const inFlight = useRef(false);
   const [destination, setDestination] = useState<Destination | null>(null);
@@ -322,6 +332,10 @@ function CodeSignIn() {
       markSent();
     } catch (lookup: unknown) {
       logClerkCodes("lookup", lookup);
+      if (alreadySignedIn(lookup)) {
+        goIn();
+        return;
+      }
       if (!unknownIdentity(lookup)) {
         setTrouble(
           lookup instanceof TookTooLong
@@ -388,9 +402,13 @@ function CodeSignIn() {
         return;
       }
       await within(setActive({ session }));
-      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+      goIn();
     } catch (error: unknown) {
       logClerkCodes("verify", error);
+      if (alreadySignedIn(error)) {
+        goIn();
+        return;
+      }
       // "That code did not work" covers every refusal Clerk does not name more exactly, so its
       // codes go under it: a mistyped code and a setting look the same otherwise.
       const codes = codesOf(error).join(", ");
@@ -420,9 +438,13 @@ function CodeSignIn() {
         return;
       }
       await within(setActive({ session: attempt.createdSessionId }));
-      router.replace(readDraft().step === "save" ? "/onboarding" : "/");
+      goIn();
     } catch (error: unknown) {
       logClerkCodes("verify", error);
+      if (alreadySignedIn(error)) {
+        goIn();
+        return;
+      }
       const codes = codesOf(error).join(", ");
       setTrouble(
         error instanceof TookTooLong
@@ -469,10 +491,6 @@ function CodeSignIn() {
   };
 
   /** Clerk's codes under a refusal, to quote to Vela: "Error code: form_identifier_exists". */
-  function errorCode(code: string): string {
-    return t`Error code: ${code}`;
-  }
-
   /** The words for what went wrong, in the language the screen is in now. */
   function troubleWords(what: Trouble): string {
     switch (what.kind) {
@@ -725,11 +743,6 @@ function CodeSignIn() {
           {trouble === undefined ? null : (
             <Words variant="body" tone="ink2">
               {troubleWords(trouble)}
-            </Words>
-          )}
-          {trouble?.codes === undefined ? null : (
-            <Words variant="caption" tone="ink3" selectable>
-              {errorCode(trouble.codes)}
             </Words>
           )}
           {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (

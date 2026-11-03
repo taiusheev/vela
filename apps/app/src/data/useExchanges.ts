@@ -163,7 +163,7 @@ export function useExchanges(watch = false): ExchangesView {
     loading: pages.isPending,
     refreshing: pages.isRefetching,
     refresh,
-    trouble: pages.isError,
+    trouble: pages.isError && pages.data === undefined,
     more: pages.hasNextPage,
     loadMore: () => {
       if (pages.hasNextPage && !pages.isFetchingNextPage) void pages.fetchNextPage();

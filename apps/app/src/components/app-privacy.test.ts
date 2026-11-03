@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, fetchMe } from "../api/client.ts";
 import { resetDraft, updateDraft } from "../data/onboarding-draft.ts";
 import { createSessionQueries } from "../data/query-client.ts";
-import { AppPrivacyGate } from "./app-privacy.tsx";
+import { AppPrivacyGate, QUIET_ACCOUNT_RETRIES_MS } from "./app-privacy.tsx";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), provision: vi.fn() }));
 vi.mock("../api/client.ts", async (original) => ({
@@ -211,7 +211,7 @@ describe("privacy gate with shared account readers", () => {
     expect(mocks.read).toHaveBeenCalledTimes(1);
   });
 
-  it("offers retry for a failed read while inactive and retries even when reported offline", async () => {
+  it("tries a failed first read again on its own, even inactive and offline, and opens with no error", async () => {
     focusManager.setFocused(false);
     onlineManager.setOnline(false);
     mocks.read.mockRejectedValueOnce(new ApiError(503, "unavailable"));
@@ -221,15 +221,46 @@ describe("privacy gate with shared account readers", () => {
     await open();
     expect(queries.getQueryState(["me"])?.status).toBe("error");
     expect(nodes("navigator")).toHaveLength(0);
-    expect(nodes("primary-button")).toHaveLength(0);
+    // Still loading, not an error, while the quiet retry waits.
+    expect(nodes("secondary-button")).toHaveLength(0);
     await act(async () => {
-      nodes("secondary-button")[0]?.props.onPress();
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, QUIET_ACCOUNT_RETRIES_MS[0] + 50));
     });
     expect(mocks.read).toHaveBeenCalledTimes(2);
     expect(nodes("navigator")).toHaveLength(1);
     expect(mocks.provision).not.toHaveBeenCalled();
   });
+
+  it("offers Try again only after every quiet retry failed, and that retry still works", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mocks.read.mockRejectedValue(new ApiError(503, "unavailable"));
+      updateDraft({ privacyAccepted: true });
+      await open();
+      const quiet = QUIET_ACCOUNT_RETRIES_MS.reduce((sum, wait) => sum + wait, 0);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(quiet + 500);
+      });
+      expect(mocks.read).toHaveBeenCalledTimes(QUIET_ACCOUNT_RETRIES_MS.length + 1);
+      expect(nodes("navigator")).toHaveLength(0);
+      expect(nodes("secondary-button")).toHaveLength(1);
+      const user = {
+        id: "synthetic-user",
+        display_name: "Anna",
+        language: "en",
+        tz: "Asia/Taipei",
+      };
+      mocks.read.mockResolvedValue({ user, memberships: [], privacy_accepted: true });
+      await act(async () => {
+        nodes("secondary-button")[0]?.props.onPress();
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      expect(nodes("navigator")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("continues into setup after a new account accepts privacy, without restarting its missing-account read", async () => {
     mocks.read.mockRejectedValueOnce(new ApiError(404, "not_found"));
     // A remount would start another read and leave the gate on Loading your account.

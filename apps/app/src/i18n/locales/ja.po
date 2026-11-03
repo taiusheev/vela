@@ -1638,10 +1638,6 @@ msgstr ""
 msgid "Enter your password"
 msgstr ""
 
-#: app/sign-in.tsx
-msgid "Error code: {code}"
-msgstr ""
-
 #: src/components/onboarding/questions.tsx
 msgid "Every morning starts with it."
 msgstr ""

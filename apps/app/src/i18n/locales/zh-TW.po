@@ -1645,10 +1645,6 @@ msgstr "輸入驗證碼，繼續連結你的家人。"
 msgid "Enter your password"
 msgstr "輸入密碼"
 
-#: app/sign-in.tsx
-msgid "Error code: {code}"
-msgstr "錯誤代碼：{code}"
-
 #: src/components/onboarding/questions.tsx
 msgid "Every morning starts with it."
 msgstr "每天的早安訊息都從這個稱呼開始。"
