@@ -11,7 +11,7 @@ tags:
 - tapOn: ".*only Mia listened about the butter.*"
 - tapOn: "Open in the chat"
 - assertVisible: "What the family said"
-- assertVisible: "The family sees it here. She will not hear it: her mornings read back only her latest day."
+- assertVisible: "The family sees it here. Mom will not hear it: the morning read-back covers only the latest day."
 - tapOn: "Say something short"
 - inputText: "Save me a pie"
 - scrollUntilVisible:

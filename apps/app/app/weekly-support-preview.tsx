@@ -10,7 +10,7 @@ import { Text } from "../src/components/scaled-text.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { SecondaryButton, Words } from "../src/components/ui.tsx";
 import { WarmPage } from "../src/components/warm.tsx";
-import { localDayMonth } from "../src/data/format.ts";
+import { localDayMonth, quoted } from "../src/data/format.ts";
 import { demoDataAllowed } from "../src/data/live-state.ts";
 import { weeklySupportPreview } from "../src/data/weekly-support-preview.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -73,9 +73,9 @@ function ExampleWeek() {
               <Words variant="caption" tone="ink2">
                 <Trans>Dad's words · {date}</Trans>
               </Words>
-              <Text
-                style={[type.story, { color: palette.ink }]}
-              >{`“${suggestion.source.quote}”`}</Text>
+              <Text style={[type.story, { color: palette.ink }]}>
+                {quoted(suggestion.source.quote)}
+              </Text>
               <Words variant="body" tone="ink2">
                 {offer.why}
               </Words>

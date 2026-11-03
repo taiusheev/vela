@@ -463,8 +463,17 @@ msgstr ""
 msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 msgstr ""
 
+#: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
+msgid "{recipient} has not answered yet, so there is nothing to reply to."
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
+msgstr ""
+
+#: app/exchange/[id].tsx
+msgid "{recipient} hears it in the read-back tomorrow morning."
 msgstr ""
 
 #: src/data/exchanges.ts
@@ -2171,9 +2180,12 @@ msgstr ""
 msgid "India"
 msgstr ""
 
-#: app/(tabs)/index.tsx
 #: app/ask.tsx
-msgid "Into her morning."
+msgid "Into {name}'s morning."
+msgstr ""
+
+#: app/(tabs)/index.tsx
+msgid "Into {recipient}'s morning."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -4069,15 +4081,6 @@ msgstr ""
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr ""
 
-#: app/exchange/[id].tsx
-#: src/components/today-heart.tsx
-msgid "She has not answered yet, so there is nothing to reply to."
-msgstr ""
-
-#: app/exchange/[id].tsx
-msgid "She hears it in her read-back tomorrow morning."
-msgstr ""
-
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
@@ -4638,7 +4641,7 @@ msgid "The family found {found} of {verdicts} useful."
 msgstr ""
 
 #: app/exchange/[id].tsx
-msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
+msgid "The family sees it here. {recipient} will not hear it: the morning read-back covers only the latest day."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -5400,7 +5403,7 @@ msgid "Vela suggests"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-msgid "Vela suggests · from her own words"
+msgid "Vela suggests · from {recipient}'s own words"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5869,7 +5872,7 @@ msgid "You can explore an example family. No messages are sent."
 msgstr ""
 
 #: app/exchange/[id].tsx
-msgid "You can reply once she has answered."
+msgid "You can reply once {recipient} has answered."
 msgstr ""
 
 #: app/vela-light.tsx

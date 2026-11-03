@@ -8,7 +8,7 @@ import { noticeUrl } from "../src/api/support.ts";
 import { BackButton } from "../src/components/back-button.tsx";
 import { SoftCard } from "../src/components/today-hero.tsx";
 import { PrimaryButton, SecondaryButton, Words } from "../src/components/ui.tsx";
-import { localDayMonth } from "../src/data/format.ts";
+import { localDayMonth, quoted } from "../src/data/format.ts";
 import { type MemoryWrite, useMyMemories } from "../src/data/useMyMemories.ts";
 import { useToday } from "../src/data/useToday.ts";
 import { usePalette } from "../src/theme/theme.tsx";
@@ -26,7 +26,7 @@ function Quote({ words }: { words: string }) {
   const palette = usePalette();
   return (
     <View style={{ borderLeftWidth: 3, borderColor: palette.lightSoft, paddingLeft: space.m }}>
-      <Words variant="preview">{`“${words}”`}</Words>
+      <Words variant="preview">{quoted(words)}</Words>
     </View>
   );
 }

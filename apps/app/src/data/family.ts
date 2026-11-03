@@ -3,7 +3,7 @@ import { t } from "@lingui/core/macro";
 import type { ApiFamily, ApiMe, NearbyConsent } from "@vela/contracts";
 import { exampleNames } from "./example-names.ts";
 import { dayMonth, listOf } from "./format.ts";
-import { languages } from "./onboarding.ts";
+import { countries, languages } from "./onboarding.ts";
 
 /** One kept-light member on You: her light and where her Vela Light stands (spec A12). */
 export interface KeptLightRow {
@@ -44,8 +44,16 @@ export interface YouFamily {
   nearby?: { names: string; line: string };
 }
 
-/** The city a time zone is named for, as the prototype shows it: "Asia/Taipei" is Taipei. */
+/**
+ * Where she lives, in the reader's language: the country set-up offered for her zone when it is
+ * that country's only zone ("Asia/Taipei" is 台灣 in Chinese, Taiwan in English), otherwise the
+ * city the zone is named for, as the prototype shows it.
+ */
 function placeOf(tz: string): string {
+  const country = countries.find(
+    (choice) => choice.zones.length === 1 && choice.zones[0]?.zone === tz,
+  );
+  if (country !== undefined) return i18n._(country.label);
   return (tz.split("/").pop() ?? tz).replaceAll("_", " ");
 }
 
@@ -216,7 +224,7 @@ export function youFixture(): YouFamily {
       memberId: "me",
       organiser: true,
       name: exampleNames().anna,
-      line: [roleOf(true), languageOf(i18n.locale), "Taipei"].join(" · "),
+      line: [roleOf(true), languageOf(i18n.locale), placeOf("Asia/Taipei")].join(" · "),
       lightOn: false,
       paused: false,
     },

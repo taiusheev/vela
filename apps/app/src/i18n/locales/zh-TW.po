@@ -470,9 +470,18 @@ msgstr "{recipient}在 {time} 回覆了"
 msgid "{recipient} has been invited. Their mornings begin after they say yes in their own chat."
 msgstr "已邀請{recipient}。在自己的聊天室答應後，晨間訊息才會開始。"
 
+#: app/exchange/[id].tsx
+#: src/components/today-heart.tsx
+msgid "{recipient} has not answered yet, so there is nothing to reply to."
+msgstr "{recipient}還沒有回覆，所以目前沒有可以回應的內容。"
+
 #: app/(tabs)/index.tsx
 msgid "{recipient} has paused their mornings. They can start again in Vela's chat when they are ready."
 msgstr "{recipient}已暫停晨間訊息。準備好時，可以在 Vela 的聊天室重新開始。"
+
+#: app/exchange/[id].tsx
+msgid "{recipient} hears it in the read-back tomorrow morning."
+msgstr "{recipient}明天早上會在早安訊息裡看到。"
 
 #: src/data/exchanges.ts
 #: src/data/today.ts
@@ -2178,10 +2187,13 @@ msgstr "請加上國碼，以 + 開頭，例如越南是 +84。"
 msgid "India"
 msgstr "印度"
 
-#: app/(tabs)/index.tsx
 #: app/ask.tsx
-msgid "Into her morning."
-msgstr "已放進早安訊息。"
+msgid "Into {name}'s morning."
+msgstr "已放進{name}的早安訊息。"
+
+#: app/(tabs)/index.tsx
+msgid "Into {recipient}'s morning."
+msgstr "已放進{recipient}的早安訊息。"
 
 #: src/components/onboarding/finish.tsx
 msgid "Invitation sent"
@@ -4076,15 +4088,6 @@ msgstr "無法開啟分享。請選取並複製下方連結，再傳給長輩。
 msgid "She answers when she likes: a few words, a photo, or her voice."
 msgstr "媽媽想回的時候再回：幾個字、一張照片，或一段語音。"
 
-#: app/exchange/[id].tsx
-#: src/components/today-heart.tsx
-msgid "She has not answered yet, so there is nothing to reply to."
-msgstr "這位家人還沒有回覆，所以目前沒有可以回應的內容。"
-
-#: app/exchange/[id].tsx
-msgid "She hears it in her read-back tomorrow morning."
-msgstr "這位家人明天早上會在早安訊息裡看到。"
-
 #: src/data/chat.ts
 #: src/data/exchanges.ts
 msgid "She is never letting that go"
@@ -4645,8 +4648,8 @@ msgid "The family found {found} of {verdicts} useful."
 msgstr "家人覺得{verdicts}則中有{found}則有幫助。"
 
 #: app/exchange/[id].tsx
-msgid "The family sees it here. She will not hear it: her mornings read back only her latest day."
-msgstr "家人會在這裡看到。這位家人不會收到：早安訊息只會回顧最近一天的回覆。"
+msgid "The family sees it here. {recipient} will not hear it: the morning read-back covers only the latest day."
+msgstr "家人會在這裡看到。{recipient}不會收到：早安訊息只會回顧最近一天的回覆。"
 
 #: src/components/onboarding/finish.tsx
 msgid "The family, the first week and everything you told us."
@@ -5263,7 +5266,7 @@ msgstr "改用 Telegram"
 
 #: app/(tabs)/index.tsx
 msgid "Use this"
-msgstr "用這個"
+msgstr "用這個問題"
 
 #: app/ask.tsx
 msgid "Use this idea instead"
@@ -5360,7 +5363,7 @@ msgstr "Vela Light 試用"
 
 #: src/data/family.ts
 msgid "Vela Light trial · ends {date}"
-msgstr "Vela Light 試用 · {date}結束"
+msgstr "Vela Light 試用到 {date}"
 
 #: src/components/voice-hello.tsx
 msgid "Vela needs the microphone for a voice hello. You can allow it in Settings."
@@ -5407,8 +5410,8 @@ msgid "Vela suggests"
 msgstr "Vela 的建議"
 
 #: app/(tabs)/index.tsx
-msgid "Vela suggests · from her own words"
-msgstr "Vela 的建議 · 取自這位家人說過的話"
+msgid "Vela suggests · from {recipient}'s own words"
+msgstr "Vela 的建議 · 取自{recipient}說過的話"
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela suggests questions about what {name} enjoys. Choose as many as fit."
@@ -5876,8 +5879,8 @@ msgid "You can explore an example family. No messages are sent."
 msgstr "你可以探索範例家庭。這裡不會傳送任何訊息。"
 
 #: app/exchange/[id].tsx
-msgid "You can reply once she has answered."
-msgstr "等這位家人回覆之後，你就可以回應。"
+msgid "You can reply once {recipient} has answered."
+msgstr "等{recipient}回覆之後，你就可以回應。"
 
 #: app/vela-light.tsx
 msgid "You choose whether to keep it. Nothing is charged unless you choose a plan."
