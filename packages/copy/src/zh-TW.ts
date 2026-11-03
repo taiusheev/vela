@@ -294,6 +294,10 @@ export const zhTW: Record<keyof typeof en, string> = {
   "onboarding.invalid_time": "請輸入像 07:30 這樣的時間。",
   "onboarding.done":
     "設定完成。請把這個連結傳給{name}： {link} 然後另外建立一個家人群組（不要加{name}），把我加進去，讓家人可以輪流提問。",
+  "onboarding.done_wait":
+    "設定完成。這是給{name}的連結，請先留著，不要馬上傳出去： {link} Vela 團隊確認您的家庭後，我會在這裡通知您，通常一天之內。到時候先打電話跟{name}說明，再把連結傳過去。如果想讓其他家人也一起提問，可以另外建立一個家人群組（不要加{name}），再把我加進去。",
+  "organiser.family_approved":
+    "您的家庭已經確認了。現在可以打電話跟{name}說明，再把設定完成時收到的連結傳過去。{name}說好之後，隔天早上就會收到第一則早安訊息。",
   "admin.weekly_read_draft": "{family}的每週小記草稿已經準備好了： {link}",
   "admin.weekly_read_sent": "{family}的每週小記已經寄給家人了： {link}",
   "admin.flag": "{family}有一則標記。查看： {link}",

@@ -7,6 +7,9 @@
  * Each change is one row in `admin_access_log` (`roster_add`, `roster_remove`), naming the id and
  * the Access identity that made it. Ids only: never a name or a phone number.
  */
+
+import { t } from "@vela/copy";
+import { outboundKey } from "@vela/core";
 import {
   adminAccessLog,
   channelLinks,
@@ -15,13 +18,19 @@ import {
   pilotFamilies,
   pilotRoster,
 } from "@vela/db";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { AdminContext } from "./admin.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
+import {
+  handOverOutbound,
+  type InsertResult,
+  insertOutbound,
+  type OutboundRequest,
+} from "./gateway.ts";
 import type { PilotAdmission } from "./pilot-admission.ts";
-import type { Queryable } from "./repo.ts";
+import { activeOrganisersWithLinks, MESSENGER, type Queryable } from "./repo.ts";
 
 /** A numeric Telegram user id, as the bot shows a participant and the private allowlist holds. */
 export const TelegramUserId = z
@@ -210,15 +219,18 @@ function familyChange(ctx: AdminContext, familyId: string): { admin: string; fam
 /**
  * Approves a family for the closed test: it takes part from its next message, on any messenger,
  * with everyone who joins it. Approving one already approved changes nothing and logs nothing.
+ * Each organiser who can be reached is told, in their language, that they may now send her the
+ * link (`organiser.family_approved`): set-up told them to keep it until then (`onboarding.done_wait`).
  */
 export async function approveFamily(
-  deps: Pick<Deps, "db" | "clock">,
+  deps: Pick<Deps, "db" | "clock" | "logger" | "queues">,
   ctx: AdminContext,
   familyId: string,
 ): Promise<"approved" | "already"> {
   const change = familyChange(ctx, familyId);
   const at = deps.clock.now();
-  return deps.db.transaction(async (tx) => {
+  const pending: { request: OutboundRequest; written: InsertResult }[] = [];
+  const outcome = await deps.db.transaction(async (tx) => {
     const [family] = await tx
       .select({ id: families.id })
       .from(families)
@@ -239,8 +251,43 @@ export async function approveFamily(
       what: "closed test",
       at,
     });
-    return "approved";
+    // Whom it is for: her, by name, while she has not said yes (a light set up, no yes yet).
+    const waiting = await tx
+      .select({ name: members.displayName })
+      .from(members)
+      .where(
+        and(
+          eq(members.familyId, change.familyId),
+          eq(members.status, "invited"),
+          isNotNull(members.wakeTime),
+          isNull(members.lightConsentedAt),
+        ),
+      )
+      .orderBy(asc(members.createdAt), asc(members.id));
+    if (waiting.length > 0) {
+      for (const organiser of await activeOrganisersWithLinks(tx, change.familyId, MESSENGER)) {
+        const lang = organiser.member.language;
+        const request: OutboundRequest = {
+          kind: "system",
+          idempotencyKey: outboundKey("system", {
+            conversationId: organiser.link.externalId,
+            suffix: `family_approved:${change.familyId}`,
+          }),
+          memberId: organiser.member.id,
+          channel: organiser.link.channel,
+          conversationId: organiser.link.externalId,
+          lang,
+          text: t(lang, "organiser.family_approved", {
+            name: waiting.map((member) => member.name).join(lang === "zh-TW" ? "、" : ", "),
+          }),
+        };
+        pending.push({ request, written: await insertOutbound(deps, tx, request) });
+      }
+    }
+    return "approved" as const;
   });
+  for (const { request, written } of pending) await handOverOutbound(deps, request, written);
+  return outcome;
 }
 
 /**

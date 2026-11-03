@@ -590,7 +590,15 @@ async function createFamily(
     channel: event.channel,
     conversationId: event.conversation.externalId,
     lang,
-    text: t(lang, "onboarding.done", { name: data.name, link }),
+    // Where the founder approves each family first (ADR-52), she must not tap before that: the
+    // organiser keeps the link until Vela writes that the family is confirmed (`approveFamily`).
+    text: t(
+      lang,
+      deps.config.pilotAdmission?.familyIds === undefined
+        ? "onboarding.done"
+        : "onboarding.done_wait",
+      { name: data.name, link },
+    ),
   });
   await recordEvent(
     tx,

@@ -184,6 +184,8 @@ async function organiserSetsUp(): Promise<string> {
   const done = lastTo(ORGANISER).message.text;
   expect(done).toContain("設定完成。");
   expect(done).toContain("https://line.me/R/oaMessage/");
+  // With approval on, the organiser keeps her link until Vela says the family is confirmed.
+  expect(done).toContain("請先留著，不要馬上傳出去");
   const [invite] = await h.db.select().from(invites);
   if (invite === undefined) throw new Error("no invite");
   return invite.token;
@@ -206,6 +208,11 @@ describe("a Taiwan family on LINE, in Chinese, with family approval on", () => {
     if (invite === undefined) throw new Error("no invite");
     expect(await approveFamily(h.deps, { admin: "founder@vela-light.com" }, invite.familyId)).toBe(
       "approved",
+    );
+    await h.run(handlers());
+    // The organiser hears, in Chinese, that now is the time to call her and send the link.
+    expect(lastTo(ORGANISER).message.text).toBe(
+      t("zh-TW", "organiser.family_approved", { name: "媽媽" }),
     );
     (h.deps.config as Settable).pilotAdmission = await admissionWithRoster(h.db, BASE);
 

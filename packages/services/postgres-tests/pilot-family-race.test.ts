@@ -24,6 +24,15 @@ let seeder: RaceClient;
 let familyId: string;
 const ctx = { admin: "founder@vela.test" };
 
+/** A connection's ports, with the queue and logger the approval's note to organisers hands over to. */
+function approving(client: RaceClient): Parameters<typeof approveFamily>[0] {
+  return {
+    ...client.deps,
+    logger: { info: () => {}, warn: () => {}, error: () => {} },
+    queues: { outbound: { send: async () => {} } },
+  } as unknown as Parameters<typeof approveFamily>[0];
+}
+
 beforeAll(async () => {
   pg = await openPostgresHarness();
 }, 60_000);
@@ -50,8 +59,8 @@ describe("approving a family on independent PostgreSQL connections", () => {
       holder,
       (tx) => tx.select().from(families).where(eq(families.id, familyId)).for("update"),
       [
-        { client: first, start: () => approveFamily(first.deps, ctx, familyId) },
-        { client: second, start: () => approveFamily(second.deps, ctx, familyId) },
+        { client: first, start: () => approveFamily(approving(first), ctx, familyId) },
+        { client: second, start: () => approveFamily(approving(second), ctx, familyId) },
       ],
     );
     const results = await pg.settle("both approvals", queued);
