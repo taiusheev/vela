@@ -12,6 +12,9 @@ Reviewed by Claude on 3 November 2026, from the code on `main` at `45ddddf`, a m
 | Analytics | `apps/app/src/analytics/provider.tsx`, `site-analytics.ts` | Asked before anything is sent, per account; no identity before the choice; production collection inactive |
 | Logs | Every `logger.*` and `console.*` call in Worker, services and packages | No message content, transcripts or tokens; errors by label. The only `error.message` prints are in local scripts and evals |
 | Notice against code | Each provider in `infra/sub-processors.md` against both notices | Every provider that receives family data is named in both languages; PostHog, which only the website and app's optional counts use, is named on the website privacy page |
+| The 30-day promise | Every sealed column in `packages/db/src/schema.ts` against `applyRetention` (`packages/services/src/jobs.ts`) | Each table holding family words is cleared by the nightly run, including those added since October (question profiles, weekly support, memory keeps and candidates, reminders, quiet events' ask-to-check). Kept on purpose, as their notices say: the photo box until taken out (ADR-58, v13; `releaseBoxPhotosOfLeavers` takes out a leaver's photos the same night) and book stories (ADR-39). Dead jobs go at 14 days. The `stories` table is never written |
+| Website promises | `site-legal.ts`, `site-privacy.ts`, the analytics relay | "We never send your IP address to PostHog" holds: the relay sends `$ip: null` and no request headers. The sign-up limit added below uses the address only "to protect it from abuse", as the website notice already says |
+| Keys on the phone | `apps/app/src/device/token.ts`, `storage/flags.ts`, Clerk's `tokenCache` | Her device token and the organiser's session are in the phone's secure store (Keychain or Keystore), never in plain storage or a log |
 
 ## Found and fixed in this review
 
