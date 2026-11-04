@@ -249,6 +249,7 @@ export {
 export * from "./photo-questions.ts";
 export {
   type PilotAdmission,
+  pilotAccountAwaitsFamily,
   pilotAdmitsInbound,
   pilotAllowsTelegram,
   pilotApiAccountAllowed,

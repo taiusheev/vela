@@ -1227,6 +1227,7 @@ msgstr "調整草稿方向"
 msgid "Change the name your family sees"
 msgstr "更改家人看到的你的名字"
 
+#: src/components/app-privacy.tsx
 #: src/components/service-status.tsx
 msgid "Check again"
 msgstr "再檢查一次"
@@ -1269,6 +1270,7 @@ msgid "Checking Vela…"
 msgstr "正在檢查 Vela…"
 
 #: app/sign-in.tsx
+#: src/components/app-privacy.tsx
 msgid "Checking…"
 msgstr "確認中…"
 
@@ -4198,6 +4200,7 @@ msgid "Sign in to delete your account."
 msgstr "請先登入，再刪除你的帳號。"
 
 #: app/settings.tsx
+#: src/components/app-privacy.tsx
 msgid "Sign out"
 msgstr "登出"
 
@@ -5360,6 +5363,10 @@ msgstr "Vela · 早安訊息 · {time}"
 msgid "Vela {version}"
 msgstr "Vela 版本{version}"
 
+#: app/settings.tsx
+msgid "Vela {version} · update {update}"
+msgstr "Vela {version} · 更新{update}"
+
 #: src/components/photo-box.tsx
 msgid "Vela asks for the story behind it."
 msgstr "Vela 會請長輩說說背後的故事。"
@@ -5492,6 +5499,10 @@ msgstr "Vela 會用這些內容準備草稿。只有在你選擇儲存時，才�
 #: app/my-memories.tsx
 msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
 msgstr "Vela 會停止從你的回答中建議回憶。你的建議和已保留的回憶會從 Vela 移除。你平常的聊天和其他選擇都不會改變。"
+
+#: src/components/app-privacy.tsx
+msgid "Vela will tell you in your messenger when it is done. This page then opens by itself. Keep the invite link for your parent until then."
+msgstr "確認好了，Vela 會在聊天軟體裡通知你，這一頁也會自動打開。在那之前，給爸媽的邀請連結請先留著。"
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela writes in a chat of its own."
@@ -5789,6 +5800,10 @@ msgstr "您會先挑哪一個？"
 #: src/components/onboarding/questions.tsx
 msgid "Which part?"
 msgstr "哪個地區？"
+
+#: src/components/app-privacy.tsx
+msgid "While Vela is in its first test, a person looks at each new family before the first morning. That is usually done the same day."
+msgstr "Vela 現在是第一次試用，每個新家庭在第一個早上之前，都會有人先看過、確認。通常當天就會完成。"
 
 #: src/components/onboarding/questions.tsx
 msgid "Who are you keeping a light on for?"
@@ -6099,6 +6114,10 @@ msgstr "你的家人連結"
 #: app/settings.tsx
 msgid "Your family could not be reached just now."
 msgstr "目前無法載入你的家庭。"
+
+#: src/components/app-privacy.tsx
+msgid "Your family is set up"
+msgstr "你的家庭設定好了"
 
 #: app/profile.tsx
 msgid "Your family sees this name on your questions and replies."

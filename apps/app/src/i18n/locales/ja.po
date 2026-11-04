@@ -1220,6 +1220,7 @@ msgstr ""
 msgid "Change the name your family sees"
 msgstr ""
 
+#: src/components/app-privacy.tsx
 #: src/components/service-status.tsx
 msgid "Check again"
 msgstr ""
@@ -1262,6 +1263,7 @@ msgid "Checking Vela…"
 msgstr ""
 
 #: app/sign-in.tsx
+#: src/components/app-privacy.tsx
 msgid "Checking…"
 msgstr ""
 
@@ -4191,6 +4193,7 @@ msgid "Sign in to delete your account."
 msgstr ""
 
 #: app/settings.tsx
+#: src/components/app-privacy.tsx
 msgid "Sign out"
 msgstr ""
 
@@ -5353,6 +5356,10 @@ msgstr ""
 msgid "Vela {version}"
 msgstr ""
 
+#: app/settings.tsx
+msgid "Vela {version} · update {update}"
+msgstr ""
+
 #: src/components/photo-box.tsx
 msgid "Vela asks for the story behind it."
 msgstr ""
@@ -5484,6 +5491,10 @@ msgstr ""
 
 #: app/my-memories.tsx
 msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
+msgstr ""
+
+#: src/components/app-privacy.tsx
+msgid "Vela will tell you in your messenger when it is done. This page then opens by itself. Keep the invite link for your parent until then."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -5781,6 +5792,10 @@ msgstr ""
 
 #: src/components/onboarding/questions.tsx
 msgid "Which part?"
+msgstr ""
+
+#: src/components/app-privacy.tsx
+msgid "While Vela is in its first test, a person looks at each new family before the first morning. That is usually done the same day."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -6091,6 +6106,10 @@ msgstr ""
 #: app/away.tsx
 #: app/settings.tsx
 msgid "Your family could not be reached just now."
+msgstr ""
+
+#: src/components/app-privacy.tsx
+msgid "Your family is set up"
 msgstr ""
 
 #: app/profile.tsx

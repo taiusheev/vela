@@ -1226,6 +1226,7 @@ msgstr "Change starting points"
 msgid "Change the name your family sees"
 msgstr "Change the name your family sees"
 
+#: src/components/app-privacy.tsx
 #: src/components/service-status.tsx
 msgid "Check again"
 msgstr "Check again"
@@ -1268,6 +1269,7 @@ msgid "Checking Vela…"
 msgstr "Checking Vela…"
 
 #: app/sign-in.tsx
+#: src/components/app-privacy.tsx
 msgid "Checking…"
 msgstr "Checking…"
 
@@ -4197,6 +4199,7 @@ msgid "Sign in to delete your account."
 msgstr "Sign in to delete your account."
 
 #: app/settings.tsx
+#: src/components/app-privacy.tsx
 msgid "Sign out"
 msgstr "Sign out"
 
@@ -5359,6 +5362,10 @@ msgstr "Vela · her morning · {time}"
 msgid "Vela {version}"
 msgstr "Vela {version}"
 
+#: app/settings.tsx
+msgid "Vela {version} · update {update}"
+msgstr "Vela {version} · update {update}"
+
 #: src/components/photo-box.tsx
 msgid "Vela asks for the story behind it."
 msgstr "Vela asks for the story behind it."
@@ -5491,6 +5498,10 @@ msgstr "Vela uses these notes to prepare a draft. They are kept for later only i
 #: app/my-memories.tsx
 msgid "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
 msgstr "Vela will stop suggesting memories from your answers. Your suggestions and kept memories will be removed from Vela. Your ordinary chats and other choices will not change."
+
+#: src/components/app-privacy.tsx
+msgid "Vela will tell you in your messenger when it is done. This page then opens by itself. Keep the invite link for your parent until then."
+msgstr "Vela will tell you in your messenger when it is done. This page then opens by itself. Keep the invite link for your parent until then."
 
 #: src/components/onboarding/questions.tsx
 msgid "Vela writes in a chat of its own."
@@ -5788,6 +5799,10 @@ msgstr "Which one would you pick first?"
 #: src/components/onboarding/questions.tsx
 msgid "Which part?"
 msgstr "Which part?"
+
+#: src/components/app-privacy.tsx
+msgid "While Vela is in its first test, a person looks at each new family before the first morning. That is usually done the same day."
+msgstr "While Vela is in its first test, a person looks at each new family before the first morning. That is usually done the same day."
 
 #: src/components/onboarding/questions.tsx
 msgid "Who are you keeping a light on for?"
@@ -6098,6 +6113,10 @@ msgstr "Your family connection"
 #: app/settings.tsx
 msgid "Your family could not be reached just now."
 msgstr "Your family could not be reached just now."
+
+#: src/components/app-privacy.tsx
+msgid "Your family is set up"
+msgstr "Your family is set up"
 
 #: app/profile.tsx
 msgid "Your family sees this name on your questions and replies."

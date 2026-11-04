@@ -749,6 +749,29 @@ describe("pilot capabilities and secure Telegram linking", () => {
     expect(f.writes.services.leaveApiFamily).toHaveBeenCalledOnce();
   });
 
+  it("tells an organiser whose family awaits approval so, instead of not found", async () => {
+    admission.permitsAccount.mockResolvedValue(false);
+    const awaitsFamily = vi.fn<NonNullable<NonNullable<ApiRuntime["admission"]>["awaitsFamily"]>>();
+    awaitsFamily.mockResolvedValue(true);
+    const f = fixture(true, false, { admission: { ...admission, awaitsFamily } });
+    const response = await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "forbidden",
+        message: "The family is waiting for approval.",
+        details: { reason: "family_waiting" },
+      },
+    });
+    expect(f.services.loadApiMe).not.toHaveBeenCalled();
+    awaitsFamily.mockResolvedValue(false);
+    await expectResponse(
+      await f.app.request("/v1/me", { headers: { authorization: "Bearer good" } }),
+      404,
+      NOT_FOUND,
+    );
+  });
+
   it("enforces English profiles and Telegram-first family setup", async () => {
     admission.permitsAccount.mockResolvedValue(true);
     const f = fixture(true, false, { admission });
