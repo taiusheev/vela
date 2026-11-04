@@ -95,6 +95,7 @@ import {
   memberOfDeviceToken,
   openApiWeeklyRead,
   pauseApiMember,
+  pilotAccountAwaitsFamily,
   pilotApiAccountAllowed,
   pilotSpeaks,
   prepareMemoryPermission,
@@ -462,6 +463,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
           admission: {
             config: config.pilotAdmission,
             permitsAccount: pilotApiAccountAllowed,
+            awaitsFamily: pilotAccountAwaitsFamily,
             // A roster that cannot be read leaves the allowlist alone, which admits fewer.
             withRoster: async (db, base) => {
               try {

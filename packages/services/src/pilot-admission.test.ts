@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
 import { handleParentCommand } from "./parent-commands.ts";
 import {
+  pilotAccountAwaitsFamily,
   pilotAdmitsInbound,
   pilotApiAccountAllowed,
   pilotCanActivate,
@@ -196,6 +197,28 @@ describe("closed pilot admission", () => {
       .where(eq(channelLinks.id, seed.organiserLink.id));
     await h.db.update(members).set({ language: "zh-TW" }).where(eq(members.id, seed.organiser.id));
     expect(await pilotApiAccountAllowed(h.db, identity, admission)).toBe(false);
+  });
+
+  it("says an account is waiting only while family approval is on and its family is not approved", async () => {
+    const identity = { authSubject: "waiting-app-user", sessionId: "waiting-app-session" };
+    const [user] = await h.db
+      .insert(users)
+      .values({ authSubject: identity.authSubject, displayName: "Organiser" })
+      .returning();
+    if (user === undefined) throw new Error("Missing account");
+    const approval = { telegramUserIds: [], familyIds: [] as string[], languages: ["en", "zh-TW"] };
+    expect(await pilotAccountAwaitsFamily(h.db, identity, approval)).toBe(false);
+    const seed = await seedFamily(h.db, { now: h.clock.now() });
+    await h.db.update(members).set({ userId: user.id }).where(eq(members.id, seed.organiser.id));
+    expect(await pilotApiAccountAllowed(h.db, identity, approval)).toBe(false);
+    expect(await pilotAccountAwaitsFamily(h.db, identity, approval)).toBe(true);
+    expect(await pilotAccountAwaitsFamily(h.db, identity, admission)).toBe(false);
+    const approved = { ...approval, familyIds: [seed.family.id] };
+    expect(await pilotApiAccountAllowed(h.db, identity, approved)).toBe(true);
+    expect(await pilotAccountAwaitsFamily(h.db, identity, approved)).toBe(false);
+    expect(await pilotAccountAwaitsFamily(h.db, identity, { ...approval, languages: ["ja"] })).toBe(
+      false,
+    );
   });
 
   it("requires actual organiser delivery before activation and rejects a blocked organiser", async () => {

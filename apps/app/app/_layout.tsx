@@ -14,6 +14,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import * as Updates from "expo-updates";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -46,6 +47,7 @@ import {
 } from "../src/storage/portraits.ts";
 import { ThemeProvider, useTheme } from "../src/theme/theme.tsx";
 import { SERIF_TC } from "../src/theme/tokens.ts";
+import { applyPendingWhenLeaving } from "../src/updates/apply-pending.ts";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -252,6 +254,16 @@ function Navigation() {
   );
 }
 
+/** A downloaded update applies when Vela next goes to the background (apply-pending.ts). */
+function ApplyPendingUpdate() {
+  const { isUpdatePending } = Updates.useUpdates();
+  useEffect(() => {
+    if (__DEV__ || !Updates.isEnabled || !isUpdatePending) return;
+    return applyPendingWhenLeaving(AppState, () => Updates.reloadAsync());
+  }, [isUpdatePending]);
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <AccountProvider>
@@ -260,6 +272,7 @@ export default function RootLayout() {
           <PushProvider>
             <SafeAreaProvider>
               <ThemeProvider>
+                <ApplyPendingUpdate />
                 <Root />
               </ThemeProvider>
             </SafeAreaProvider>

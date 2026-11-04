@@ -175,12 +175,9 @@ export async function pilotFamilyAllowed(
 }
 
 /** No membership is needed to provision or prove an account. Existing memberships must be approved. */
-export async function pilotApiAccountAllowed(
-  db: Queryable,
-  identity: SessionIdentity,
-  admission: PilotAdmission,
-): Promise<boolean> {
-  const rows = await db
+/** The account's live memberships, with what admission looks at in each. */
+async function accountMemberships(db: Queryable, identity: SessionIdentity) {
+  return db
     .select({
       familyId: members.familyId,
       language: members.language,
@@ -203,6 +200,14 @@ export async function pilotApiAccountAllowed(
         isNull(families.deletedAt),
       ),
     );
+}
+
+export async function pilotApiAccountAllowed(
+  db: Queryable,
+  identity: SessionIdentity,
+  admission: PilotAdmission,
+): Promise<boolean> {
+  const rows = await accountMemberships(db, identity);
   return rows.every(
     (row) =>
       pilotSpeaks(admission, row.language, row.familyLanguage) &&
@@ -210,6 +215,26 @@ export async function pilotApiAccountAllowed(
         (row.externalId !== null &&
           row.blockedAt === null &&
           pilotAllowsTelegram(admission, row.externalId))),
+  );
+}
+
+/**
+ * Whether an account the app refused is only waiting for the founder to approve its family
+ * (ADR-52): family approval is on, and each of its families speaks the test's languages, and at
+ * least one is not approved yet. The app then says so calmly instead of "could not be reached".
+ * It tells the account nothing about anyone else.
+ */
+export async function pilotAccountAwaitsFamily(
+  db: Queryable,
+  identity: SessionIdentity,
+  admission: PilotAdmission,
+): Promise<boolean> {
+  if (admission.familyIds === undefined) return false;
+  const rows = await accountMemberships(db, identity);
+  return (
+    rows.length > 0 &&
+    rows.every((row) => pilotSpeaks(admission, row.language, row.familyLanguage)) &&
+    rows.some((row) => !pilotApprovesFamily(admission, row.familyId))
   );
 }
 

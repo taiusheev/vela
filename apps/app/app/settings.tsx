@@ -2,6 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { router, Stack, useFocusEffect } from "expo-router";
+import * as Updates from "expo-updates";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ import { useAppLocale } from "../src/i18n/provider.tsx";
 import { usePush } from "../src/push/provider.tsx";
 import { usePalette } from "../src/theme/theme.tsx";
 import { space } from "../src/theme/tokens.ts";
+import { runningUpdateLabel } from "../src/updates/apply-pending.ts";
 
 export default function SettingsScreen() {
   const day = useToday();
@@ -106,6 +108,7 @@ function FamilyYou({ day }: { day: TodayView }) {
   // A kept light pauses and stops in her own chat, where her mornings arrive (spec §9).
   const ownTurns = !((!live && apiConfigured()) || family.me.lightOn);
   const version = Constants.expoConfig?.version;
+  const update = runningUpdateLabel(Updates.updateId, Updates.isEmbeddedLaunch);
 
   return (
     <>
@@ -469,7 +472,13 @@ function FamilyYou({ day }: { day: TodayView }) {
         {version === undefined ? null : (
           <View style={{ paddingHorizontal: space.xs }}>
             <SettingsNote>
-              <Trans>Vela {version}</Trans>
+              {update === null ? (
+                <Trans>Vela {version}</Trans>
+              ) : (
+                <Trans>
+                  Vela {version} · update {update}
+                </Trans>
+              )}
             </SettingsNote>
           </View>
         )}

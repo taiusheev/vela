@@ -223,6 +223,7 @@ import {
   PhotoBoxRefusedError,
   type PilotAdmission,
   type pauseApiMember,
+  type pilotAccountAwaitsFamily,
   type pilotApiAccountAllowed,
   pilotSpeaks,
   type prepareMemoryPermission,
@@ -426,6 +427,8 @@ export interface ApiRuntime {
   admission?: {
     config: PilotAdmission;
     permitsAccount: typeof pilotApiAccountAllowed;
+    /** Whether a refused account is only waiting for its family's approval; absent, never. */
+    awaitsFamily?: typeof pilotAccountAwaitsFamily;
     /** The allowlist with the founder's admin-page roster added (ADR-45); absent, the allowlist. */
     withRoster?: (db: VelaDatabase, config: PilotAdmission) => Promise<PilotAdmission>;
   };
@@ -512,6 +515,14 @@ interface RuntimeEnv {
 
 const NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Not found." },
+};
+/** The closed test's answer to an organiser whose new family the founder has not approved yet. */
+const FAMILY_WAITING: ApiErrorBody = {
+  error: {
+    code: "forbidden",
+    message: "The family is waiting for approval.",
+    details: { reason: "family_waiting" },
+  },
 };
 /** `Authorization: Device <token>`: her phone's 43-character token (ADR-35). */
 const DEVICE_AUTHORIZATION = /^Device ([A-Za-z0-9_-]{43})$/;
@@ -695,8 +706,15 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         roster !== undefined &&
         !removal &&
         (identity === undefined || !(await admission.permitsAccount(handle.db, identity, roster)))
-      )
+      ) {
+        if (
+          identity !== undefined &&
+          admission.awaitsFamily !== undefined &&
+          (await admission.awaitsFamily(handle.db, identity, roster))
+        )
+          return c.json(FAMILY_WAITING, 403);
         return c.json(NOT_FOUND, 404);
+      }
       await next();
       return;
     } finally {

@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, apiConfigured, provisionAccount } from "../api/client.ts";
+import { FAMILY_WAITING_RECHECK_MS, isFamilyWaiting } from "../api/family-waiting.ts";
 import { readMe } from "../api/read-me.ts";
 import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
@@ -144,13 +145,18 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     queryFn: () => readMe(account),
     enabled,
     retry: false,
+    // While the founder has not approved a new family yet, look again now and then, so the app
+    // opens by itself once they have.
+    refetchInterval: (query) =>
+      isFamilyWaiting(query.state.error) ? FAMILY_WAITING_RECHECK_MS : false,
   });
   const missing = me.error instanceof ApiError && me.error.status === 404;
+  const waiting = me.data === undefined && isFamilyWaiting(me.error);
   // A failed read is tried again quietly first; the screen goes on loading meanwhile.
   const [quietTries, setQuietTries] = useState(0);
   const quietWait = QUIET_ACCOUNT_RETRIES_MS[quietTries];
   const retryingQuietly =
-    me.isError && !missing && me.data === undefined && quietWait !== undefined;
+    me.isError && !missing && !waiting && me.data === undefined && quietWait !== undefined;
   useEffect(() => {
     if (!retryingQuietly || quietWait === undefined) return;
     const timer = setTimeout(() => {
@@ -213,6 +219,14 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     if (decision === "save" && save.status === "idle") saveChoice();
   }, [decision, save.status, saveChoice]);
   if (decision === "pass") return children;
+  if (waiting)
+    return (
+      <FamilyWaiting
+        checking={me.isFetching}
+        onCheck={() => void retryAccountRead(queries)}
+        onSignOut={() => void account.signOut()}
+      />
+    );
   const decline = () => {
     updateDraft({ privacyAccepted: false });
     void account.signOut();
@@ -266,4 +280,60 @@ export function acceptLocalPrivacy(): void {
 }
 export function localPrivacyAccepted(): boolean {
   return readDraft().privacyAccepted;
+}
+
+/**
+ * What a new organiser sees while the founder has not approved their family yet (ADR-52): their
+ * family is set up, a person confirms it, and the app opens by itself afterwards. Never an error.
+ */
+function FamilyWaiting({
+  checking,
+  onCheck,
+  onSignOut,
+}: {
+  checking: boolean;
+  onCheck: () => void;
+  onSignOut: () => void;
+}) {
+  const { t } = useLingui();
+  const palette = usePalette();
+  const insets = useSafeAreaInsets();
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: palette.bg }}
+      contentContainerStyle={{
+        paddingTop: insets.top + space.xxl,
+        paddingBottom: insets.bottom + space.xxxl,
+        paddingHorizontal: space.margin,
+        gap: space.l,
+      }}
+    >
+      <View style={{ alignItems: "flex-start" }}>
+        <Light state="lit" height={40} />
+      </View>
+      <Words variant="title">
+        <Trans>Your family is set up</Trans>
+      </Words>
+      <Words variant="body" tone="ink2">
+        <Trans>
+          While Vela is in its first test, a person looks at each new family before the first
+          morning. That is usually done the same day.
+        </Trans>
+      </Words>
+      <Words variant="body" tone="ink2">
+        <Trans>
+          Vela will tell you in your messenger when it is done. This page then opens by itself. Keep
+          the invite link for your parent until then.
+        </Trans>
+      </Words>
+      <View style={{ alignItems: "flex-start", gap: space.m }}>
+        <SecondaryButton
+          label={checking ? t`Checking…` : t`Check again`}
+          disabled={checking}
+          onPress={onCheck}
+        />
+        <TextButton label={t`Sign out`} onPress={onSignOut} />
+      </View>
+    </ScrollView>
+  );
 }
