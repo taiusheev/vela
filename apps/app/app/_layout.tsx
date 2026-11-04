@@ -19,7 +19,8 @@ import { AppState, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import SERIF_TC_FILE from "../assets/fonts/NotoSerifTC-Voice.ttf";
 import { UsageAnalytics } from "../src/analytics/provider.tsx";
-import { apiConfigured, fetchMe } from "../src/api/client.ts";
+import { apiConfigured } from "../src/api/client.ts";
+import { readMe } from "../src/api/read-me.ts";
 import { sessionRequests } from "../src/api/request-session.ts";
 import { englishTrialBuild } from "../src/api/trial.ts";
 import { clearAudioCache } from "../src/audio/cache.ts";
@@ -94,7 +95,7 @@ function WarmAccount() {
   useQuery({
     queryKey: ["me"],
     enabled: apiConfigured() && account.ready && account.signedIn,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   return null;
 }

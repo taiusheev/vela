@@ -516,7 +516,7 @@ msgid "{time} · A quiet morning"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
-msgid "{time} · in her Telegram"
+msgid "{time} · in her chat app"
 msgstr ""
 
 #: src/components/onboarding/story.tsx
@@ -1725,10 +1725,6 @@ msgstr ""
 msgid "Family connection"
 msgstr ""
 
-#: src/components/today-hero.tsx
-msgid "Family settings"
-msgstr ""
-
 #: src/components/onboarding/story.tsx
 msgid "Far from you, Mom’s day is beginning."
 msgstr ""
@@ -2124,15 +2120,15 @@ msgid "If {sharedWithName} can’t tap the link, Telegram is hiding it because y
 msgstr ""
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on."
 msgstr ""
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
 msgstr ""
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet."
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link, and Vela does not send notifications to phones yet."
 msgstr ""
 
 #: src/push/provider.tsx
@@ -2164,7 +2160,7 @@ msgid "If you agree, Vela can suggest little things worth remembering from your 
 msgstr ""
 
 #: app/delete-account.tsx
-msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
+msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family in your messenger, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr ""
 
 #: src/components/not-okay-follow-up.tsx
@@ -4110,7 +4106,7 @@ msgid "Share invitation again"
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
-msgid "Share one personal link in your usual chat. Your parent decides in Telegram or LINE and does not need to register in the app."
+msgid "Share one personal link in your usual chat. Your parent decides in their own messenger and does not need to register in the app."
 msgstr ""
 
 #: src/components/parent-link-settings.tsx
@@ -4527,6 +4523,10 @@ msgstr ""
 #: src/data/useNearby.ts
 #: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
+msgstr ""
+
+#: src/components/quiet-notice.tsx
+msgid "That did not save. Try again in a moment."
 msgstr ""
 
 #: app/weekly-report.tsx
@@ -5463,7 +5463,7 @@ msgid "Vela status is unavailable. Try again shortly."
 msgstr ""
 
 #: app/delete-account.tsx
-msgid "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
+msgid "Vela still writes to you in your messenger in a family where you are the only organiser or have your own light. Say stop there to end it."
 msgstr ""
 
 #: app/(tabs)/index.tsx
@@ -6191,7 +6191,7 @@ msgid "Your parent can ask “what does the family see” in their own chat. Hea
 msgstr ""
 
 #: app/settings.tsx
-msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela on Telegram or LINE."
+msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela in their messenger."
 msgstr ""
 
 #: app/personal-question.tsx

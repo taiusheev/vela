@@ -113,7 +113,7 @@ export function ParentLinkSettings({
                 ? t`Morning messages are off. Give them time; another invitation will still need their own agreement.`
                 : state === "unavailable"
                   ? t`We can’t confirm an available chat for this parent. Check with them before trying to invite again.`
-                  : t`Share one personal link in your usual chat. Your parent decides in Telegram or LINE and does not need to register in the app.`}
+                  : t`Share one personal link in your usual chat. Your parent decides in their own messenger and does not need to register in the app.`}
       </Words>
       {!live ? (
         <Words variant="caption" tone="ink2">

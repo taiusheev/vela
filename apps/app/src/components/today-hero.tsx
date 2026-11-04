@@ -1,5 +1,4 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { router } from "expo-router";
 import {
   createContext,
   type ReactNode,
@@ -285,20 +284,11 @@ export function Face({
 }
 
 /**
- * One row: the mark and the line it stands for, then the bell, with a dot while something is new,
- * and the family's faces, which open their settings.
+ * One row: the mark and the line it stands for, then the bell in the corner, with a dot while
+ * something is new. Her face is already in her window below; the family's settings are on You
+ * (founder, build 42: no parent badge in the corner, notifications there instead).
  */
-export function TodayHeader({
-  lights,
-  familyId,
-  unread,
-  onBell,
-}: {
-  lights: TodayLight[];
-  familyId: string;
-  unread: boolean;
-  onBell(): void;
-}) {
+export function TodayHeader({ unread, onBell }: { unread: boolean; onBell(): void }) {
   const { t } = useLingui();
   const p = usePalette();
   const { width, fontScale } = useWindowDimensions();
@@ -345,34 +335,6 @@ export function TodayHeader({
           />
         ) : null}
       </Pressable>
-      {lights.length === 0 ? null : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t`Family settings`}
-          hitSlop={hitSlop}
-          onPress={() => router.push("/settings")}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            padding: 2,
-            borderRadius: 999,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          {lights.slice(0, 3).map((light, index) => (
-            <View
-              key={light.memberId}
-              style={{
-                marginLeft: index === 0 ? 0 : -12,
-                borderRadius: 999,
-                borderWidth: 2,
-                borderColor: p.bg,
-              }}
-            >
-              <Face light={light} familyId={familyId} size={34} />
-            </View>
-          ))}
-        </Pressable>
-      )}
     </View>
   );
 }

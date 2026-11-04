@@ -523,8 +523,8 @@ msgid "{time} · A quiet morning"
 msgstr "{time} · 安靜的早晨"
 
 #: src/components/onboarding/story.tsx
-msgid "{time} · in her Telegram"
-msgstr "{time} · 在媽媽的 LINE 裡"
+msgid "{time} · in her chat app"
+msgstr "{time} · 在媽媽的聊天軟體裡"
 
 #: src/components/onboarding/story.tsx
 msgid "{time} · She answered"
@@ -1732,10 +1732,6 @@ msgstr "家人與孩子"
 msgid "Family connection"
 msgstr "家人連結"
 
-#: src/components/today-hero.tsx
-msgid "Family settings"
-msgstr "家人設定"
-
 #: src/components/onboarding/story.tsx
 msgid "Far from you, Mom’s day is beginning."
 msgstr "在離你很遠的地方，媽媽的一天開始了。"
@@ -2131,16 +2127,16 @@ msgid "If {sharedWithName} can’t tap the link, Telegram is hiding it because y
 msgstr "如果{sharedWithName}點不開連結，是因為你不在對方的聯絡人裡，Telegram 會把連結藏起來。請{sharedWithName}先把你加為聯絡人，或改用簡訊傳送邀請。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，也沒有開啟 Vela 通知的手機。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結聊天軟體，也沒有開啟 Vela 通知的手機。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，也沒有開啟 Vela 通知的手機。在這支手機上開啟通知，就能在這裡收到。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on. Turn them on for this phone to be told here."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結聊天軟體，也沒有開啟 Vela 通知的手機。在這支手機上開啟通知，就能在這裡收到。"
 
 #: src/data/notifications.ts
-msgid "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet."
-msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結 Telegram 或 LINE，而 Vela 還不會傳送手機通知。"
+msgid "If a morning goes quiet, nobody can tell you yet: you have no messenger link, and Vela does not send notifications to phones yet."
+msgstr "如果哪天早上比較安靜，目前沒有辦法通知你：你沒有連結聊天軟體，而 Vela 還不會傳送手機通知。"
 
 #: src/push/provider.tsx
 msgid "If her morning stays quiet past her usual time, and when it is settled."
@@ -2171,8 +2167,8 @@ msgid "If you agree, Vela can suggest little things worth remembering from your 
 msgstr "如果你同意，Vela 可以從你之後的新回答中，建議值得記住的小事。只有你看得到，要保留哪些由你決定。"
 
 #: app/delete-account.tsx
-msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family on Telegram or LINE, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
-msgstr "如果你是某個家庭唯一的發起人，或 Vela 為你自己留著一盞燈，你會繼續透過 Telegram 或 LINE 留在那個家庭，這樣就不會有人沒被通知。若也想離開，請在那裡說「停止」，或先請另一位家人擔任發起人。"
+msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family in your messenger, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
+msgstr "如果你是某個家庭唯一的發起人，或 Vela 為你自己留著一盞燈，你會繼續透過聊天軟體留在那個家庭，這樣就不會有人沒被通知。若也想離開，請在那裡說「停止」，或先請另一位家人擔任發起人。"
 
 #: src/components/not-okay-follow-up.tsx
 msgid "If you cannot reach them, contact someone nearby. If help is needed immediately, call local emergency services. Vela cannot send emergency help."
@@ -4117,8 +4113,8 @@ msgid "Share invitation again"
 msgstr "再次分享邀請"
 
 #: src/components/parent-link-settings.tsx
-msgid "Share one personal link in your usual chat. Your parent decides in Telegram or LINE and does not need to register in the app."
-msgstr "在平常使用的聊天中分享專屬連結。長輩會在 Telegram 或 LINE 自行決定，不需要在應用程式註冊。"
+msgid "Share one personal link in your usual chat. Your parent decides in their own messenger and does not need to register in the app."
+msgstr "在平常使用的聊天中分享專屬連結。長輩會在自己的聊天軟體裡決定，不需要在應用程式註冊。"
 
 #: src/components/parent-link-settings.tsx
 msgid "Share their chat link"
@@ -4535,6 +4531,10 @@ msgstr "沒有成功，什麼都沒有改變。請再試一次。"
 #: src/device/useParent.ts
 msgid "That did not go through. Try again in a moment."
 msgstr "沒有成功。請稍後再試一次。"
+
+#: src/components/quiet-notice.tsx
+msgid "That did not save. Try again in a moment."
+msgstr "沒有存到，請稍後再試一次。"
 
 #: app/weekly-report.tsx
 msgid "That did not save. Try again when you are connected."
@@ -5470,8 +5470,8 @@ msgid "Vela status is unavailable. Try again shortly."
 msgstr "目前無法取得 Vela 狀態。請稍後再試。"
 
 #: app/delete-account.tsx
-msgid "Vela still writes to you on Telegram or LINE in a family where you are the only organiser or have your own light. Say stop there to end it."
-msgstr "在你是唯一發起人、或有自己一盞燈的家庭裡，Vela 仍會透過 Telegram 或 LINE 傳訊息給你。在那裡說「停止」即可結束。"
+msgid "Vela still writes to you in your messenger in a family where you are the only organiser or have your own light. Say stop there to end it."
+msgstr "在你是唯一發起人、或有自己一盞燈的家庭裡，Vela 仍會透過你的聊天軟體傳訊息給你。在那裡說「停止」即可結束。"
 
 #: app/(tabs)/index.tsx
 msgid "Vela suggests"
@@ -6198,8 +6198,8 @@ msgid "Your parent can ask “what does the family see” in their own chat. Hea
 msgstr "長輩可以在自己的聊天中問「家人看得到什麼」。是否分享健康相關的話，由長輩另外決定；說「停止」就會暫停燈光。"
 
 #: app/settings.tsx
-msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela on Telegram or LINE."
-msgstr "試辦免費。安靜通知和重要訊息會送到發起人在 Telegram 或 LINE 上和 Vela 的私人聊天室。"
+msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela in their messenger."
+msgstr "試辦免費。安靜通知和重要訊息會送到發起人在聊天軟體上和 Vela 的私人聊天室。"
 
 #: app/personal-question.tsx
 msgid "Your question"

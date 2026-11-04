@@ -78,7 +78,7 @@ export default function DeleteAccountScreen() {
             {deletion.data.kept > 0 ? (
               <Words variant="body" tone="ink2">
                 <Trans>
-                  Vela still writes to you on Telegram or LINE in a family where you are the only
+                  Vela still writes to you in your messenger in a family where you are the only
                   organiser or have your own light. Say stop there to end it.
                 </Trans>
               </Words>
@@ -101,8 +101,8 @@ export default function DeleteAccountScreen() {
             <Words variant="body" tone="ink2">
               <Trans>
                 If you are a family's only organiser, or Vela keeps your own light, you stay in that
-                family on Telegram or LINE, so nobody is left without being told. To leave it too,
-                say stop there or ask another member to organise first.
+                family in your messenger, so nobody is left without being told. To leave it too, say
+                stop there or ask another member to organise first.
               </Trans>
             </Words>
             {account.signedIn && apiConfigured() ? (

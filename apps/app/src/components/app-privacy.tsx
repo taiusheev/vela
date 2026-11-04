@@ -11,7 +11,8 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ApiError, apiConfigured, fetchMe, provisionAccount } from "../api/client.ts";
+import { ApiError, apiConfigured, provisionAccount } from "../api/client.ts";
+import { readMe } from "../api/read-me.ts";
 import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { privacyGateDecision } from "../data/app-privacy-gate.ts";
@@ -140,7 +141,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const enabled = apiConfigured() && account.ready && account.signedIn;
   const me = useQuery({
     queryKey: ["me"],
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
     enabled,
     retry: false,
   });

@@ -33,6 +33,12 @@ export interface QuietNotice {
   resolution?: string;
   /** The organisers' verdict once it is settled: whether the notice was useful (spec §18). */
   useful?: boolean | null;
+  /**
+   * The morning is settled (she answered, or someone said she is fine), which the usefulness
+   * question needs: a wait shows its resolution but is not settled, and the API refuses a verdict
+   * on it. Absent means not settled.
+   */
+  settled?: boolean;
 }
 
 /**

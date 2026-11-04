@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { router, useRootNavigationState, useSegments } from "expo-router";
 import { useEffect } from "react";
-import { apiConfigured, fetchMe } from "../api/client.ts";
+import { apiConfigured } from "../api/client.ts";
+import { readMe } from "../api/read-me.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { useFamilySelection } from "../data/family-selection.tsx";
 import { selectedMembership } from "../data/membership.ts";
@@ -24,7 +25,7 @@ export function useOpenTapped(): void {
   const me = useQuery({
     queryKey: ["me"],
     enabled: reads,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   const onSignIn = segments[0] === "sign-in";
   const mounted = navigation?.key !== undefined;

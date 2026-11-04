@@ -61,7 +61,7 @@ export function momentLine(on: boolean, told: boolean, her: string): string {
 }
 
 /**
- * For an organiser with neither a Telegram or LINE link nor a phone that can be told: plainly, that nobody
+ * For an organiser with neither a messenger link nor a phone that can be told: plainly, that nobody
  * would tell them of a quiet morning (principle 7), and the one thing to do when this phone can be
  * the answer. Where the API sends no pushes (`pushSent` false, `ApiMe.push`), no phone counts
  * whatever it allows, so the line says that instead, never that their phone's notifications are
@@ -69,9 +69,9 @@ export function momentLine(on: boolean, told: boolean, her: string): string {
  */
 export function nobodyTellsLine(canTurnOnHere: boolean, pushSent: boolean): string {
   if (!pushSent) {
-    return t`If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet.`;
+    return t`If a morning goes quiet, nobody can tell you yet: you have no messenger link, and Vela does not send notifications to phones yet.`;
   }
   return canTurnOnHere
-    ? t`If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on. Turn them on for this phone to be told here.`
-    : t`If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link and no phone with Vela's notifications on.`;
+    ? t`If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on. Turn them on for this phone to be told here.`
+    : t`If a morning goes quiet, nobody can tell you yet: you have no messenger link and no phone with Vela's notifications on.`;
 }

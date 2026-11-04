@@ -140,7 +140,7 @@ function FamilyYou({ day }: { day: TodayView }) {
             <Words variant="body" tone="ink2">
               <Trans>
                 Your pilot is free. Quiet notices and important updates arrive in the organiser’s
-                private chat with Vela on Telegram or LINE.
+                private chat with Vela in their messenger.
               </Trans>
             </Words>
           ) : null}
