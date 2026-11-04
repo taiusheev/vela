@@ -151,31 +151,23 @@ export function QuietNoticeSheet({
                     <Words variant="bodyMedium">
                       <Trans>Was this notice useful?</Trans>
                     </Words>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.l }}>
-                      <Pressable
-                        accessibilityRole="button"
-                        hitSlop={hitSlop}
-                        disabled={settling}
-                        accessibilityState={{ disabled: settling }}
-                        style={{ minHeight: 44, justifyContent: "center" }}
-                        onPress={() => onUseful(true)}
-                      >
-                        <Words variant="button" tone="action">
-                          <Trans>Yes, useful</Trans>
-                        </Words>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        hitSlop={hitSlop}
-                        disabled={settling}
-                        accessibilityState={{ disabled: settling }}
-                        style={{ minHeight: 44, justifyContent: "center" }}
-                        onPress={() => onUseful(false)}
-                      >
-                        <Words variant="button" tone="action">
-                          <Trans>Not this time</Trans>
-                        </Words>
-                      </Pressable>
+                    {/* Two real buttons side by side: as plain words they read as text, and the
+                      founder could not tell they could be tapped (build 42). */}
+                    <View style={{ flexDirection: "row", gap: space.m }}>
+                      <View style={{ flex: 1 }}>
+                        <SecondaryButton
+                          label={t`Yes, useful`}
+                          disabled={settling}
+                          onPress={() => onUseful(true)}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <SecondaryButton
+                          label={t`Not this time`}
+                          disabled={settling}
+                          onPress={() => onUseful(false)}
+                        />
+                      </View>
                     </View>
                     {usefulFailed ? (
                       <Words variant="caption" tone="ink2">
