@@ -1043,3 +1043,5 @@ Needs before production: the founder's yes on `privacy-notice.v15-photo-question
 Rejected: drafting every morning from the photo with no person choosing (the founder wants the parent to hear the child, and a person picks the final words, as with send-as-me in ADR-49); keeping the drafts (nothing needs them after the choice); the cheapest model (Chinese quality matters more than the few cents).
 
 Revisit if: adders mostly keep the first draft unchanged (then fewer drafts may do), or drafts guess at people in the photo.
+
+**Production (4 November 2026).** The founder approved privacy-notice.v15 (ADR-58's photo box with ADR-61's own questions and suggestions) and consent-script.v8. Both go live with `PHOTO_BOX` and `PHOTO_QUESTION_AI` on in production, in one release. Families who agreed under an earlier notice are told first (`plan/materials/pilot/photo-box-family-message.md`); families who start after it read v15 when they agree.

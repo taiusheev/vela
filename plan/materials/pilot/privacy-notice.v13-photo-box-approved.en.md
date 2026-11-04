@@ -1,4 +1,4 @@
-# Privacy notice v13: The family's photo box (wording approved by the founder, not live)
+# Privacy notice v13: The family's photo box (approved; superseded by v15, live in privacy-notice.en.md and .zh-TW.md)
 
 Approved 31 October 2026 (founder: "approve all"). Builds on v12 (live). Production keeps the photo
 box off (`PHOTO_BOX` off, pinned in `apps/worker/src/wrangler-config.test.ts`) until this wording is

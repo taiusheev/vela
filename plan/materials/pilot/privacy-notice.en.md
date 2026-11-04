@@ -1,11 +1,12 @@
 # Vela pilot: privacy notice
 
-Version `privacy-notice.v14` · last updated 3 November 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
+Version `privacy-notice.v15` · last updated 4 November 2026 · This invitation-only research trial runs in English or Traditional Chinese (繁體中文), on Telegram or LINE. Each person uses Vela in the language they choose, and Vela translates between the two when a family uses both.
 
 ## In short
 
 - Vela carries one question a day from a family to someone they love, and brings that person's answer back to the family.
 - We keep as little as we can. Voice notes, photos and the words of answers are deleted after 30 days. Book export is outside this trial. Stories are kept only when that feature is enabled and you choose to keep them.
+- The family can put photos in a **photo box** in the app. Vela shows them, one or two at a time, to the person the light is for on mornings when nobody in the family wrote a question. Photos in the box stay until someone takes them out. See "The photo box".
 - When an answer mentions something like a fall or pain, Vela sends the organiser a separate note with the person's own words only if the person the light is for has agreed to that separately; otherwise the note carries none of their words. Their answers still reach the family group, organiser included, as they sent them.
 - On Sundays the organisers get a short weekly read. Each organiser's copy may also carry a few words, just for them, on how their own messages reached the person. The founder alone also sees a careful guess at what may lie beneath the week's words. See "The weekly read".
 - If the person the light is for has not answered their morning message a while after they usually do, Vela sends a short check-in with two buttons. A tap on "Not okay, tell my family" tells every organiser at once. See "The check-in".
@@ -33,6 +34,7 @@ Vela is a small pilot run by **Timur Aiusheev** (in this notice, "the founder"),
 
 - The name your messaging app shows us, your language and your time zone. On Telegram also your username. On LINE there is no username, and we learn your language only when LINE shares it.
 - What you send to Vela: questions (we call them asks), photos, voice notes, and replies and reactions to answers. LINE has no reactions, and in a LINE group asks and replies are text only: photos and voice notes for the family are sent from the app.
+- Photos put in the family's photo box, the line written about each, and the question written for it, if any (see "The photo box").
 - Whether you tapped "I've read it" under Vela's first message in the group.
 
 **App setup and local preview:** The new onboarding asks for the relationship, interests and preferred ways of replying, alongside the name, language, country, time zone and morning time. These help prepare the first week. Before saving, the preview answers stay in app memory; a chosen portrait can leave a temporary local file. The in-memory draft is cleared on sign-out or account changes, except for the one explicitly accepted preview being saved into its intended first signed-in session. Replaced or abandoned portrait previews are removed; interrupted portrait previews are swept on the next app start. If local file deletion fails, a cache file may remain until cleanup succeeds or the app cache is removed. Saving sends the setup answers and chosen questions to Vela; it does not record the invited person's consent. Relationship, interests and reply preferences are kept with their member profile for the same period as their name and morning settings. You can ask the founder to correct or remove them.
@@ -137,6 +139,20 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 - **How long.** The words of a drafted question are deleted 30 days after Vela wrote them. A question sent this way is kept like any other question: its words are deleted after 30 days.
 - **Who handles them.** OpenAI drafts them, in the United States (see "Who sees it").
 
+## The photo box
+
+Anyone in the family who uses the app can put up to 40 photos in the family's photo box, chosen one by one from their phone's photos. Vela never looks through a phone's photo library: it only receives the photos a person picks. Each photo can be marked as new or old and given one line of words, such as "Lily at the beach", and a question of their own about it.
+
+**What Vela does with it.** On mornings when nobody in the family wrote a question, about twice a week and never two days running, Vela sends the person the light is for a photo from the box with a short question about it. When the person who added the photo gave it their own question, Vela sends that question as theirs, signed with their name. Otherwise Vela asks a short fixed question, signed by Vela: an old photo asks for the story behind it; two new photos may ask which one they like more; the family's line about a photo goes into that question as they wrote it. A question the family writes for a morning always comes first.
+
+**Who sees it.** Everyone in the family who uses the app sees the photos in the box, who added each one, and when Vela last showed it. The person the light is for sees a photo when Vela sends it.
+
+**Help with the question.** When someone adds a photo, they can ask Vela to suggest questions about it. Vela then sends that one photo, the line written about it, the first name of the person adding it, how they call the person the light is for, and up to three questions they asked that person before, to OpenAI, which suggests up to three questions. Only the person adding the photo sees the suggestions; they choose one, change it or write their own, and nothing is sent until a morning Vela shows the photo. The suggestions are not kept. OpenAI handles the photo as described in "Who sees it". Photos are only sent to OpenAI when someone asks for suggestions.
+
+**How long.** A photo stays in the box until the person who added it, or an organiser, takes it out. It is then deleted within a day, including from the morning it was shown on. Photos added by someone who leaves the family, or deletes their account, are taken out and deleted within a day. When the family leaves Vela, the box is deleted with everything else. The words of the morning question, like every question, are deleted after 30 days.
+
+**Where.** Photos in the box are stored in Vela's own storage at Cloudflare, like other photos, and are sent to Telegram or LINE only when Vela shows them on a morning.
+
 ## Who sees it
 
 - **The family in the Vela group** sees the asks, the answers with their transcripts and, where needed, translations, and the replies.
@@ -151,7 +167,7 @@ Every night Vela's AI drafts a question for each of the next few mornings of the
 | Clerk | App sign-in and session verification | Account identifier, name/email supplied for sign-in, session activity; no family message content | United States |
 | Neon (part of Databricks) | Database | Everything we store except voice notes and photos | Singapore |
 | Cloudflare | Runs Vela's software; stores voice notes and photos | Everything while it is processed; voice notes and photos at rest | Stored in its Asia-Pacific region as we request, which Cloudflare treats as a preference, not a guarantee; processed on its worldwide network |
-| OpenAI | AI: summaries, translations, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words. Never phone numbers | United States |
+| OpenAI | AI: summaries, translations, suggested questions in an organiser's style (see "Questions Vela writes for an organiser"), drafts of the weekly read with each organiser's feedback and the founder's readings (see "The weekly read"), suggested questions about a photo in the family's photo box, when the person adding it asks (see "The photo box"), noticing words that matter. Vela sets `store: false` on its requests. OpenAI does not use API data for training by default, but may keep inputs and outputs in abuse-monitoring logs for up to 30 days, with longer retention where required by law or necessary for safety. This setting is not Zero Data Retention; no approved Zero Data Retention arrangement is recorded for this pilot | Answers, asks, replies and reactions, with when they were sent, family members' first names, roles and languages, and whether the person the light is for agreed to health words; a photo from the family's photo box and the line about it, only when the person adding it asks for suggested questions. Never phone numbers | United States |
 | Deepgram | Turns voice notes into text | Voice notes | United States |
 | Sentry (planned, not connected) | No current processing for Vela; error reporting would need its own setup and notice before activation | None at present | Germany (EU), planned |
 | Telegram | Carries the messages of families who use Telegram, as an independent messaging platform | Everything sent in the chat | Its own data centres, under its own privacy policy |
@@ -173,6 +189,7 @@ Our database is in Singapore. Messages on Telegram or LINE also pass through tha
 | Information | How long |
 |---|---|
 | Voice notes and photos (in answers, asks and replies) | 30 days, then deleted |
+| Photos in the family's photo box, the line about each and the question written for it | Until someone in the family takes them out, then deleted within a day. Also deleted within a day when the person who added them leaves the family or deletes their account, and with the family's data when the family leaves Vela |
 | The words of answers, asks and replies: text, transcripts, translations, suggested answers, suggested questions, and health mentions where the person agreed to them | 30 days, then deleted |
 | Existing stories previously kept in the family book (the book is unavailable in this trial) | Until the family removes them or leaves Vela. Saying "don't keep that one" removes a story |
 | One-line summaries of answers, answer times, records of quiet days, weekly reads (except the parts in the next row) | While the family uses Vela |
