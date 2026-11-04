@@ -213,7 +213,7 @@ export function Story({ step, signedIn }: { step: StoryStep; signedIn: boolean }
                   {`— ${exampleNames().mia}`}
                 </Text>
                 <Text style={[type.caption, { color: "#6D655B", alignSelf: "flex-end" }]}>
-                  {t`${time} · in her Telegram`}
+                  {t`${time} · in her chat app`}
                 </Text>
               </View>
             </Card>

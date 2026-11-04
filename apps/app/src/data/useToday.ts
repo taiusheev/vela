@@ -10,7 +10,8 @@ import type {
   MemberLight,
 } from "@vela/contracts";
 import { useCallback } from "react";
-import { ApiError, apiConfigured, fetchMe, fetchToday } from "../api/client.ts";
+import { ApiError, apiConfigured, fetchToday } from "../api/client.ts";
+import { readMe } from "../api/read-me.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import type { LightState } from "../components/light.tsx";
 import { useFamilySelection } from "./family-selection.tsx";
@@ -313,7 +314,7 @@ export function useToday(): TodayView {
   const me = useQuery({
     queryKey: ["me"],
     enabled,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   const selection = useFamilySelection();
   const membership = selectedMembership(me.data?.memberships ?? [], selection.familyId);

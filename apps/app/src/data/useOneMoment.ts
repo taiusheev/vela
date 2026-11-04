@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiMe } from "@vela/contracts";
 import { useRef, useState } from "react";
-import { apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
+import { apiConfigured, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
+import { readMe } from "../api/read-me.ts";
 import { useAccount } from "../auth/clerk.tsx";
 
 export interface OneMomentView {
@@ -33,7 +34,7 @@ export function useOneMoment(): OneMomentView {
   const me = useQuery({
     queryKey: ["me"],
     enabled,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   const change = useMutation({
     mutationFn: async (on: boolean) =>

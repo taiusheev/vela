@@ -12,8 +12,9 @@ import {
   useState,
 } from "react";
 import { Platform } from "react-native";
-import { ApiError, apiConfigured, fetchMe, updateAccount } from "../api/client.ts";
+import { ApiError, apiConfigured, updateAccount } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
+import { readMe } from "../api/read-me.ts";
 import { requiresEnglish } from "../api/trial.ts";
 import { useAccount } from "../auth/clerk.tsx";
 import { Text } from "../components/scaled-text.tsx";
@@ -123,7 +124,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const me = useQuery({
     queryKey: ["me"],
     enabled,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   const language = englishOnly ? "en" : me.data?.user.language;
   useEffect(() => {

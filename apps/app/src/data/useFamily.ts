@@ -5,12 +5,12 @@ import { useCallback, useState } from "react";
 import {
   apiConfigured,
   fetchFamily,
-  fetchMe,
   leaveFamily,
   memberChangeRefusal,
   pauseSelf,
 } from "../api/client.ts";
 import { useIdempotencyKey } from "../api/idempotency.ts";
+import { readMe } from "../api/read-me.ts";
 import { accountsConfigured, useAccount } from "../auth/clerk.tsx";
 import { toYouFamily, type YouFamily, youFixture } from "./family.ts";
 import { demoDataAllowed } from "./live-state.ts";
@@ -65,7 +65,7 @@ export function useFamily(familyId: string | undefined, enabled: boolean): Famil
   const me = useQuery({
     queryKey: ["me"],
     enabled,
-    queryFn: async () => fetchMe(await account.token()),
+    queryFn: () => readMe(account),
   });
   const read = useQuery({
     queryKey: ["family", familyId],

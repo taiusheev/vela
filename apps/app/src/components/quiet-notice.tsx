@@ -25,6 +25,8 @@ interface QuietNoticeSheetProps {
   trouble?: boolean;
   /** The organiser's verdict once the morning is settled (spec §18). */
   onUseful?(useful: boolean): void;
+  /** The last usefulness tap did not save. */
+  usefulFailed?: boolean;
   onClose(): void;
 }
 
@@ -43,6 +45,7 @@ export function QuietNoticeSheet({
   onUseful,
   onClose,
   settling = false,
+  usefulFailed = false,
   callingNumber,
   trouble = false,
 }: QuietNoticeSheetProps) {
@@ -138,8 +141,8 @@ export function QuietNoticeSheet({
             {answered ? (
               <>
                 <Words variant="body">{notice.resolution}</Words>
-                {onUseful === undefined ? null : notice.useful === true ||
-                  notice.useful === false ? (
+                {onUseful === undefined || notice.settled !== true ? null : notice.useful ===
+                    true || notice.useful === false ? (
                   <Words variant="caption" tone="ink3">
                     <Trans>Thank you. That helps Vela tell quiet mornings apart.</Trans>
                   </Words>
@@ -174,6 +177,11 @@ export function QuietNoticeSheet({
                         </Words>
                       </Pressable>
                     </View>
+                    {usefulFailed ? (
+                      <Words variant="caption" tone="ink2">
+                        <Trans>That did not save. Try again in a moment.</Trans>
+                      </Words>
+                    ) : null}
                   </View>
                 )}
               </>

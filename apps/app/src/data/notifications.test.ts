@@ -97,7 +97,7 @@ describe("an organiser nobody can tell (principle 7)", () => {
     for (const canTurnOnHere of [true, false]) {
       const line = nobodyTellsLine(canTurnOnHere, false);
       expect(line).toBe(
-        "If a morning goes quiet, nobody can tell you yet: you have no Telegram or LINE link, and Vela does not send notifications to phones yet.",
+        "If a morning goes quiet, nobody can tell you yet: you have no messenger link, and Vela does not send notifications to phones yet.",
       );
       expect(line).not.toContain("notifications on");
     }

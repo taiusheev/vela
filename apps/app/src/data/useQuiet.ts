@@ -101,6 +101,7 @@ export function toQuietNotice(notice: ApiQuietNotice): QuietNotice {
           }),
     })),
     ...(resolution === undefined ? {} : { resolution }),
+    ...(notice.resolved === null ? {} : { settled: true }),
     useful: notice.useful,
   };
 }
@@ -115,6 +116,8 @@ export interface QuietView {
   /** The organiser's verdict on the settled notice. */
   markUseful(useful: boolean): void;
   settling: boolean;
+  /** The last usefulness tap did not save. */
+  usefulFailed: boolean;
   trouble: boolean;
 }
 
@@ -200,9 +203,14 @@ export function useQuiet(quietEventId: string | undefined, enabled: boolean): Qu
         ? undefined
         : afterSettle === undefined
           ? base
-          : { ...base, resolution: afterSettle },
+          : {
+              ...base,
+              resolution: afterSettle,
+              ...(settled?.resolved === null || settled === null ? {} : { settled: true }),
+            },
     settle: (action) => settle.mutate(action),
     settling: settle.isPending || useful.isPending,
+    usefulFailed: useful.isError,
     askToLookIn: (contactId) => lookIn.mutate(contactId),
     markUseful: (value) => useful.mutate(value),
     asking: lookIn.isPending,

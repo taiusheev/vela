@@ -257,6 +257,8 @@ function FamilyToday({ day }: { day: TodayView }) {
             : resolution === "wait"
               ? t`Waiting two hours. You will hear again at 13:00 if it is still quiet.`
               : undefined,
+        // Only "she's fine" settles the example morning; a wait does not, as in the live sheet.
+        ...(resolution === "fine" ? { settled: true } : {}),
       };
   // A13: the first time an organiser sees her lit with no Vela Light yet, the offer opens, once on
   // this device; You opens it again whenever they want it.
@@ -396,8 +398,6 @@ function FamilyToday({ day }: { day: TodayView }) {
       >
         <View style={{ gap: space.s }}>
           <TodayHeader
-            lights={today.lights}
-            familyId={portraitFamily}
             unread={inbox.unread}
             onBell={() => {
               inbox.markSeen();
@@ -616,6 +616,7 @@ function FamilyToday({ day }: { day: TodayView }) {
             settling={live && liveQuiet.settling}
             callingNumber={calling.number ?? undefined}
             trouble={live && liveQuiet.trouble}
+            usefulFailed={live && liveQuiet.usefulFailed}
             onUseful={(value) => {
               if (live) liveQuiet.markUseful(value);
               else setDemoUseful(value);
