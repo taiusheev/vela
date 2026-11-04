@@ -572,9 +572,10 @@
         // Off, and pinned off by src/wrangler-config.test.ts: privacy notice v1 says the family
         // book comes later in the pilot, so no story is kept before a notice describes it.
         "BOOK": "off",
-        "PHOTO_BOX": "off",
-        // Off, and pinned off, until the privacy notice says the AI sees box photos (ADR-61, v15).
-        "PHOTO_QUESTION_AI": "off",
+        // ADR-58 and ADR-61: on since privacy-notice.v15 and consent-script.v8 describe the photo box
+        // and the photo-question suggestions (founder's approval of 4 November 2026).
+        "PHOTO_BOX": "on",
+        "PHOTO_QUESTION_AI": "on",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off, until the families have been told that Vela may ask the people

@@ -1,4 +1,4 @@
-# Privacy notice v15: questions about box photos (draft, needs the founder's yes)
+# Privacy notice v15: questions about box photos (APPROVED 4 November 2026, live in privacy-notice.en.md and .zh-TW.md)
 
 Drafted 3 November 2026 for ADR-61. Changes the approved photo box text
 (`privacy-notice.v13-photo-box-approved.en.md`, which becomes v15 with the live notice). Production
