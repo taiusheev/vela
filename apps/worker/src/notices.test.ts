@@ -19,9 +19,9 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the v14 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v14");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v14");
+  it("serves the v15 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v15");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v15");
     // ADR-60: Vela may ask the people nearby itself, so neither notice says it never contacts anyone.
     expect(PRIVACY_NOTICES.en.html).toContain("when nobody in the family has answered");
     expect(PRIVACY_NOTICES.en.html).not.toContain("Vela never contacts anyone on its own");
@@ -38,6 +38,22 @@ describe("approved notification-preference notice", () => {
     );
     expect(PRIVACY_NOTICES["zh-TW"].html).toContain("通知偏好：");
     expect(PRIVACY_NOTICES["zh-TW"].html).toContain("刪除帳號時，Vela 會清除這些通知偏好。");
+  });
+});
+
+describe("the photo box in the notice (ADR-58, ADR-61)", () => {
+  it("says, in both languages, what the box keeps, for how long, and when OpenAI sees a photo", () => {
+    expect(PRIVACY_NOTICES.en.html).toContain("<h2>The photo box</h2>");
+    expect(PRIVACY_NOTICES.en.html).toContain(
+      "Photos are only sent to OpenAI when someone asks for suggestions.",
+    );
+    expect(PRIVACY_NOTICES.en.html).not.toContain(
+      "Photos in the box are not sent to an AI provider",
+    );
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("<h2>相片盒</h2>");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain(
+      "只有在有人請 Vela 建議問題時，照片才會傳給 OpenAI。",
+    );
   });
 });
 
