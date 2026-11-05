@@ -139,6 +139,7 @@ import {
   readPhotoBox,
   readPhotoQuestionAi,
   readRichMemories,
+  readTalkSetup,
   secret,
 } from "./config.ts";
 import { createAiPort, createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
@@ -456,6 +457,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
       photo_box: readPhotoBox(env),
+      talk_setup: readTalkSetup(env),
       photo_question_ai: photoQuestions !== undefined,
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
@@ -538,6 +540,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
                 telegramBotUsername: config.telegramBotUsername,
                 lineBasicId: config.lineBasicId,
                 regions: config.regions,
+                talkSetup: readTalkSetup(env),
               },
             },
             devices: {

@@ -772,6 +772,28 @@ describe("pilot capabilities and secure Telegram linking", () => {
     );
   });
 
+  it("lets a family set up in the app finish saving its setup while it waits for approval", async () => {
+    admission.permitsAccount.mockResolvedValue(false);
+    const awaitsFamily = vi.fn<NonNullable<NonNullable<ApiRuntime["admission"]>["awaitsFamily"]>>();
+    awaitsFamily.mockResolvedValue(true);
+    const headers = { authorization: "Bearer good" };
+    const morning = `/v1/families/${FAMILY_ID}/members/${MEMBER_ID}/morning`;
+    const f = fixture(true, false, { admission: { ...admission, awaitsFamily, appSetup: true } });
+    f.services.loadApiMorningPreferences.mockResolvedValue(null);
+    const read = await f.app.request(morning, { headers });
+    expect(read.status).not.toBe(403);
+    expect(f.services.loadApiMorningPreferences).toHaveBeenCalledOnce();
+    // Everything else still waits, Today and reading the family's messages included.
+    const today = await f.app.request(`/v1/families/${FAMILY_ID}/today`, { headers });
+    expect(today.status).toBe(403);
+    const feed = await f.app.request(`/v1/families/${FAMILY_ID}/exchanges`, { headers });
+    expect(feed.status).toBe(403);
+    // Without app setup, nothing passes.
+    const off = fixture(true, false, { admission: { ...admission, awaitsFamily } });
+    expect((await off.app.request(morning, { headers })).status).toBe(403);
+    expect(off.services.loadApiMorningPreferences).not.toHaveBeenCalled();
+  });
+
   it("enforces English profiles and Telegram-first family setup", async () => {
     admission.permitsAccount.mockResolvedValue(true);
     const f = fixture(true, false, { admission });

@@ -23,7 +23,10 @@ import {
   type AskBankItem,
   type AskBankLang,
   type AskBankType,
+  type Avoidance,
   askBankItem,
+  bankItemAvoided,
+  touchesAvoided,
 } from "@vela/copy";
 import {
   FORBIDDEN_ZH_TW,
@@ -150,6 +153,20 @@ export interface BankPickInput {
   readonly family: readonly SuggestedDay[];
   /** The types of her asks scheduled for the two days before `forDate`, withdrawn ones left out. */
   readonly recentAskTypes: readonly ExchangeType[];
+  /** What the organiser asked Vela never to bring up (onboarding v2); absent, nothing. */
+  readonly avoid?: Avoidance;
+}
+
+/** What her member row says Vela must never bring up; nothing where setup did not ask. */
+export function avoidanceOf(member: Pick<Member, "avoidTopics" | "avoidWords">): Avoidance {
+  return { topics: member.avoidTopics ?? [], words: member.avoidWords ?? [] };
+}
+
+/** The bank without any item that touches what she must not be asked about. */
+function bankFor(avoid: Avoidance | undefined): readonly AskBankItem[] {
+  if (avoid === undefined) return ASK_BANK;
+  const left = ASK_BANK.filter((item) => !bankItemAvoided(item, avoid));
+  return left.length > 0 ? left : ASK_BANK;
 }
 
 function isAskBankType(type: string): type is AskBankType {
@@ -210,7 +227,7 @@ function leastRecent(input: BankPickInput): AskBankItem {
       lastSeen.set(group, row.localDay);
     }
   }
-  const ranked = [...ASK_BANK].sort(
+  const ranked = [...bankFor(input.avoid)].sort(
     (a, b) =>
       Number(used.has(a.group)) - Number(used.has(b.group)) ||
       (lastSeen.get(a.group) ?? "").localeCompare(lastSeen.get(b.group) ?? "") ||
@@ -254,7 +271,7 @@ export function pickBankItem(input: BankPickInput): AskBankItem {
       .filter((row) => within(row, forDate, TOPIC_GAP_DAYS))
       .map((row) => askBankItem(row.bankId)?.topic),
   );
-  const unrepeated = ASK_BANK.filter((item) => !excludedGroups.has(item.group));
+  const unrepeated = bankFor(input.avoid).filter((item) => !excludedGroups.has(item.group));
   const fresh = unrepeated.filter((item) => !nearbyTopics.has(item.topic));
   const type = rotationTypeFor(input);
   const ofType = (items: readonly AskBankItem[]) => items.filter((item) => item.type === type);
@@ -744,6 +761,7 @@ function pickFor(context: WriterContext, plan: Plan, forDate: LocalDate): AskBan
     recentAskTypes: (context.asks.get(member.id) ?? [])
       .filter((ask) => ask.date < forDate && ask.date >= addDays(forDate, -RECENT_ASK_DAYS))
       .map((ask) => ask.type),
+    avoid: avoidanceOf(member),
   });
 }
 
@@ -762,16 +780,21 @@ function suggestInput(
 ): SuggestInput {
   const { member, family } = plan;
   const organiser = context.holders.get(member.id);
+  // Nothing that touches what she must not be asked about reaches the model, and the topics
+  // themselves never do: code leaves those words out (onboarding v2).
+  const avoid = avoidanceOf(member);
+  const allowed = (text: string) => !touchesAvoided(text, avoid);
+  const lastAsk = context.lastAsks.get(member.id) ?? null;
   return {
     lang: readerLang(organiser?.language ?? family.language),
     holderName: organiser?.displayName ?? family.name,
     recipientAddress: member.displayName,
     forDate,
     rotationType: item.type,
-    recentMentions: [...(context.mentions.get(member.id) ?? [])],
+    recentMentions: (context.mentions.get(member.id) ?? []).filter(allowed),
     familyDates: [],
-    holderLastAsk: context.lastAsks.get(member.id) ?? null,
-    holderWritingExamples: [...(context.writingExamples.get(member.id) ?? [])],
+    holderLastAsk: lastAsk !== null && allowed(lastAsk.text ?? "") ? lastAsk : null,
+    holderWritingExamples: (context.writingExamples.get(member.id) ?? []).filter(allowed),
   };
 }
 
@@ -786,7 +809,10 @@ interface AcceptedDraft {
  * The AI draft to store, or null for the bank item: no call, a failed one, a type that needs more
  * than words, no words, or words a suggestion must never hold.
  */
-function acceptedDraft(outcome: AiOutcome<SuggestDraft> | null): AcceptedDraft | null {
+function acceptedDraft(
+  outcome: AiOutcome<SuggestDraft> | null,
+  avoid: Avoidance,
+): AcceptedDraft | null {
   if (outcome === null || !outcome.ok) {
     return null;
   }
@@ -795,7 +821,7 @@ function acceptedDraft(outcome: AiOutcome<SuggestDraft> | null): AcceptedDraft |
   if (text.length === 0 || !isAskBankType(value.type)) {
     return null;
   }
-  if (DRAFT_GUARDS.some((guard) => guard.test(text))) {
+  if (DRAFT_GUARDS.some((guard) => guard.test(text)) || touchesAvoided(text, avoid)) {
     return null;
   }
   return {
@@ -858,7 +884,7 @@ async function writeDay(
       error: outcome.error,
     });
   }
-  const draft = acceptedDraft(outcome);
+  const draft = acceptedDraft(outcome, avoidanceOf(currentMember));
   const now = deps.clock.now();
 
   const result = await deps.db.transaction(async (tx): Promise<SuggestionOutcome> => {

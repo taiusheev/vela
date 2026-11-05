@@ -188,6 +188,8 @@ export interface ApiCapabilities {
   photo_box?: boolean;
   /** Vela may look at a box photo and draft questions about it (ADR-61); absent means not. */
   photo_question_ai?: boolean;
+  /** Setup asks how the family talks and what never to bring up (onboarding v2); absent means not. */
+  talk_setup?: boolean;
   parent_app: boolean;
   billing: boolean;
 }

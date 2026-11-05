@@ -58,6 +58,7 @@ const fields: readonly FieldSpec[] = [
     policy: EXCHANGE_OPTIONS_SEALING,
   },
   { table: "chips", keys: ["exchange_id"], column: "chips", kind: "text[]" },
+  { table: "members", keys: ["id"], column: "avoid_words", kind: "text[]" },
   { table: "suggestions", keys: ["id"], column: "text", kind: "text" },
   {
     table: "translations",

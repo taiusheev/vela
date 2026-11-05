@@ -189,6 +189,45 @@ describe("createApiFamily", () => {
     expect(second).toMatchObject({ relationship: null, interests: null, replyWays: null });
   });
 
+  it("keeps how the family talks and what never to bring up only where TALK_SETUP is on", async () => {
+    const talk = {
+      ...REQUEST,
+      kept_light_member: {
+        ...REQUEST.kept_light_member,
+        talk_rhythm: "rarely",
+        avoid_topics: ["money", "health"],
+        avoid_words: ["Grandpa Lin"],
+      },
+    };
+    const ignored = ApiCreatedFamily.parse((await create(talk)).response.body);
+    const [off] = await h.db
+      .select()
+      .from(members)
+      .where(eq(members.id, ignored.kept_light_member.id));
+    expect(off).toMatchObject({ talkRhythm: null, avoidTopics: null, avoidWords: null });
+
+    await h.reset();
+    await h.db.insert(users).values({
+      authSubject: identity.authSubject,
+      displayName: "Mia",
+      language: "en",
+      tz: "Asia/Taipei",
+    });
+    const on = { ...h.deps, config: { ...h.deps.config, talkSetup: true } };
+    const kept = ApiCreatedFamily.parse(
+      (await createApiFamily(on, identity, "talk-on", talk)).response.body,
+    );
+    const [her] = await h.db
+      .select()
+      .from(members)
+      .where(eq(members.id, kept.kept_light_member.id));
+    expect(her).toMatchObject({
+      talkRhythm: "rarely",
+      avoidTopics: ["money", "health"],
+      avoidWords: ["Grandpa Lin"],
+    });
+  });
+
   it("carries her invite on LINE too where LINE is on, opening Vela's chat with /start typed", async () => {
     keys += 1;
     const result = await createApiFamily(

@@ -5,6 +5,10 @@ import {
   Channel,
   ExchangeState,
   ExchangeType,
+  AVOID_TOPICS,
+  AVOID_WORD_MAX,
+  AVOID_WORDS_MAX,
+  AvoidTopic,
   INTEREST_TOPICS,
   InterestTopic,
   KeptLightRelationship,
@@ -19,6 +23,7 @@ import {
   PushPlatform,
   REACTION_KINDS,
   REPLY_WAYS,
+  TalkRhythm,
   Region,
   ReplyKind,
   ReplyWay,
@@ -124,6 +129,11 @@ export const ApiCapabilities = z.strictObject({
    * adding it to choose from (ADR-61). Without it they write their own question, or none.
    */
   photo_question_ai: z.boolean().optional(),
+  /**
+   * Whether setup asks "How do you and Mom talk?" and keeps the answers (onboarding v2): how often
+   * they talk, and what Vela should never bring up. Absent means not.
+   */
+  talk_setup: z.boolean().optional(),
   parent_app: z.boolean(),
   billing: z.boolean(),
 });
@@ -897,6 +907,21 @@ export const CreateFamily = z.strictObject({
     relationship: KeptLightRelationship.optional(),
     interests: DistinctChoices(InterestTopic, 1, INTEREST_TOPICS.length).optional(),
     reply_ways: DistinctChoices(ReplyWay, 0, REPLY_WAYS.length).optional(),
+    /**
+     * "How do you and Mom talk?" (onboarding v2): how often they talk now, and what Vela should never
+     * bring up, as fixed topics and up to three words of the organiser's own. Empty lists are the
+     * organiser's "nothing to avoid". Kept only where `TALK_SETUP` is on; otherwise ignored.
+     */
+    talk_rhythm: TalkRhythm.optional(),
+    avoid_topics: DistinctChoices(AvoidTopic, 0, AVOID_TOPICS.length).optional(),
+    avoid_words: z
+      .array(PersonText(AVOID_WORD_MAX))
+      .max(AVOID_WORDS_MAX)
+      .refine(
+        (words) => new Set(words.map((word) => word.toLowerCase())).size === words.length,
+        "each word at most once",
+      )
+      .optional(),
   }),
 });
 export type CreateFamily = z.infer<typeof CreateFamily>;

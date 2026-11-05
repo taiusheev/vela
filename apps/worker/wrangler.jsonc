@@ -284,6 +284,8 @@
     "PHOTO_BOX": "on",
     // On: Vela looks at a photo going into the box and drafts questions for the adder (ADR-61).
     "PHOTO_QUESTION_AI": "on",
+    // On: setup asks how the family talks and what never to bring up (onboarding v2).
+    "TALK_SETUP": "on",
     "PERSONAL_QUESTION_DRAFTS": "off",
     "PERSONAL_QUESTION_PROFILES": "off",
     // On: the founder's reading and each organiser's feedback with the weekly read (ADR-48).
@@ -427,6 +429,8 @@
         "PHOTO_BOX": "on",
         // On: Vela looks at a photo going into the box and drafts questions for the adder (ADR-61).
         "PHOTO_QUESTION_AI": "on",
+        // On: setup asks how the family talks and what never to bring up (onboarding v2).
+        "TALK_SETUP": "on",
         "PERSONAL_QUESTION_DRAFTS": "on",
         "PERSONAL_QUESTION_PROFILES": "off",
         // On: staging holds test families only (ADR-48).
@@ -579,6 +583,8 @@
         // and the photo-question suggestions (founder's approval of 4 November 2026).
         "PHOTO_BOX": "on",
         "PHOTO_QUESTION_AI": "on",
+        // Off: "How do you and Mom talk?" waits for privacy-notice.v16 and the founder's yes.
+        "TALK_SETUP": "off",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off, until the families have been told that Vela may ask the people

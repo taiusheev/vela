@@ -171,6 +171,13 @@ export interface PilotEnv extends SharedEnv {
    */
   readonly PHOTO_QUESTION_AI?: string;
   /**
+   * `TALK_SETUP` (onboarding v2): "on" lets setup ask "How do you and Mom talk?" and keeps the
+   * answers: how often they talk, and what Vela should never bring up, which code then keeps out of
+   * her questions. Absent or "off" does not. On in development and staging, off in production until
+   * the privacy notice describes it; pinned in src/wrangler-config.test.ts.
+   */
+  readonly TALK_SETUP?: string;
+  /**
    * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
    * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.
    */

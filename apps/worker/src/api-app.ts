@@ -523,6 +523,15 @@ const NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Not found." },
 };
 /** The closed test's answer to an organiser whose new family the founder has not approved yet. */
+/** The setup writes (and the reads they need) a family may make while it waits for approval. */
+const WAITING_SETUP: readonly (readonly [string, RegExp])[] = [
+  ["POST", /^\/v1\/families\/[^/]+\/exchanges$/],
+  ["POST", /^\/v1\/families\/[^/]+\/nearby$/],
+  ["GET", /^\/v1\/families\/[^/]+\/members\/[^/]+\/morning$/],
+  ["POST", /^\/v1\/families\/[^/]+\/members\/[^/]+\/morning$/],
+  ["POST", /^\/v1\/families\/[^/]+\/members\/[^/]+\/question-profile\/save$/],
+];
+
 const FAMILY_WAITING: ApiErrorBody = {
   error: {
     code: "forbidden",
@@ -717,8 +726,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           identity !== undefined &&
           admission.awaitsFamily !== undefined &&
           (await admission.awaitsFamily(handle.db, identity, roster))
-        )
+        ) {
+          // A family set up in the app finishes saving its own setup while it waits (ADR-52
+          // amended): her first week, the people nearby, her morning and how the family talks.
+          // Nothing reaches anyone before approval; the family's own routes still check the role.
+          if (
+            admission.appSetup === true &&
+            WAITING_SETUP.some(
+              ([method, route]) => c.req.method === method && route.test(c.req.path),
+            )
+          ) {
+            await next();
+            return;
+          }
           return c.json(FAMILY_WAITING, 403);
+        }
         return c.json(NOT_FOUND, 404);
       }
       await next();
