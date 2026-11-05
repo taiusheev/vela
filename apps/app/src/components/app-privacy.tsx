@@ -26,40 +26,17 @@ import { Light } from "./light.tsx";
 import { LoadingLight } from "./loading-light.tsx";
 import { Card, PrimaryButton, SecondaryButton, TextButton, Words } from "./ui.tsx";
 
-/** A versioned English notice for the current English testing cohort. */
-export function AppPrivacy({
-  onAccept,
-  onDecline,
-  working = false,
-  failed = false,
-}: {
-  onAccept: () => void;
-  onDecline: () => void;
-  working?: boolean;
-  failed?: boolean;
-}) {
+/**
+ * What a new organiser agrees to before anything is saved: the versioned summary, with the full
+ * permission text, the terms and the privacy notice one tap away. Shown on its own (`AppPrivacy`)
+ * and above the email when onboarding saves a family (sign-in, onboarding v2).
+ */
+export function PrivacySummary() {
   const { t, i18n } = useLingui();
-  const palette = usePalette();
   const [linkFailed, setLinkFailed] = useState(false);
   const [details, setDetails] = useState(false);
-  const insets = useSafeAreaInsets();
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.xl,
-        paddingBottom: insets.bottom + space.xxxl,
-        paddingHorizontal: space.margin,
-        gap: space.l,
-      }}
-    >
-      {/* One lit window, as on every onboarding screen, so this step feels part of the same walk. */}
-      <View style={{ alignItems: "flex-start" }}>
-        <Light state="lit" height={40} />
-      </View>
-      <Words variant="title">
-        <Trans>Before you continue</Trans>
-      </Words>
+    <>
       <Card>
         <Words variant="body" tone="ink2">
           <Trans>
@@ -93,6 +70,43 @@ export function AppPrivacy({
         </>
       ) : null}
       {linkFailed ? <Words selectable>{SUPPORT_EMAIL}</Words> : null}
+    </>
+  );
+}
+
+/** A versioned English notice for the current English testing cohort. */
+export function AppPrivacy({
+  onAccept,
+  onDecline,
+  working = false,
+  failed = false,
+}: {
+  onAccept: () => void;
+  onDecline: () => void;
+  working?: boolean;
+  failed?: boolean;
+}) {
+  const { t } = useLingui();
+  const palette = usePalette();
+  const insets = useSafeAreaInsets();
+  return (
+    <ScrollView
+      style={{ backgroundColor: palette.bg }}
+      contentContainerStyle={{
+        paddingTop: insets.top + space.xl,
+        paddingBottom: insets.bottom + space.xxxl,
+        paddingHorizontal: space.margin,
+        gap: space.l,
+      }}
+    >
+      {/* One lit window, as on every onboarding screen, so this step feels part of the same walk. */}
+      <View style={{ alignItems: "flex-start" }}>
+        <Light state="lit" height={40} />
+      </View>
+      <Words variant="title">
+        <Trans>Before you continue</Trans>
+      </Words>
+      <PrivacySummary />
       {failed ? (
         <Words>
           <Trans>Your choice could not be saved. Please try again.</Trans>
@@ -219,6 +233,10 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
     if (decision === "save" && save.status === "idle") saveChoice();
   }, [decision, save.status, saveChoice]);
   if (decision === "pass") return children;
+  // A family set up in the app finishes onboarding while it waits: its own screen says so, beside
+  // the invitation that opens once the founder approves (ADR-52 amended).
+  if (waiting && draft.created !== null && ["save", "invite", "ready"].includes(draft.step))
+    return children;
   if (waiting)
     return (
       <FamilyWaiting

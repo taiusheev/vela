@@ -220,6 +220,12 @@ export interface Config {
    */
   photoBox?: boolean;
   /**
+   * Whether setup's "How do you and Mom talk?" answers are kept (onboarding v2, `TALK_SETUP`): how
+   * often they talk, and what Vela should never bring up. Absent means they are ignored; off in
+   * production until the privacy notice describes them.
+   */
+  talkSetup?: boolean;
+  /**
    * Whether Vela may look at a photo going into the box and draft questions about it for the person
    * adding it (ADR-61, `PHOTO_QUESTION_AI`). Absent means not; off in production until the privacy
    * notice says the AI sees box photos.

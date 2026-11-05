@@ -21,6 +21,8 @@ export const night = {
 const WINDOW_X = 0.72;
 const WINDOW_Y = 0.44;
 const PICTURE_RATIO = 780 / 1170;
+/** The lit glass of that window, as shares of the picture: its arch, mullions and sill inside. */
+const GLASS = { x: 0.622, y: 0.232, width: 0.308, height: 0.358 } as const;
 
 const native = Platform.OS !== "web";
 
@@ -46,11 +48,14 @@ function useEased(target: number, duration: number, still: boolean): Animated.Va
 export function NightScene({
   dim,
   glow,
+  lamp = 1,
   breathing = false,
   children,
 }: {
   dim: number;
   glow: number;
+  /** The lamp in her window: 1 lit as painted, 0 off; between, a small waiting light. */
+  lamp?: number;
   breathing?: boolean;
   children: ReactNode;
 }) {
@@ -67,6 +72,8 @@ export function NightScene({
   const still = useReducedMotion();
   const darkness = useEased(dim, 1400, still);
   const light = useEased(glow, 1600, still);
+  // A real bulb takes a moment to warm: slower than the room, so the window comes on last.
+  const bulb = useEased(lamp, 1800, still);
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!breathing || still) {
@@ -107,6 +114,42 @@ export function NightScene({
           resizeMode="cover"
           style={{ position: "absolute", left, top, width: pictureWidth, height: pictureHeight }}
         />
+        {/* The glass of her window, dark while the lamp is off (picture coordinates). */}
+        <Animated.View
+          style={{
+            position: "absolute",
+            left: left + GLASS.x * pictureWidth,
+            top: top + GLASS.y * pictureHeight,
+            width: GLASS.width * pictureWidth,
+            height: GLASS.height * pictureHeight,
+            borderTopLeftRadius: (GLASS.width * pictureWidth) / 2,
+            borderTopRightRadius: (GLASS.width * pictureWidth) / 2,
+            backgroundColor: "#0E1215",
+            opacity: bulb.interpolate({ inputRange: [0, 1], outputRange: [0.9, 0] }),
+          }}
+        />
+        {/* A warm grade, and a plum dusk in place of the painting's cold blue sky (5 Nov 2026). */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: night.amber,
+            opacity: 0.1,
+          }}
+        />
+        <Svg width={width} height={height * 0.5} style={{ position: "absolute", left: 0, top: 0 }}>
+          <Defs>
+            <LinearGradient id="dusk-sky" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#3B2433" stopOpacity={0.62} />
+              <Stop offset="0.6" stopColor="#7A4A3A" stopOpacity={0.28} />
+              <Stop offset="1" stopColor="#7A4A3A" stopOpacity={0} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={width} height={height * 0.5} fill="url(#dusk-sky)" />
+        </Svg>
         <Animated.View
           style={{
             position: "absolute",

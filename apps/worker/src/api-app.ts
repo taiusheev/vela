@@ -431,6 +431,12 @@ export interface ApiRuntime {
     awaitsFamily?: typeof pilotAccountAwaitsFamily;
     /** The allowlist with the founder's admin-page roster added (ADR-45); absent, the allowlist. */
     withRoster?: (db: VelaDatabase, config: PilotAdmission) => Promise<PilotAdmission>;
+    /**
+     * Families may be set up in the app (onboarding v2), where the founder approves families
+     * (ADR-52 amended): each then waits for approval like any other. Absent, setup stays in the
+     * messenger.
+     */
+    appSetup?: boolean;
   };
   verifySession: SessionVerifier;
   /** Reads that answer in a member's own local day need the hour it is now. */
@@ -517,6 +523,15 @@ const NOT_FOUND: ApiErrorBody = {
   error: { code: "not_found", message: "Not found." },
 };
 /** The closed test's answer to an organiser whose new family the founder has not approved yet. */
+/** The setup writes (and the reads they need) a family may make while it waits for approval. */
+const WAITING_SETUP: readonly (readonly [string, RegExp])[] = [
+  ["POST", /^\/v1\/families\/[^/]+\/exchanges$/],
+  ["POST", /^\/v1\/families\/[^/]+\/nearby$/],
+  ["GET", /^\/v1\/families\/[^/]+\/members\/[^/]+\/morning$/],
+  ["POST", /^\/v1\/families\/[^/]+\/members\/[^/]+\/morning$/],
+  ["POST", /^\/v1\/families\/[^/]+\/members\/[^/]+\/question-profile\/save$/],
+];
+
 const FAMILY_WAITING: ApiErrorBody = {
   error: {
     code: "forbidden",
@@ -711,8 +726,21 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
           identity !== undefined &&
           admission.awaitsFamily !== undefined &&
           (await admission.awaitsFamily(handle.db, identity, roster))
-        )
+        ) {
+          // A family set up in the app finishes saving its own setup while it waits (ADR-52
+          // amended): her first week, the people nearby, her morning and how the family talks.
+          // Nothing reaches anyone before approval; the family's own routes still check the role.
+          if (
+            admission.appSetup === true &&
+            WAITING_SETUP.some(
+              ([method, route]) => c.req.method === method && route.test(c.req.path),
+            )
+          ) {
+            await next();
+            return;
+          }
           return c.json(FAMILY_WAITING, 403);
+        }
         return c.json(NOT_FOUND, 404);
       }
       await next();
@@ -2276,13 +2304,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         checkActivity,
         withDatabase,
         async (c) => {
-          if (runtime.admission !== undefined)
+          const admission = runtime.admission;
+          if (admission !== undefined && admission.appSetup !== true)
             return c.json(
               {
                 error: {
                   code: "forbidden",
                   message: "Start your trial family in Telegram, then link it here.",
                   details: { reason: "pilot_telegram_first" },
+                },
+              },
+              403,
+            );
+          if (
+            admission !== undefined &&
+            !pilotSpeaks(
+              admission.config,
+              (c.get("writeInput") as CreateFamily).kept_light_member.language,
+            )
+          )
+            return c.json(
+              {
+                error: {
+                  code: "forbidden",
+                  message: "The closed test does not run in this language yet.",
+                  details: { reason: "pilot_language" },
                 },
               },
               403,

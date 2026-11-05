@@ -63,6 +63,7 @@ import {
   ADMIN_ACTIONS,
   AGE_BANDS,
   ANSWER_KINDS,
+  AVOID_TOPICS,
   AWAY_SOURCES,
   BUDGETED_OUTBOUND_KINDS,
   CHANNELS,
@@ -95,6 +96,7 @@ import {
   ROLES,
   SUBSCRIPTION_STATUSES,
   SURFACES,
+  TALK_RHYTHMS,
   WHEN_RULES,
 } from "@vela/contracts";
 import { relations, sql } from "drizzle-orm";
@@ -291,6 +293,15 @@ export const members = pgTable(
     relationship: text("relationship", { enum: KEPT_LIGHT_RELATIONSHIPS }),
     interests: text("interests", { enum: INTEREST_TOPICS }).array(),
     replyWays: text("reply_ways", { enum: REPLY_WAYS }).array(),
+    /**
+     * "How do you and Mom talk?" (onboarding v2, 5 November 2026): how often they talk now, and what
+     * Vela should never bring up, as fixed topics and the organiser's own words (sealed, ADR-38).
+     * Code alone reads them to keep questions off those topics; they never go to the AI. NULL where
+     * setup did not ask; empty lists are "nothing to avoid". Deleted with her row.
+     */
+    talkRhythm: text("talk_rhythm", { enum: TALK_RHYTHMS }),
+    avoidTopics: text("avoid_topics", { enum: AVOID_TOPICS }).array(),
+    avoidWords: sealedTextArray("members.avoid_words"),
     status: text("status", { enum: MEMBER_STATUSES }).notNull().default("invited"),
     turnsIn: boolean("turns_in").notNull().default(true),
     primarySurface: text("primary_surface", { enum: SURFACES }).notNull().default("app"),
@@ -355,6 +366,8 @@ export const members = pgTable(
     check("members_relationship_check", isOneOf(t.relationship, KEPT_LIGHT_RELATIONSHIPS)),
     check("members_interests_check", isSubsetOf(t.interests, INTEREST_TOPICS)),
     check("members_reply_ways_check", isSubsetOf(t.replyWays, REPLY_WAYS)),
+    check("members_talk_rhythm_check", isOneOf(t.talkRhythm, TALK_RHYTHMS)),
+    check("members_avoid_topics_check", isSubsetOf(t.avoidTopics, AVOID_TOPICS)),
     check("members_status_check", isOneOf(t.status, MEMBER_STATUSES)),
     check("members_primary_surface_check", isOneOf(t.primarySurface, SURFACES)),
   ],

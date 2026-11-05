@@ -14,7 +14,7 @@ import { regionForCountry } from "./onboarding.ts";
  * the regions whose database exists here. */
 export type ApiFamilyDeps = Pick<Deps, "db" | "clock" | "random"> & {
   config: Pick<Deps["config"], "telegramBotUsername" | "regions"> &
-    Partial<Pick<Deps["config"], "lineBasicId">>;
+    Partial<Pick<Deps["config"], "lineBasicId" | "talkSetup">>;
 };
 
 /**
@@ -137,6 +137,16 @@ export async function createApiFamily(
             ...(person.relationship === undefined ? {} : { relationship: person.relationship }),
             ...(person.interests === undefined ? {} : { interests: person.interests }),
             ...(person.reply_ways === undefined ? {} : { replyWays: person.reply_ways }),
+            // How the family talks, only where the notice describes it (`TALK_SETUP`).
+            ...(deps.config.talkSetup !== true
+              ? {}
+              : {
+                  ...(person.talk_rhythm === undefined ? {} : { talkRhythm: person.talk_rhythm }),
+                  ...(person.avoid_topics === undefined
+                    ? {}
+                    : { avoidTopics: person.avoid_topics }),
+                  ...(person.avoid_words === undefined ? {} : { avoidWords: person.avoid_words }),
+                }),
           },
           now,
         );

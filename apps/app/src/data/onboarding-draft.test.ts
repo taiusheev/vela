@@ -5,6 +5,7 @@ import {
   chapterOf,
   firstQuestion,
   initialDraft,
+  nextQuestion,
   type OnboardingDraft,
   previousStep,
   QUESTION_STEPS,
@@ -23,24 +24,32 @@ afterEach(() => resetDraft());
 describe("the onboarding draft", () => {
   it("keeps its answers across reads until it starts over, with a new run for its keys", () => {
     const run = readDraft().run;
-    updateDraft({ callName: "Mẹ", step: "where" });
-    expect(readDraft()).toMatchObject({ callName: "Mẹ", step: "where", run });
+    updateDraft({ callName: "Mẹ", step: "mornings" });
+    expect(readDraft()).toMatchObject({ callName: "Mẹ", step: "mornings", run });
     resetDraft();
-    expect(readDraft()).toMatchObject({ callName: "", step: "night" });
+    expect(readDraft()).toMatchObject({ callName: "", step: "welcome" });
     expect(readDraft().run).not.toBe(run);
   });
 
   it("puts every question in exactly one of three chapters", () => {
     expect(CHAPTERS.flat()).toEqual([...QUESTION_STEPS]);
-    expect(chapterOf("who")).toEqual({ chapter: 1, index: 0, size: 4 });
-    expect(chapterOf("first")).toEqual({ chapter: 2, index: 2, size: 4 });
-    expect(chapterOf("photo")).toEqual({ chapter: 3, index: 1, size: 2 });
+    expect(chapterOf("who")).toEqual({ chapter: 1, index: 0, size: 3 });
+    expect(chapterOf("first")).toEqual({ chapter: 2, index: 2, size: 3 });
+    expect(chapterOf("around")).toEqual({ chapter: 3, index: 0, size: 1 });
   });
 
-  it("goes back from the first question to the story's last scene, and never before the story", () => {
-    expect(previousStep("who")).toBe("quiet");
-    expect(previousStep("night")).toBeNull();
+  it("goes back from the first question to the welcome, and never before it", () => {
+    expect(previousStep("who")).toBe("welcome");
+    expect(previousStep("welcome")).toBeNull();
     expect(previousStep("plan")).toBe("build");
+  });
+
+  it("asks how the family talks only where the server keeps it", () => {
+    expect(nextQuestion("world")).toBe("talk");
+    expect(nextQuestion("world", false)).toBe("first");
+    expect(previousStep("first", false)).toBe("world");
+    expect(previousStep("first")).toBe("talk");
+    expect(nextQuestion("around")).toBe("build");
   });
 });
 
@@ -51,29 +60,37 @@ describe("answered", () => {
     expect(answered("who", draft({ callName: "Mom", you: "Mia" }))).toBe(true);
   });
 
-  it("needs a messenger, at least one topic, and who signs on quiet days", () => {
+  it("needs a messenger, and both halves of her world", () => {
     expect(answered("messenger", draft())).toBe(false);
     expect(answered("messenger", draft({ messenger: "line" }))).toBe(true);
-    expect(answered("world", draft())).toBe(false);
-    expect(answered("world", draft({ interests: ["garden"] }))).toBe(true);
-    expect(answered("nobody", draft())).toBe(false);
-    expect(answered("nobody", draft({ nobody: "vela" }))).toBe(true);
+    expect(answered("world", draft({ interests: ["garden"] }))).toBe(false);
+    expect(answered("world", draft({ interests: ["garden"], unsure: true }))).toBe(true);
+    expect(answered("world", draft({ replyWays: ["voice"] }))).toBe(false);
   });
 
-  it("counts the honest none as an answer: not sure yet, no one nearby, no photo", () => {
-    expect(answered("replies", draft())).toBe(false);
-    expect(answered("replies", draft({ unsure: true }))).toBe(true);
-    expect(answered("replies", draft({ replyWays: ["voice"] }))).toBe(true);
-    expect(answered("nearby", draft())).toBe(false);
-    expect(answered("nearby", draft({ noneNearby: true }))).toBe(true);
-    expect(answered("nearby", draft({ people: [{ name: "Lan", relation: "Neighbour" }] }))).toBe(
+  it("needs how often they talk and what to avoid, with nothing to avoid as an answer", () => {
+    expect(answered("talk", draft())).toBe(false);
+    expect(answered("talk", draft({ talkRhythm: "often" }))).toBe(false);
+    expect(answered("talk", draft({ talkRhythm: "often", nothingToAvoid: true }))).toBe(true);
+    expect(answered("talk", draft({ talkRhythm: "rarely", avoidTopics: ["money"] }))).toBe(true);
+    expect(answered("talk", draft({ talkRhythm: "sometimes", avoidWords: ["Grandpa Lin"] }))).toBe(
       true,
     );
-    expect(answered("photo", draft())).toBe(false);
-    expect(answered("photo", draft({ photo: { kind: "initials" } }))).toBe(true);
   });
 
-  it("takes the organiser's own first question over a picked one", () => {
+  it("counts the honest none as an answer: no one nearby, no photo", () => {
+    expect(answered("around", draft())).toBe(false);
+    expect(answered("around", draft({ noneNearby: true }))).toBe(false);
+    expect(answered("around", draft({ noneNearby: true, photo: { kind: "initials" } }))).toBe(true);
+    expect(
+      answered(
+        "around",
+        draft({ people: [{ name: "Lan", relation: "Neighbour" }], photo: { kind: "initials" } }),
+      ),
+    ).toBe(true);
+  });
+
+  it("takes the organiser's own first question over a picked one, and needs who signs quiet days", () => {
     expect(answered("first", draft())).toBe(false);
     expect(firstQuestion(draft({ firstPick: "What did you cook?", own: "  " }))).toBe(
       "What did you cook?",
@@ -81,7 +98,8 @@ describe("answered", () => {
     expect(firstQuestion(draft({ firstPick: "What did you cook?", own: "Hi Mom!" }))).toBe(
       "Hi Mom!",
     );
-    expect(answered("first", draft({ own: "Hi Mom!" }))).toBe(true);
+    expect(answered("first", draft({ own: "Hi Mom!" }))).toBe(false);
+    expect(answered("first", draft({ own: "Hi Mom!", nobody: "vela" }))).toBe(true);
   });
 });
 

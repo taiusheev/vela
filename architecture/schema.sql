@@ -37,7 +37,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove', 'weekly_feedback_off', 'weekly_feedback_on'))
 );
 
 CREATE TABLE "ai_calls" (
@@ -343,10 +343,14 @@ CREATE TABLE "members" (
 	"relationship" text,
 	"interests" text[],
 	"reply_ways" text[],
+	"talk_rhythm" text,
+	"avoid_topics" text[],
+	"avoid_words" text[],
 	"status" text DEFAULT 'invited' NOT NULL,
 	"turns_in" boolean DEFAULT true NOT NULL,
 	"primary_surface" text DEFAULT 'app' NOT NULL,
 	"light_on" boolean DEFAULT false NOT NULL,
+	"weekly_feedback" boolean DEFAULT true NOT NULL,
 	"light_consented_at" timestamp with time zone,
 	"light_consent_text" text,
 	"light_starts_on" date,
@@ -369,6 +373,8 @@ CREATE TABLE "members" (
 	CONSTRAINT "members_relationship_check" CHECK ("relationship" in ('mother', 'father', 'grandmother', 'grandfather', 'other')),
 	CONSTRAINT "members_interests_check" CHECK ("interests" <@ ARRAY['cooking', 'garden', 'family', 'old_days', 'music', 'festivals', 'films_books', 'friends', 'travel', 'making', 'work', 'sayings']::text[]),
 	CONSTRAINT "members_reply_ways_check" CHECK ("reply_ways" <@ ARRAY['text', 'voice', 'photo', 'tap']::text[]),
+	CONSTRAINT "members_talk_rhythm_check" CHECK ("talk_rhythm" in ('often', 'sometimes', 'rarely')),
+	CONSTRAINT "members_avoid_topics_check" CHECK ("avoid_topics" <@ ARRAY['money', 'health', 'work', 'partner']::text[]),
 	CONSTRAINT "members_status_check" CHECK ("status" in ('invited', 'active', 'paused', 'left', 'deceased')),
 	CONSTRAINT "members_primary_surface_check" CHECK ("primary_surface" in ('app', 'parent-surface', 'line', 'whatsapp', 'telegram', 'voice'))
 );
@@ -545,7 +551,7 @@ CREATE TABLE "nearby_contacts" (
 	CONSTRAINT "nearby_contacts_invite_token_hash_key" UNIQUE("invite_token_hash"),
 	CONSTRAINT "nearby_contacts_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'sms')),
 	CONSTRAINT "nearby_contacts_reach_consented_check" CHECK (("phone" is not null or "external_id" is not null) = ("consented_at" is not null and "declined_at" is null)),
-	CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" = 'telegram')
+	CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" in ('telegram', 'line'))
 );
 
 CREATE TABLE "onboarding_sessions" (
@@ -580,7 +586,7 @@ CREATE TABLE "outbound" (
 	"sent_at" timestamp with time zone,
 	"effects_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
-	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
+	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'nearby_auto_ask', 'flag', 'consent', 'onboarding', 'system')),
 	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "outbound_status_check" CHECK ("status" in ('queued', 'sent', 'failed', 'dropped')),
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
@@ -592,9 +598,9 @@ CREATE TABLE "photo_box" (
 	"media_id" uuid NOT NULL,
 	"era" text NOT NULL,
 	"caption" text,
+	"question" text,
 	"added_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"question" text,
 	CONSTRAINT "photo_box_media_id_key" UNIQUE("media_id"),
 	CONSTRAINT "photo_box_era_check" CHECK ("era" in ('new', 'old'))
 );
