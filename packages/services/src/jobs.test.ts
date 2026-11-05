@@ -872,6 +872,9 @@ describe("rollupMetrics", () => {
 
 describe("applyRetention", () => {
   const RULES = [
+    "deleted_accounts_minimised",
+    "deleted_account_proofs_expired",
+    "dead_letters_scrubbed",
     "question_profiles_deleted",
     "dead_letters_deleted",
     "account_link_challenges_deleted",

@@ -9,6 +9,7 @@ import { loadApiFamily } from "./api-family.ts";
 import { ApiIdempotencyError } from "./api-idempotency.ts";
 import { leaveApiFamily, MemberChangeRefusedError, pauseApiMember } from "./api-members.ts";
 import { VelaError } from "./errors.ts";
+import { sha256Hex } from "./hash.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedFamily, seedGroupMember } from "./testing/seed.ts";
 
@@ -287,7 +288,7 @@ describe("account deletion and families", () => {
     const [row] = await h.db
       .select()
       .from(users)
-      .where(eq(users.authSubject, identity.authSubject));
+      .where(eq(users.deletedAuthSubjectHash, await sha256Hex(identity.authSubject)));
     return row;
   };
 

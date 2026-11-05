@@ -62,6 +62,7 @@ import {
   suggestions,
   type Translation,
   translations,
+  users,
   weeklyReads,
   weeklySupportPresentations,
   weeklySupportSelections,
@@ -90,7 +91,7 @@ import {
   translateForHer,
   weeklyReadSentEvent,
 } from "./admin.ts";
-import { deleteOldDeadLetters } from "./dead-letters.ts";
+import { deleteOldDeadLetters, lockDeadLetters, scrubDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { medianTimeAround } from "./format.ts";
@@ -1164,6 +1165,7 @@ async function deleteMembers(
   now: Date,
 ): Promise<{ id: string; lightOn: boolean; lightConsentedAt: Date | null }[]> {
   return deps.db.transaction(async (tx) => {
+    await lockDeadLetters(tx);
     const ids = (await select(tx)).map((row) => row.id);
     if (ids.length === 0) {
       return [];
@@ -1196,6 +1198,52 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   const counts: Record<string, number> = {};
   const db = deps.db;
 
+  // Also covers an older Worker deleting an account during the migration/deploy window.
+  counts.deleted_accounts_minimised = (
+    await db
+      .update(users)
+      .set({
+        deletedAuthSubjectHash: sql`coalesce(${users.deletedAuthSubjectHash}, encode(sha256(convert_to(${users.authSubject}, 'UTF8')), 'hex'))`,
+        authSubject: null,
+        displayName: "",
+        email: null,
+        phone: null,
+        language: "en",
+        tz: "UTC",
+        privacyAcceptance: null,
+        oneMomentADay: false,
+        replyNotifications: false,
+        turnReminders: false,
+      })
+      .where(
+        and(
+          isNotNull(users.deletedAt),
+          or(
+            isNotNull(users.authSubject),
+            ne(users.displayName, ""),
+            isNotNull(users.email),
+            isNotNull(users.phone),
+            isNotNull(users.privacyAcceptance),
+            ne(users.language, "en"),
+            ne(users.tz, "UTC"),
+            eq(users.oneMomentADay, true),
+            eq(users.replyNotifications, true),
+            eq(users.turnReminders, true),
+          ),
+        ),
+      )
+      .returning({ id: users.id })
+  ).length;
+  // Like other deletion fingerprints, the denial proof lasts five years. Bare row references
+  // may still be needed by a family's billing/history foreign keys, without an identity/profile.
+  counts.deleted_account_proofs_expired = (
+    await db
+      .update(users)
+      .set({ deletedAuthSubjectHash: null })
+      .where(and(lt(users.deletedAt, cutoff5y), isNotNull(users.deletedAuthSubjectHash)))
+      .returning({ id: users.id })
+  ).length;
+
   counts.question_profiles_deleted = (
     await db
       .delete(questionProfiles)
@@ -1218,6 +1266,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
 
   // Dead jobs, which may hold a family's words, are kept 14 days at most (technical plan 2.7).
   counts.dead_letters_deleted = await deleteOldDeadLetters(deps);
+  counts.dead_letters_scrubbed = await db.transaction((tx) => scrubDeadLetters(tx, now));
 
   counts.account_link_challenges_deleted = (
     await db
@@ -1270,6 +1319,7 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
       .from(members)
       .where(eq(members.familyId, family.id));
     await db.transaction(async (tx) => {
+      await lockDeadLetters(tx);
       await forgetFamilySubjects(tx, family.id, now);
       // Neither follows the cascade: translations have no foreign key, and the AI call log is kept
       // 24 months with its ids set null, which would leave her words in it unfindable for 30 days.
@@ -1651,9 +1701,9 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
   ).length;
 
   // ADR-48: the founder's readings and the organisers' feedback quote her words, so they go when
-  // her words do, 30 days after the week ends. The column is sealed, so each read of the four weeks
-  // before that point is read and written back without them; older ones were cleared on earlier
-  // nights.
+  // her words do, 30 days after the week ends. There is no lower age bound: cleanup must catch up
+  // after an outage or restore. Filter content-bearing rows in SQL so already-cleared history costs
+  // no decryption. There is no age floor: overdue copies must still expire after an outage.
   const lastStart = addDays(localDateOf(cutoff30, "UTC"), 1 - DAYS_IN_WEEK);
   const aging = await db
     .select({ id: weeklyReads.id })
@@ -1661,9 +1711,10 @@ export async function applyRetention(deps: Deps): Promise<Record<string, number>
     .where(
       and(
         lte(weeklyReads.weekStart, lastStart),
-        gte(weeklyReads.weekStart, addDays(lastStart, -28)),
+        sql`${weeklyReads.stats} ?| array['insight', 'feedback', 'sent_feedback']`,
       ),
-    );
+    )
+    .orderBy(asc(weeklyReads.weekStart), asc(weeklyReads.id));
   counts.weekly_insights_cleared = 0;
   for (const { id } of aging) {
     // Each read under its row lock, as the founder's send writes `stats` under it, so neither

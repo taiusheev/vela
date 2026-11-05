@@ -8,16 +8,19 @@ import {
 import {
   accountLinkChallenges,
   apiRequestReceipts,
+  members,
+  photoBox,
   pushDevices,
   users,
   type VelaTransaction,
 } from "@vela/db";
-import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import type { SessionIdentity } from "./api-access.ts";
 import { provisionApiUser } from "./api-accounts.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, lockApiActor, runApiMutation } from "./api-idempotency.ts";
 import { type ReleasedMembership, releaseAccountMemberships } from "./api-members.ts";
+import { lockDeadLetters, scrubDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { sha256Hex } from "./hash.ts";
@@ -35,6 +38,12 @@ const userProjection = {
  * unknown or deleted account is `not_found`, unless `allowAbsent` lets provisioning find none.
  */
 export async function lockAccount(tx: VelaTransaction, authSubject: string, allowAbsent = false) {
+  const [erased] = await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.deletedAuthSubjectHash, await sha256Hex(authSubject)))
+    .limit(1);
+  if (erased !== undefined) throw new VelaError("not_found", "Account not found");
   const [account] = await tx
     .select({ ...userProjection, deletedAt: users.deletedAt })
     .from(users)
@@ -170,8 +179,7 @@ export async function updateApiAccount(
 }
 
 /**
- * Deletes the account (ADR-43): the `users` row becomes a tombstone holding only the auth subject
- * (name, email, phone and time zone erased), its receipts, link challenges
+ * Deletes the account (ADR-43): the `users` row becomes a tombstone, its receipts, link challenges
  * and phones go, and each live membership is let go by `releaseAccountMemberships` (left where Leave
  * would allow it, otherwise kept as a messenger-only member with no account link). Shared family
  * content stays with the family. Run by `DELETE /v1/me` after Clerk has deleted the user, and by
@@ -194,39 +202,63 @@ export async function disableApiAccount(
   const after = nothingAfterCommit();
   const released = await deps.db.transaction(async (tx) => {
     await lockApiActor(tx, actorHash);
-    await tx
-      .insert(users)
-      .values({ authSubject, displayName: "", deletedAt: now })
-      .onConflictDoNothing({ target: users.authSubject });
-    const [account] = await tx
+    await lockDeadLetters(tx);
+    let [account] = await tx
       .select({ id: users.id, deletedAt: users.deletedAt })
       .from(users)
-      .where(eq(users.authSubject, authSubject))
+      .where(or(eq(users.authSubject, authSubject), eq(users.deletedAuthSubjectHash, actorHash)))
       .for("update");
-    if (account === undefined) throw new VelaError("not_found", "Account not found");
-    if (account.deletedAt === null) {
-      await tx
-        .update(users)
-        .set({
-          deletedAt: now,
-          // The tombstone keeps only the auth subject, which refuses the account from then on; the
-          // person's own profile goes with the account (data map, receipts row).
+    if (account === undefined) {
+      [account] = await tx
+        .insert(users)
+        .values({
+          deletedAuthSubjectHash: actorHash,
           displayName: "",
-          email: null,
-          phone: null,
-          tz: "UTC",
-          privacyAcceptance: null,
+          deletedAt: now,
+          oneMomentADay: false,
           replyNotifications: false,
           turnReminders: false,
-          oneMomentADay: false,
         })
-        .where(eq(users.id, account.id));
+        .returning({ id: users.id, deletedAt: users.deletedAt });
     }
+    if (account === undefined) throw new VelaError("not_found", "Account not found");
+    // Keep only the denial fingerprint and row references. Repeated lifecycle events keep the
+    // first erasure time; they never recreate the provider id or restore identifying profile data.
+    await tx
+      .update(users)
+      .set({
+        deletedAt: account.deletedAt ?? now,
+        deletedAuthSubjectHash: actorHash,
+        authSubject: null,
+        displayName: "",
+        email: null,
+        phone: null,
+        language: "en",
+        tz: "UTC",
+        privacyAcceptance: null,
+        replyNotifications: false,
+        turnReminders: false,
+        oneMomentADay: false,
+      })
+      .where(eq(users.id, account.id));
+    // The only organiser may remain messenger-only. Mark their box contributions before that
+    // account link is cleared, so even an immediate relink cannot escape next-day photo erasure.
+    await tx
+      .update(photoBox)
+      .set({ addedBy: null, caption: null, question: null })
+      .where(
+        inArray(
+          photoBox.addedBy,
+          tx.select({ id: members.id }).from(members).where(eq(members.userId, account.id)),
+        ),
+      );
     await tx.delete(apiRequestReceipts).where(eq(apiRequestReceipts.actorHash, actorHash));
-    await tx.delete(accountLinkChallenges).where(eq(accountLinkChallenges.userId, account.id));
     // Its phones are told nothing more (ADR-34); the row is kept, so no cascade would take them.
     await tx.delete(pushDevices).where(eq(pushDevices.userId, account.id));
-    return releaseAccountMemberships(deps, tx, account.id, now, after);
+    const released = await releaseAccountMemberships(deps, tx, account.id, now, after);
+    await scrubDeadLetters(tx, now, { userIds: [account.id] });
+    await tx.delete(accountLinkChallenges).where(eq(accountLinkChallenges.userId, account.id));
+    return released;
   });
   return { released, after };
 }

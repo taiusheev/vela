@@ -82,6 +82,7 @@ import {
   organisersUnreachable,
 } from "./admin-alerts.ts";
 import { type QuietPrecisionMonth, quietPrecision } from "./api-precision.ts";
+import { lockDeadLetters, scrubDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { isErrorCode, VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -751,6 +752,7 @@ export async function removeContact(
   const id = parse(Uuid, contactId, "remove_contact");
   const at = deps.clock.now();
   await deps.db.transaction(async (tx) => {
+    await lockDeadLetters(tx);
     const contact = await lockContact(tx, admin, id, "remove_contact");
     if (contact === null) {
       const gone = await tx
@@ -808,6 +810,7 @@ export async function createInvite(
   const input = parse(CreateInviteSchema, rawInput, "create_invite");
   const at = deps.clock.now();
   await deps.db.transaction(async (tx) => {
+    await lockDeadLetters(tx);
     const { member: organiser, family } = await lockMember(
       tx,
       admin,
@@ -1180,11 +1183,17 @@ export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: stri
   const id = parse(Uuid, familyId, "delete_family");
   const at = deps.clock.now();
   const clearIds = await deps.db.transaction(async (tx) => {
+    await lockDeadLetters(tx);
     const [family] = await tx.select().from(families).where(eq(families.id, id)).for("update");
     if (family === undefined) {
       throw new VelaError("not_found", "delete_family: family does not exist");
     }
     assertInScope(admin, family.id, "delete_family");
+    await tx
+      .update(families)
+      .set({ deletedAt: family.deletedAt ?? at })
+      .where(eq(families.id, family.id));
+    await scrubDeadLetters(tx, at);
     // Also on a repeat: a family marked before links were released here still holds its links.
     await tx
       .delete(channelLinks)
@@ -1197,7 +1206,6 @@ export async function deleteFamily(deps: Deps, ctx: AdminContext, familyId: stri
     if (family.deletedAt !== null) {
       return [];
     }
-    await tx.update(families).set({ deletedAt: at }).where(eq(families.id, family.id));
     const keptLight = await keptLightMembersOfFamily(tx, family.id);
     const ids = keptLight.map((member) => member.id);
     if (ids.length > 0) {

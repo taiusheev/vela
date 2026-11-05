@@ -5,6 +5,7 @@
  * exactly one of them: the claim selects with `for update skip locked` and sets `replayed_at` in
  * the same statement.
  */
+import { InboundEvent } from "@vela/contracts";
 import { deadLetters } from "@vela/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
   keepDeadLetter,
   requestDeadLetterReplay,
 } from "../src/dead-letters.ts";
+import { seedFamily } from "../src/testing/seed.ts";
 import { openPostgresHarness, type PostgresHarness, type RaceClient, settled } from "./testing.ts";
 
 let pg: PostgresHarness;
@@ -34,13 +36,27 @@ afterAll(async () => {
 
 describe("replaying dead letters on independent PostgreSQL connections", () => {
   it("lets exactly one of two reconciles claim each asked-for job", async () => {
+    const seed = await seedFamily(seeder.db, { now: seeder.deps.clock.now() });
     for (let index = 0; index < 5; index += 1) {
       await keepDeadLetter(
         { ...seeder.deps, logger: quiet },
         {
           messageId: `m-${index}`,
           jobType: "handle_inbound",
-          job: { type: "handle_inbound", events: [] },
+          job: {
+            type: "handle_inbound",
+            events: [
+              InboundEvent.parse({
+                channel: "telegram",
+                kind: "text",
+                eventId: `synthetic-${index}`,
+                at: seeder.deps.clock.now().toISOString(),
+                sender: { externalUserId: seed.memberLink.externalId },
+                conversation: { kind: "private", externalId: seed.memberLink.externalId },
+                text: "Synthetic recovery text",
+              }),
+            ],
+          },
         },
       );
     }

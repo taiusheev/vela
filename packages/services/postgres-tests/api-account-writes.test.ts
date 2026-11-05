@@ -194,12 +194,12 @@ describe("account writes on independent PostgreSQL connections", () => {
   );
 
   it.each([
-    { kind: "provision", order: "behind" },
-    { kind: "provision", order: "ahead of" },
-    { kind: "update", order: "behind" },
-    { kind: "update", order: "ahead of" },
+    { kind: "provision", order: "behind", displayName: "Mia" },
+    { kind: "provision", order: "ahead of", displayName: "" },
+    { kind: "update", order: "behind", displayName: "Updated" },
+    { kind: "update", order: "ahead of", displayName: "Mia" },
   ] as const)(
-    "leaves a nameless tombstone and no actor receipts when a disable is queued $order a pending $kind",
+    "leaves a tombstone and no actor receipts when a disable is queued $order a pending $kind",
     async ({ kind, order }) => {
       if (kind === "update") await seedAccount();
       const blocker = await pg.client("blocker");
@@ -229,10 +229,7 @@ describe("account writes on independent PostgreSQL connections", () => {
       }
       await pg.finish("the disable", disabled);
 
-      // Whichever ran first, the deleted account keeps no name (ADR-43, the profile erased).
-      expect(await pg.accounts()).toEqual([
-        { authSubject: identity.authSubject, displayName: "", deletedAt: NOW },
-      ]);
+      expect(await pg.accounts()).toEqual([{ authSubject: null, displayName: "", deletedAt: NOW }]);
       expect(await pg.receipts(identity.authSubject)).toEqual([]);
       await expect(
         pg.finish("a provision after the disable", provision(later, "race-key")),
@@ -267,7 +264,7 @@ describe("account writes on independent PostgreSQL connections", () => {
           disables.map(() => ({ status: "fulfilled", value: expect.anything() })),
         );
         expect(await pg.accounts()).toEqual([
-          expect.objectContaining({ authSubject: identity.authSubject, deletedAt: NOW }),
+          expect.objectContaining({ authSubject: null, displayName: "", deletedAt: NOW }),
         ]);
         expect(await pg.receipts(identity.authSubject)).toEqual([]);
       }
@@ -316,8 +313,8 @@ describe("account writes on independent PostgreSQL connections", () => {
     await pg.finish("the bystander lock", lock.done);
 
     expect(await pg.accounts()).toEqual([
-      { authSubject: identity.authSubject, displayName: "", deletedAt: NOW },
       { authSubject: bystander.authSubject, displayName: "Mia", deletedAt: null },
+      { authSubject: null, displayName: "", deletedAt: NOW },
     ]);
     expect(await pg.receipts(bystander.authSubject)).toHaveLength(1);
     expect(await pg.receipts(identity.authSubject)).toEqual([]);

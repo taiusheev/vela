@@ -6,6 +6,8 @@
  * proof keys, which hold ids and a hash and nothing the person said or is called. The database
  * refuses a deletion that skipped the step (`consents_subject_deleted_check`), so every path that
  * deletes a member or a nearby contact calls `forgetConsentSubjects` first, in its own transaction.
+ * Erasing transaction entry points take `lockDeadLetters` before receipt/family/member/contact
+ * rows (after any API actor lock), so recovery-copy erasure cannot introduce a row-lock cycle.
  *
  * A deletion proof hashes the object's type and id, never a value the row held: a phone number or a
  * storage key has so few possible values that its hash gives it back (L4).
@@ -14,6 +16,7 @@ import type { Lang } from "@vela/contracts";
 import { type MessageKey, t } from "@vela/copy";
 import { CONSENT_PROOF_KEYS, consents, deletions, members, nearbyContacts } from "@vela/db";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { scrubDeadLetters } from "./dead-letters.ts";
 import { sha256Hex } from "./hash.ts";
 import type { Queryable } from "./repo.ts";
 
@@ -101,6 +104,7 @@ export async function forgetConsentSubjects(
   if (refs.length === 0) {
     return 0;
   }
+  await scrubDeadLetters(tx, at, subjects);
   const kept = sql.join(
     CONSENT_PROOF_KEYS.map((key) => sql`${key}`),
     sql`, `,
