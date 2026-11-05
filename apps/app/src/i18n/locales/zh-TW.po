@@ -1117,6 +1117,10 @@ msgstr "返回"
 msgid "Back to questions"
 msgstr "回到問題"
 
+#: src/components/app-privacy.tsx
+msgid "Back to the invitation"
+msgstr "回到邀請"
+
 #: src/components/today-glance.tsx
 msgid "Be the first to answer {recipient}."
 msgstr "第一個回覆{recipient}吧。"

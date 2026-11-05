@@ -1110,6 +1110,10 @@ msgstr ""
 msgid "Back to questions"
 msgstr ""
 
+#: src/components/app-privacy.tsx
+msgid "Back to the invitation"
+msgstr ""
+
 #: src/components/today-glance.tsx
 msgid "Be the first to answer {recipient}."
 msgstr ""

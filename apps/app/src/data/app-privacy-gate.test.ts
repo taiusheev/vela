@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { privacyGateDecision } from "./app-privacy-gate.ts";
+import { privacyGateDecision, waitingCanReturn, waitingMayContinue } from "./app-privacy-gate.ts";
 
 const known = {
   enabled: true,
@@ -40,5 +40,22 @@ describe("one app permission decision", () => {
       privacyGateDecision({ ...known, failed: true, knownMissing: true, localAccepted: true }),
     ).toBe("unavailable");
     expect(privacyGateDecision({ ...known, knownMissing: true, localAccepted: true })).toBe("save");
+  });
+});
+
+describe("a waiting family", () => {
+  it("continues only setup's last steps, and only on the onboarding screen", () => {
+    expect(waitingMayContinue({ step: "invite", saved: true, onOnboarding: true })).toBe(true);
+    expect(waitingMayContinue({ step: "ready", saved: true, onOnboarding: true })).toBe(true);
+    expect(waitingMayContinue({ step: "invite", saved: true, onOnboarding: false })).toBe(false);
+    expect(waitingMayContinue({ step: "invite", saved: false, onOnboarding: true })).toBe(false);
+    expect(waitingMayContinue({ step: "welcome", saved: true, onOnboarding: true })).toBe(false);
+  });
+
+  it("goes back to an invitation still open in this session, never to an unsaved setup", () => {
+    expect(waitingCanReturn({ step: "invite", saved: true })).toBe(true);
+    expect(waitingCanReturn({ step: "ready", saved: true })).toBe(true);
+    expect(waitingCanReturn({ step: "save", saved: true })).toBe(false);
+    expect(waitingCanReturn({ step: "invite", saved: false })).toBe(false);
   });
 });
