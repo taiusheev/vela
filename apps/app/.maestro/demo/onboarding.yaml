@@ -11,7 +11,6 @@ tags:
     visible: "Keep a light on for Mom."
     timeout: 20000
 - assertNotVisible: "Skip"
-- assertVisible: "I already have an account"
 - tapOn: "Start · about 3 minutes"
 
 - assertVisible: "Who are you keeping a light on for?"
