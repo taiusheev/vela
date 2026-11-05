@@ -1,9 +1,10 @@
 import { ApiCreatedFamily, ApiParentLink } from "@vela/contracts";
 import { channelLinks, consents, events, families, invites, members, users } from "@vela/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApiFamily } from "./api-families.ts";
 import { loadApiParentConnection, shareApiParentLink } from "./api-parent-link.ts";
+import { sha256Hex } from "./hash.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 
 let h: Harness;
@@ -41,6 +42,38 @@ const share = (
   family = created.family.id,
   member = created.kept_light_member.id,
 ) => shareApiParentLink(h.deps, who, key, family, member, {});
+
+/** The token in an invite link, as Telegram's `?start=` carries it. */
+const startTokenOf = (url: string): string => new URL(url).searchParams.get("start") ?? "";
+
+describe("invite tokens at rest (ADR-38, migration 0038)", () => {
+  it("keeps only the sealed token and its hash in the database", async () => {
+    const token = startTokenOf(created.invite.url);
+    expect(token.length).toBeGreaterThan(20);
+    const { rows } = await h.db.execute<{ token: string; token_hash: string }>(
+      sql`select token, token_hash from invites`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.token.startsWith("v1.")).toBe(true);
+    expect(rows[0]?.token).not.toContain(token);
+    expect(rows[0]?.token_hash).toBe(await sha256Hex(token));
+  });
+
+  it("gives a fresh link for an open invite made before sealing, and keeps the old one findable", async () => {
+    const oldToken = startTokenOf(created.invite.url);
+    await h.db.execute(sql`update invites set token = ''`);
+    const body = ApiParentLink.parse((await share()).response.body);
+    expect(body.kind).toBe("invite");
+    expect(body.url).not.toBe(created.invite.url);
+    expect(startTokenOf(body.url).length).toBeGreaterThan(20);
+    expect(await h.db.select().from(invites)).toHaveLength(2);
+    const [old] = await h.db
+      .select({ id: invites.id })
+      .from(invites)
+      .where(eq(invites.tokenHash, await sha256Hex(oldToken)));
+    expect(old).toBeDefined();
+  });
+});
 
 describe("re-sharing a parent link", () => {
   it("reuses the same valid invite without another family, parent, consent or outbound", async () => {

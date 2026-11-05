@@ -170,7 +170,8 @@ export async function updateApiAccount(
 }
 
 /**
- * Deletes the account (ADR-43): the `users` row becomes a tombstone, its receipts, link challenges
+ * Deletes the account (ADR-43): the `users` row becomes a tombstone holding only the auth subject
+ * (name, email, phone and time zone erased), its receipts, link challenges
  * and phones go, and each live membership is let go by `releaseAccountMemberships` (left where Leave
  * would allow it, otherwise kept as a messenger-only member with no account link). Shared family
  * content stays with the family. Run by `DELETE /v1/me` after Clerk has deleted the user, and by
@@ -208,6 +209,12 @@ export async function disableApiAccount(
         .update(users)
         .set({
           deletedAt: now,
+          // The tombstone keeps only the auth subject, which refuses the account from then on; the
+          // person's own profile goes with the account (data map, receipts row).
+          displayName: "",
+          email: null,
+          phone: null,
+          tz: "UTC",
           privacyAcceptance: null,
           replyNotifications: false,
           turnReminders: false,

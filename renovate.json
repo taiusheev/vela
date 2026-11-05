@@ -1,7 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":semanticCommitsDisabled"],
+  "extends": ["config:recommended", ":semanticCommitsDisabled", "helpers:pinGitHubActionDigests"],
   "schedule": ["before 6am on monday"],
   "timezone": "Asia/Taipei",
-  "packageRules": [{ "matchUpdateTypes": ["minor", "patch"], "groupName": "minor and patch" }]
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch"
+    }
+  ]
 }

@@ -276,12 +276,13 @@ CREATE TABLE "invites" (
 	"invited_by" uuid NOT NULL,
 	"for_member_id" uuid,
 	"token" text NOT NULL,
+	"token_hash" text NOT NULL,
 	"channel" text DEFAULT 'link' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"accepted_at" timestamp with time zone,
 	"accepted_by" uuid,
-	CONSTRAINT "invites_token_key" UNIQUE("token"),
+	CONSTRAINT "invites_token_hash_key" UNIQUE("token_hash"),
 	CONSTRAINT "invites_channel_check" CHECK ("channel" in ('link', 'line', 'whatsapp', 'telegram', 'sms', 'email'))
 );
 

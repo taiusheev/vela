@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * Webhook redelivery (flows §5, §6 test 4): every inbound path, processed twice, changes nothing the
  * second time — no new row in any table and no second message — and two ticks for one member at the
@@ -52,6 +53,9 @@ import {
   seedLinkedGroup,
 } from "./testing/seed.ts";
 import { tickMember } from "./tick.ts";
+
+/** An invite token's hash, as the services store it (migration 0038). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;
 
@@ -252,6 +256,7 @@ describe("every inbound path processed twice", () => {
       invitedBy: seed.organiser.id,
       forMemberId: invited?.id,
       token: "invite-token",
+      tokenHash: tokenHashOf("invite-token"),
       channel: "link",
       createdAt: h.clock.now(),
       expiresAt: new Date(h.clock.now().getTime() + 7 * 24 * 60 * 60_000),

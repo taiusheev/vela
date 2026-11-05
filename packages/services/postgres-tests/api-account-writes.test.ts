@@ -194,13 +194,13 @@ describe("account writes on independent PostgreSQL connections", () => {
   );
 
   it.each([
-    { kind: "provision", order: "behind", displayName: "Mia" },
-    { kind: "provision", order: "ahead of", displayName: "" },
-    { kind: "update", order: "behind", displayName: "Updated" },
-    { kind: "update", order: "ahead of", displayName: "Mia" },
+    { kind: "provision", order: "behind" },
+    { kind: "provision", order: "ahead of" },
+    { kind: "update", order: "behind" },
+    { kind: "update", order: "ahead of" },
   ] as const)(
-    "leaves a tombstone and no actor receipts when a disable is queued $order a pending $kind",
-    async ({ kind, order, displayName }) => {
+    "leaves a nameless tombstone and no actor receipts when a disable is queued $order a pending $kind",
+    async ({ kind, order }) => {
       if (kind === "update") await seedAccount();
       const blocker = await pg.client("blocker");
       const writer = await pg.client(kind);
@@ -229,8 +229,9 @@ describe("account writes on independent PostgreSQL connections", () => {
       }
       await pg.finish("the disable", disabled);
 
+      // Whichever ran first, the deleted account keeps no name (ADR-43, the profile erased).
       expect(await pg.accounts()).toEqual([
-        { authSubject: identity.authSubject, displayName, deletedAt: NOW },
+        { authSubject: identity.authSubject, displayName: "", deletedAt: NOW },
       ]);
       expect(await pg.receipts(identity.authSubject)).toEqual([]);
       await expect(

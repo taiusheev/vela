@@ -47,6 +47,9 @@ import {
   seedNearbyContact,
 } from "./testing/seed.ts";
 
+/** An invite token's hash, as the services store it (migration 0038). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
+
 const TZ = "Asia/Taipei";
 const ADMIN_CHAT = "9001";
 const DAY_MS = 86_400_000;
@@ -1494,6 +1497,7 @@ describe("applyRetention", () => {
         invitedBy: seed.organiser.id,
         forMemberId: seed.member.id,
         token: invite.token,
+        tokenHash: tokenHashOf(invite.token),
         createdAt: daysAgo(35),
         expiresAt: invite.expiresAt,
         acceptedAt: invite.acceptedAt,
@@ -1805,6 +1809,7 @@ describe("applyRetention", () => {
       familyId: seed.family.id,
       invitedBy: sam.member.id,
       token: "sams-invite",
+      tokenHash: tokenHashOf("sams-invite"),
       createdAt: daysAgo(1),
       expiresAt: daysAgo(-6),
     });
@@ -2074,6 +2079,7 @@ describe("applyRetention", () => {
           invitedBy: seed.organiser.id,
           forMemberId: seed.member.id,
           token: `${externalId}-${index}`,
+          tokenHash: tokenHashOf(`${externalId}-${index}`),
           createdAt: daysAgo(age + 7),
           expiresAt: daysAgo(age),
           // She opened the first link and never tapped: accepted long ago, still unanswered.
@@ -2147,6 +2153,7 @@ describe("applyRetention", () => {
         invitedBy: seed.organiser.id,
         forMemberId: seed.member.id,
         token: externalId,
+        tokenHash: tokenHashOf(externalId),
         createdAt: daysAgo(expiredDaysAgo + 7),
         expiresAt: daysAgo(expiredDaysAgo),
       });

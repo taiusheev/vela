@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createOffAi } from "@vela/ai";
 import type { LocalDate, OutboundKind, OutboundStatus } from "@vela/contracts";
 import { t } from "@vela/copy";
@@ -58,6 +59,9 @@ import {
   seedHealthWordsConsent,
   seedNearbyContact,
 } from "./testing/seed.ts";
+
+/** An invite token's hash, as the services store it (migration 0038). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;
 
@@ -824,6 +828,7 @@ describe("createInvite", () => {
       invitedBy: seed.organiser.id,
       forMemberId: seed.member.id,
       token: "old-token",
+      tokenHash: tokenHashOf("old-token"),
       createdAt: h.clock.now(),
       expiresAt: addMinutes(h.clock.now(), 7 * 24 * 60),
     });
@@ -2174,6 +2179,7 @@ describe("the admin pages", () => {
       invitedBy: seed.organiser.id,
       forMemberId: seed.member.id,
       token: "token-1",
+      tokenHash: tokenHashOf("token-1"),
       expiresAt: new Date("2026-09-21T00:00:00Z"),
       createdAt: h.clock.now(),
     });

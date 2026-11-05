@@ -488,7 +488,14 @@ export const invites = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     /** A pre-created member row, e.g. the kept-light member. */
     forMemberId: uuid("for_member_id").references(() => members.id, { onDelete: "cascade" }),
-    token: text("token").notNull().unique("invites_token_key"),
+    /**
+     * The link's token, sealed (ADR-38) so a copy of the database cannot be used to join a family:
+     * kept only so the organiser can be shown the same link again while it is open. Empty for
+     * invites made before sealing, whose links still open by their hash.
+     */
+    token: sealedText("invites.token").notNull(),
+    /** SHA-256 of the token, hex: how a `/start <token>` finds its invite. */
+    tokenHash: text("token_hash").notNull().unique("invites_token_hash_key"),
     channel: text("channel", { enum: INVITE_CHANNELS }).notNull().default("link"),
     createdAt: createdAt(),
     expiresAt: timestamptz("expires_at").notNull(),

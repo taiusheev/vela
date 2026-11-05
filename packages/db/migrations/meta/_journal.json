@@ -267,6 +267,13 @@
       "when": 1793850618531,
       "tag": "0037_talk_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793861254817,
+      "tag": "0038_invite_token_sealed",
+      "breakpoints": true
     }
   ]
 }

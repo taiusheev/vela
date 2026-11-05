@@ -73,7 +73,11 @@ export async function shareApiParentLink(
           };
         }
         const now = deps.clock.now();
-        let invite = existing.find((item) => item.acceptedAt === null && item.expiresAt > now);
+        // An invite made before tokens were sealed (migration 0038) has no token to show again: its
+        // link still opens, and the organiser gets a fresh one.
+        let invite = existing.find(
+          (item) => item.acceptedAt === null && item.expiresAt > now && item.token !== "",
+        );
         if (invite === undefined)
           invite = (
             await insertInvite(

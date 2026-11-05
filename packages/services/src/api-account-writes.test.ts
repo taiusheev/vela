@@ -476,7 +476,7 @@ describe("disableApiAccount", () => {
     },
   );
 
-  it("preserves the profile and first tombstone, purges only the actor's receipts and challenges", async () => {
+  it("erases the profile, keeps the first tombstone, purges only the actor's receipts and challenges", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const account = ApiUser.parse((await provision()).response.body);
     await update();
@@ -508,6 +508,10 @@ describe("disableApiAccount", () => {
     ).toEqual([
       {
         ...before,
+        displayName: "",
+        email: null,
+        phone: null,
+        tz: "UTC",
         deletedAt: timestamp,
         oneMomentADay: false,
         replyNotifications: false,
@@ -541,6 +545,10 @@ describe("disableApiAccount", () => {
     ).toEqual([
       {
         ...before,
+        displayName: "",
+        email: null,
+        phone: null,
+        tz: "UTC",
         deletedAt: timestamp,
         oneMomentADay: false,
         replyNotifications: false,
