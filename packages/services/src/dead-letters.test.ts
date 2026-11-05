@@ -1,5 +1,13 @@
 import { InboundEvent } from "@vela/contracts";
-import { accountLinkChallenges, deadLetters, families, members, users } from "@vela/db";
+import { encodeButton } from "@vela/core";
+import {
+  accountLinkChallenges,
+  deadLetters,
+  families,
+  members,
+  nearbyContacts,
+  users,
+} from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { deleteFamily } from "./admin.ts";
@@ -11,8 +19,10 @@ import {
   releaseDeadLetterReplay,
   requestDeadLetterReplay,
 } from "./dead-letters.ts";
+import { sha256Hex } from "./hash.ts";
 import { insertInvite } from "./invites.ts";
 import { applyRetention } from "./jobs.ts";
+import { deleteContact } from "./nearby-consent.ts";
 import { opsAlerts } from "./ops.ts";
 import { forgetMembersWithTheirContacts } from "./proofs.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
@@ -194,6 +204,70 @@ describe("dead letters", () => {
       }),
     ).toBe(false);
   });
+
+  it.each(["button", "start"] as const)(
+    "does not rescue an erased nearby %s through the sender's other family",
+    async (kind) => {
+      const other = await seedFamily(h.db, {
+        now: h.clock.now(),
+        organiserExternalId: "801",
+        memberExternalId: "802",
+      });
+      const token = `n${"a".repeat(32)}`;
+      const [contact] = await h.db
+        .insert(nearbyContacts)
+        .values({
+          familyId: seeded.family.id,
+          memberId: seeded.member.id,
+          name: "Synthetic nearby contact",
+          channel: "telegram",
+          createdAt: h.clock.now(),
+          ...(kind === "start"
+            ? { inviteTokenHash: await sha256Hex(token) }
+            : { externalId: other.memberLink.externalId, consentedAt: h.clock.now() }),
+        })
+        .returning();
+      if (contact === undefined) throw new Error("missing contact");
+      const event = InboundEvent.parse({
+        ...INBOUND.events[0],
+        kind,
+        sender: { externalUserId: other.memberLink.externalId },
+        conversation: { kind: "private", externalId: other.memberLink.externalId },
+        ...(kind === "start"
+          ? { startParam: token }
+          : {
+              buttonData: encodeButton({
+                type: "nearby_consent",
+                contactId: contact.id,
+                accept: false,
+              }),
+            }),
+      });
+      const job = { type: "handle_inbound", events: [event] };
+      expect(
+        await keepDeadLetter(h.deps, { messageId: "nearby-role", jobType: "handle_inbound", job }),
+      ).toBe(true);
+      await h.db.transaction((tx) =>
+        deleteContact(tx, contact, "synthetic contact withdrawal", h.clock.now()),
+      );
+      expect(await h.db.select().from(deadLetters)).toEqual([]);
+      expect(
+        await keepDeadLetter(h.deps, {
+          messageId: "late-nearby-role",
+          jobType: "handle_inbound",
+          job,
+        }),
+      ).toBe(false);
+      const ordinary = { ...event, kind: "text", startParam: undefined, buttonData: undefined };
+      expect(
+        await keepDeadLetter(h.deps, {
+          messageId: "other-family-role",
+          jobType: "handle_inbound",
+          job: { type: "handle_inbound", events: [ordinary] },
+        }),
+      ).toBe(true);
+    },
+  );
 
   it("erases a member's recovery copy with their consent proofs", async () => {
     await keep();

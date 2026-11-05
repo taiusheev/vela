@@ -8,6 +8,7 @@
  * the request is a mark, and its reconcile claims the marked jobs and sends each again once.
  */
 import { InboundEvent } from "@vela/contracts";
+import { decodeButton } from "@vela/core";
 import {
   accountLinkChallenges,
   channelLinks,
@@ -79,6 +80,31 @@ async function liveInbound(
       !forgotten.userIds?.includes(challenge.user.id) &&
       challenge.challenge.expiresAt > now &&
       challenge.challenge.invalidatedAt === null
+    );
+  }
+  // Nearby requests are routed before family membership. A contact may also belong to a
+  // different live family; that membership must not rescue the erased nearby request.
+  const action = event.buttonData === undefined ? null : decodeButton(event.buttonData);
+  const nearbyStart = token !== undefined && /^n[A-Za-z0-9_-]{32}$/.test(token);
+  if (nearbyStart || action?.type === "nearby_consent") {
+    if (event.conversation.kind !== "private") return false;
+    const scope =
+      action?.type === "nearby_consent"
+        ? eq(nearbyContacts.id, action.contactId)
+        : eq(nearbyContacts.inviteTokenHash, await sha256Hex(token ?? ""));
+    const [owner] = await tx
+      .select({ contact: nearbyContacts, family: families, member: members })
+      .from(nearbyContacts)
+      .innerJoin(families, eq(families.id, nearbyContacts.familyId))
+      .innerJoin(members, eq(members.id, nearbyContacts.memberId))
+      .where(scope);
+    return (
+      owner !== undefined &&
+      owner.family.deletedAt === null &&
+      owner.member.status !== "left" &&
+      owner.member.status !== "deceased" &&
+      !forgotten.contactIds?.includes(owner.contact.id) &&
+      !forgotten.memberIds?.includes(owner.member.id)
     );
   }
   const [person] = await tx
