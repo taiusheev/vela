@@ -3,7 +3,7 @@ import { releaseSmoke } from "./release-smoke-checks.ts";
 
 const caps = {
   pilot: true,
-  telegram_first: true,
+  telegram_first: false,
   english_only: false,
   memory: false,
   book: false,
