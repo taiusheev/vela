@@ -177,6 +177,7 @@ export function fetchMe(token: string | null): Promise<ApiMe> {
 }
 
 export interface ApiCapabilities {
+  push?: boolean;
   personal_question_profiles?: boolean;
   personal_questions?: boolean;
   pilot: boolean;

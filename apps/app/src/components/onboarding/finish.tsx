@@ -1,6 +1,6 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { appPrivacyAcceptance, type CreateFamily, privacyLangOf } from "@vela/contracts";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,8 +18,6 @@ import {
   provisionAccount,
   setMorningPreferences,
 } from "../../api/client.ts";
-import { FAMILY_WAITING_RECHECK_MS, isFamilyWaiting } from "../../api/family-waiting.ts";
-import { readMe } from "../../api/read-me.ts";
 import { useAccount } from "../../auth/clerk.tsx";
 import { clockTime } from "../../data/format.ts";
 import { sessionScope } from "../../data/live-state.ts";
@@ -32,14 +30,15 @@ import {
   updateDraftForRun,
 } from "../../data/onboarding-draft.ts";
 import { installOnboardingPortrait } from "../../data/onboarding-portrait.ts";
+import { useFamilyApproval } from "../../data/useFamilyApproval.ts";
 import { useToday } from "../../data/useToday.ts";
 import { useAppLocale } from "../../i18n/provider.tsx";
-import { usePush } from "../../push/provider.tsx";
 import { space, type } from "../../theme/tokens.ts";
 import { Text } from "../scaled-text.tsx";
 import { SetUpPhone } from "../set-up-phone.tsx";
 import { NightScene, night } from "./night-scene.tsx";
 import { NightButton, NightCopy } from "./story.tsx";
+import { useNotificationAsk } from "./use-notification-ask.ts";
 
 /** The example family's id, where nothing is sent anywhere. */
 const EXAMPLE_FAMILY = "example";
@@ -302,7 +301,10 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
   const insets = useSafeAreaInsets();
   const [trouble, setTrouble] = useState(false);
   const created = draft.created;
-  const approval = useApproved(created?.familyId ?? EXAMPLE_FAMILY);
+  const approval = useFamilyApproval(
+    created?.familyId ?? EXAMPLE_FAMILY,
+    (created?.familyId ?? EXAMPLE_FAMILY) !== EXAMPLE_FAMILY,
+  );
   const notifications = useNotificationAsk();
   if (created === null) return null;
   const onLine = draft.messenger === "line" && created.invite.lineText !== null;
@@ -435,56 +437,6 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
       </View>
     </NightScene>
   );
-}
-
-/**
- * Whether to ask for notifications here, and how: only where this Vela sends them and the phone has
- * not said yes yet. "Not now" always stays: the phone's own prompt may never be forced.
- */
-function useNotificationAsk() {
-  const push = usePush();
-  const today = useToday();
-  const phone = push.phone;
-  const offered =
-    apiConfigured() &&
-    today.pushSent &&
-    push.availability.available &&
-    phone !== null &&
-    phone.permission !== "granted";
-  const settings = phone !== null && !phone.canAskAgain;
-  const ask = async () => {
-    if (settings) {
-      push.openSettings();
-      return;
-    }
-    await push.ask();
-  };
-  return { offered, settings, asking: push.asking, ask, granted: phone?.permission === "granted" };
-}
-
-/**
- * Whether the founder has approved this family yet (ADR-52): a closed-test family set up in the app
- * waits, and the invitation stays here until then. Looked at again every 30 seconds while waiting.
- */
-function useApproved(familyId: string): "approved" | "waiting" {
-  const account = useAccount();
-  const check = useQuery({
-    queryKey: ["family-approved", familyId, account.userId],
-    enabled: apiConfigured() && familyId !== EXAMPLE_FAMILY,
-    queryFn: async () => {
-      try {
-        await readMe(account);
-        return "approved" as const;
-      } catch (error) {
-        if (isFamilyWaiting(error)) return "waiting" as const;
-        throw error;
-      }
-    },
-    refetchInterval: (query) =>
-      query.state.data === "waiting" ? FAMILY_WAITING_RECHECK_MS : false,
-    retry: 2,
-  });
-  return check.data === "waiting" ? "waiting" : "approved";
 }
 
 function Milestone({ text, state }: { text: string; state: "done" | "next" | "later" }) {

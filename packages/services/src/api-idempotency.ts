@@ -15,6 +15,8 @@ export interface ApiMutationRequest {
 }
 
 export interface ApiMutationAction {
+  /** Extra transaction locks, after the actor but before receipt/entity rows. No writes here. */
+  beforeReceipt?(tx: VelaTransaction): Promise<void>;
   authorize(tx: VelaTransaction): Promise<void>;
   mutate(tx: VelaTransaction): Promise<ApiMutationResponse>;
 }
@@ -210,6 +212,7 @@ export async function runApiMutation(
   ]);
   return deps.db.transaction(async (tx) => {
     await lockApiActor(tx, actorHash);
+    await action.beforeReceipt?.(tx);
     const [inserted] = await tx
       .insert(apiRequestReceipts)
       .values({

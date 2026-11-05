@@ -22,6 +22,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { deviceTokenHash } from "./api-device.ts";
+import { lockDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -328,6 +329,7 @@ export async function handleNearbyConsentButton(
   const now = deps.clock.now();
   const pending: Pending = [];
   const outcome = await deps.db.transaction(async (tx) => {
+    if (!action.accept) await lockDeadLetters(tx);
     const [contact] = await tx
       .select()
       .from(nearbyContacts)
@@ -528,6 +530,7 @@ export async function handleNearbyMessage(deps: Deps, event: InboundEvent): Prom
   if (first === undefined) return false;
   const pending: Pending = [];
   await deps.db.transaction(async (tx) => {
+    if (stop) await lockDeadLetters(tx);
     if (stop) {
       for (const contact of listed) {
         await tx

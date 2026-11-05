@@ -11,6 +11,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { SessionIdentity } from "./api-access.ts";
 import { VelaError } from "./errors.ts";
+import { sha256Hex } from "./hash.ts";
 import type { Queryable } from "./repo.ts";
 
 const Uuid = z.uuid();
@@ -37,6 +38,13 @@ export async function provisionApiUser(
   if (!parsed.success) {
     throw new VelaError("invalid_payload", "Invalid account profile");
   }
+
+  const [erased] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.deletedAuthSubjectHash, await sha256Hex(identity.authSubject)))
+    .limit(1);
+  if (erased !== undefined) throw new VelaError("not_found", "Account not found");
 
   const [created] = await db
     .insert(users)

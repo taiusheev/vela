@@ -39,6 +39,7 @@ import {
 } from "@vela/db";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { familyWaitingAlert } from "./admin-alerts.ts";
+import { lockDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
@@ -884,7 +885,10 @@ async function answerConsent(
     deps.logger.info("consent_button", { familyId: sender.family.id, accept: true, changed });
     return;
   }
-  const declined = await deps.db.transaction((tx) => declineConsent(deps, tx, event, action, now));
+  const declined = await deps.db.transaction(async (tx) => {
+    await lockDeadLetters(tx);
+    return declineConsent(deps, tx, event, action, now);
+  });
   if (event.messageId !== undefined) {
     await adapter.closeButtons(conversationId, event.messageId, declined?.answered);
   }

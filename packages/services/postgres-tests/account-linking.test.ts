@@ -218,7 +218,7 @@ describe("account linking on independent PostgreSQL connections", () => {
     expect(await pg.receipts(identity.authSubject)).toEqual([]);
     expect(await linkEvents()).toEqual([]);
     expect(await pg.accounts()).toEqual([
-      expect.objectContaining({ authSubject: identity.authSubject, deletedAt: NOW }),
+      expect.objectContaining({ authSubject: null, displayName: "", deletedAt: NOW }),
     ]);
   });
 
@@ -246,7 +246,7 @@ describe("account linking on independent PostgreSQL connections", () => {
     expect(await pg.receipts(identity.authSubject)).toEqual([]);
     expect(await linkEvents()).toHaveLength(1);
     expect(await pg.accounts()).toEqual([
-      expect.objectContaining({ authSubject: identity.authSubject, deletedAt: NOW }),
+      expect.objectContaining({ authSubject: null, displayName: "", deletedAt: NOW }),
     ]);
     // Deletion lets go of the membership it linked (ADR-43): this one is kept in the family on
     // Telegram, so it no longer names the deleted account.

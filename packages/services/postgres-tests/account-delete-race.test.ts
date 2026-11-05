@@ -88,6 +88,27 @@ async function organisers() {
     .where(and(eq(members.familyId, scope.familyId), eq(members.role, "organiser")));
 }
 
+/** Erasures may queue first on the recovery lock, and Leaves on the organiser row. */
+async function queueChanges(
+  holder: RaceClient,
+  contenders: { client: RaceClient; start: () => Promise<unknown> }[],
+) {
+  const held = await pg.holdRows(holder, onTheFirstOrganiser);
+  const pending: Promise<unknown>[] = [];
+  let blocker = holder;
+  try {
+    for (const contender of contenders) {
+      const operation = pg.track(contender.start());
+      await pg.waitForLockWait(contender.client, [blocker], operation);
+      pending.push(operation);
+      blocker = contender.client;
+    }
+  } finally {
+    await held.release();
+  }
+  return pending;
+}
+
 describe("account deletion on independent PostgreSQL connections", () => {
   it("lets one of two organisers deleting at once leave, and keeps the other in the family", async () => {
     const [first, second, holder] = await pg.clientPool("delete", 3);
@@ -95,7 +116,7 @@ describe("account deletion on independent PostgreSQL connections", () => {
       throw new Error("expected three race connections");
     }
 
-    const queued = await pg.queueBehindRowLock<unknown>(holder, onTheFirstOrganiser, [
+    const queued = await queueChanges(holder, [
       { client: first, start: () => deleteAccount(first, mia) },
       { client: second, start: () => deleteAccount(second, anna) },
     ]);
@@ -117,7 +138,7 @@ describe("account deletion on independent PostgreSQL connections", () => {
       throw new Error("expected three race connections");
     }
 
-    const queued = await pg.queueBehindRowLock<unknown>(holder, onTheFirstOrganiser, [
+    const queued = await queueChanges(holder, [
       {
         client: first,
         start: () => leaveApiFamily(first.deps, mia, "leave-mia", scope.familyId, scope.miaId, {}),

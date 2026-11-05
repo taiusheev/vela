@@ -525,6 +525,7 @@ const NOT_FOUND: ApiErrorBody = {
 /** The closed test's answer to an organiser whose new family the founder has not approved yet. */
 /** The setup writes (and the reads they need) a family may make while it waits for approval. */
 const WAITING_SETUP: readonly (readonly [string, RegExp])[] = [
+  ["POST", /^\/v1\/me\/devices$/],
   ["POST", /^\/v1\/families\/[^/]+\/exchanges$/],
   ["POST", /^\/v1\/families\/[^/]+\/nearby$/],
   ["GET", /^\/v1\/families\/[^/]+\/members\/[^/]+\/morning$/],
@@ -709,6 +710,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
       c.set("pilotAdmission", roster);
       const identity = c.get("session");
       const removal =
+        (c.req.method === "POST" && c.req.path === "/v1/me/delete") ||
         c.req.path.endsWith("/left") ||
         c.req.path.endsWith("/remove") ||
         c.req.path.endsWith("/question-profile/forget") ||
@@ -758,6 +760,7 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
     if (c.req.method === "HEAD") return c.json(NOT_FOUND, 404);
     return c.json(
       ApiCapabilities.parse({
+        push: runtime.push === true,
         ...(runtime.capabilities ?? {
           pilot: false,
           telegram_first: false,

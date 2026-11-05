@@ -32,7 +32,7 @@ it("preserves existing notification opt-outs when migrating from the combined co
       turn_reminders: boolean;
     }>(`SELECT display_name, reply_notifications, turn_reminders FROM users ORDER BY display_name`);
     expect(rows).toEqual([
-      { display_name: "Synthetic deleted", reply_notifications: false, turn_reminders: false },
+      { display_name: "", reply_notifications: false, turn_reminders: false },
       { display_name: "Synthetic off", reply_notifications: false, turn_reminders: false },
       { display_name: "Synthetic on", reply_notifications: true, turn_reminders: true },
     ]);

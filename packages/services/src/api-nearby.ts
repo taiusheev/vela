@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { MAX_NEARBY_CONTACTS } from "./admin.ts";
 import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
+import { lockDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
@@ -171,6 +172,7 @@ export async function removeApiNearby(
       ...(found === undefined ? {} : { familyId: found.familyId, memberId: found.memberId }),
     },
     {
+      beforeReceipt: lockDeadLetters,
       authorize: async (tx) => {
         if (found === undefined) throw notFound();
         const access = await authorizeFamilyAccess(tx, identity, found.familyId, "organiser");
