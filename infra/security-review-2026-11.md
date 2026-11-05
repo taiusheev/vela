@@ -28,13 +28,13 @@ Reviewed by Claude on 3 November 2026, from the code on `main` at `45ddddf`, a m
 
 ### For the founder (account owner)
 
-These are the gaps that matter most before a real family: they are written promises, and the code cannot keep them for you.
+These are the gaps that matter most before a real family: they are written promises, and the code cannot keep them for you. Each is written out with exact steps, and the two provider emails are drafted, in [`plan/founder-security-actions.md`](../plan/founder-security-actions.md).
 
 1. **OpenAI's data processing terms.** OpenAI receives the families' words today wherever AI is on, and its terms are recorded as "not yet read in full", with no acceptance date (`sub-processors.md`). The rule there is terms in place before real family data. Also decide whether to apply for zero data retention: without it, OpenAI may keep requests up to 30 days for abuse monitoring.
 2. **Deepgram's DPA** (ask security@deepgram.com), **Expo's terms** (none found yet), **PostHog's DPA** (generate and countersign in the organisation before any production collection), **Sentry's** (before it is connected). Record the dates for Cloudflare, Neon, Clerk and Telegram.
 3. **Cloudflare Access policy** (October item 1): confirm in Zero Trust that only your own email can open the admin page, for staging and production.
 4. **Laptop and phone encryption** (`security-plan.md`, measure 8): confirm and date.
-5. **Publish the bridge** with finding 1's change, through the release runbook's protected step.
+5. **The bridge** needs nothing separately: finding 1's change goes live when the bridge moves to production, step 8 of `infra/runbooks/release.md`.
 
 ### For counsel
 
