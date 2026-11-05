@@ -68,13 +68,13 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     security: {
-      lede: "How Vela protects family information and how to report a concern. Updated 19 October 2026.",
+      lede: "How Vela protects family information and how to report a concern. Updated 5 November 2026.",
       sections: [
         {
           heading: "Access and encryption",
           paragraphs: [
             "Signed-in app requests are checked for family membership and role. The founder’s administration tools require separate sign-in protected by Cloudflare Access. The founder can read messages to operate and review the pilot. Vela is not end-to-end encrypted: its servers and named providers process messages.",
-            "Vela uses HTTPS. Family content fields are encrypted before database storage; the database and private media storage also use provider-managed encryption at rest. Media access is checked and temporary access links expire. Production and test environments have separate resources and credentials. No service can guarantee perfect security.",
+            "Vela uses HTTPS. Family content fields are encrypted before database storage; the database and private media storage also use provider-managed encryption at rest. The app shows photos and voice notes only to the family: members signed in to their own accounts, and the phone set up for her. On LINE, each one is sent as a private link that cannot be guessed, and that link stops working when the file is deleted. Production and test environments have separate resources and credentials. No service can guarantee perfect security.",
           ],
         },
         {
@@ -196,13 +196,13 @@ export const LEGAL_COPY: Record<SiteLang, Record<LegalPage, LegalCopy>> = {
       ],
     },
     security: {
-      lede: "Vela 如何保護家庭資料與受理通報。更新：2026 年 10 月 19 日。",
+      lede: "Vela 如何保護家庭資料與受理通報。更新：2026 年 11 月 5 日。",
       sections: [
         {
           heading: "存取與加密",
           paragraphs: [
             "App 請求檢查登入身分、家庭資格與角色。管理工具另由 Cloudflare Access 保護。創辦人可為營運與檢視試辦閱讀訊息。Vela 並非端對端加密：伺服器與列出的供應商需要處理訊息。",
-            "使用 HTTPS，家庭內容欄位寫入資料庫前加密，資料庫與私人媒體另有供應商的靜態加密。媒體存取須經檢查，臨時連結有期限。正式與測試環境資源與憑證分開。任何服務都不能保證絕對安全。",
+            "使用 HTTPS，家庭內容欄位寫入資料庫前加密，資料庫與私人媒體另有供應商的靜態加密。照片和語音訊息在 App 裡只給家人看：用自己帳號登入的家人，以及為她設定好的手機。在 LINE 上，每一則都以無法猜到的私人連結傳送，檔案刪除後連結就失效。正式與測試環境資源與憑證分開。任何服務都不能保證絕對安全。",
           ],
         },
         {
