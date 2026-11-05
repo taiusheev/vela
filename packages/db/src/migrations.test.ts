@@ -3,6 +3,8 @@
  * nothing but the local dev seed (`apps/worker/scripts/seed-dev-family.ts`) wrote `suggestions`, and
  * a row it wrote has no day and no bank item for the columns 0003 adds as NOT NULL.
  */
+
+import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -130,5 +132,45 @@ describe("0005_push", { timeout: MIGRATION_TIMEOUT_MS }, () => {
       sql`select count(*)::int as n from push_devices`,
     );
     expect(devices.rows).toEqual([{ n: 0 }]);
+  });
+});
+
+describe("0038_invite_token_sealed", { timeout: MIGRATION_TIMEOUT_MS }, () => {
+  it("hashes every existing invite and empties its readable token, however many there are", async () => {
+    const earlier = migrationsUpTo("0037_talk_setup");
+    const client = new PGlite();
+    cleanups.push(() => rmSync(earlier, { recursive: true, force: true }));
+    cleanups.push(() => client.close());
+    const db = drizzle({ client });
+    await migrate(db, { migrationsFolder: earlier });
+    const [family] = (
+      await db.execute<{ id: string }>(
+        sql`insert into families (name, region, country) values ('Chen', 'apac', 'TW') returning id`,
+      )
+    ).rows;
+    const [organiser] = (
+      await db.execute<{ id: string }>(
+        sql`insert into members (family_id, display_name, tz, country)
+            values (${family?.id}, 'Mia', 'Asia/Taipei', 'TW') returning id`,
+      )
+    ).rows;
+    for (const token of ["first-token", "second-token", "third-token"]) {
+      await db.execute(
+        sql`insert into invites (family_id, invited_by, token, expires_at)
+            values (${family?.id}, ${organiser?.id}, ${token}, now() + interval '7 days')`,
+      );
+    }
+
+    await migrate(db, { migrationsFolder });
+
+    const rows = await db.execute<{ token: string; token_hash: string }>(
+      sql`select token, token_hash from invites order by token_hash`,
+    );
+    const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+    expect(rows.rows).toEqual(
+      ["first-token", "second-token", "third-token"]
+        .map((token) => ({ token: "", token_hash: hash(token) }))
+        .sort((a, b) => a.token_hash.localeCompare(b.token_hash)),
+    );
   });
 });
