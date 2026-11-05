@@ -28,8 +28,10 @@ import {
   readable,
   toInternational,
 } from "../src/auth/phone.ts";
+import { acceptLocalPrivacy, PrivacySummary } from "../src/components/app-privacy.tsx";
 import { BrandHeader } from "../src/components/brand/header.tsx";
 import { LocaleChips } from "../src/components/locale-chips.tsx";
+import { QuestionConfirm } from "../src/components/questions/flow.tsx";
 import { SetupHelp } from "../src/components/setup-help.tsx";
 import {
   Card,
@@ -211,6 +213,10 @@ function CodeSignIn() {
   const draft = useOnboardingDraft();
   const savingFor =
     draft.step === "save" && draft.callName.trim().length > 0 ? draft.callName.trim() : null;
+  // Saving a family from onboarding asks for the privacy agreement here, beside the email, so
+  // saving is one screen (onboarding v2). It is kept on this phone until the account exists.
+  const needsPrivacy = draft.step === "save" && !draft.privacyAccepted;
+  const [agreed, setAgreed] = useState(false);
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   // The closed test's server says when Chinese is allowed (ADR-52); until then, English only.
@@ -279,6 +285,7 @@ function CodeSignIn() {
 
   const sendCode = async () => {
     if (!ready || signIn === undefined || inFlight.current) return;
+    if (needsPrivacy && !agreed) return;
     const entered = identifier;
     if (mode === "phone" && international === null) {
       setTrouble({ kind: "number_invalid" });
@@ -291,6 +298,7 @@ function CodeSignIn() {
     inFlight.current = true;
     setWorking(true);
     setTrouble(undefined);
+    if (needsPrivacy) acceptLocalPrivacy();
     try {
       const attempt = await within(signIn.create({ identifier: entered }));
       // An account with a password (Apple's reviewer) signs in with it; everyone else gets a code.
@@ -649,9 +657,20 @@ function CodeSignIn() {
                   />
                 </>
               )}
+              {needsPrivacy ? (
+                <View style={{ gap: space.m }}>
+                  <PrivacySummary />
+                  <QuestionConfirm
+                    label={t`I agree to how Vela keeps my family’s information`}
+                    checked={agreed}
+                    disabled={working}
+                    onPress={() => setAgreed((value) => !value)}
+                  />
+                </View>
+              ) : null}
               <PrimaryButton
-                label={working ? t`Sending…` : t`Send me a code`}
-                disabled={working || !ready || identifier.length === 0}
+                label={working ? t`Sending…` : t`Email me a code`}
+                disabled={working || !ready || identifier.length === 0 || (needsPrivacy && !agreed)}
                 onPress={sendCode}
               />
             </>

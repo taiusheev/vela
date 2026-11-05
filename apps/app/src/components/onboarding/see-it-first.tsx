@@ -16,7 +16,7 @@ import {
   useOnboardingDraft,
 } from "../../data/onboarding-draft.ts";
 import { AppPrivacy, acceptLocalPrivacy } from "../app-privacy.tsx";
-import { Invite, Notify, Ready, Save } from "./finish.tsx";
+import { Invite, Ready, Save } from "./finish.tsx";
 import { Build, Plan } from "./plan.tsx";
 import { nameFor, Questions } from "./questions.tsx";
 import { Story } from "./story.tsx";
@@ -45,7 +45,9 @@ export function SeeItFirst() {
   const step = draft.step;
 
   const screen =
-    step === "save" && !draft.privacyAccepted ? (
+    // Signing in asks for the agreement beside the email; only an account that already exists
+    // agrees here (onboarding v2).
+    step === "save" && !draft.privacyAccepted && !needsAccount ? (
       <AppPrivacy
         onAccept={() => {
           acceptLocalPrivacy();
@@ -65,15 +67,13 @@ export function SeeItFirst() {
         name={name}
         onSave={() => {
           updateDraft({ step: "save", ...(alreadyAccepted ? { privacyAccepted: true } : {}) });
-          if (draft.privacyAccepted && needsAccount) router.push("/sign-in");
+          if (needsAccount) router.push("/sign-in");
         }}
       />
     ) : step === "save" ? (
       <Save name={name} />
     ) : step === "invite" ? (
       <Invite draft={draft} name={name} />
-    ) : step === "notify" ? (
-      <Notify name={name} />
     ) : (
       <Ready draft={draft} name={name} />
     );

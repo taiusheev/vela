@@ -103,7 +103,7 @@ const TOPIC_WORDS: Readonly<Record<AvoidTopic, Readonly<Record<AskBankLang, read
 
 const latin = /^[a-z0-9' -]+$/;
 
-function escape(text: string): string {
+function escapePattern(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
@@ -112,7 +112,7 @@ function mentions(text: string, word: string): boolean {
   if (needle.length === 0) return false;
   const haystack = text.toLowerCase();
   if (!latin.test(needle)) return haystack.includes(needle);
-  return new RegExp(`(^|[^a-z])${escape(needle)}s?($|[^a-z])`).test(haystack);
+  return new RegExp(`(^|[^a-z])${escapePattern(needle)}s?($|[^a-z])`).test(haystack);
 }
 
 /** Whether these words touch anything the organiser asked Vela to leave out, in any language. */
