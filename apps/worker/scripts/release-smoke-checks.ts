@@ -14,10 +14,11 @@ export interface SmokeResult {
   readonly checks: readonly SmokeCheck[];
 }
 
-// The closed trial in production (ADR-52): approved families, in English or Chinese.
+// The closed trial in production (ADR-52): approved families, in English or Chinese, set up in the
+// app since PILOT_APP_SETUP is on (ADR-52 amended, 5 November 2026), so not messenger-first.
 const TRIAL_CAPABILITIES: Readonly<Record<string, boolean>> = {
   pilot: true,
-  telegram_first: true,
+  telegram_first: false,
   english_only: false,
   memory: false,
   book: false,
