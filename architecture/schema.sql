@@ -37,7 +37,7 @@ CREATE TABLE "admin_access_log" (
 	"action" text NOT NULL,
 	"what" text NOT NULL,
 	"at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove'))
+	CONSTRAINT "admin_access_log_action_check" CHECK ("action" in ('view', 'record_consent', 'record_contact_consent', 'add_contact', 'remove_contact', 'set_away', 'end_away', 'mark_left', 'mark_deceased', 'delete_family', 'send_weekly_read', 'create_invite', 'roster_add', 'roster_remove', 'family_approve', 'family_unapprove', 'weekly_feedback_off', 'weekly_feedback_on'))
 );
 
 CREATE TABLE "ai_calls" (
@@ -276,12 +276,13 @@ CREATE TABLE "invites" (
 	"invited_by" uuid NOT NULL,
 	"for_member_id" uuid,
 	"token" text NOT NULL,
+	"token_hash" text NOT NULL,
 	"channel" text DEFAULT 'link' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"accepted_at" timestamp with time zone,
 	"accepted_by" uuid,
-	CONSTRAINT "invites_token_key" UNIQUE("token"),
+	CONSTRAINT "invites_token_hash_key" UNIQUE("token_hash"),
 	CONSTRAINT "invites_channel_check" CHECK ("channel" in ('link', 'line', 'whatsapp', 'telegram', 'sms', 'email'))
 );
 
@@ -347,6 +348,7 @@ CREATE TABLE "members" (
 	"turns_in" boolean DEFAULT true NOT NULL,
 	"primary_surface" text DEFAULT 'app' NOT NULL,
 	"light_on" boolean DEFAULT false NOT NULL,
+	"weekly_feedback" boolean DEFAULT true NOT NULL,
 	"light_consented_at" timestamp with time zone,
 	"light_consent_text" text,
 	"light_starts_on" date,
@@ -545,7 +547,7 @@ CREATE TABLE "nearby_contacts" (
 	CONSTRAINT "nearby_contacts_invite_token_hash_key" UNIQUE("invite_token_hash"),
 	CONSTRAINT "nearby_contacts_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'sms')),
 	CONSTRAINT "nearby_contacts_reach_consented_check" CHECK (("phone" is not null or "external_id" is not null) = ("consented_at" is not null and "declined_at" is null)),
-	CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" = 'telegram')
+	CONSTRAINT "nearby_contacts_external_channel_check" CHECK ("external_id" is null or "channel" in ('telegram', 'line'))
 );
 
 CREATE TABLE "onboarding_sessions" (
@@ -580,7 +582,7 @@ CREATE TABLE "outbound" (
 	"sent_at" timestamp with time zone,
 	"effects_at" timestamp with time zone,
 	CONSTRAINT "outbound_idempotency_key_key" UNIQUE("idempotency_key"),
-	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'flag', 'consent', 'onboarding', 'system')),
+	CONSTRAINT "outbound_kind_check" CHECK ("kind" in ('conversation', 'arrival', 'repeat', 'turn_prompt', 'answer_receipt', 'answer_post', 'quiet_notice', 'quiet_resolved', 'weekly_read', 'ack', 'nearby_ask', 'nearby_auto_ask', 'flag', 'consent', 'onboarding', 'system')),
 	CONSTRAINT "outbound_channel_check" CHECK ("channel" in ('line', 'whatsapp', 'telegram', 'voice', 'app', 'device')),
 	CONSTRAINT "outbound_status_check" CHECK ("status" in ('queued', 'sent', 'failed', 'dropped')),
 	CONSTRAINT "outbound_nearby_ask_actor_check" CHECK ("kind" <> 'nearby_ask' or "actor_id" is not null)
@@ -592,9 +594,9 @@ CREATE TABLE "photo_box" (
 	"media_id" uuid NOT NULL,
 	"era" text NOT NULL,
 	"caption" text,
+	"question" text,
 	"added_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"question" text,
 	CONSTRAINT "photo_box_media_id_key" UNIQUE("media_id"),
 	CONSTRAINT "photo_box_era_check" CHECK ("era" in ('new', 'old'))
 );

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * A family on LINE (05-line-flows §8, step 4): with every person's link and the family's group on
  * LINE, her mornings, the turn prompt, a quiet notice and the post of her answer all go there, and
@@ -28,6 +29,9 @@ import { handleInbound } from "./inbound/router.ts";
 import { openQuiet } from "./quiet.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedExchange, seedFamily, seedLinkedGroup } from "./testing/seed.ts";
+
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;
 let seed: SeededFamily;
@@ -219,6 +223,7 @@ describe("taps on LINE, which name no message", () => {
       invitedBy: seed.organiser.id,
       forMemberId: seed.member.id,
       token: "line-invite-token-0123456789abcdef0123456789",
+      tokenHash: tokenHashOf("line-invite-token-0123456789abcdef0123456789"),
       channel: "link",
       createdAt: h.clock.now(),
       expiresAt: new Date(h.clock.now().getTime() + 7 * 86_400_000),

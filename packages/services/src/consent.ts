@@ -43,6 +43,7 @@ import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
 import { directReplyOf, enqueueOutbound, replyFieldOf, replyOf } from "./gateway.ts";
 import { languageOfSender, sendOutsideGateway } from "./group.ts";
+import { inviteTokenHash } from "./invites.ts";
 import { morningTimeOn } from "./morning-time.ts";
 import { pilotCanActivate } from "./pilot-admission.ts";
 import {
@@ -409,7 +410,11 @@ export async function handleInviteStart(deps: Deps, event: InboundEvent): Promis
   }
   const now = deps.clock.now();
   const sender = await memberByChannelUser(deps.db, event.channel, event.sender.externalUserId);
-  const [invite] = await deps.db.select().from(invites).where(eq(invites.token, token)).limit(1);
+  const [invite] = await deps.db
+    .select()
+    .from(invites)
+    .where(eq(invites.tokenHash, await inviteTokenHash(token)))
+    .limit(1);
   if (invite !== undefined && sender !== null && sender.member.id === invite.forMemberId) {
     deps.logger.info("invite_start_repeated", { familyId: sender.family.id });
     return;

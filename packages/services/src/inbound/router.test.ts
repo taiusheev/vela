@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * The routing table of flows §5: which flow each event belongs to, and, as much as that, what the
  * router refuses to do. A group message that is not an ask, a reply, or a reaction leaves no trace
@@ -36,6 +37,9 @@ import {
   seedLinkedGroup,
 } from "../testing/seed.ts";
 import { handleInbound } from "./router.ts";
+
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;
 
@@ -339,6 +343,7 @@ describe("the consent buttons", () => {
       invitedBy: seed.organiser.id,
       forMemberId: seed.member.id,
       token: "her-token",
+      tokenHash: tokenHashOf("her-token"),
       createdAt: h.clock.now(),
       expiresAt: new Date(h.clock.now().getTime() + 7 * 86_400_000),
       acceptedAt: h.clock.now(),

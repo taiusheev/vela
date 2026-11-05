@@ -13,6 +13,7 @@ import type {
 } from "@vela/contracts";
 import { type Invite, invites, type Member, members, type VelaTransaction } from "@vela/db";
 import type { Deps } from "./deps.ts";
+import { sha256Hex } from "./hash.ts";
 
 /** An invite link is good for a week (flows §3.1). */
 export const INVITE_DAYS = 7;
@@ -108,6 +109,15 @@ export function lineInviteLink(basicId: string, token: string): string {
 }
 
 /**
+ * How an invite is found from the token in its link: SHA-256, hex, the digest migration 0037 wrote
+ * for the invites made before it. The token itself is stored sealed (ADR-38), and only read back to
+ * show the organiser the same link again.
+ */
+export function inviteTokenHash(token: string): Promise<string> {
+  return sha256Hex(token);
+}
+
+/**
  * A single-use invite for the member, from a fresh token, with the link to send her: the token is
  * never logged, and reaches only the organiser's own chat.
  */
@@ -125,6 +135,7 @@ export async function insertInvite(
       invitedBy: input.invitedBy,
       forMemberId: input.forMemberId,
       token,
+      tokenHash: await inviteTokenHash(token),
       channel: "link",
       createdAt: now,
       expiresAt: new Date(now.getTime() + INVITE_DAYS * MINUTES_PER_DAY * 60_000),

@@ -260,6 +260,13 @@
       "when": 1793692081911,
       "tag": "0036_photo_box_question",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793859798002,
+      "tag": "0037_invite_token_sealed",
+      "breakpoints": true
     }
   ]
 }

@@ -123,6 +123,9 @@ import {
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
+
 const NOT_NULL_VIOLATION = "23502";
 const UNIQUE_VIOLATION = "23505";
 const CHECK_VIOLATION = "23514";
@@ -367,6 +370,7 @@ async function seedEveryTable(): Promise<void> {
     invitedBy: seed.organiser.id,
     forMemberId: seed.parent.id,
     token: "invite-token",
+    tokenHash: tokenHashOf("invite-token"),
     expiresAt: new Date("2026-09-20T00:00:00Z"),
   });
   const contact = only(
@@ -712,6 +716,14 @@ async function seedEveryTable(): Promise<void> {
 }
 
 describe("migrations", () => {
+  it("hash an invite token in SQL as the services do, so links sent before 0037 still open", async () => {
+    const token = "Abc_123-xyz_\u00e9";
+    const { rows } = await db.execute<{ hash: string }>(
+      sql`select encode(sha256(convert_to(${token}, 'UTF8')), 'hex') as hash`,
+    );
+    expect(rows[0]?.hash).toBe(tokenHashOf(token));
+  });
+
   it("give every uuid primary key the native uuidv7() default", async () => {
     const uuidKeyed = allTables
       .filter((table) => getTableColumns(table).id?.columnType === "PgUUID")
@@ -1836,16 +1848,24 @@ describe("deleting a member who left", () => {
         familyId,
         invitedBy: seed.organiser.id,
         token: "accepted-by-leo",
+        tokenHash: tokenHashOf("accepted-by-leo"),
         expiresAt,
         acceptedAt: new Date("2026-07-02T00:00:00Z"),
         acceptedBy: sibling.id,
       },
-      { familyId, invitedBy: sibling.id, token: "sent-by-leo", expiresAt },
+      {
+        familyId,
+        invitedBy: sibling.id,
+        token: "sent-by-leo",
+        tokenHash: tokenHashOf("sent-by-leo"),
+        expiresAt,
+      },
       {
         familyId,
         invitedBy: seed.organiser.id,
         forMemberId: sibling.id,
         token: "for-leo",
+        tokenHash: tokenHashOf("for-leo"),
         expiresAt,
       },
     ]);

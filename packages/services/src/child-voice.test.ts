@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * Her messages name her child instead of "the family" or Vela's own "I" (founder, 3 November 2026:
  * she should feel she is talking to her child, not to a bot): Vela's mornings are signed for them,
@@ -16,6 +17,9 @@ import { handleInbound } from "./inbound/router.ts";
 import { childOf } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { type SeededFamily, seedFamily } from "./testing/seed.ts";
+
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 const TZ = "Asia/Taipei";
 const TODAY: LocalDate = "2026-09-14";
@@ -39,6 +43,7 @@ async function family(options: { memberLanguage?: "en" | "zh-TW"; organiserName?
     invitedBy: seed.organiser.id,
     forMemberId: seed.member.id,
     token: `invite-${seed.member.id}`,
+    tokenHash: tokenHashOf(`invite-${seed.member.id}`),
     expiresAt: addMinutesOf(h.clock.now(), 60 * 24),
     acceptedAt: h.clock.now(),
     acceptedBy: seed.member.id,

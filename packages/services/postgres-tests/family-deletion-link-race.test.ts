@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * A family's deletion and an invite into it, accepted at the same moment, on independent PostgreSQL
  * connections (flows §3.15). Deleting a family removes its members' channel links at once, so the
@@ -24,6 +25,9 @@ import {
   type PostgresHarness,
   type RaceClient,
 } from "./testing.ts";
+
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let pg: PostgresHarness;
 let seeder: RaceClient;
@@ -80,6 +84,7 @@ async function seedInvitedFamily(client: RaceClient): Promise<Scope> {
     invitedBy: chens.organiser.id,
     forMemberId: invited.id,
     token: TOKEN,
+    tokenHash: tokenHashOf(TOKEN),
     channel: "link",
     createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 7 * 24 * 60 * 60_000),

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { InboundEvent, Lang } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, encodeButton, outboundKey } from "@vela/core";
@@ -32,6 +33,9 @@ import { handleParentCommand } from "./parent-commands.ts";
 import { hasHealthWordsConsent } from "./repo.ts";
 import { createHarness, type Harness } from "./testing/harness.ts";
 import { seedFamily } from "./testing/seed.ts";
+
+/** An invite token's hash, as the services store it (migration 0037). */
+const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;
 
@@ -138,6 +142,7 @@ async function seedInvited(
         invitedBy: organiser.id,
         forMemberId: her.id,
         token: TOKEN,
+        tokenHash: tokenHashOf(TOKEN),
         channel: "link",
         createdAt: now,
         expiresAt:
