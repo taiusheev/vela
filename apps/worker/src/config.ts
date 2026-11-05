@@ -624,6 +624,15 @@ export function readPhotoBox(env: { readonly PHOTO_BOX?: string }): boolean {
 }
 
 /**
+ * The var `TALK_SETUP` (onboarding v2): "on" keeps setup's "How do you and Mom talk?" answers and
+ * keeps her questions off what the organiser asked Vela never to bring up; absent or "off" ignores
+ * them; anything else is refused.
+ */
+export function readTalkSetup(env: { readonly TALK_SETUP?: string }): boolean {
+  return env.TALK_SETUP === undefined ? false : readOnOff(env.TALK_SETUP, "TALK_SETUP");
+}
+
+/**
  * The var `PHOTO_QUESTION_AI` (ADR-61): "on" lets Vela look at a photo going into the box and draft
  * questions about it for the person adding it; absent or "off" does not; anything else is refused.
  * It does nothing without `PHOTO_BOX`.
@@ -678,6 +687,7 @@ function readOnOff(
     | "WEEKLY_INSIGHT"
     | "NEARBY_AUTO_ASK"
     | "WEEKLY_READ_AUTO_SEND"
+    | "TALK_SETUP"
     | "SEND_AS_ME"
     | "PHOTO_BOX"
     | "PHOTO_QUESTION_AI"
@@ -839,6 +849,7 @@ export function readConfig(env: PilotEnv, notices: PrivacyNotices): Config {
     weeklyReadAutoSend: readWeeklyReadAutoSend(env),
     sendAsMe: readSendAsMe(env),
     photoBox: readPhotoBox(env),
+    talkSetup: readTalkSetup(env),
     photoQuestionAi: readPhotoQuestionAi(env),
     checkIn: readCheckIn(env),
     richMemories: readRichMemories(env),

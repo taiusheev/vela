@@ -5,11 +5,13 @@
  * that is good for a week.
  */
 import type {
+  AvoidTopic,
   InterestTopic,
   KeptLightRelationship,
   Lang,
   LocalTime,
   ReplyWay,
+  TalkRhythm,
 } from "@vela/contracts";
 import { type Invite, invites, type Member, members, type VelaTransaction } from "@vela/db";
 import type { Deps } from "./deps.ts";
@@ -51,6 +53,10 @@ export interface InvitedMemberProfile {
   relationship?: KeptLightRelationship;
   interests?: readonly InterestTopic[];
   replyWays?: readonly ReplyWay[];
+  /** "How do you and Mom talk?" (onboarding v2), kept only where `TALK_SETUP` is on. */
+  talkRhythm?: TalkRhythm;
+  avoidTopics?: readonly AvoidTopic[];
+  avoidWords?: readonly string[];
 }
 
 /**
@@ -81,6 +87,9 @@ export async function insertInvitedMember(
       relationship: profile.relationship ?? null,
       interests: profile.interests === undefined ? null : [...profile.interests],
       replyWays: profile.replyWays === undefined ? null : [...profile.replyWays],
+      talkRhythm: profile.talkRhythm ?? null,
+      avoidTopics: profile.avoidTopics === undefined ? null : [...profile.avoidTopics],
+      avoidWords: profile.avoidWords === undefined ? null : [...profile.avoidWords],
       createdAt: now,
     })
     .returning();
@@ -109,7 +118,7 @@ export function lineInviteLink(basicId: string, token: string): string {
 }
 
 /**
- * How an invite is found from the token in its link: SHA-256, hex, the digest migration 0037 wrote
+ * How an invite is found from the token in its link: SHA-256, hex, the digest migration 0038 wrote
  * for the invites made before it. The token itself is stored sealed (ADR-38), and only read back to
  * show the organiser the same link again.
  */

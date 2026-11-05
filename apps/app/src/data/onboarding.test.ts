@@ -1,5 +1,5 @@
 import { INTEREST_TOPICS } from "@vela/contracts";
-import { ASK_BANK } from "@vela/copy";
+import { ASK_BANK, NOTHING_TO_AVOID, touchesAvoided } from "@vela/copy";
 import { describe, expect, it, vi } from "vitest";
 import {
   firstQuestionChoices,
@@ -102,5 +102,22 @@ describe("her next morning", () => {
     const now = new Date("2026-10-19T02:00:00Z");
     expect(nextMorningAt("08:00", "Asia/Ho_Chi_Minh", now)).toBe("2026-10-20T01:00:00.000Z");
     expect(nextMorningAt("08:00", "America/New_York", now)).toBe("2026-10-19T12:00:00.000Z");
+  });
+});
+
+describe("her first week and what never to bring up", () => {
+  it("leaves out every question on an avoided topic, ideas included", () => {
+    const avoid = { topics: ["money", "work"] as const, words: ["garden"] };
+    const week = firstWeek(["garden", "cooking"], "Hi Mom!", "en", avoid, null);
+    expect(week).toHaveLength(7);
+    for (const ask of week.slice(1)) expect(touchesAvoided(ask, avoid)).toBe(false);
+    for (const idea of firstQuestionChoices(["garden"], "en", avoid))
+      expect(touchesAvoided(idea, avoid)).toBe(false);
+  });
+
+  it("starts with what she knows and thinks, not her life story, where they talk rarely", () => {
+    const week = firstWeek(["old_days", "cooking"], "Hi Mom!", "en", NOTHING_TO_AVOID, "rarely");
+    const second = ASK_BANK.find((item) => item.child.en === week[1]);
+    expect(second?.theme).not.toBe("life");
   });
 });

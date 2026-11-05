@@ -2,6 +2,10 @@ import { z } from "zod";
 import { AppPrivacyAcceptance } from "./app-privacy.ts";
 import {
   AnswerKind,
+  AVOID_TOPICS,
+  AVOID_WORD_MAX,
+  AVOID_WORDS_MAX,
+  AvoidTopic,
   Channel,
   ExchangeState,
   ExchangeType,
@@ -24,6 +28,7 @@ import {
   ReplyWay,
   Role,
   SubscriptionStatus,
+  TalkRhythm,
   TimeZone,
   WhenRule,
 } from "./domain.ts";
@@ -124,6 +129,11 @@ export const ApiCapabilities = z.strictObject({
    * adding it to choose from (ADR-61). Without it they write their own question, or none.
    */
   photo_question_ai: z.boolean().optional(),
+  /**
+   * Whether setup asks "How do you and Mom talk?" and keeps the answers (onboarding v2): how often
+   * they talk, and what Vela should never bring up. Absent means not.
+   */
+  talk_setup: z.boolean().optional(),
   parent_app: z.boolean(),
   billing: z.boolean(),
 });
@@ -881,8 +891,10 @@ const DistinctChoices = <T extends z.ZodType<string>>(choice: T, min: number, ma
  * Onboarding also asks (founder, 19 October 2026) who she is to the organiser, what she loves to
  * talk about and how she likes to answer. Each is optional, so an older app's request stays valid;
  * the app of that date always sends all three. `interests` holds at least one topic when sent;
- * an empty `reply_ways` is the organiser's "not sure yet". The pilot never stores them: its API
- * refuses this route (`pilot_telegram_first`), and the pilot's privacy notice does not list them.
+ * an empty `reply_ways` is the organiser's "not sure yet". In the closed test this route is open
+ * only where `PILOT_APP_SETUP` is on (ADR-52 amended); elsewhere it answers `pilot_telegram_first`,
+ * and a family in a language the test does not run in answers `pilot_language`. The notice's "App
+ * setup and local preview" paragraph (v13 onwards) lists these answers.
  */
 export const CreateFamily = z.strictObject({
   country: z.string().regex(/^[A-Z]{2}$/, "a two-letter country code"),
@@ -895,6 +907,21 @@ export const CreateFamily = z.strictObject({
     relationship: KeptLightRelationship.optional(),
     interests: DistinctChoices(InterestTopic, 1, INTEREST_TOPICS.length).optional(),
     reply_ways: DistinctChoices(ReplyWay, 0, REPLY_WAYS.length).optional(),
+    /**
+     * "How do you and Mom talk?" (onboarding v2): how often they talk now, and what Vela should never
+     * bring up, as fixed topics and up to three words of the organiser's own. Empty lists are the
+     * organiser's "nothing to avoid". Kept only where `TALK_SETUP` is on; otherwise ignored.
+     */
+    talk_rhythm: TalkRhythm.optional(),
+    avoid_topics: DistinctChoices(AvoidTopic, 0, AVOID_TOPICS.length).optional(),
+    avoid_words: z
+      .array(PersonText(AVOID_WORD_MAX))
+      .max(AVOID_WORDS_MAX)
+      .refine(
+        (words) => new Set(words.map((word) => word.toLowerCase())).size === words.length,
+        "each word at most once",
+      )
+      .optional(),
   }),
 });
 export type CreateFamily = z.infer<typeof CreateFamily>;

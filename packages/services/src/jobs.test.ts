@@ -47,7 +47,7 @@ import {
   seedNearbyContact,
 } from "./testing/seed.ts";
 
-/** An invite token's hash, as the services store it (migration 0037). */
+/** An invite token's hash, as the services store it (migration 0038). */
 const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 const TZ = "Asia/Taipei";

@@ -67,6 +67,11 @@ async function main(): Promise<void> {
           "select item.value as value from chips cross join lateral unnest(chips) as item(value) where item.value <> '' limit 1",
         column: "chips.chips",
       },
+      {
+        query:
+          "select item.value as value from members cross join lateral unnest(avoid_words) as item(value) where item.value <> '' limit 1",
+        column: "members.avoid_words",
+      },
     ] as const;
     for (const candidate of arrayCandidates) {
       const result = await client.query<{ value: unknown }>(candidate.query);

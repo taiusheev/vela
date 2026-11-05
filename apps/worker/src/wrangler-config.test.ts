@@ -637,6 +637,23 @@ describe("the pilot Worker's bindings", () => {
     ).toEqual(["on", "on", "on"]);
   });
 
+  // Onboarding v2: "How do you and Mom talk?" (how often, and what never to bring up) only where the
+  // notice describes it. Off in production until privacy-notice.v16 is approved and live; the commit
+  // that turns it on changes this.
+  it("ask how the family talks in development and staging, and not yet in production", () => {
+    expect(
+      (["development", ...DEPLOYED] as const).map(
+        (environment) => configOf("pilot", environment).vars.TALK_SETUP,
+      ),
+    ).toEqual(["on", "on", "off"]);
+  });
+
+  // ADR-52 amended: closed-test families set up in the app wait for approval like any other. Off in
+  // production until the app with onboarding v2 is on phones; the commit that turns it on changes this.
+  it("keep closed-test family setup in the messenger in production for now", () => {
+    expect(configOf("pilot", "production").vars.PILOT_APP_SETUP).toBe("off");
+  });
+
   // ADR-60: Vela asks the people nearby itself only where test families are, until the families
   // have been told (privacy-notice.v14 and the contacts' new text already say it may). The commit
   // that turns it on changes this.

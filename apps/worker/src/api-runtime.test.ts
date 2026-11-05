@@ -627,6 +627,7 @@ describe("the runtime staging's API app runs on", () => {
       photo_box: true,
       // And Vela's photo question drafts (ADR-61), pinned off in production the same way.
       photo_question_ai: true,
+      talk_setup: true,
       parent_app: false,
       billing: false,
     });
@@ -704,7 +705,12 @@ describe("the runtime staging's API app runs on", () => {
     expect(writesOf(runtime).services).toBe(API_WRITE_SERVICES);
     expect(writesOf(runtime).families).toEqual({
       random: expect.anything(),
-      config: { telegramBotUsername: "VelaStagingBot", lineBasicId: null, regions: ["apac"] },
+      config: {
+        telegramBotUsername: "VelaStagingBot",
+        lineBasicId: null,
+        regions: ["apac"],
+        talkSetup: true,
+      },
     });
     expect(send).toHaveBeenCalledExactlyOnceWith({ type: "deliver", outboundId: "o1" });
   });

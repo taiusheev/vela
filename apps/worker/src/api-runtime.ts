@@ -139,6 +139,7 @@ import {
   readPhotoBox,
   readPhotoQuestionAi,
   readRichMemories,
+  readTalkSetup,
   secret,
 } from "./config.ts";
 import { createAiPort, createLogger, createMediaPort, createSchedulerPort } from "./deps.ts";
@@ -417,6 +418,9 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const { secretKey } = config;
   const photos = apiMediaFor(env, config, logger);
   const photoQuestions = apiPhotoQuestionsFor(env, config, logger);
+  // Onboarding v2 in the closed test: only where the founder approves families (ADR-52 amended).
+  const pilotAppSetup =
+    config.pilotAdmission?.familyIds !== undefined && env.PILOT_APP_SETUP?.trim() === "on";
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
     questionProfiles: {
@@ -447,12 +451,13 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       : {}),
     capabilities: {
       pilot: config.pilotAdmission != null,
-      telegram_first: config.pilotAdmission != null,
+      telegram_first: config.pilotAdmission != null && !pilotAppSetup,
       // English alone until the test's languages include Chinese (ADR-52, PILOT_LANGUAGES).
       english_only: config.pilotAdmission != null && !pilotSpeaks(config.pilotAdmission, "zh-TW"),
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
       book: env.BOOK?.trim() === "on",
       photo_box: readPhotoBox(env),
+      talk_setup: readTalkSetup(env),
       photo_question_ai: photoQuestions !== undefined,
       parent_app: config.pilotAdmission == null,
       billing: config.pilotAdmission == null,
@@ -464,6 +469,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
             config: config.pilotAdmission,
             permitsAccount: pilotApiAccountAllowed,
             awaitsFamily: pilotAccountAwaitsFamily,
+            appSetup: pilotAppSetup,
             // A roster that cannot be read leaves the allowlist alone, which admits fewer.
             withRoster: async (db, base) => {
               try {
@@ -534,6 +540,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
                 telegramBotUsername: config.telegramBotUsername,
                 lineBasicId: config.lineBasicId,
                 regions: config.regions,
+                talkSetup: readTalkSetup(env),
               },
             },
             devices: {

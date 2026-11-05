@@ -1,5 +1,5 @@
 {
-  "id": "c47ba6eb-6de7-438e-88c7-cd5920d217a3",
+  "id": "61d98e1e-61e0-4d8f-8cc7-de765a878b1f",
   "prevId": "dba7aefe-db14-4917-bf52-144d163cbdc5",
   "version": "7",
   "dialect": "postgresql",
@@ -2352,12 +2352,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token_hash": {
-          "name": "token_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "channel": {
           "name": "channel",
           "type": "text",
@@ -2448,11 +2442,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "invites_token_hash_key": {
-          "name": "invites_token_hash_key",
+        "invites_token_key": {
+          "name": "invites_token_key",
           "nullsNotDistinct": false,
           "columns": [
-            "token_hash"
+            "token"
           ]
         }
       },
@@ -2995,6 +2989,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "talk_rhythm": {
+          "name": "talk_rhythm",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avoid_topics": {
+          "name": "avoid_topics",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avoid_words": {
+          "name": "avoid_words",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -3235,6 +3247,14 @@
         "members_reply_ways_check": {
           "name": "members_reply_ways_check",
           "value": "\"reply_ways\" <@ ARRAY['text', 'voice', 'photo', 'tap']::text[]"
+        },
+        "members_talk_rhythm_check": {
+          "name": "members_talk_rhythm_check",
+          "value": "\"talk_rhythm\" in ('often', 'sometimes', 'rarely')"
+        },
+        "members_avoid_topics_check": {
+          "name": "members_avoid_topics_check",
+          "value": "\"avoid_topics\" <@ ARRAY['money', 'health', 'work', 'partner']::text[]"
         },
         "members_status_check": {
           "name": "members_status_check",

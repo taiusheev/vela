@@ -77,6 +77,14 @@ export interface PilotEnv extends SharedEnv {
   readonly PILOT_FAMILY_APPROVAL?: string;
   /** The closed test's languages, `en` or `en,zh-TW`; English alone when unset. */
   readonly PILOT_LANGUAGES?: string;
+  /**
+   * `PILOT_APP_SETUP` (ADR-52 amended, 5 November 2026): "on" lets a closed-test organiser set their
+   * family up in the app (onboarding v2) instead of in Telegram or LINE. The family then waits for
+   * the founder's approval like any other. Absent or "off" keeps setup in the messenger. Off in
+   * production until the app that sets families up is on phones; pinned in
+   * src/wrangler-config.test.ts.
+   */
+  readonly PILOT_APP_SETUP?: string;
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
   readonly PRIVACY_NOTICE_URL_EN: string;
@@ -162,6 +170,13 @@ export interface PilotEnv extends SharedEnv {
    * src/wrangler-config.test.ts.
    */
   readonly PHOTO_QUESTION_AI?: string;
+  /**
+   * `TALK_SETUP` (onboarding v2): "on" lets setup ask "How do you and Mom talk?" and keeps the
+   * answers: how often they talk, and what Vela should never bring up, which code then keeps out of
+   * her questions. Absent or "off" does not. On in development and staging, off in production until
+   * the privacy notice describes it; pinned in src/wrangler-config.test.ts.
+   */
+  readonly TALK_SETUP?: string;
   /**
    * `CHECK_IN` (ADR-54): "on" sends her morning without buttons and, when it is unanswered at the
    * repeat, a check-in whose "Not okay" tells her organisers at once. Absent or "off" does not.

@@ -83,6 +83,27 @@ export const REPLY_WAYS = ["text", "voice", "photo", "tap"] as const;
 export const ReplyWay = z.enum(REPLY_WAYS);
 export type ReplyWay = z.infer<typeof ReplyWay>;
 
+/**
+ * How often the organiser and she talk now, as the organiser chose at setup (onboarding v2, "How do
+ * you and Mom talk?"). Code uses it to choose gentler first questions; it is never sent to the AI.
+ */
+export const TALK_RHYTHMS = ["often", "sometimes", "rarely"] as const;
+export const TalkRhythm = z.enum(TALK_RHYTHMS);
+export type TalkRhythm = z.infer<typeof TalkRhythm>;
+
+/**
+ * What the organiser asked Vela never to bring up, as chosen at setup (onboarding v2). Code keeps
+ * questions touching these out of her mornings (`avoid-topics.ts` in `@vela/copy`); they are never
+ * sent to the AI, since "her health" is itself a health word (ADR-47). `partner` is her husband or
+ * wife, which the app names from her relationship ("Dad" for a mother). The organiser may add up to
+ * `AVOID_WORDS_MAX` words of their own, matched the same way.
+ */
+export const AVOID_TOPICS = ["money", "health", "work", "partner"] as const;
+export const AvoidTopic = z.enum(AVOID_TOPICS);
+export type AvoidTopic = z.infer<typeof AvoidTopic>;
+export const AVOID_WORDS_MAX = 3;
+export const AVOID_WORD_MAX = 40;
+
 /** Where a member receives their daily arrival. */
 export const SURFACES = ["app", "parent-surface", "line", "whatsapp", "telegram", "voice"] as const;
 export const Surface = z.enum(SURFACES);

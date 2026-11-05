@@ -46,7 +46,7 @@ const share = (
 /** The token in an invite link, as Telegram's `?start=` carries it. */
 const startTokenOf = (url: string): string => new URL(url).searchParams.get("start") ?? "";
 
-describe("invite tokens at rest (ADR-38, migration 0037)", () => {
+describe("invite tokens at rest (ADR-38, migration 0038)", () => {
   it("keeps only the sealed token and its hash in the database", async () => {
     const token = startTokenOf(created.invite.url);
     expect(token.length).toBeGreaterThan(20);

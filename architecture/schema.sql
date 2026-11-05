@@ -344,6 +344,9 @@ CREATE TABLE "members" (
 	"relationship" text,
 	"interests" text[],
 	"reply_ways" text[],
+	"talk_rhythm" text,
+	"avoid_topics" text[],
+	"avoid_words" text[],
 	"status" text DEFAULT 'invited' NOT NULL,
 	"turns_in" boolean DEFAULT true NOT NULL,
 	"primary_surface" text DEFAULT 'app' NOT NULL,
@@ -371,6 +374,8 @@ CREATE TABLE "members" (
 	CONSTRAINT "members_relationship_check" CHECK ("relationship" in ('mother', 'father', 'grandmother', 'grandfather', 'other')),
 	CONSTRAINT "members_interests_check" CHECK ("interests" <@ ARRAY['cooking', 'garden', 'family', 'old_days', 'music', 'festivals', 'films_books', 'friends', 'travel', 'making', 'work', 'sayings']::text[]),
 	CONSTRAINT "members_reply_ways_check" CHECK ("reply_ways" <@ ARRAY['text', 'voice', 'photo', 'tap']::text[]),
+	CONSTRAINT "members_talk_rhythm_check" CHECK ("talk_rhythm" in ('often', 'sometimes', 'rarely')),
+	CONSTRAINT "members_avoid_topics_check" CHECK ("avoid_topics" <@ ARRAY['money', 'health', 'work', 'partner']::text[]),
 	CONSTRAINT "members_status_check" CHECK ("status" in ('invited', 'active', 'paused', 'left', 'deceased')),
 	CONSTRAINT "members_primary_surface_check" CHECK ("primary_surface" in ('app', 'parent-surface', 'line', 'whatsapp', 'telegram', 'voice'))
 );

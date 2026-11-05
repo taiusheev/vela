@@ -1,6 +1,6 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { appPrivacyAcceptance, type CreateFamily, privacyLangOf } from "@vela/contracts";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,6 +18,8 @@ import {
   provisionAccount,
   setMorningPreferences,
 } from "../../api/client.ts";
+import { FAMILY_WAITING_RECHECK_MS, isFamilyWaiting } from "../../api/family-waiting.ts";
+import { readMe } from "../../api/read-me.ts";
 import { useAccount } from "../../auth/clerk.tsx";
 import { clockTime } from "../../data/format.ts";
 import { sessionScope } from "../../data/live-state.ts";
@@ -38,6 +40,9 @@ import { Text } from "../scaled-text.tsx";
 import { SetUpPhone } from "../set-up-phone.tsx";
 import { NightScene, night } from "./night-scene.tsx";
 import { NightButton, NightCopy } from "./story.tsx";
+
+/** The example family's id, where nothing is sent anywhere. */
+const EXAMPLE_FAMILY = "example";
 
 function clock(time: string): string {
   const [hour, minute] = time.split(":").map(Number);
@@ -126,6 +131,15 @@ export function Save({ name }: { name: string }) {
             relationship: start.relationship,
             interests: start.interests,
             reply_ways: start.unsure ? [] : start.replyWays,
+            // How the family talks, where setup asked it (`talk_setup`); the server keeps it only
+            // where its notice describes it.
+            ...(start.talkRhythm === null
+              ? {}
+              : {
+                  talk_rhythm: start.talkRhythm,
+                  avoid_topics: start.nothingToAvoid ? [] : start.avoidTopics,
+                  avoid_words: start.nothingToAvoid ? [] : start.avoidWords,
+                }),
           },
         };
         const made = await createFamily(family, `family:${run}`, token);
@@ -288,12 +302,14 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
   const insets = useSafeAreaInsets();
   const [trouble, setTrouble] = useState(false);
   const created = draft.created;
+  const approval = useApproved(created?.familyId ?? EXAMPLE_FAMILY);
+  const notifications = useNotificationAsk();
   if (created === null) return null;
   const onLine = draft.messenger === "line" && created.invite.lineText !== null;
   const words = onLine ? (created.invite.lineText ?? created.invite.text) : created.invite.text;
   // Product names, the same in every language.
   const app = onLine ? "LINE" : "Telegram";
-  const next = () => updateDraft({ step: "notify" });
+  const next = () => updateDraft({ step: "ready" });
   const send = async () => {
     try {
       const result = await Share.share({ message: words });
@@ -329,10 +345,33 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
         ) : (
           <>
             <NightCopy
-              eyebrow={t`The last step is ${name}’s`}
-              title={t`Send ${name} the invitation.`}
-              body={t`It comes from you, in ${app}, so ${name} knows it’s really you.`}
+              eyebrow={t`Saved`}
+              title={t`Last step: invite ${name}.`}
+              body={
+                approval === "waiting"
+                  ? undefined
+                  : t`It comes from you, in ${app}, so ${name} knows it’s really you. Nothing reaches ${name} before a yes.`
+              }
             />
+            {approval === "waiting" ? (
+              <View
+                style={{
+                  padding: space.l,
+                  borderRadius: 20,
+                  backgroundColor: "#FBEBCF",
+                  gap: space.xs,
+                }}
+              >
+                <Text style={[type.heading, { color: night.onAmber }]}>
+                  {t`We’re checking your family`}
+                </Text>
+                <Text style={[type.caption, { color: night.onAmber }]}>
+                  {notifications.granted
+                    ? t`During the trial we check every new family, usually within a day. The invitation opens here as soon as yours is approved.`
+                    : t`During the trial we check every new family, usually within a day. Turn on notifications so Vela can reach you on a quiet morning; the invitation opens here once approved.`}
+                </Text>
+              </View>
+            ) : null}
             <View
               style={{
                 alignSelf: "flex-end",
@@ -341,6 +380,7 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
                 borderRadius: 22,
                 borderBottomRightRadius: 6,
                 backgroundColor: "#FFFFFF",
+                opacity: approval === "waiting" ? 0.55 : 1,
               }}
             >
               <Text selectable style={[type.body, { color: night.onAmber }]}>
@@ -362,10 +402,34 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
                 {t`This phone cannot share from here. Copy the words above and send them yourself.`}
               </Text>
             ) : null}
-            <View style={{ gap: space.xs }}>
-              <NightButton label={t`Send on ${app}`} onPress={() => void send()} />
-              <NightButton quiet label={t`I have sent it`} onPress={next} />
-            </View>
+            {approval === "waiting" ? (
+              <View style={{ gap: space.xs }}>
+                {notifications.offered ? (
+                  <NightButton
+                    label={
+                      notifications.settings
+                        ? t`Open settings`
+                        : notifications.asking
+                          ? t`Asking…`
+                          : t`Turn on notifications`
+                    }
+                    disabled={notifications.asking}
+                    onPress={() => void notifications.ask()}
+                  />
+                ) : null}
+                <NightButton
+                  quiet
+                  disabled
+                  label={t`Send on ${app} · after the check`}
+                  onPress={send}
+                />
+              </View>
+            ) : (
+              <View style={{ gap: space.xs }}>
+                <NightButton label={t`Send on ${app}`} onPress={() => void send()} />
+                <NightButton quiet label={t`I have sent it`} onPress={next} />
+              </View>
+            )}
           </>
         )}
       </View>
@@ -374,13 +438,10 @@ export function Invite({ draft, name }: { draft: OnboardingDraft; name: string }
 }
 
 /**
- * Notifications, asked for after the invitation is sent, when what they are for has just been
- * said (Apple HIG; ADR-34), and only where this Vela sends them. "Not now" stays: the phone's own
- * prompt may never be forced.
+ * Whether to ask for notifications here, and how: only where this Vela sends them and the phone has
+ * not said yes yet. "Not now" always stays: the phone's own prompt may never be forced.
  */
-export function Notify({ name }: { name: string }) {
-  const { t } = useLingui();
-  const insets = useSafeAreaInsets();
+function useNotificationAsk() {
   const push = usePush();
   const today = useToday();
   const phone = push.phone;
@@ -390,73 +451,40 @@ export function Notify({ name }: { name: string }) {
     push.availability.available &&
     phone !== null &&
     phone.permission !== "granted";
-  useEffect(() => {
-    if (!offered) updateDraft({ step: "ready" });
-  }, [offered]);
-  if (!offered || phone === null)
-    return (
-      <NightScene dim={0.8} glow={0.3}>
-        {null}
-      </NightScene>
-    );
-  const settings = !phone.canAskAgain;
-  return (
-    <NightScene dim={0.8} glow={0.3}>
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          paddingHorizontal: space.margin,
-          paddingBottom: insets.bottom + space.xl,
-          gap: space.l,
-        }}
-      >
-        <View
-          style={{
-            width: 88,
-            height: 88,
-            borderRadius: 44,
-            backgroundColor: "rgba(233,162,59,0.16)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Svg width={40} height={40} viewBox="0 0 24 24">
-            <Path
-              d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"
-              fill="none"
-              stroke={night.amber}
-              strokeWidth={1.6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </View>
-        <NightCopy
-          eyebrow={t`Invitation sent`}
-          title={t`Know the moment ${name} says yes.`}
-          body={t`And each morning ${name} answers. Only about ${name}, never ads.`}
-        />
-        <View style={{ gap: space.xs }}>
-          <NightButton
-            label={
-              settings ? t`Open settings` : push.asking ? t`Asking…` : t`Turn on notifications`
-            }
-            disabled={push.asking}
-            onPress={() => {
-              if (settings) {
-                push.openSettings();
-                updateDraft({ step: "ready" });
-                return;
-              }
-              void push.ask().then(() => updateDraft({ step: "ready" }));
-            }}
-          />
-          <NightButton quiet label={t`Not now`} onPress={() => updateDraft({ step: "ready" })} />
-        </View>
-      </View>
-    </NightScene>
-  );
+  const settings = phone !== null && !phone.canAskAgain;
+  const ask = async () => {
+    if (settings) {
+      push.openSettings();
+      return;
+    }
+    await push.ask();
+  };
+  return { offered, settings, asking: push.asking, ask, granted: phone?.permission === "granted" };
+}
+
+/**
+ * Whether the founder has approved this family yet (ADR-52): a closed-test family set up in the app
+ * waits, and the invitation stays here until then. Looked at again every 30 seconds while waiting.
+ */
+function useApproved(familyId: string): "approved" | "waiting" {
+  const account = useAccount();
+  const check = useQuery({
+    queryKey: ["family-approved", familyId, account.userId],
+    enabled: apiConfigured() && familyId !== EXAMPLE_FAMILY,
+    queryFn: async () => {
+      try {
+        await readMe(account);
+        return "approved" as const;
+      } catch (error) {
+        if (isFamilyWaiting(error)) return "waiting" as const;
+        throw error;
+      }
+    },
+    refetchInterval: (query) =>
+      query.state.data === "waiting" ? FAMILY_WAITING_RECHECK_MS : false,
+    retry: 2,
+  });
+  return check.data === "waiting" ? "waiting" : "approved";
 }
 
 function Milestone({ text, state }: { text: string; state: "done" | "next" | "later" }) {
@@ -510,8 +538,13 @@ export function Ready({ draft, name }: { draft: OnboardingDraft; name: string })
   const { t } = useLingui();
   const insets = useSafeAreaInsets();
   const time = clock(draft.created?.arrival ?? arrivalAfter(draft.wake));
+  const notifications = useNotificationAsk();
+  const finish = () => {
+    resetDraft();
+    router.replace("/");
+  };
   return (
-    <NightScene dim={0.5} glow={0} breathing>
+    <NightScene dim={0.55} glow={0.2} lamp={0.35} breathing>
       <View
         style={{
           flex: 1,
@@ -524,21 +557,32 @@ export function Ready({ draft, name }: { draft: OnboardingDraft; name: string })
         <NightCopy
           eyebrow={t`Ready`}
           title={t`${name}’s window is ready.`}
-          body={t`It lights the first time ${name} answers. Nothing is sent before ${name} says yes.`}
+          body={t`It lights up the first time ${name} answers. Until then it keeps a little light on.`}
         >
           <View>
             <Milestone text={t`Invitation sent`} state="done" />
             <Milestone text={t`${name} says yes`} state="next" />
-            <Milestone text={t`First morning, the next day at ${time}`} state="later" />
+            <Milestone text={t`${name}’s first morning, the next day at ${time}`} state="later" />
           </View>
         </NightCopy>
-        <NightButton
-          label={t`Go to Today`}
-          onPress={() => {
-            resetDraft();
-            router.replace("/");
-          }}
-        />
+        {notifications.offered ? (
+          <View style={{ gap: space.xs }}>
+            <NightButton
+              label={
+                notifications.settings
+                  ? t`Open settings`
+                  : notifications.asking
+                    ? t`Asking…`
+                    : t`Tell me when ${name} says yes`
+              }
+              disabled={notifications.asking}
+              onPress={() => void notifications.ask().then(finish)}
+            />
+            <NightButton quiet label={t`Not now · go to Today`} onPress={finish} />
+          </View>
+        ) : (
+          <NightButton label={t`Go to Today`} onPress={finish} />
+        )}
       </View>
     </NightScene>
   );

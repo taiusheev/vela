@@ -6,8 +6,15 @@
 
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
-import type { InterestTopic, KeptLightRelationship, ReplyWay } from "@vela/contracts";
-import { ASK_BANK, type AskBankItem, type AskBankLang } from "@vela/copy";
+import type { InterestTopic, KeptLightRelationship, ReplyWay, TalkRhythm } from "@vela/contracts";
+import {
+  ASK_BANK,
+  type AskBankItem,
+  type AskBankLang,
+  type Avoidance,
+  bankItemAvoided,
+  NOTHING_TO_AVOID,
+} from "@vela/copy";
 
 export interface ZoneChoice {
   label: MessageDescriptor;
@@ -195,11 +202,12 @@ const FALLBACK_INTERESTS: readonly InterestTopic[] = ["old_days", "cooking", "fa
 export function questionsFor(
   interests: readonly InterestTopic[],
   count: number,
+  avoid: Avoidance = NOTHING_TO_AVOID,
 ): readonly AskBankItem[] {
   const chosen = interests.length > 0 ? interests : FALLBACK_INTERESTS;
   const pools = chosen.map((interest) => {
     const topics = interestTopics.find((choice) => choice.value === interest)?.bankTopics ?? [];
-    return ASK_BANK.filter((item) => topics.includes(item.topic));
+    return ASK_BANK.filter((item) => topics.includes(item.topic) && !bankItemAvoided(item, avoid));
   });
   const picked: AskBankItem[] = [];
   const groups = new Set<string>();
@@ -219,8 +227,9 @@ export function questionsFor(
 export function firstQuestionChoices(
   interests: readonly InterestTopic[],
   language: AskBankLang,
+  avoid: Avoidance = NOTHING_TO_AVOID,
 ): string[] {
-  return questionsFor(interests, 3).map((item) => item.child[language]);
+  return questionsFor(interests, 3, avoid).map((item) => item.child[language]);
 }
 
 /**
@@ -232,6 +241,8 @@ export function firstWeek(
   interests: readonly InterestTopic[],
   first: string,
   language: AskBankLang,
+  avoid: Avoidance = NOTHING_TO_AVOID,
+  rhythm: TalkRhythm | null = null,
 ): string[] {
   const week = [first];
   let lastTopic = ASK_BANK.find((item) => item.child[language] === first)?.topic ?? null;
@@ -246,8 +257,17 @@ export function firstWeek(
       lastTopic = item.topic;
     }
   };
-  take(questionsFor(interests, ASK_BANK.length));
-  take(ASK_BANK);
+  // Where they do not talk often lately, the first days ask about what she knows and thinks before
+  // her own life story: easier to answer from someone you have not heard from in a while.
+  const gentleFirst = (items: readonly AskBankItem[]) =>
+    rhythm === "rarely"
+      ? [
+          ...items.filter((item) => item.theme !== "life"),
+          ...items.filter((item) => item.theme === "life"),
+        ]
+      : items;
+  take(gentleFirst(questionsFor(interests, ASK_BANK.length, avoid)));
+  take(gentleFirst(ASK_BANK.filter((item) => !bankItemAvoided(item, avoid))));
   return week;
 }
 

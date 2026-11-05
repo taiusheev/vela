@@ -54,7 +54,7 @@ import {
 } from "./testing/seed.ts";
 import { tickMember } from "./tick.ts";
 
-/** An invite token's hash, as the services store it (migration 0037). */
+/** An invite token's hash, as the services store it (migration 0038). */
 const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 let h: Harness;

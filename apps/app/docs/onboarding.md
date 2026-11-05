@@ -22,3 +22,24 @@ setup sequence, account/privacy gates and first-week construction are unchanged.
 examples and boundaries are contextual options in the separate reviewed-draft flow, not newly
 collected during onboarding. This is a scoped UI improvement; it does not claim a shorter total
 onboarding or measured conversion improvement.
+
+## Onboarding v2, "One road" — 5 November 2026
+
+The founder chose the Figma design "Onboarding v2 · One road" (Vela · Design, App page). One welcome
+replaces the four story scenes: her house at dusk, a lamp coming on in her window like a real bulb,
+then the words. It plays once (about three seconds), then the light breathes; with Reduce Motion it
+opens lit. The questions are seven light screens with her window's four panes as progress: who,
+her mornings (place, language and wake time), where she chats, her world (topics and reply ways),
+"How do you and Mom talk?" (only where the server says `talk_setup`), the first question with quiet
+mornings, and around her (nearby and photo). Then her first week, then one save screen where the
+privacy agreement sits beside the email, the email code, the invitation, and the ready window, which
+asks for notifications ("Tell me when Mom says yes").
+
+In the closed test, families set up in the app wait for the founder's approval (`PILOT_APP_SETUP`,
+ADR-52 amended). The invitation step then shows "We're checking your family" and opens the
+invitation by itself once approved. The setup writes still save while the family waits.
+
+"How do you and Mom talk?" keeps how often they talk and what Vela must never bring up. Code alone
+keeps those topics out of her first week, the daily bank pick and anything drafted in the
+organiser's name; the topics are never sent to an AI. It is behind `TALK_SETUP`, off in production
+until privacy-notice v16 (`plan/materials/pilot/privacy-notice.v16-talk-setup-draft.md`) is approved.

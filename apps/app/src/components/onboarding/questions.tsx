@@ -1,6 +1,7 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { t as herWords } from "@vela/copy";
+import { AVOID_WORD_MAX, AVOID_WORDS_MAX, type AvoidTopic } from "@vela/contracts";
+import { type Avoidance, t as herWords } from "@vela/copy";
 import { type ReactNode, useState } from "react";
 import { Animated, Image, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,10 +23,10 @@ import {
 } from "../../data/onboarding.ts";
 import {
   answered,
-  CHAPTERS,
   chapterOf,
   firstQuestion,
   type Messenger,
+  nextQuestion,
   type OnboardingDraft,
   previousStep,
   type QuestionStep,
@@ -42,8 +43,7 @@ import { hitSlop, space, type } from "../../theme/tokens.ts";
 import { QuestionPaper } from "../questions/flow.tsx";
 import { Text } from "../scaled-text.tsx";
 import { Chip, PrimaryButton, TextField, Words } from "../ui.tsx";
-import { NightScene, night, useRise } from "./night-scene.tsx";
-import { PaneWindow } from "./pane-window.tsx";
+import { useRise } from "./night-scene.tsx";
 
 /** "08:30" written as the app writes a time: "8:30", or "08:30" in Chinese. */
 function clock(time: string): string {
@@ -217,175 +217,172 @@ function Rising({ children }: { children: ReactNode }) {
   return <Animated.View style={[rise, { flexGrow: 1, gap: space.l }]}>{children}</Animated.View>;
 }
 
+/** Her window's four panes, lit one per chapter; the fourth is her first week. */
+function Panes({ lit }: { lit: number }) {
+  const palette = usePalette();
+  return (
+    <View style={{ flexDirection: "row", gap: 4 }}>
+      {[0, 1, 2, 3].map((pane) => (
+        <View
+          key={pane}
+          style={{
+            width: 12,
+            height: 16,
+            borderTopLeftRadius: 6,
+            borderTopRightRadius: 6,
+            borderBottomLeftRadius: 2,
+            borderBottomRightRadius: 2,
+            backgroundColor: pane < lit ? palette.light : palette.rule,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 /**
- * The ten questions (See It First), in three chapters under a window whose panes light as each
- * chapter is done: the story lit the first, so the window starts a quarter lit (Nunes & Drèze 2006).
- * Easy questions come first and personal ones last; every one says why it is asked, and none has a
- * Skip. A question whose honest answer is "none" offers that as an answer.
+ * The questions (onboarding v2): seven screens in three chapters, with her window's panes lighting
+ * as each chapter is done (Nunes & Drèze 2006). Easy questions come first and personal ones last;
+ * every screen says why it asks, and none has a Skip. A question whose honest answer is "none"
+ * offers that as an answer.
  */
 export function Questions({ draft, step }: { draft: OnboardingDraft; step: QuestionStep }) {
   const { t, i18n } = useLingui();
   const palette = usePalette();
   const insets = useSafeAreaInsets();
+  const { capabilities } = useCapabilities();
+  // "How do you and Mom talk?" only where the server keeps the answers; the example shows it.
+  const talk = !apiConfigured() || capabilities?.talk_setup === true;
   const relationship = relationships.find((choice) => choice.value === draft.relationship);
   const name = nameFor(draft, relationship === undefined ? t`them` : i18n._(relationship.label));
-  const { chapter, index, size } = chapterOf(step);
+  const { chapter } = chapterOf(step);
   const chapterName =
     [t`${name}’s mornings`, t`${name}’s world`, t`Around ${name}`][chapter - 1] ?? "";
-  const lit = chapter;
-  const paneLine =
-    step === "who"
-      ? t`You’ve seen how it works. First pane lit.`
-      : t`${ph({ count: lit })} of 4 panes lit · ${chapterName}`;
   const back = () => {
-    const previous = previousStep(step);
+    const previous = previousStep(step, talk);
     if (previous !== null) updateDraft({ step: previous });
   };
-  const go = (next: QuestionStep | "build") => updateDraft({ step: next });
   const ready = answered(step, draft);
+  const avoid = { topics: draft.avoidTopics, words: draft.avoidWords };
 
   return (
-    <NightScene dim={0.9} glow={0}>
+    <View style={{ flex: 1, backgroundColor: palette.bg }}>
       <View
         style={{
-          paddingTop: insets.top + space.m,
-          paddingBottom: space.xl,
+          flexDirection: "row",
           alignItems: "center",
-          gap: space.s,
+          justifyContent: "space-between",
+          paddingTop: insets.top + space.s,
+          paddingLeft: space.s,
+          paddingRight: space.margin,
         }}
       >
-        <PaneWindow lit={lit} width={34} frame={night.cream} unlit="#3A332C" />
-        <Text style={[type.caption, { color: night.cream, fontFamily: type.heading.fontFamily }]}>
-          {paneLine}
-        </Text>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: palette.bg,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: "hidden",
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t`Back`}
+          hitSlop={hitSlop}
+          onPress={back}
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             alignItems: "center",
-            justifyContent: "space-between",
-            paddingTop: space.m,
-            paddingLeft: space.s,
-            paddingRight: space.margin,
-          }}
+            justifyContent: "center",
+            opacity: pressed ? 0.6 : 1,
+          })}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t`Back`}
-            hitSlop={hitSlop}
-            onPress={back}
-            style={({ pressed }) => ({
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <Svg width={22} height={22} viewBox="0 0 24 24">
-              <Path
-                d="M15 5l-7 7 7 7"
-                fill="none"
-                stroke={palette.ink}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </Pressable>
-          <View
-            style={{ flexDirection: "row", alignItems: "center", gap: space.s }}
-            accessibilityRole="progressbar"
-            accessibilityLabel={chapterName}
-            accessibilityValue={{ min: 1, max: size, now: index + 1 }}
-          >
-            <Text style={[type.label, { color: palette.ink3 }]}>{chapterName}</Text>
-            <View style={{ flexDirection: "row", gap: 4 }}>
-              {(CHAPTERS[chapter - 1] ?? []).map((question, dot) => (
-                <View
-                  key={question}
-                  style={{
-                    width: dot === index ? 18 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor:
-                      dot === index ? palette.action : dot < index ? palette.control : palette.rule,
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <ScrollView
-          key={step}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: space.margin,
-            paddingTop: space.s,
-            paddingBottom: insets.bottom + space.xl,
-            gap: space.l,
-          }}
-        >
-          <Rising key={step}>
-            {step === "who" ? <Who draft={draft} /> : null}
-            {step === "where" ? <Where draft={draft} name={name} /> : null}
-            {step === "wake" ? <Wake draft={draft} name={name} /> : null}
-            {step === "messenger" ? <Messengers draft={draft} name={name} /> : null}
-            {step === "world" ? <World draft={draft} name={name} /> : null}
-            {step === "replies" ? <Replies draft={draft} name={name} /> : null}
-            {step === "first" ? <First draft={draft} name={name} /> : null}
-            {step === "nobody" ? <Nobody draft={draft} name={name} /> : null}
-            {step === "nearby" ? <Nearby draft={draft} name={name} /> : null}
-            {step === "photo" ? <Photo draft={draft} name={name} /> : null}
-            <View style={{ flexGrow: 1 }} />
-            <PrimaryButton
-              label={
-                step === "world" && !ready
-                  ? t`Choose at least one`
-                  : step === "photo"
-                    ? t`Build ${name}’s first week`
-                    : t`Continue`
-              }
-              disabled={!ready}
-              onPress={() => {
-                if (step === "photo") {
-                  updateDraft({
-                    week: firstWeek(draft.interests, firstQuestion(draft), draft.language),
-                    step: "build",
-                  });
-                  return;
-                }
-                const next = {
-                  who: "where",
-                  where: "wake",
-                  wake: "messenger",
-                  messenger: "world",
-                  world: "replies",
-                  replies: "first",
-                  first: "nobody",
-                  nobody: "nearby",
-                  nearby: "photo",
-                } as const;
-                go(next[step]);
-              }}
+          <Svg width={22} height={22} viewBox="0 0 24 24">
+            <Path
+              d="M15 5l-7 7 7 7"
+              fill="none"
+              stroke={palette.ink}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
-          </Rising>
-        </ScrollView>
+          </Svg>
+        </Pressable>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: space.s }}
+          accessibilityRole="progressbar"
+          accessibilityLabel={t`${chapterName} · ${ph({ chapter })} of 4`}
+          accessibilityValue={{ min: 1, max: 4, now: chapter }}
+        >
+          <Text style={[type.caption, { color: palette.ink3 }]}>
+            {t`${chapterName} · ${ph({ chapter })} of 4`}
+          </Text>
+          <Panes lit={chapter} />
+        </View>
       </View>
-    </NightScene>
+
+      <ScrollView
+        key={step}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: space.margin,
+          paddingTop: space.l,
+          paddingBottom: insets.bottom + space.xl,
+          gap: space.l,
+        }}
+      >
+        <Rising key={step}>
+          {step === "who" ? <Who draft={draft} /> : null}
+          {step === "mornings" ? (
+            <>
+              <Title why={t`Mornings arrive on ${name}’s clock, not yours.`}>
+                {t`When does ${name}’s morning start?`}
+              </Title>
+              <Where draft={draft} name={name} />
+              <Wake draft={draft} name={name} />
+            </>
+          ) : null}
+          {step === "messenger" ? <Messengers draft={draft} name={name} /> : null}
+          {step === "world" ? (
+            <>
+              <World draft={draft} name={name} />
+              <Replies draft={draft} name={name} />
+            </>
+          ) : null}
+          {step === "talk" ? <Talk draft={draft} name={name} /> : null}
+          {step === "first" ? (
+            <>
+              <First draft={draft} name={name} avoid={avoid} />
+              <Nobody draft={draft} name={name} />
+            </>
+          ) : null}
+          {step === "around" ? (
+            <>
+              <Nearby draft={draft} name={name} />
+              <Photo draft={draft} name={name} />
+            </>
+          ) : null}
+          <View style={{ flexGrow: 1 }} />
+          <PrimaryButton
+            label={step === "around" ? t`See ${name}’s first week` : t`Continue`}
+            disabled={!ready}
+            onPress={() => {
+              const next = nextQuestion(step, talk);
+              if (next === "build") {
+                updateDraft({
+                  week: firstWeek(
+                    draft.interests,
+                    firstQuestion(draft),
+                    draft.language,
+                    avoid,
+                    talk ? draft.talkRhythm : null,
+                  ),
+                  step: "build",
+                });
+                return;
+              }
+              updateDraft({ step: next });
+            }}
+          />
+        </Rising>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -396,6 +393,18 @@ function Title({ children, why, lock }: { children: string; why: string; lock?: 
         {children}
       </Words>
       <Why lock={lock ?? false}>{why}</Why>
+    </View>
+  );
+}
+
+/** A second question on the same screen: smaller, with its reason under it. */
+function Section({ children, why, lock }: { children: string; why?: string; lock?: boolean }) {
+  return (
+    <View style={{ gap: space.s, marginTop: space.l }}>
+      <Words variant="heading" accessibilityRole="header">
+        {children}
+      </Words>
+      {why === undefined ? null : <Why lock={lock ?? false}>{why}</Why>}
     </View>
   );
 }
@@ -454,9 +463,7 @@ function Where({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const country = countries.find((choice) => choice.code === draft.country);
   return (
     <>
-      <Title why={t`Mornings arrive on ${name}’s clock, not yours.`}>
-        {t`Where does ${name} live?`}
-      </Title>
+      <Section>{t`Where does ${name} live?`}</Section>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
         {countries.map((choice) => (
           <Chip
@@ -520,11 +527,11 @@ function Wake({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const yours = timeOfDay(nextMorningAt(arrival, draft.zone), deviceZone(draft.zone));
   return (
     <>
-      <Title
+      <Section
         why={t`The message comes half an hour later, so it’s there when ${name} first picks up the phone.`}
       >
         {t`When does ${name} usually wake up?`}
-      </Title>
+      </Section>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
         {wakeTimes.map((wake) => (
           <View key={wake} style={{ width: "31%" }}>
@@ -655,9 +662,9 @@ function Replies({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const { t, i18n } = useLingui();
   return (
     <>
-      <Title why={t`So Vela can make answering easy for ${name}, the way ${name} likes.`}>
+      <Section why={t`So Vela can make answering easy for ${name}, the way ${name} likes.`}>
         {t`How does ${name} like to reply?`}
-      </Title>
+      </Section>
       <View style={{ gap: space.s }}>
         {replyWays.map((choice) => {
           const chosen = draft.replyWays.includes(choice.value);
@@ -690,10 +697,127 @@ function Replies({ draft, name }: { draft: OnboardingDraft; name: string }) {
   );
 }
 
-function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
+/**
+ * "How do you and Mom talk?" (onboarding v2): how often they talk now, and what Vela should never
+ * bring up. Code keeps those topics out of every question, and they are never sent to an AI. "Nothing
+ * to avoid" is an answer, so nothing is skipped.
+ */
+function Talk({ draft, name }: { draft: OnboardingDraft; name: string }) {
+  const { t } = useLingui();
+  const [adding, setAdding] = useState(false);
+  const [word, setWord] = useState("");
+  const rhythms = [
+    { value: "often" as const, label: t`Most days` },
+    { value: "sometimes" as const, label: t`Now and then` },
+    { value: "rarely" as const, label: t`Not often lately` },
+  ];
+  // Her husband or wife, named as the organiser would: the other parent or grandparent.
+  const partner =
+    draft.relationship === "mother"
+      ? t`Dad`
+      : draft.relationship === "father"
+        ? t`Mom`
+        : draft.relationship === "grandmother"
+          ? t`Grandpa`
+          : draft.relationship === "grandfather"
+            ? t`Grandma`
+            : t`${name}’s partner`;
+  const topics: { value: AvoidTopic; label: string }[] = [
+    { value: "money", label: t`Money` },
+    { value: "health", label: t`${name}’s health` },
+    { value: "work", label: t`Work` },
+    { value: "partner", label: partner },
+  ];
+  const toggle = (topic: AvoidTopic) =>
+    updateDraft({
+      nothingToAvoid: false,
+      avoidTopics: draft.avoidTopics.includes(topic)
+        ? draft.avoidTopics.filter((each) => each !== topic)
+        : [...draft.avoidTopics, topic],
+    });
+  const addWord = () => {
+    const entered = word.trim().slice(0, AVOID_WORD_MAX);
+    const known = draft.avoidWords.some((each) => each.toLowerCase() === entered.toLowerCase());
+    if (entered.length > 0 && !known && draft.avoidWords.length < AVOID_WORDS_MAX) {
+      updateDraft({ avoidWords: [...draft.avoidWords, entered], nothingToAvoid: false });
+    }
+    setWord("");
+    setAdding(false);
+  };
+  return (
+    <>
+      <Title why={t`So ${name}’s first questions fit how you two talk now.`}>
+        {t`How do you and ${name} talk?`}
+      </Title>
+      <Section>{t`How often do you talk now?`}</Section>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+        {rhythms.map((choice) => (
+          <Chip
+            key={choice.value}
+            label={choice.label}
+            selected={draft.talkRhythm === choice.value}
+            onPress={() => updateDraft({ talkRhythm: choice.value })}
+          />
+        ))}
+      </View>
+      <Section
+        lock
+        why={t`Vela keeps these out of every question, also the ones it writes for you. They are never sent to an AI.`}
+      >
+        {t`What should Vela never bring up?`}
+      </Section>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.s }}>
+        {topics.map((choice) => (
+          <Chip
+            key={choice.value}
+            label={choice.label}
+            selected={draft.avoidTopics.includes(choice.value)}
+            onPress={() => toggle(choice.value)}
+          />
+        ))}
+        {draft.avoidWords.map((each) => (
+          <Chip
+            key={each}
+            label={each}
+            selected
+            onPress={() =>
+              updateDraft({ avoidWords: draft.avoidWords.filter((other) => other !== each) })
+            }
+          />
+        ))}
+        {draft.avoidWords.length < AVOID_WORDS_MAX && !adding ? (
+          <Chip label={t`+ Add your own`} selected={false} onPress={() => setAdding(true)} />
+        ) : null}
+        <Chip
+          label={t`Nothing to avoid`}
+          selected={draft.nothingToAvoid}
+          onPress={() =>
+            updateDraft({ nothingToAvoid: !draft.nothingToAvoid, avoidTopics: [], avoidWords: [] })
+          }
+        />
+      </View>
+      {adding ? (
+        <View style={{ gap: space.s }}>
+          <TextField
+            autoFocus
+            label={t`A word or topic to leave out`}
+            value={word}
+            onChangeText={setWord}
+            placeholder={t`For example, a name or a place`}
+            maxLength={AVOID_WORD_MAX}
+            onSubmit={addWord}
+          />
+          <PrimaryButton label={t`Add`} disabled={word.trim().length === 0} onPress={addWord} />
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function First({ draft, name, avoid }: { draft: OnboardingDraft; name: string; avoid: Avoidance }) {
   const { t } = useLingui();
   const [help, setHelp] = useState(false);
-  const choices = firstQuestionChoices(draft.interests, draft.language);
+  const choices = firstQuestionChoices(draft.interests, draft.language, avoid);
   const shown = firstQuestion(draft);
   const you = draft.you.trim();
   const time = clock(arrivalAfter(draft.wake));
@@ -702,7 +826,7 @@ function First({ draft, name }: { draft: OnboardingDraft; name: string }) {
       <Title
         why={t`Start with your own words, the way you normally message ${name}. You can use an idea if you get stuck.`}
       >
-        {t`Start a conversation with ${name}.`}
+        {t`What’s your first question for ${name}?`}
       </Title>
       <View style={{ gap: space.s }}>
         <TextField
@@ -757,11 +881,11 @@ function Nobody({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const you = draft.you.trim();
   return (
     <>
-      <Title
+      <Section
         why={t`Most days someone in the family asks. This covers the days nobody does, so ${name} always has a morning.`}
       >
         {t`On mornings nobody writes`}
-      </Title>
+      </Section>
       <View style={{ gap: space.s }}>
         <PickRow
           title={t`Vela writes one in my name`}
@@ -903,19 +1027,19 @@ function Photo({ draft, name }: { draft: OnboardingDraft; name: string }) {
   const picked = draft.photo?.kind === "picked" ? draft.photo.source : null;
   return (
     <>
-      <Title
+      <Section
         lock
         why={t`It’s how ${name} appears in your app. It stays on this phone and is never uploaded.`}
       >
         {t`Add a photo of ${name}`}
-      </Title>
+      </Section>
       <View
         style={{
           alignSelf: "center",
-          width: 150,
-          height: 192,
-          borderTopLeftRadius: 75,
-          borderTopRightRadius: 75,
+          width: 104,
+          height: 132,
+          borderTopLeftRadius: 52,
+          borderTopRightRadius: 52,
           borderBottomLeftRadius: 16,
           borderBottomRightRadius: 16,
           backgroundColor: palette.surface2,
@@ -928,7 +1052,7 @@ function Photo({ draft, name }: { draft: OnboardingDraft; name: string }) {
         }}
       >
         {picked === null ? (
-          <Text style={[type.display, { fontSize: 44, lineHeight: 52, color: palette.ink2 }]}>
+          <Text style={[type.display, { fontSize: 32, lineHeight: 40, color: palette.ink2 }]}>
             {initials}
           </Text>
         ) : (
@@ -936,7 +1060,7 @@ function Photo({ draft, name }: { draft: OnboardingDraft; name: string }) {
             source={{ uri: picked }}
             resizeMode="cover"
             accessibilityLabel={t`The photo of ${name} you chose`}
-            style={{ width: 150, height: 192 }}
+            style={{ width: 104, height: 132 }}
           />
         )}
       </View>

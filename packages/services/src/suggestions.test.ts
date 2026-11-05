@@ -1,6 +1,12 @@
 import { createFakeAi, createOffAi, fakeRecord, type SuggestInput } from "@vela/ai";
 import type { LocalDate } from "@vela/contracts";
-import { ASK_BANK, type AskBankType, askBankChildText, askBankItem } from "@vela/copy";
+import {
+  ASK_BANK,
+  type AskBankType,
+  askBankChildText,
+  askBankItem,
+  bankItemAvoided,
+} from "@vela/copy";
 import { addDays, localDateOf, weekdayOf } from "@vela/core";
 import {
   aiCalls,
@@ -44,6 +50,21 @@ function pick(overrides: Partial<BankPickInput> = {}) {
     ...overrides,
   });
 }
+
+describe("what the organiser asked Vela never to bring up", () => {
+  it("never picks a question on those topics, for any member on any day", () => {
+    const avoid = { topics: ["money", "health", "work", "partner"] as const, words: ["garden"] };
+    for (let day = 0; day < 60; day += 1) {
+      const forDate = addDays(MONDAY, day);
+      const item = pick({
+        forDate,
+        memberId: `01990000-0000-7000-8000-${String(day).padStart(12, "0")}`,
+        avoid,
+      });
+      expect(bankItemAvoided(item, avoid)).toBe(false);
+    }
+  });
+});
 
 /** Her picks for `days` days from `from`, each fed back in as the history of the next. */
 function simulate(

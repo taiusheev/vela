@@ -3,6 +3,7 @@ import {
   ADMIN_ACTIONS,
   AGE_BANDS,
   ANSWER_KINDS,
+  AVOID_TOPICS,
   AWAY_SOURCES,
   BUDGETED_OUTBOUND_KINDS,
   CHANNELS,
@@ -29,6 +30,7 @@ import {
   REPLY_WAYS,
   ROLES,
   SURFACES,
+  TALK_RHYTHMS,
   WHEN_RULES,
 } from "@vela/contracts";
 import { and, eq, getTableColumns, getTableName, is, sql } from "drizzle-orm";
@@ -123,7 +125,7 @@ import {
 } from "./schema.ts";
 import { createTestDatabase, type TestDatabase } from "./testing.ts";
 
-/** An invite token's hash, as the services store it (migration 0037). */
+/** An invite token's hash, as the services store it (migration 0038). */
 const tokenHashOf = (value: string): string => createHash("sha256").update(value).digest("hex");
 
 const NOT_NULL_VIOLATION = "23502";
@@ -716,7 +718,7 @@ async function seedEveryTable(): Promise<void> {
 }
 
 describe("migrations", () => {
-  it("hash an invite token in SQL as the services do, so links sent before 0037 still open", async () => {
+  it("hash an invite token in SQL as the services do, so links sent before 0038 still open", async () => {
     const token = "Abc_123-xyz_\u00e9";
     const { rows } = await db.execute<{ hash: string }>(
       sql`select encode(sha256(convert_to(${token}, 'UTF8')), 'hex') as hash`,
@@ -2287,6 +2289,7 @@ describe("CHECK constraints on enumerated columns", () => {
     { table: "members", column: "language", values: LANGS },
     { table: "members", column: "age_band", values: AGE_BANDS },
     { table: "members", column: "relationship", values: KEPT_LIGHT_RELATIONSHIPS },
+    { table: "members", column: "talk_rhythm", values: TALK_RHYTHMS },
     { table: "members", column: "status", values: MEMBER_STATUSES },
     { table: "members", column: "primary_surface", values: SURFACES },
     { table: "channel_links", column: "channel", values: CHANNELS },
@@ -2354,6 +2357,7 @@ describe("CHECK constraints on enumerated columns", () => {
   it.each([
     { column: "interests", values: INTEREST_TOPICS },
     { column: "reply_ways", values: REPLY_WAYS },
+    { column: "avoid_topics", values: AVOID_TOPICS },
   ])(
     "members column $column holds any of its tuple's values, none, or nothing else",
     async ({ column, values }) => {
@@ -2539,6 +2543,7 @@ describe("CHECK constraints on enumerated columns", () => {
       "memory_permission_presentations_timing_check",
       "members_interests_check",
       "members_reply_ways_check",
+      "members_avoid_topics_check",
       "outbound_nearby_ask_actor_check",
       "media_storage_key_or_provider_file_id_check",
       "media_provider_unique_id_channel_check",
