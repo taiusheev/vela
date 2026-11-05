@@ -41,5 +41,5 @@ invitation by itself once approved. The setup writes still save while the family
 
 "How do you and Mom talk?" keeps how often they talk and what Vela must never bring up. Code alone
 keeps those topics out of her first week, the daily bank pick and anything drafted in the
-organiser's name; the topics are never sent to an AI. It is behind `TALK_SETUP`, off in production
-until privacy-notice v16 (`plan/materials/pilot/privacy-notice.v16-talk-setup-draft.md`) is approved.
+organiser's name; the topics are never sent to an AI. It is behind `TALK_SETUP`, on everywhere since
+privacy-notice v16 describes it (`plan/materials/pilot/privacy-notice.v16-talk-setup-approved.md`).

@@ -1,6 +1,6 @@
 # Privacy notice v16: "How do you and Mom talk?" (DRAFT)
 
-Status: **draft, waits for the founder's yes.** Until then `TALK_SETUP` stays `off` in production (pinned in `apps/worker/src/wrangler-config.test.ts`) and production ignores these answers. Development and staging have it on for testing.
+Status: **approved by the founder on 5 November 2026** and merged into privacy-notice.en.md and .zh-TW.md (the live Chinese uses 您 for the organiser, as the rest of that notice does). `TALK_SETUP` is on in every environment.
 
 What changes from v15: onboarding v2 adds one setup screen. It asks how often the organiser and the invited person talk now, and what Vela should never bring up (four fixed topics, plus up to three words of the organiser's own). The Chinese is a draft until the native reader reviews it (vela-zh-tw).
 

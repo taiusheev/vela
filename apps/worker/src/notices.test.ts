@@ -19,9 +19,12 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the v15 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v15");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v15");
+  it("serves the v16 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v16");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v16");
+    // Onboarding v2: what to avoid is matched in code and never sent to an AI provider.
+    expect(PRIVACY_NOTICES.en.html).toContain("These answers are never sent to an AI provider.");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("這些答案不會傳給任何 AI 服務。");
     // ADR-60: Vela may ask the people nearby itself, so neither notice says it never contacts anyone.
     expect(PRIVACY_NOTICES.en.html).toContain("when nobody in the family has answered");
     expect(PRIVACY_NOTICES.en.html).not.toContain("Vela never contacts anyone on its own");

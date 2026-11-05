@@ -2,7 +2,7 @@
 
 # Consent script: the onboarding call with the person the light is for
 
-Version `consent-script.v8` · 4 November 2026 · goes with `privacy-notice.v15` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
+Version `consent-script.v8` · 4 November 2026 · goes with `privacy-notice.v16` · spoken meaning matches the single `consent.request@3` message, which asks about the light and about health words together, as two separate choices with three buttons (founder's decision of 22 October 2026; architecture/03-code-design.md §4, spec §9). People who received a `consent.request@2` message before then still answer it with its Yes and No, followed by the `consent.health_words@2` question.
 
 What the founder says on the onboarding call, before Vela sends its consent message. The call is where the person hears everything and asks questions; the tap on "Yes to both" or "Yes, health private" in the chat is what switches the light on. Nobody's light is switched on by the call alone, and nobody's light is switched on by the organiser.
 
