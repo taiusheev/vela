@@ -555,9 +555,9 @@
         // in English or Traditional Chinese. The Telegram roster keeps working beside it.
         "PILOT_FAMILY_APPROVAL": "on",
         "PILOT_LANGUAGES": "en,zh-TW",
-        // Off: closed-test families are still set up in their messenger until the app with
-        // onboarding v2 is on phones (ADR-52 amended, 5 November 2026).
-        "PILOT_APP_SETUP": "off",
+        // On (founder, 5 November 2026): closed-test families set up in the app and wait for
+        // approval on /admin/roster like any other (ADR-52 amended).
+        "PILOT_APP_SETUP": "on",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
         // pilot Worker at setup. Privacy notice v3 names Clerk.
@@ -583,8 +583,9 @@
         // and the photo-question suggestions (founder's approval of 4 November 2026).
         "PHOTO_BOX": "on",
         "PHOTO_QUESTION_AI": "on",
-        // Off: "How do you and Mom talk?" waits for privacy-notice.v16 and the founder's yes.
-        "TALK_SETUP": "off",
+        // On since privacy-notice.v16 describes "How do you and Mom talk?" (founder's approval of
+        // 5 November 2026).
+        "TALK_SETUP": "on",
         "PERSONAL_QUESTION_DRAFTS": "off",
         "PERSONAL_QUESTION_PROFILES": "off",
         // Off, and pinned off, until the families have been told that Vela may ask the people
