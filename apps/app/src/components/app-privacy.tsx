@@ -7,6 +7,7 @@ import {
   appPrivacyAcceptance,
   privacyLangOf,
 } from "@vela/contracts";
+import { router, useSegments } from "expo-router";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
@@ -16,7 +17,11 @@ import { FAMILY_WAITING_RECHECK_MS, isFamilyWaiting } from "../api/family-waitin
 import { readMe } from "../api/read-me.ts";
 import { noticeUrl, SUPPORT_EMAIL } from "../api/support.ts";
 import { useAccount } from "../auth/clerk.tsx";
-import { privacyGateDecision } from "../data/app-privacy-gate.ts";
+import {
+  privacyGateDecision,
+  waitingCanReturn,
+  waitingMayContinue,
+} from "../data/app-privacy-gate.ts";
 import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-draft.ts";
 import { retryAccountRead } from "../data/query-client.ts";
 import { usePalette } from "../theme/theme.tsx";
@@ -145,6 +150,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const { t, i18n } = useLingui();
   const palette = usePalette();
   const draft = useOnboardingDraft();
+  const onOnboarding = useSegments()[0] === "onboarding";
   const queries = useQueryClient();
   const mounted = useRef(true);
   useEffect(() => {
@@ -234,12 +240,18 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   }, [decision, save.status, saveChoice]);
   if (decision === "pass") return children;
   // A family set up in the app finishes onboarding while it waits: its own screen says so, beside
-  // the invitation that opens once the founder approves (ADR-52 amended).
-  if (waiting && draft.created !== null && ["save", "invite", "ready"].includes(draft.step))
-    return children;
+  // the invitation that opens once the founder approves (ADR-52 amended). Only on that screen:
+  // anywhere else a waiting family could not load or send anything.
+  const saved = draft.created !== null;
+  if (waiting && waitingMayContinue({ step: draft.step, saved, onOnboarding })) return children;
   if (waiting)
     return (
       <FamilyWaiting
+        onReturn={
+          waitingCanReturn({ step: draft.step, saved })
+            ? () => router.replace("/onboarding")
+            : undefined
+        }
         checking={me.isFetching}
         onCheck={() => void retryAccountRead(queries)}
         onSignOut={() => void account.signOut()}
@@ -305,10 +317,13 @@ export function localPrivacyAccepted(): boolean {
  * family is set up, a person confirms it, and the app opens by itself afterwards. Never an error.
  */
 function FamilyWaiting({
+  onReturn,
   checking,
   onCheck,
   onSignOut,
 }: {
+  /** Back to the invitation, when this session's setup still has it open. */
+  onReturn: (() => void) | undefined;
   checking: boolean;
   onCheck: () => void;
   onSignOut: () => void;
@@ -345,6 +360,9 @@ function FamilyWaiting({
         </Trans>
       </Words>
       <View style={{ alignItems: "flex-start", gap: space.m }}>
+        {onReturn === undefined ? null : (
+          <PrimaryButton label={t`Back to the invitation`} onPress={onReturn} />
+        )}
         <SecondaryButton
           label={checking ? t`Checking…` : t`Check again`}
           disabled={checking}
