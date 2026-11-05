@@ -881,8 +881,10 @@ const DistinctChoices = <T extends z.ZodType<string>>(choice: T, min: number, ma
  * Onboarding also asks (founder, 19 October 2026) who she is to the organiser, what she loves to
  * talk about and how she likes to answer. Each is optional, so an older app's request stays valid;
  * the app of that date always sends all three. `interests` holds at least one topic when sent;
- * an empty `reply_ways` is the organiser's "not sure yet". The pilot never stores them: its API
- * refuses this route (`pilot_telegram_first`), and the pilot's privacy notice does not list them.
+ * an empty `reply_ways` is the organiser's "not sure yet". In the closed test this route is open
+ * only where `PILOT_APP_SETUP` is on (ADR-52 amended); elsewhere it answers `pilot_telegram_first`,
+ * and a family in a language the test does not run in answers `pilot_language`. The notice's "App
+ * setup and local preview" paragraph (v13 onwards) lists these answers.
  */
 export const CreateFamily = z.strictObject({
   country: z.string().regex(/^[A-Z]{2}$/, "a two-letter country code"),

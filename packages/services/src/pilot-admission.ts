@@ -1,5 +1,13 @@
 import type { InboundEvent } from "@vela/contracts";
-import { channelLinks, families, familyChannels, members, outbound, users } from "@vela/db";
+import {
+  channelLinks,
+  families,
+  familyChannels,
+  members,
+  outbound,
+  pushDevices,
+  users,
+} from "@vela/db";
 import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { SessionIdentity } from "./api-access.ts";
 import type { Queryable } from "./repo.ts";
@@ -294,5 +302,24 @@ export async function pilotCanActivate(
       .limit(1);
     if (delivered !== undefined) return true;
   }
-  return false;
+  // An organiser who set the family up in the app (ADR-52 amended, 5 November 2026) is reachable
+  // through Vela's notifications: a phone of theirs that allows them, so a quiet notice can reach
+  // them, and the founder is told if it reaches no phone. Only in a family the founder approved.
+  if (!familyApproved) return false;
+  const [phone] = await db
+    .select({ id: pushDevices.id })
+    .from(members)
+    .innerJoin(pushDevices, eq(pushDevices.userId, members.userId))
+    .where(
+      and(
+        eq(members.familyId, familyId),
+        eq(members.role, "organiser"),
+        eq(members.status, "active"),
+        isNull(members.leftAt),
+        eq(pushDevices.permission, "granted"),
+        eq(pushDevices.quietChannelBlocked, false),
+      ),
+    )
+    .limit(1);
+  return phone !== undefined;
 }

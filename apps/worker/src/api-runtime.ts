@@ -417,6 +417,9 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
   const { secretKey } = config;
   const photos = apiMediaFor(env, config, logger);
   const photoQuestions = apiPhotoQuestionsFor(env, config, logger);
+  // Onboarding v2 in the closed test: only where the founder approves families (ADR-52 amended).
+  const pilotAppSetup =
+    config.pilotAdmission?.familyIds !== undefined && env.PILOT_APP_SETUP?.trim() === "on";
   return {
     weeklySupport: { config: weeklySupportConfig(env), services: WEEKLY_SUPPORT_SERVICES },
     questionProfiles: {
@@ -447,7 +450,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
       : {}),
     capabilities: {
       pilot: config.pilotAdmission != null,
-      telegram_first: config.pilotAdmission != null,
+      telegram_first: config.pilotAdmission != null && !pilotAppSetup,
       // English alone until the test's languages include Chinese (ADR-52, PILOT_LANGUAGES).
       english_only: config.pilotAdmission != null && !pilotSpeaks(config.pilotAdmission, "zh-TW"),
       memory: config.pilotAdmission == null && env.MEMORY?.trim() === "on",
@@ -464,6 +467,7 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
             config: config.pilotAdmission,
             permitsAccount: pilotApiAccountAllowed,
             awaitsFamily: pilotAccountAwaitsFamily,
+            appSetup: pilotAppSetup,
             // A roster that cannot be read leaves the allowlist alone, which admits fewer.
             withRoster: async (db, base) => {
               try {

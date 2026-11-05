@@ -431,6 +431,12 @@ export interface ApiRuntime {
     awaitsFamily?: typeof pilotAccountAwaitsFamily;
     /** The allowlist with the founder's admin-page roster added (ADR-45); absent, the allowlist. */
     withRoster?: (db: VelaDatabase, config: PilotAdmission) => Promise<PilotAdmission>;
+    /**
+     * Families may be set up in the app (onboarding v2), where the founder approves families
+     * (ADR-52 amended): each then waits for approval like any other. Absent, setup stays in the
+     * messenger.
+     */
+    appSetup?: boolean;
   };
   verifySession: SessionVerifier;
   /** Reads that answer in a member's own local day need the hour it is now. */
@@ -2276,13 +2282,31 @@ export function createApiApp(runtime: ApiRuntime): Hono<RuntimeEnv> {
         checkActivity,
         withDatabase,
         async (c) => {
-          if (runtime.admission !== undefined)
+          const admission = runtime.admission;
+          if (admission !== undefined && admission.appSetup !== true)
             return c.json(
               {
                 error: {
                   code: "forbidden",
                   message: "Start your trial family in Telegram, then link it here.",
                   details: { reason: "pilot_telegram_first" },
+                },
+              },
+              403,
+            );
+          if (
+            admission !== undefined &&
+            !pilotSpeaks(
+              admission.config,
+              (c.get("writeInput") as CreateFamily).kept_light_member.language,
+            )
+          )
+            return c.json(
+              {
+                error: {
+                  code: "forbidden",
+                  message: "The closed test does not run in this language yet.",
+                  details: { reason: "pilot_language" },
                 },
               },
               403,

@@ -551,6 +551,9 @@
         // in English or Traditional Chinese. The Telegram roster keeps working beside it.
         "PILOT_FAMILY_APPROVAL": "on",
         "PILOT_LANGUAGES": "en,zh-TW",
+        // Off: closed-test families are still set up in their messenger until the app with
+        // onboarding v2 is on phones (ADR-52 amended, 5 November 2026).
+        "PILOT_APP_SETUP": "off",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
         // pilot Worker at setup. Privacy notice v3 names Clerk.

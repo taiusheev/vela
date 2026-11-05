@@ -77,6 +77,14 @@ export interface PilotEnv extends SharedEnv {
   readonly PILOT_FAMILY_APPROVAL?: string;
   /** The closed test's languages, `en` or `en,zh-TW`; English alone when unset. */
   readonly PILOT_LANGUAGES?: string;
+  /**
+   * `PILOT_APP_SETUP` (ADR-52 amended, 5 November 2026): "on" lets a closed-test organiser set their
+   * family up in the app (onboarding v2) instead of in Telegram or LINE. The family then waits for
+   * the founder's approval like any other. Absent or "off" keeps setup in the messenger. Off in
+   * production until the app that sets families up is on phones; pinned in
+   * src/wrangler-config.test.ts.
+   */
+  readonly PILOT_APP_SETUP?: string;
   // Vars.
   readonly TELEGRAM_BOT_USERNAME: string;
   readonly PRIVACY_NOTICE_URL_EN: string;

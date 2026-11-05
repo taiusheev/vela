@@ -1,5 +1,5 @@
 import type { InboundEvent } from "@vela/contracts";
-import { channelLinks, families, familyChannels, members, users } from "@vela/db";
+import { channelLinks, families, familyChannels, members, pushDevices, users } from "@vela/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { deliverOutbound, enqueueOutbound } from "./gateway.ts";
@@ -336,6 +336,44 @@ describe("approved families (ADR-52)", () => {
     await deliverOutbound(h.deps, queued.outboundId);
     expect(await pilotCanActivate(h.db, approved, seed.family.id, seed.member.id)).toBe(true);
     expect(await pilotCanActivate(h.db, approving([]), seed.family.id, seed.member.id)).toBe(false);
+  });
+
+  it("starts her light for an app-only organiser whose phone takes Vela's notifications", async () => {
+    const seed = await seedLineFamily();
+    const approved = approving([seed.family.id]);
+    // Set up in the app: the organiser has no messenger of their own, only an account and a phone.
+    await h.db.delete(channelLinks).where(eq(channelLinks.id, seed.organiserLink.id));
+    const [account] = await h.db
+      .insert(users)
+      .values({ authSubject: "user_app_only", displayName: "Mia", language: "zh-TW" })
+      .returning();
+    if (account === undefined) throw new Error("Missing account");
+    await h.db.update(members).set({ userId: account.id }).where(eq(members.id, seed.organiser.id));
+    expect(await pilotCanActivate(h.db, approved, seed.family.id, seed.member.id)).toBe(false);
+
+    const [phone] = await h.db
+      .insert(pushDevices)
+      .values({
+        userId: account.id,
+        installationId: "019a0000-0000-7000-8000-00000000a001",
+        token: "ExponentPushToken[app-only-organiser]",
+        platform: "ios",
+        permission: "denied",
+      })
+      .returning();
+    if (phone === undefined) throw new Error("Missing phone");
+    expect(await pilotCanActivate(h.db, approved, seed.family.id, seed.member.id)).toBe(false);
+
+    await h.db
+      .update(pushDevices)
+      .set({ permission: "granted" })
+      .where(eq(pushDevices.id, phone.id));
+    expect(await pilotCanActivate(h.db, approved, seed.family.id, seed.member.id)).toBe(true);
+    // Never before the founder approves the family.
+    expect(await pilotCanActivate(h.db, approving([]), seed.family.id, seed.member.id)).toBe(false);
+    // A phone of someone who is not an active organiser does not count.
+    await h.db.update(members).set({ status: "paused" }).where(eq(members.id, seed.organiser.id));
+    expect(await pilotCanActivate(h.db, approved, seed.family.id, seed.member.id)).toBe(false);
   });
 
   it("lets an organiser of an approved Chinese family use the app", async () => {

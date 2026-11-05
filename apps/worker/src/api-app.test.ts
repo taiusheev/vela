@@ -794,6 +794,34 @@ describe("pilot capabilities and secure Telegram linking", () => {
     expect(f.writes.services.createApiFamily).not.toHaveBeenCalled();
   });
 
+  it("sets a closed-test family up in the app where families are approved, in the test's languages", async () => {
+    admission.permitsAccount.mockResolvedValue(true);
+    const config = { telegramUserIds: [], familyIds: [], languages: ["en", "zh-TW"] };
+    const f = fixture(true, false, { admission: { ...admission, config, appSetup: true } });
+    const headers = { authorization: "Bearer good" };
+    const family = await f.app.request(
+      writeRequest("POST", "/v1/families", JSON.stringify(NEW_FAMILY), headers),
+    );
+    expect(family.status).toBe(201);
+    expect(f.writes.services.createApiFamily).toHaveBeenCalledOnce();
+
+    const elsewhere = fixture(true, false, {
+      admission: { ...admission, config: { ...config, languages: ["zh-TW"] }, appSetup: true },
+    });
+    const refused = await elsewhere.app.request(
+      writeRequest("POST", "/v1/families", JSON.stringify(NEW_FAMILY), headers),
+    );
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({
+      error: {
+        code: "forbidden",
+        message: "The closed test does not run in this language yet.",
+        details: { reason: "pilot_language" },
+      },
+    });
+    expect(elsewhere.writes.services.createApiFamily).not.toHaveBeenCalled();
+  });
+
   it("disables billing trials and parent device enrolment on the server", async () => {
     admission.permitsAccount.mockResolvedValue(true);
     const f = fixture(true, false, { admission });
