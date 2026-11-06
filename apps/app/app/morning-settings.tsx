@@ -80,12 +80,9 @@ export default function MorningSettingsScreen() {
         {her === undefined ? (
           <>
             <Words>
-              <Trans>Choose a parent in Settings before changing morning settings.</Trans>
+              <Trans>Choose a parent on You before changing morning settings.</Trans>
             </Words>
-            <SecondaryButton
-              label={t`Go to Settings`}
-              onPress={() => router.replace("/settings")}
-            />
+            <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/you")} />
           </>
         ) : read.isError && data === undefined ? (
           <>

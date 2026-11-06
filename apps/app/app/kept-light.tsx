@@ -40,6 +40,8 @@ export default function KeptLightScreen() {
   );
   const name = her?.name ?? "";
   const organiser = family.me.organiser;
+  // Her days away, as Today knows them: shown on the row, so nobody opens it only to check.
+  const awayUntil = day.today.lights.find((light) => light.memberId === her?.memberId)?.awayUntil;
   const nearby = organiser && her !== undefined ? (her.nearby ?? family.nearby) : undefined;
 
   return (
@@ -65,10 +67,7 @@ export default function KeptLightScreen() {
               <Words variant="body">
                 <Trans>This parent is no longer in this family.</Trans>
               </Words>
-              <SecondaryButton
-                label={t`Go to Settings`}
-                onPress={() => router.replace("/settings")}
-              />
+              <SecondaryButton label={t`Go to You`} onPress={() => router.replace("/you")} />
             </View>
           )
         ) : (
@@ -87,15 +86,18 @@ export default function KeptLightScreen() {
               </View>
             </View>
 
-            <SettingsSection>
-              <SettingsRow
-                icon="photo"
-                title={t`Photo and parent link`}
-                testID={`parent-settings-${her.memberId}`}
+            {/* What the reader comes here for most: to talk with her, then her morning and her days
+                away; her photo and link are set once, so they sit lower. */}
+            {her.light === "on" && !her.paused ? (
+              <SecondaryButton
+                icon="chat"
+                label={talkTitle(name)}
                 onPress={() =>
-                  router.push({ pathname: "/parent-settings", params: { member: her.memberId } })
+                  router.push({ pathname: "/conversation", params: { recipient: her.memberId } })
                 }
               />
+            ) : null}
+            <SettingsSection>
               {organiser ? (
                 <SettingsRow
                   icon="time"
@@ -106,6 +108,17 @@ export default function KeptLightScreen() {
                   }
                 />
               ) : null}
+              {/* Away mode (spec §8): any member may say she is away. */}
+              {her.paused ? null : (
+                <SettingsRow
+                  icon="calendar"
+                  title={awayTitle(name)}
+                  {...(awayUntil === undefined ? {} : { detail: t`Away until ${awayUntil}` })}
+                  onPress={() =>
+                    router.push({ pathname: "/away", params: { member: her.memberId } })
+                  }
+                />
+              )}
               {nearby === undefined ? null : (
                 <SettingsRow
                   icon="nearby"
@@ -116,16 +129,15 @@ export default function KeptLightScreen() {
                   }
                 />
               )}
-              {/* Away mode (spec §8): any member may say she is away. */}
-              {her.paused ? null : (
-                <SettingsRow
-                  icon="calendar"
-                  title={awayTitle(name)}
-                  onPress={() =>
-                    router.push({ pathname: "/away", params: { member: her.memberId } })
-                  }
-                />
-              )}
+              <SettingsRow
+                icon="photo"
+                title={t`Photo and parent link`}
+                detail={photo.uri === null ? t`No photo yet` : undefined}
+                testID={`parent-settings-${her.memberId}`}
+                onPress={() =>
+                  router.push({ pathname: "/parent-settings", params: { member: her.memberId } })
+                }
+              />
               {capabilities?.billing === true && organiser && her.light === "on" ? (
                 <SettingsRow
                   icon="heart"
@@ -156,6 +168,10 @@ export default function KeptLightScreen() {
 
 function morningTitle(name: string) {
   return translate`Change ${name}'s morning`;
+}
+
+function talkTitle(name: string) {
+  return translate`Talk with ${name}`;
 }
 
 function awayTitle(name: string) {

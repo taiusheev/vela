@@ -80,6 +80,7 @@ export function SettingsRow({
   trailing,
   onPress,
   careful = false,
+  quiet = false,
   disabled = false,
   expanded,
   testID,
@@ -91,6 +92,12 @@ export function SettingsRow({
   trailing?: ReactNode;
   onPress?: () => void;
   careful?: boolean;
+  /**
+   * A rare step that is hard to undo but opens its own page first (leave, delete account): drawn
+   * softer than its neighbours, so it is found when looked for and never tapped by accident. The
+   * red belongs to the confirming step, where it is the one thing on screen (Refactoring UI).
+   */
+  quiet?: boolean;
   disabled?: boolean;
   /** For a row that shows more below itself rather than opening a screen. */
   expanded?: boolean;
@@ -112,13 +119,18 @@ export function SettingsRow({
       {icon === undefined ? null : (
         <BrandIcon
           name={icon}
-          color={careful ? palette.error : palette.action}
+          color={careful ? palette.error : quiet ? palette.ink3 : palette.action}
           size={20}
           strokeWidth={2}
         />
       )}
       <View style={{ flex: stacked ? undefined : 1, minWidth: 0, gap: 2 }}>
-        <Text style={[type.bodyMedium, { color: careful ? palette.error : palette.ink }]}>
+        <Text
+          style={[
+            type.bodyMedium,
+            { color: careful ? palette.error : quiet ? palette.ink2 : palette.ink },
+          ]}
+        >
           {title}
         </Text>
         {detail === undefined ? null : (

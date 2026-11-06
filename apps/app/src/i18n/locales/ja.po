@@ -575,6 +575,10 @@ msgstr ""
 msgid "15 minutes later"
 msgstr ""
 
+#: app/(tabs)/you.tsx
+msgid "A break from your turns. Nothing is deleted."
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr ""
@@ -696,10 +700,6 @@ msgstr ""
 msgid "A quick tap, like a heart"
 msgstr ""
 
-#: app/settings.tsx
-msgid "A quiet alert when a parent answers. At most once a day, never at night."
-msgstr ""
-
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr ""
@@ -710,10 +710,6 @@ msgstr ""
 
 #: app/vela-light.tsx
 msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
-msgstr ""
-
-#: app/settings.tsx
-msgid "A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night."
 msgstr ""
 
 #: src/data/ask.ts
@@ -789,7 +785,8 @@ msgstr ""
 msgid "Accepted for delivery. This is not a read receipt."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
+#: app/account.tsx
 msgid "Account"
 msgstr ""
 
@@ -1069,6 +1066,10 @@ msgstr ""
 msgid "At {time}, {name} tapped “Not okay, tell my family”. Call now to find out what they need."
 msgstr ""
 
+#: app/(tabs)/you.tsx
+msgid "At most once a day, never at night."
+msgstr ""
+
 #: src/data/notifications.ts
 msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
 msgstr ""
@@ -1100,6 +1101,10 @@ msgstr ""
 msgid "away · {day}"
 msgstr ""
 
+#: app/kept-light.tsx
+msgid "Away until {awayUntil}"
+msgstr ""
+
 #: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
@@ -1122,7 +1127,7 @@ msgstr ""
 msgid "Before you continue"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Before your turn"
 msgstr ""
 
@@ -1256,15 +1261,15 @@ msgid "Choose a morning."
 msgstr ""
 
 #: app/away.tsx
-msgid "Choose a parent in Settings before changing away dates."
+msgid "Choose a parent on You before changing away dates."
 msgstr ""
 
 #: app/morning-settings.tsx
-msgid "Choose a parent in Settings before changing morning settings."
+msgid "Choose a parent on You before changing morning settings."
 msgstr ""
 
 #: app/nearby.tsx
-msgid "Choose a parent in Settings before changing the people nearby."
+msgid "Choose a parent on You before changing the people nearby."
 msgstr ""
 
 #: src/components/photo-slots.tsx
@@ -1359,7 +1364,7 @@ msgstr ""
 msgid "Connect my family"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Connect your family"
 msgstr ""
 
@@ -1465,8 +1470,8 @@ msgstr ""
 msgid "Day 30"
 msgstr ""
 
+#: app/account.tsx
 #: app/delete-account.tsx
-#: app/settings.tsx
 msgid "Delete account"
 msgstr ""
 
@@ -1623,7 +1628,7 @@ msgstr ""
 msgid "Email Vela support"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "English pilot"
 msgstr ""
 
@@ -1708,10 +1713,6 @@ msgctxt "role"
 msgid "family"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Family"
-msgstr ""
-
 #: src/data/onboarding.ts
 msgid "Family & children"
 msgstr ""
@@ -1789,7 +1790,6 @@ msgid "Free"
 msgstr ""
 
 #: app/kept-light.tsx
-#: app/settings.tsx
 msgid "Free pilot"
 msgstr ""
 
@@ -1838,8 +1838,8 @@ msgstr ""
 msgid "Get help connecting"
 msgstr ""
 
+#: app/(tabs)/you.tsx
 #: app/help.tsx
-#: app/settings.tsx
 msgid "Get help or request your data"
 msgstr ""
 
@@ -1848,11 +1848,7 @@ msgid "Getting your family ready…"
 msgstr ""
 
 #: app/(tabs)/index.tsx
-#: app/away.tsx
 #: app/conversation.tsx
-#: app/kept-light.tsx
-#: app/morning-settings.tsx
-#: app/nearby.tsx
 msgid "Go to Settings"
 msgstr ""
 
@@ -1861,6 +1857,13 @@ msgstr ""
 #: app/vela-light.tsx
 #: src/components/onboarding/finish.tsx
 msgid "Go to Today"
+msgstr ""
+
+#: app/away.tsx
+#: app/kept-light.tsx
+#: app/morning-settings.tsx
+#: app/nearby.tsx
+msgid "Go to You"
 msgstr ""
 
 #: src/data/chat.ts
@@ -1921,10 +1924,13 @@ msgstr ""
 msgid "Heart sent"
 msgstr ""
 
-#: app/(tabs)/you.tsx
 #: app/help.tsx
 #: app/sign-in.tsx
 msgid "Help"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Help and privacy"
 msgstr ""
 
 #: app/ask.tsx
@@ -2031,7 +2037,7 @@ msgstr ""
 msgid "How the 30 days work"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
 msgstr ""
 
@@ -2043,8 +2049,8 @@ msgstr ""
 msgid "How they know {name}, like neighbour"
 msgstr ""
 
+#: app/(tabs)/you.tsx
 #: app/precision.tsx
-#: app/settings.tsx
 msgid "How Vela is doing"
 msgstr ""
 
@@ -2317,7 +2323,7 @@ msgstr ""
 msgid "Keep my current settings"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Keep my turns"
 msgstr ""
 
@@ -2401,7 +2407,7 @@ msgstr ""
 msgid "Kept. Only you can see these words."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Language"
 msgstr ""
 
@@ -2433,16 +2439,20 @@ msgstr ""
 msgid "Laugh"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Leave"
+#: app/account.tsx
+msgid "Leave {familyName}"
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leave {familyName}?"
 msgstr ""
 
 #: app/personal-question.tsx
 msgid "Leave a little room."
+msgstr ""
+
+#: app/account.tsx
+msgid "Leave or delete"
 msgstr ""
 
 #: app/my-memories.tsx
@@ -2453,7 +2463,7 @@ msgstr ""
 msgid "Leave room for now"
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leave the family"
 msgstr ""
 
@@ -2465,7 +2475,7 @@ msgstr ""
 msgid "Leave this one out"
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leaving…"
 msgstr ""
 
@@ -2567,7 +2577,6 @@ msgstr ""
 #: app/onboarding.tsx
 #: app/parent-photos.tsx
 #: app/parent-settings.tsx
-#: app/settings.tsx
 msgid "Loading your family…"
 msgstr ""
 
@@ -2579,7 +2588,7 @@ msgstr ""
 msgid "Loading your family’s plan…"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Loading your notification preference…"
 msgstr ""
 
@@ -2702,10 +2711,10 @@ msgstr ""
 #. who the light is for
 #. who the light is for
 #: app/(tabs)/index.tsx
+#: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/photo-box.tsx
-#: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/onboarding/story.tsx
@@ -2892,6 +2901,10 @@ msgstr ""
 msgid "No photo on this phone"
 msgstr ""
 
+#: app/kept-light.tsx
+msgid "No photo yet"
+msgstr ""
+
 #: app/personal-question.tsx
 msgid "No question is needed right now. Your existing morning settings stay as they are."
 msgstr ""
@@ -3039,11 +3052,11 @@ msgstr ""
 msgid "Nothing yet."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Notification preference saved."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/components/today-feed.tsx
 #: src/components/today-hero.tsx
 msgid "Notifications"
@@ -3072,10 +3085,6 @@ msgstr ""
 
 #: src/data/notifications.ts
 msgid "Notifications come to the Vela app on a phone, not to a browser."
-msgstr ""
-
-#: app/(tabs)/you.tsx
-msgid "Notifications, language, privacy, account"
 msgstr ""
 
 #: src/components/today-hero.tsx
@@ -3219,7 +3228,7 @@ msgstr ""
 msgid "Open private report example"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -3325,24 +3334,20 @@ msgstr ""
 msgid "Parent settings"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Parents"
-msgstr ""
-
 #: app/sign-in.tsx
 msgid "Password"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/audio/voice-bar.tsx
 msgid "Pause"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Pause my turns"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Pause your turns in {familyName}?"
 msgstr ""
 
@@ -3483,20 +3488,12 @@ msgstr ""
 msgid "Preparing your draft…"
 msgstr ""
 
-#: app/settings.tsx
-msgid "Preview family setup"
-msgstr ""
-
 #: app/morning-settings.tsx
 msgid "Preview settings"
 msgstr ""
 
 #: app/weekly-support-preview.tsx
 msgid "Preview this offer"
-msgstr ""
-
-#: app/settings.tsx
-msgid "Privacy and help"
 msgstr ""
 
 #: src/components/app-privacy.tsx
@@ -3507,8 +3504,8 @@ msgstr ""
 msgid "Privacy notice"
 msgstr ""
 
+#: app/(tabs)/you.tsx
 #: app/legal.tsx
-#: app/settings.tsx
 msgid "Privacy, terms and security"
 msgstr ""
 
@@ -3700,7 +3697,7 @@ msgstr ""
 msgid "Replied"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/push/provider.tsx
 msgid "Replies and turn reminders"
 msgstr ""
@@ -3734,7 +3731,7 @@ msgstr ""
 msgid "Restore example review"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Resume"
 msgstr ""
 
@@ -3886,7 +3883,7 @@ msgstr ""
 msgid "Saving your choice…"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Saving your preference…"
 msgstr ""
 
@@ -4074,11 +4071,6 @@ msgstr ""
 msgid "Setting up…"
 msgstr ""
 
-#: app/(tabs)/you.tsx
-#: app/settings.tsx
-msgid "Settings"
-msgstr ""
-
 #: src/components/telegram-family-link.tsx
 msgid "Setup finished — connect my family"
 msgstr ""
@@ -4160,7 +4152,8 @@ msgstr ""
 msgid "Sign in as family"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
+#: app/account.tsx
 msgid "Sign in to connect your family."
 msgstr ""
 
@@ -4168,9 +4161,13 @@ msgstr ""
 msgid "Sign in to delete your account."
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 #: src/components/app-privacy.tsx
 msgid "Sign out"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "Sign out, leave the family, delete account"
 msgstr ""
 
 #: app/sign-in.tsx
@@ -4185,7 +4182,7 @@ msgstr ""
 msgid "Sign-in is unavailable in this build"
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Sign-out did not finish. You are still signed in. Try again."
 msgstr ""
 
@@ -4197,7 +4194,7 @@ msgstr ""
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Signing out…"
 msgstr ""
 
@@ -4303,7 +4300,7 @@ msgstr ""
 msgid "Starting…"
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Stay"
 msgstr ""
 
@@ -4405,6 +4402,7 @@ msgstr ""
 msgid "Take this photo out? It is deleted within a day, and Vela won't send it."
 msgstr ""
 
+#: app/kept-light.tsx
 #: src/components/chat/chat-link.tsx
 #: src/components/today-glance.tsx
 msgid "Talk with {name}"
@@ -4503,7 +4501,7 @@ msgstr ""
 msgid "That did not go through. Nothing changed. Try again."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
@@ -4629,7 +4627,7 @@ msgstr ""
 msgid "The 30 days start after {name}'s first answer."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "The app's words. Her mornings keep the language she reads."
 msgstr ""
 
@@ -4936,7 +4934,7 @@ msgstr ""
 msgid "This is taking longer than it should."
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "This is the example family, so nobody left."
 msgstr ""
 
@@ -4977,7 +4975,7 @@ msgstr ""
 msgid "This parent is no longer in this family."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "This phone"
 msgstr ""
 
@@ -5058,6 +5056,10 @@ msgstr ""
 
 #: app/(tabs)/exchanges.tsx
 msgid "To keep"
+msgstr ""
+
+#: app/account.tsx
+msgid "To take a break instead, pause your turns on You. Nothing is deleted."
 msgstr ""
 
 #: src/device/useParent.ts
@@ -5165,6 +5167,7 @@ msgstr ""
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
 #: app/(tabs)/sunday.tsx
+#: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
@@ -5174,7 +5177,6 @@ msgstr ""
 #: app/onboarding.tsx
 #: app/photo-box.tsx
 #: app/precision.tsx
-#: app/settings.tsx
 #: app/vela-light.tsx
 #: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
@@ -5205,7 +5207,7 @@ msgstr ""
 msgid "Turn off and clear your memories?"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Turn on"
 msgstr ""
 
@@ -5332,11 +5334,11 @@ msgstr ""
 msgid "Vela · her morning · {time}"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela {version}"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela {version} · update {update}"
 msgstr ""
 
@@ -5369,7 +5371,7 @@ msgstr ""
 msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."
 msgstr ""
 
@@ -5397,7 +5399,7 @@ msgstr ""
 msgid "Vela Light is on for {name}."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
 msgstr ""
 
@@ -5670,7 +5672,7 @@ msgstr ""
 msgid "What the family said"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "What the family sees about you"
 msgstr ""
 
@@ -5725,7 +5727,7 @@ msgstr ""
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "When a parent replies"
 msgstr ""
 
@@ -5747,6 +5749,10 @@ msgstr ""
 
 #: app/ask.tsx
 msgid "When should it arrive?"
+msgstr ""
+
+#: app/(tabs)/you.tsx
+msgid "When tomorrow’s question still needs you. Never at night."
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -5822,7 +5828,7 @@ msgstr ""
 msgid "Why: it grows from {name}'s answer to {asker} on {day}."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr ""
 
@@ -5955,11 +5961,11 @@ msgstr ""
 msgid "You and {name} are connected."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you."
 msgstr ""
 
@@ -6012,15 +6018,15 @@ msgstr ""
 msgid "You tried an example ask. No message was sent."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You will not receive turns or quiet notices while paused. Another active organiser must stay reachable."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You will stop receiving turns. You can resume whenever you are ready."
 msgstr ""
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr ""
 
@@ -6095,8 +6101,8 @@ msgstr ""
 msgid "Your family connection"
 msgstr ""
 
+#: app/(tabs)/you.tsx
 #: app/away.tsx
-#: app/settings.tsx
 msgid "Your family could not be reached just now."
 msgstr ""
 
@@ -6133,7 +6139,7 @@ msgstr ""
 msgid "Your idea"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
 msgstr ""
 
@@ -6180,11 +6186,11 @@ msgstr ""
 msgid "Your name, as the family says it."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your notification preference could not be loaded."
 msgstr ""
 
@@ -6197,11 +6203,11 @@ msgstr ""
 msgid "Your parent"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela in their messenger."
 msgstr ""
 
@@ -6274,7 +6280,7 @@ msgstr ""
 msgid "Your starting point"
 msgstr ""
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your turns"
 msgstr ""
 

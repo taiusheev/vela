@@ -7,7 +7,6 @@ tags:
 ---
 - launchApp
 - tapOn: "You"
-- tapOn: "Settings"
 - assertNotVisible: "Set it up"
 - scrollUntilVisible:
     element: "Privacy, terms and security"
@@ -20,8 +19,10 @@ tags:
 - assertVisible: "Your data and deletion"
 - tapOn: "Back"
 - scrollUntilVisible:
-    element: "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
+    element: "What the family sees about you"
     direction: DOWN
+- tapOn: "What the family sees about you"
+- assertVisible: "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 - assertNotVisible: "Ask the founder for access, correction, deletion, or to withdraw consent. Never include private family content in a support message."
 - assertNotVisible: "Set it up"
 - tapOn: "Get help or request your data"
@@ -38,4 +39,4 @@ tags:
     element: "Back"
     direction: UP
 - tapOn: "Back"
-- assertVisible: "Settings"
+- assertVisible: "Help and privacy"

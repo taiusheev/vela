@@ -1,12 +1,11 @@
 # Every action here is an explicit synthetic demo. No account, participant or message is changed.
 url: ${APP_URL}
-name: Pause and leave are deliberate and unknown parent links recover safely
+name: Pause and leave are deliberate, leave sits behind Account, and unknown parent links recover safely
 tags:
   - demo
 ---
 - launchApp
 - openLink: ${APP_URL}/you
-- tapOn: "Settings"
 - scrollUntilVisible:
     element: "Pause"
     direction: DOWN
@@ -18,19 +17,25 @@ tags:
 - tapOn: "Pause my turns"
 - assertVisible: "You are paused: no turns come to you, and you are not told if it goes quiet."
 - tapOn: "Resume"
-- tapOn: "Leave"
+# Leaving is one page down, under Account, never next to everyday rows.
+- assertNotVisible: "Leave The Chens"
+- scrollUntilVisible:
+    element: "Account"
+    direction: DOWN
+- tapOn: "Account"
+- tapOn: "Leave The Chens"
 - assertVisible: 'Leave The Chens\?'
 - tapOn: "Stay"
 - assertNotVisible: "Leave the family"
 - openLink: ${APP_URL}/away?member=unknown
-- assertVisible: "Choose a parent in Settings before changing away dates."
+- assertVisible: "Choose a parent on You before changing away dates."
 - assertNotVisible: "Mom is away"
-- tapOn: "Go to Settings"
-- assertVisible: "Parents"
+- tapOn: "Go to You"
+- assertVisible: "Your family"
 - openLink: ${APP_URL}/nearby?member=unknown
-- assertVisible: "Choose a parent in Settings before changing the people nearby."
+- assertVisible: "Choose a parent on You before changing the people nearby."
 - assertNotVisible: "Add them"
-- tapOn: "Go to Settings"
+- tapOn: "Go to You"
 - openLink: ${APP_URL}/sign-in
 - assertVisible: "Sign-in is unavailable in this build"
 - assertVisible: "You can explore an example family. No messages are sent."
