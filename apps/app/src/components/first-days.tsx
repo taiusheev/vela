@@ -39,7 +39,7 @@ export function FirstDaysGuide({
         <Trans>Your first days with {name}</Trans>
       </Words>
       <View style={{ gap: space.l }}>
-        <Step
+        <GuideStep
           number={1}
           state={steps.yes}
           title={steps.yes === "done" ? t`${name} said yes` : t`${name} says yes`}
@@ -52,8 +52,8 @@ export function FirstDaysGuide({
           {steps.yes === "now" ? (
             <SecondaryButton label={t`See the invitation`} onPress={onInvitation} />
           ) : null}
-        </Step>
-        <Step
+        </GuideStep>
+        <GuideStep
           number={2}
           state={steps.ask}
           title={t`The first morning question`}
@@ -66,8 +66,8 @@ export function FirstDaysGuide({
           {steps.ask === "now" && onAsk !== undefined ? (
             <PrimaryButton label={t`Write the first question`} onPress={onAsk} />
           ) : null}
-        </Step>
-        <Step
+        </GuideStep>
+        <GuideStep
           number={3}
           state={steps.answer}
           title={t`${name} answers`}
@@ -78,7 +78,7 @@ export function FirstDaysGuide({
   );
 }
 
-function Step({
+export function GuideStep({
   number,
   state,
   title,
