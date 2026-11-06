@@ -19,3 +19,24 @@ export function privacyGateDecision(input: {
   if (input.localAccepted) return input.missing ? "pass" : "save";
   return "ask";
 }
+
+/** The steps after a family is saved, where setup goes on while the founder checks it (ADR-52). */
+const AFTER_SAVE = ["save", "invite", "ready"];
+
+/**
+ * Whether a family still waiting for approval may see this screen. Only setup's own last steps,
+ * on the onboarding screen itself: every other screen needs an approved family and would sit
+ * there unable to load or send, so it gets the waiting page instead.
+ */
+export function waitingMayContinue(input: {
+  step: string;
+  saved: boolean;
+  onOnboarding: boolean;
+}): boolean {
+  return input.onOnboarding && input.saved && AFTER_SAVE.includes(input.step);
+}
+
+/** Whether the waiting page offers the way back to the invitation still open in this session. */
+export function waitingCanReturn(input: { step: string; saved: boolean }): boolean {
+  return input.saved && AFTER_SAVE.includes(input.step) && input.step !== "save";
+}

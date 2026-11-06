@@ -13,7 +13,16 @@ import { resetDraft, updateDraft } from "../data/onboarding-draft.ts";
 import { createSessionQueries } from "../data/query-client.ts";
 import { AppPrivacyGate, QUIET_ACCOUNT_RETRIES_MS } from "./app-privacy.tsx";
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), provision: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  read: vi.fn(),
+  provision: vi.fn(),
+  segments: [] as string[],
+  replace: vi.fn(),
+}));
+vi.mock("expo-router", () => ({
+  useSegments: () => mocks.segments,
+  router: { replace: (...args: unknown[]) => mocks.replace(...args) },
+}));
 vi.mock("../api/client.ts", async (original) => ({
   ...(await original<typeof import("../api/client.ts")>()),
   apiConfigured: () => true,
@@ -88,6 +97,8 @@ beforeEach(() => {
   unmounts = 0;
   mocks.read.mockReset();
   mocks.provision.mockReset();
+  mocks.replace.mockReset();
+  mocks.segments = [];
   queries = createSessionQueries();
   queries.setDefaultOptions({ queries: { ...queries.getDefaultOptions().queries, retryDelay: 0 } });
 });
@@ -124,6 +135,53 @@ async function open() {
     else await new Promise((resolve) => setTimeout(resolve, 20));
   });
 }
+
+describe("a family waiting for approval", () => {
+  const waitingRead = () =>
+    mocks.read.mockRejectedValue(new ApiError(403, "forbidden", { reason: "family_waiting" }));
+  const savedInvite = () =>
+    updateDraft({
+      step: "invite",
+      created: {
+        familyId: "synthetic-family",
+        memberId: "synthetic-member",
+        arrival: "07:30",
+        invite: { text: "Synthetic invitation", lineText: null, lineUrl: null },
+      },
+    });
+
+  it("keeps setup's own invitation screen open while it waits", async () => {
+    waitingRead();
+    savedInvite();
+    mocks.segments = ["onboarding"];
+    await open();
+    expect(nodes("navigator")).toHaveLength(1);
+  });
+
+  it("shows the waiting page on any other screen, such as Ask, with the way back to the invitation", async () => {
+    waitingRead();
+    savedInvite();
+    mocks.segments = ["ask"];
+    await open();
+    expect(nodes("navigator")).toHaveLength(0);
+    const back = nodes("primary-button").find(
+      (node) => node.props.label === "Back to the invitation",
+    );
+    expect(back).toBeDefined();
+    await act(async () => back?.props.onPress());
+    expect(mocks.replace).toHaveBeenCalledWith("/onboarding");
+  });
+
+  it("offers no way back once nothing is open from this session's setup", async () => {
+    waitingRead();
+    mocks.segments = ["(tabs)"];
+    await open();
+    expect(nodes("navigator")).toHaveLength(0);
+    expect(
+      nodes("primary-button").some((node) => node.props.label === "Back to the invitation"),
+    ).toBe(false);
+  });
+});
 
 describe("privacy gate with shared account readers", () => {
   it("keeps a confirmed new-account setup mounted during its background account refresh", async () => {
