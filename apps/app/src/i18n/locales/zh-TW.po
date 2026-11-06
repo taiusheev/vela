@@ -251,6 +251,10 @@ msgstr "{name}回覆"
 msgid "{name} answers there. No new app to learn."
 msgstr "{name}會在那裡回覆，不用學新的 App。"
 
+#: src/components/first-memories.tsx
+msgid "{name} answers, and it lands here"
+msgstr "{name}回覆後，就會收在這裡"
+
 #: src/components/not-okay-follow-up.tsx
 msgid "{name} asked for the family"
 msgstr "{name}想找家人"
@@ -336,6 +340,10 @@ msgstr "{name}最後一次回覆是在昨天 {time}。"
 msgid "{name} last answered yesterday at 8:41."
 msgstr "{name}最後一次回覆是在昨天 08:41。"
 
+#: src/components/first-memories.tsx
+msgid "{name} needs no app, only their usual chat."
+msgstr "{name}不用裝 App，用平常的聊天軟體就好。"
+
 #: src/components/parent-link-settings.tsx
 msgid "{name} opened the invitation."
 msgstr "{name}已開啟邀請。"
@@ -353,11 +361,13 @@ msgid "{name} said no"
 msgstr "{name}說不要"
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 #: src/data/family.ts
 msgid "{name} said yes"
 msgstr "{name}同意了"
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 #: src/components/onboarding/finish.tsx
 msgid "{name} says yes"
 msgstr "{name}答應"
@@ -373,6 +383,10 @@ msgstr "{name}：{what}，{day}"
 #: src/components/reminders.tsx
 msgid "{name}: {what}. You will be reminded to ask on {day}."
 msgstr "{name}：{what}。{day}會提醒你問一問。"
+
+#: src/components/first-memories.tsx
+msgid "{name}'s first memory is on its way"
+msgstr "{name}的第一則回憶，就快來了"
 
 #: src/components/onboarding/finish.tsx
 msgid "{name}’s first morning, the next day at {time}"
@@ -626,6 +640,10 @@ msgstr "給{recipient}的問候"
 msgid "A hello from Vela"
 msgstr "來自 Vela 的問候"
 
+#: app/(tabs)/sunday.tsx
+msgid "A letter about {parentName}, every Sunday"
+msgstr "每個星期日，一封關於{parentName}的信"
+
 #: src/components/today-glance.tsx
 msgid "A light comes on when they answer their morning."
 msgstr "早晨的問題一有回覆，燈就會亮起。"
@@ -722,6 +740,10 @@ msgstr "早晨沒有回覆時的安靜通知 · 可以幫忙看看的附近親�
 #: src/data/ask.ts
 msgid "A recipe"
 msgstr "一道菜的做法"
+
+#: src/components/find-your-way.tsx
+msgid "A short letter about {name}'s week, every Sunday."
+msgstr "每個星期日，一封關於{name}這一週的信。"
 
 #: src/components/onboarding/questions.tsx
 msgid "A small, specific question feels more like you than a perfect one."
@@ -928,6 +950,14 @@ msgstr "已經設定好了"
 msgid "Always free"
 msgstr "永遠免費"
 
+#: src/components/first-memories.tsx
+msgid "An example memory"
+msgstr "回憶範例"
+
+#: src/components/first-memories.tsx
+msgid "An example. {name}'s own words will appear here instead."
+msgstr "這是範例。之後這裡會是{name}自己說的話。"
+
 #: src/components/parent-link-settings.tsx
 msgid "An invitation for {name}"
 msgstr "給{name}的邀請"
@@ -1011,6 +1041,7 @@ msgid "Ask {name} how {what} went"
 msgstr "問問{name}，{what}還順利嗎"
 
 #: app/ask.tsx
+#: src/components/first-memories.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name} something"
 msgstr "問{name}一件事"
@@ -1744,6 +1775,10 @@ msgstr "找一則回憶來保存"
 msgid "Find my family"
 msgstr "找到我的家人"
 
+#: src/components/find-your-way.tsx
+msgid "Find your way around"
+msgstr "認識一下 Vela"
+
 #: app/(tabs)/questions.tsx
 msgid "Find your words"
 msgstr "找找適合你的說法"
@@ -1885,6 +1920,10 @@ msgstr "媽媽早安。小美想問：您早餐吃了什麼？"
 msgid "Good morning. Your message is here."
 msgstr "早安。您的訊息來了。"
 
+#: src/components/find-your-way.tsx
+msgid "Got it"
+msgstr "知道了"
+
 #. who the light is for
 #: src/components/onboarding/questions.tsx
 #: src/data/onboarding.ts
@@ -2011,6 +2050,10 @@ msgstr "做法"
 #: src/components/ask-ideas.tsx
 msgid "How {name} sees it"
 msgstr "{name}會看到的樣子"
+
+#: src/components/first-memories.tsx
+msgid "How a memory gets here"
+msgstr "回憶是怎麼來的"
 
 #: src/data/memories.ts
 msgid "How are the seedlings doing?"
@@ -2670,6 +2713,7 @@ msgstr "全部一起標示"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "Memories"
 msgstr "回憶"
@@ -2822,6 +2866,10 @@ msgstr "隔壁的李太太帶了水餃來，還留下來給我看孫子的學校
 #: src/data/onboarding.ts
 msgid "Music & songs"
 msgstr "音樂與歌曲"
+
+#: src/components/first-memories.tsx
+msgid "My mother’s red-bean soup. The beans soaked overnight, and I got to stir."
+msgstr "我媽媽煮的紅豆湯。紅豆前一晚就泡好，煮的時候我在旁邊幫忙攪。"
 
 #: app/sign-in.tsx
 msgid "name@example.com"
@@ -3463,6 +3511,10 @@ msgstr "地方與旅行"
 msgid "Plan a question for {day}"
 msgstr "為{day}安排一個問題"
 
+#: src/components/find-your-way.tsx
+msgid "Plan what to ask {name} in the coming mornings."
+msgstr "安排接下來幾個早上想問{name}的事。"
+
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
 msgstr "已安排的問題"
@@ -3542,6 +3594,7 @@ msgstr "問題已儲存。你可以在下方調整。"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/questions.tsx
+#: src/components/find-your-way.tsx
 msgid "Questions"
 msgstr "問題"
 
@@ -3941,7 +3994,9 @@ msgstr "看看{name}的第一週"
 msgid "See that morning"
 msgstr "看那天早上的對話"
 
+#: app/(tabs)/sunday.tsx
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 msgid "See the invitation"
 msgstr "查看邀請"
 
@@ -4423,6 +4478,10 @@ msgstr "點一個來用，也可以再改字。"
 msgid "Tap the heart on a memory, and it is kept here, long after the chat has let it go."
 msgstr "在回憶上點愛心，它就會保存在這裡，即使聊天裡早已不見。"
 
+#: src/components/first-memories.tsx
+msgid "Tap the heart on the ones you love to keep them for good."
+msgstr "喜歡的就按愛心，永遠保存下來。"
+
 #: src/data/useToday.ts
 msgid "tapped an answer"
 msgstr "選了一個回答"
@@ -4676,6 +4735,10 @@ msgstr "家庭故事書"
 msgid "The family book could not be reached just now."
 msgstr "暫時無法開啟家庭故事書。"
 
+#: src/components/first-memories.tsx
+msgid "The family can keep the ones they love for good."
+msgstr "家人喜歡的回憶，可以永遠保存下來。"
+
 #: src/data/precision.ts
 msgid "The family found {found} of {verdicts} useful."
 msgstr "家人覺得{verdicts}則中有{found}則有幫助。"
@@ -4705,6 +4768,7 @@ msgid "The first page is waiting."
 msgstr "第一頁正等著被寫下。"
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 msgid "The invitation is waiting in {name}'s chat. One tap, and their mornings begin."
 msgstr "邀請已經在{name}的聊天室裡。按一下，早安訊息就開始了。"
 
@@ -4727,6 +4791,14 @@ msgstr "暫時無法取得連結。您的家庭設定沒有變更。請重試或
 #: src/components/nearby-editor.tsx
 msgid "The link opens a chat with Vela Light. Tap Send there."
 msgstr "點開連結會打開和 Vela Light 的聊天，在那裡按「傳送」就好。"
+
+#: src/components/first-memories.tsx
+msgid "The little things {name} tells you, a recipe, an old story, a photo, gather here so the family never loses them."
+msgstr "{name}跟你說的小事，一道菜的做法、一段往事、一張照片，都會收在這裡，家人再也不會弄丟。"
+
+#: src/components/find-your-way.tsx
+msgid "The little things {name} tells you, kept for the family."
+msgstr "{name}跟你說的小事，替家人收好。"
 
 #: src/data/memories.ts
 msgid "The little tomato plants are as tall as my hand now."
@@ -5093,6 +5165,10 @@ msgstr "今天"
 msgid "Today could not be reached just now."
 msgstr "目前無法載入今天的內容。"
 
+#: src/components/find-your-way.tsx
+msgid "Today is home: {name}'s window and answers. The rest, in one line each:"
+msgstr "「今天」是首頁：{name}的窗和回覆都在這裡。其他頁面，一句話說明："
+
 #: app/(tabs)/index.tsx
 msgid "Today with the family"
 msgstr "今天的家人"
@@ -5365,6 +5441,10 @@ msgstr "沒人寫的早晨由 Vela 提問"
 msgid "Vela asks what it makes her think of."
 msgstr "Vela 會問長輩看了想到什麼。"
 
+#: src/components/first-memories.tsx
+msgid "Vela brings it to {name} in the morning, signed with your name. Ask nothing, and Vela sends a gentle hello."
+msgstr "Vela 會在早上把它帶給{name}，署上你的名字。不寫的話，Vela 會傳一句溫柔的問候。"
+
 #: app/(tabs)/index.tsx
 #: src/components/today-feed.tsx
 msgid "Vela cannot reach {name} on {channel}"
@@ -5605,6 +5685,7 @@ msgstr "我們正在確認你的家庭"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/sunday.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "Week"
 msgstr "本週"
@@ -5637,6 +5718,14 @@ msgstr "{name}這週跟你說了什麼、哪些事提了兩次，以及下次可
 msgid "What {name} will see"
 msgstr "{name}會看到"
 
+#: app/(tabs)/sunday.tsx
+msgid "What {parentName} told the family this week, what came up more than once, and one thing to ask next. The first one comes after {parentName} says yes and answers a week of mornings."
+msgstr "{parentName}這一週跟家人說了什麼、哪些事提了不只一次，還有下次可以問的一件事。第一封會在{parentName}答應、回覆了一週的早安訊息之後寄來。"
+
+#: src/components/first-memories.tsx
+msgid "What a memory looks like"
+msgstr "回憶長這樣"
+
 #: src/data/memories.ts
 msgid "What are you planting this year?"
 msgstr "今年要種什麼？"
@@ -5646,6 +5735,10 @@ msgstr "今年要種什麼？"
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
 msgstr "今天早上花園看起來怎麼樣？"
+
+#: src/components/first-memories.tsx
+msgid "What did your mother cook when you were small?"
+msgstr "你小時候，你媽媽都煮些什麼？"
 
 #: app/personal-question.tsx
 msgid "What do you call {name}?"
@@ -5956,6 +6049,7 @@ msgstr "我"
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/you.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "You"
 msgstr "我"
@@ -5979,6 +6073,10 @@ msgstr "你目前暫停中：不會輪到你提問。"
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
 msgstr "目前只有你一位發起人在使用中，而暫停的發起人在安靜的日子不會收到通知。必須先有這個家庭的另一位發起人在使用中。"
+
+#: src/components/first-memories.tsx
+msgid "You ask one small thing"
+msgstr "你問一件小事"
 
 #: src/components/onboarding/questions.tsx
 msgid "You can add someone from Today later."
@@ -6124,6 +6222,10 @@ msgstr "家人會在你的提問和回覆上看到這個名字。"
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
 msgstr "更新 Vela 後，你的家庭仍會保留。"
+
+#: src/components/find-your-way.tsx
+msgid "Your family, notifications and privacy."
+msgstr "你的家人、通知和隱私。"
 
 #: app/(tabs)/index.tsx
 msgid "Your family's first parent connection is still being set up."

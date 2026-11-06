@@ -3,6 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
+import { FamilyScene } from "../../src/components/brand/scene.tsx";
 import { ConnectionWindows } from "../../src/components/connection-windows.tsx";
 import { FirstWeek } from "../../src/components/first-week.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
@@ -63,6 +64,7 @@ function FamilySunday({ day }: { day: TodayView }) {
   );
   const name = read.name;
   const windowsFor = selectedLight(day.today.lights, view.memberId ?? selected);
+  const parentName = windowsFor?.displayName ?? "";
 
   return (
     <WarmPage
@@ -80,6 +82,35 @@ function FamilySunday({ day }: { day: TodayView }) {
         <Words variant="body" tone="ink2">
           <Trans>The weekly read goes to the family's organisers.</Trans>
         </Words>
+      ) : view.nobody && windowsFor !== undefined ? (
+        // Before her yes (founder, 6 November 2026: first time should assist, not stay neutral):
+        // what the read will be, when it starts, and the one thing to do now.
+        <SoftCard tone="paper">
+          <View style={{ alignItems: "center" }}>
+            <FamilyScene kind="letter" width={152} />
+          </View>
+          <Words variant="heading" accessibilityRole="header">
+            <Trans>A letter about {parentName}, every Sunday</Trans>
+          </Words>
+          <Words variant="body" tone="ink2">
+            <Trans>
+              What {parentName} told the family this week, what came up more than once, and one
+              thing to ask next. The first one comes after {parentName} says yes and answers a week
+              of mornings.
+            </Trans>
+          </Words>
+          <View style={{ alignSelf: "flex-start" }}>
+            <SecondaryButton
+              label={t`See the invitation`}
+              onPress={() =>
+                router.push({
+                  pathname: "/parent-settings",
+                  params: { member: windowsFor.memberId },
+                })
+              }
+            />
+          </View>
+        </SoftCard>
       ) : view.nobody ? (
         <Words variant="body" tone="ink2">
           <Trans>The weekly read starts once she has said yes and had a week of mornings.</Trans>
