@@ -582,6 +582,10 @@ msgstr "提早 15 分鐘"
 msgid "15 minutes later"
 msgstr "延後 15 分鐘"
 
+#: app/(tabs)/you.tsx
+msgid "A break from your turns. Nothing is deleted."
+msgstr "暫時休息，不會刪除任何內容。"
+
 #: src/components/parent-link-settings.tsx
 msgid "A connection is not a delivered morning message or a reply."
 msgstr "完成連結不代表早晨訊息已送達或已收到回覆。"
@@ -703,10 +707,6 @@ msgstr "放進早安訊息的問題"
 msgid "A quick tap, like a heart"
 msgstr "輕點一下，例如愛心"
 
-#: app/settings.tsx
-msgid "A quiet alert when a parent answers. At most once a day, never at night."
-msgstr "父母回覆時，給你一則無聲通知。每天最多一則，夜間不會發送。"
-
 #: src/components/quiet-notice.tsx
 msgid "A quiet morning"
 msgstr "安靜的早上"
@@ -718,10 +718,6 @@ msgstr "安靜通知表示 Vela 尚未記錄到回覆。請自行打電話或傳
 #: app/vela-light.tsx
 msgid "A quiet notice when a morning goes unanswered · people nearby who can look in · away mode · the weekly read"
 msgstr "早晨沒有回覆時的安靜通知 · 可以幫忙看看的附近親友 · 外出模式 · 每週小記"
-
-#: app/settings.tsx
-msgid "A quiet reminder when tomorrow’s question still needs you. At most once a day, never at night."
-msgstr "明天的問題還需要你時，給你一則無聲提醒。每天最多一則，夜間不會發送。"
 
 #: src/data/ask.ts
 msgid "A recipe"
@@ -796,7 +792,8 @@ msgstr "大約十秒，會在問題之前播放。"
 msgid "Accepted for delivery. This is not a read receipt."
 msgstr "已收下，準備送出。這不代表已讀。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
+#: app/account.tsx
 msgid "Account"
 msgstr "帳號"
 
@@ -1076,6 +1073,10 @@ msgstr "正在詢問…"
 msgid "At {time}, {name} tapped “Not okay, tell my family”. Call now to find out what they need."
 msgstr "{name}在 {time} 按了「不太好，告訴家人」。請現在打電話給{name}，問問需要什麼幫忙。"
 
+#: app/(tabs)/you.tsx
+msgid "At most once a day, never at night."
+msgstr "一天最多一次，夜間不打擾。"
+
 #: src/data/notifications.ts
 msgid "At most one of each a day: when {her} answers what you asked, and the evening before your turn."
 msgstr "每種通知每天最多一則：{her}回覆你的提問時，以及輪到你提問的前一晚。"
@@ -1107,6 +1108,10 @@ msgstr "不在家"
 msgid "away · {day}"
 msgstr "外出中 · 到{day}"
 
+#: app/kept-light.tsx
+msgid "Away until {awayUntil}"
+msgstr "不在家，到{awayUntil}"
+
 #: app/my-memories.tsx
 #: src/components/back-button.tsx
 #: src/components/onboarding/questions.tsx
@@ -1129,7 +1134,7 @@ msgstr "第一個回覆{recipient}吧。"
 msgid "Before you continue"
 msgstr "繼續之前"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Before your turn"
 msgstr "輪到你之前"
 
@@ -1263,16 +1268,16 @@ msgid "Choose a morning."
 msgstr "選個早晨。"
 
 #: app/away.tsx
-msgid "Choose a parent in Settings before changing away dates."
-msgstr "變更外出日期前，請先在設定中選擇一位家人。"
+msgid "Choose a parent on You before changing away dates."
+msgstr "變更外出日期前，請先在「我」頁面選擇一位家人。"
 
 #: app/morning-settings.tsx
-msgid "Choose a parent in Settings before changing morning settings."
-msgstr "變更早安設定前，請先在設定中選擇一位家人。"
+msgid "Choose a parent on You before changing morning settings."
+msgstr "變更早安設定前，請先在「我」頁面選擇一位家人。"
 
 #: app/nearby.tsx
-msgid "Choose a parent in Settings before changing the people nearby."
-msgstr "變更附近聯絡人前，請先在設定中選擇一位家人。"
+msgid "Choose a parent on You before changing the people nearby."
+msgstr "變更附近聯絡人前，請先在「我」頁面選擇一位家人。"
 
 #: src/components/photo-slots.tsx
 msgid "Choose a photo"
@@ -1366,7 +1371,7 @@ msgstr "確認移除"
 msgid "Connect my family"
 msgstr "連結我的家人"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Connect your family"
 msgstr "連結你的家庭"
 
@@ -1472,8 +1477,8 @@ msgstr "達爾文"
 msgid "Day 30"
 msgstr "第 30 天"
 
+#: app/account.tsx
 #: app/delete-account.tsx
-#: app/settings.tsx
 msgid "Delete account"
 msgstr "刪除帳號"
 
@@ -1630,7 +1635,7 @@ msgstr "寄驗證碼給我"
 msgid "Email Vela support"
 msgstr "寄信給 Vela 支援"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "English pilot"
 msgstr "英語試辦"
 
@@ -1715,10 +1720,6 @@ msgctxt "role"
 msgid "family"
 msgstr "家人"
 
-#: app/settings.tsx
-msgid "Family"
-msgstr "家人"
-
 #: src/data/onboarding.ts
 msgid "Family & children"
 msgstr "家人與孩子"
@@ -1796,7 +1797,6 @@ msgid "Free"
 msgstr "免費"
 
 #: app/kept-light.tsx
-#: app/settings.tsx
 msgid "Free pilot"
 msgstr "免費試辦"
 
@@ -1845,8 +1845,8 @@ msgstr "德國"
 msgid "Get help connecting"
 msgstr "取得連結協助"
 
+#: app/(tabs)/you.tsx
 #: app/help.tsx
-#: app/settings.tsx
 msgid "Get help or request your data"
 msgstr "尋求協助或索取你的資料"
 
@@ -1855,11 +1855,7 @@ msgid "Getting your family ready…"
 msgstr "正在準備你的家庭…"
 
 #: app/(tabs)/index.tsx
-#: app/away.tsx
 #: app/conversation.tsx
-#: app/kept-light.tsx
-#: app/morning-settings.tsx
-#: app/nearby.tsx
 msgid "Go to Settings"
 msgstr "前往設定"
 
@@ -1869,6 +1865,13 @@ msgstr "前往設定"
 #: src/components/onboarding/finish.tsx
 msgid "Go to Today"
 msgstr "前往「今天」"
+
+#: app/away.tsx
+#: app/kept-light.tsx
+#: app/morning-settings.tsx
+#: app/nearby.tsx
+msgid "Go to You"
+msgstr "前往「我」"
 
 #: src/data/chat.ts
 msgid "Good morning from Vela"
@@ -1928,11 +1931,14 @@ msgstr "給{recipient}一顆愛心"
 msgid "Heart sent"
 msgstr "愛心已送出"
 
-#: app/(tabs)/you.tsx
 #: app/help.tsx
 #: app/sign-in.tsx
 msgid "Help"
 msgstr "說明"
+
+#: app/(tabs)/you.tsx
+msgid "Help and privacy"
+msgstr "協助與隱私"
 
 #: app/ask.tsx
 msgid "Help me find a question"
@@ -2038,7 +2044,7 @@ msgstr "你們平常多久聊一次？"
 msgid "How the 30 days work"
 msgstr "這 30 天怎麼運作"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "How the quiet notices ended, in your family and across Vela"
 msgstr "安靜通知最後的結果，包括你家和整個 Vela"
 
@@ -2050,8 +2056,8 @@ msgstr "結果：{ended}。"
 msgid "How they know {name}, like neighbour"
 msgstr "和{name}的關係，例如鄰居"
 
+#: app/(tabs)/you.tsx
 #: app/precision.tsx
-#: app/settings.tsx
 msgid "How Vela is doing"
 msgstr "Vela 的表現"
 
@@ -2324,7 +2330,7 @@ msgstr "保留我的帳號"
 msgid "Keep my current settings"
 msgstr "維持目前設定"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Keep my turns"
 msgstr "保留我的輪次"
 
@@ -2408,7 +2414,7 @@ msgstr "自 {date}起保存"
 msgid "Kept. Only you can see these words."
 msgstr "已保留。只有你看得到這段話。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Language"
 msgstr "語言"
 
@@ -2440,17 +2446,21 @@ msgstr "之後：{title}"
 msgid "Laugh"
 msgstr "大笑"
 
-#: app/settings.tsx
-msgid "Leave"
-msgstr "離開"
+#: app/account.tsx
+msgid "Leave {familyName}"
+msgstr "離開{familyName}"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leave {familyName}?"
 msgstr "要離開{familyName}嗎？"
 
 #: app/personal-question.tsx
 msgid "Leave a little room."
 msgstr "留一點空間。"
+
+#: app/account.tsx
+msgid "Leave or delete"
+msgstr "離開或刪除"
 
 #: app/my-memories.tsx
 msgid "Leave out"
@@ -2460,7 +2470,7 @@ msgstr "略過"
 msgid "Leave room for now"
 msgstr "先留點空間"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leave the family"
 msgstr "離開這個家庭"
 
@@ -2472,7 +2482,7 @@ msgstr "請不要填電話號碼。對方同意後，Vela 會再向對方要號�
 msgid "Leave this one out"
 msgstr "這張先不要"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Leaving…"
 msgstr "正在離開…"
 
@@ -2574,7 +2584,6 @@ msgstr "正在載入對話…"
 #: app/onboarding.tsx
 #: app/parent-photos.tsx
 #: app/parent-settings.tsx
-#: app/settings.tsx
 msgid "Loading your family…"
 msgstr "正在載入你的家庭…"
 
@@ -2586,7 +2595,7 @@ msgstr "正在載入家人的早晨"
 msgid "Loading your family’s plan…"
 msgstr "正在載入你家庭的方案…"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Loading your notification preference…"
 msgstr "正在載入通知偏好設定…"
 
@@ -2709,10 +2718,10 @@ msgstr "小美"
 #. who the light is for
 #. who the light is for
 #: app/(tabs)/index.tsx
+#: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/nearby.tsx
 #: app/photo-box.tsx
-#: app/settings.tsx
 #: app/vela-light.tsx
 #: src/components/onboarding/questions.tsx
 #: src/components/onboarding/story.tsx
@@ -2899,6 +2908,10 @@ msgstr "這裡不填電話號碼：對方同意後，Vela 會再向對方要號�
 msgid "No photo on this phone"
 msgstr "這支手機上沒有照片"
 
+#: app/kept-light.tsx
+msgid "No photo yet"
+msgstr "還沒有照片"
+
 #: app/personal-question.tsx
 msgid "No question is needed right now. Your existing morning settings stay as they are."
 msgstr "現在不一定要問問題。原本的晨間問候設定會維持不變。"
@@ -3046,11 +3059,11 @@ msgstr "今天還沒有訊息。早上的訊息會出現在這裡。"
 msgid "Nothing yet."
 msgstr "還沒有內容。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Notification preference saved."
 msgstr "已儲存通知偏好設定。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/components/today-feed.tsx
 #: src/components/today-hero.tsx
 msgid "Notifications"
@@ -3080,10 +3093,6 @@ msgstr "通知已開啟。"
 #: src/data/notifications.ts
 msgid "Notifications come to the Vela app on a phone, not to a browser."
 msgstr "通知會送到手機上的 Vela App，不會送到瀏覽器。"
-
-#: app/(tabs)/you.tsx
-msgid "Notifications, language, privacy, account"
-msgstr "通知、語言、隱私、帳號"
 
 #: src/components/today-hero.tsx
 msgid "Notifications, something new"
@@ -3226,7 +3235,7 @@ msgstr "開啟我的家人"
 msgid "Open private report example"
 msgstr "開啟私人報告範例"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/components/onboarding/finish.tsx
 #: src/components/push-offer.tsx
 msgid "Open settings"
@@ -3332,24 +3341,20 @@ msgstr "父母的照片"
 msgid "Parent settings"
 msgstr "父母的設定"
 
-#: app/settings.tsx
-msgid "Parents"
-msgstr "長輩"
-
 #: app/sign-in.tsx
 msgid "Password"
 msgstr "密碼"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/audio/voice-bar.tsx
 msgid "Pause"
 msgstr "暫停"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Pause my turns"
 msgstr "暫停我的輪次"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Pause your turns in {familyName}?"
 msgstr "要暫停你在{familyName}的輪次嗎？"
 
@@ -3490,10 +3495,6 @@ msgstr "正在準備傳送，這個問題已無法修改。"
 msgid "Preparing your draft…"
 msgstr "正在準備草稿…"
 
-#: app/settings.tsx
-msgid "Preview family setup"
-msgstr "預覽家人設定"
-
 #: app/morning-settings.tsx
 msgid "Preview settings"
 msgstr "預覽設定"
@@ -3501,10 +3502,6 @@ msgstr "預覽設定"
 #: app/weekly-support-preview.tsx
 msgid "Preview this offer"
 msgstr "預覽這個邀請"
-
-#: app/settings.tsx
-msgid "Privacy and help"
-msgstr "隱私與協助"
 
 #: src/components/app-privacy.tsx
 msgid "Privacy details and terms"
@@ -3514,8 +3511,8 @@ msgstr "隱私詳情與條款"
 msgid "Privacy notice"
 msgstr "隱私權告知事項"
 
+#: app/(tabs)/you.tsx
 #: app/legal.tsx
-#: app/settings.tsx
 msgid "Privacy, terms and security"
 msgstr "隱私、條款與安全"
 
@@ -3707,7 +3704,7 @@ msgstr "換一張"
 msgid "Replied"
 msgstr "回覆了"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: src/push/provider.tsx
 msgid "Replies and turn reminders"
 msgstr "回覆與輪值提醒"
@@ -3741,7 +3738,7 @@ msgstr "還原範例的使用許可"
 msgid "Restore example review"
 msgstr "還原範例審閱"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Resume"
 msgstr "恢復"
 
@@ -3893,7 +3890,7 @@ msgstr "還無法確認是否已儲存。請先保持這個畫面開啟，再試
 msgid "Saving your choice…"
 msgstr "正在儲存你的選擇…"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Saving your preference…"
 msgstr "正在儲存你的偏好設定…"
 
@@ -4081,11 +4078,6 @@ msgstr "正在設定你的家庭…"
 msgid "Setting up…"
 msgstr "設定中…"
 
-#: app/(tabs)/you.tsx
-#: app/settings.tsx
-msgid "Settings"
-msgstr "設定"
-
 #: src/components/telegram-family-link.tsx
 msgid "Setup finished — connect my family"
 msgstr "設定完成 — 連結我的家人"
@@ -4167,7 +4159,8 @@ msgstr "顯示今天"
 msgid "Sign in as family"
 msgstr "以家人身分登入"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
+#: app/account.tsx
 msgid "Sign in to connect your family."
 msgstr "登入後即可連結你的家庭。"
 
@@ -4175,10 +4168,14 @@ msgstr "登入後即可連結你的家庭。"
 msgid "Sign in to delete your account."
 msgstr "請先登入，再刪除你的帳號。"
 
-#: app/settings.tsx
+#: app/account.tsx
 #: src/components/app-privacy.tsx
 msgid "Sign out"
 msgstr "登出"
+
+#: app/(tabs)/you.tsx
+msgid "Sign out, leave the family, delete account"
+msgstr "登出、離開家庭、刪除帳號"
 
 #: app/sign-in.tsx
 msgid "Sign-in code"
@@ -4192,7 +4189,7 @@ msgstr "登入設定未完成。請聯絡 Vela 取得協助。"
 msgid "Sign-in is unavailable in this build"
 msgstr "這個版本目前無法登入"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Sign-out did not finish. You are still signed in. Try again."
 msgstr "登出沒有完成，你仍在登入狀態。請再試一次。"
 
@@ -4204,7 +4201,7 @@ msgstr "署名「— Vela」。只有你自己寫的訊息才會署你的名字�
 msgid "Signing in with a number is not open yet. Use your email instead."
 msgstr "目前還不能用手機號碼登入，請改用電子郵件。"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Signing out…"
 msgstr "正在登出…"
 
@@ -4310,7 +4307,7 @@ msgstr "在{messenger}開始設定家人。"
 msgid "Starting…"
 msgstr "正在開啟…"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "Stay"
 msgstr "留下"
 
@@ -4412,6 +4409,7 @@ msgstr "要把這一頁從家庭之書拿出來嗎？"
 msgid "Take this photo out? It is deleted within a day, and Vela won't send it."
 msgstr "要拿出這張照片嗎？照片會在一天內刪除，Vela 不會再傳出。"
 
+#: app/kept-light.tsx
 #: src/components/chat/chat-link.tsx
 #: src/components/today-glance.tsx
 msgid "Talk with {name}"
@@ -4510,7 +4508,7 @@ msgstr "目前無法傳送。你寫的內容都還在。"
 msgid "That did not go through. Nothing changed. Try again."
 msgstr "沒有成功，什麼都沒有改變。請再試一次。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 #: app/vela-light.tsx
 #: src/components/set-up-phone.tsx
 #: src/data/useFamily.ts
@@ -4636,7 +4634,7 @@ msgstr "你那邊是 {time}。"
 msgid "The 30 days start after {name}'s first answer."
 msgstr "30 天會從{name}第一次回覆之後開始。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "The app's words. Her mornings keep the language she reads."
 msgstr "這是 App 顯示的語言。早安訊息仍然使用這位家人閱讀的語言。"
 
@@ -4943,7 +4941,7 @@ msgstr "這是範例，不會將設定送至任何家庭。"
 msgid "This is taking longer than it should."
 msgstr "比平常久了一些。"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "This is the example family, so nobody left."
 msgstr "這是範例家庭，所以沒有人離開。"
 
@@ -4984,7 +4982,7 @@ msgstr "目前無法顯示這位家人。請返回設定並重新選擇家庭。
 msgid "This parent is no longer in this family."
 msgstr "這位長輩已不在這個家庭中。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "This phone"
 msgstr "這支手機"
 
@@ -5066,6 +5064,10 @@ msgstr "要用聲音回答，Vela 需要使用麥克風。請家人幫您在「�
 #: app/(tabs)/exchanges.tsx
 msgid "To keep"
 msgstr "待保存"
+
+#: app/account.tsx
+msgid "To take a break instead, pause your turns on You. Nothing is deleted."
+msgstr "若只想休息一下，可以在「我」頁面暫停輪次，不會刪除任何內容。"
 
 #: src/device/useParent.ts
 msgid "Toast and tea"
@@ -5172,6 +5174,7 @@ msgstr "無法登入嗎？"
 #: app/(tabs)/index.tsx
 #: app/(tabs)/questions.tsx
 #: app/(tabs)/sunday.tsx
+#: app/(tabs)/you.tsx
 #: app/away.tsx
 #: app/conversation.tsx
 #: app/exchange/[id].tsx
@@ -5181,7 +5184,6 @@ msgstr "無法登入嗎？"
 #: app/onboarding.tsx
 #: app/photo-box.tsx
 #: app/precision.tsx
-#: app/settings.tsx
 #: app/vela-light.tsx
 #: app/weekly/[read].tsx
 #: src/components/app-privacy.tsx
@@ -5212,7 +5214,7 @@ msgstr "關閉並清除"
 msgid "Turn off and clear your memories?"
 msgstr "要關閉並清除你的回憶嗎？"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Turn on"
 msgstr "開啟"
 
@@ -5339,11 +5341,11 @@ msgstr "通常在 {time} 前回覆"
 msgid "Vela · her morning · {time}"
 msgstr "Vela · 早安訊息 · {time}"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela {version}"
 msgstr "Vela 版本{version}"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela {version} · update {update}"
 msgstr "Vela {version} · 更新{update}"
 
@@ -5376,7 +5378,7 @@ msgstr "現在連不上 Vela。請檢查網路連線，再試一次。"
 msgid "Vela could not finish delivering {recipient}’s morning. Contact them directly if you are concerned. No quiet notice will be sent for this morning."
 msgstr "Vela 未能完成傳送{recipient}的早安訊息。如果你擔心，請直接聯絡對方。這次早晨不會發出未回覆通知。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela does not send notifications from here yet."
 msgstr "Vela 目前還不會從這裡傳送通知。"
 
@@ -5404,7 +5406,7 @@ msgstr "{name}的 Vela Light 已開啟，到 {date}為止。不收任何費用�
 msgid "Vela Light is on for {name}."
 msgstr "{name}的 Vela Light 已開啟。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Vela Light quiet-morning notices still reach you when these reminders are off."
 msgstr "即使關閉這些提醒，你仍會收到 Vela Light 的早晨未回覆通知。"
 
@@ -5677,7 +5679,7 @@ msgstr "有什麼是 Vela 絕對不要提的？"
 msgid "What the family said"
 msgstr "家人說了什麼"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "What the family sees about you"
 msgstr "家人看得到你的哪些資訊"
 
@@ -5732,7 +5734,7 @@ msgstr "早上比較安靜時"
 msgid "When a morning stays quiet, Vela tells you. Here is how those notices ended. Most end with an answer that came later, or a day away."
 msgstr "早上一直很安靜時，Vela 會通知你。這裡是那些通知最後的結果。大多數是稍晚才回覆，或那天正好外出。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "When a parent replies"
 msgstr "父母回覆時"
 
@@ -5755,6 +5757,10 @@ msgstr "家人回覆你的提問時，以及輪到你提問的前一晚。"
 #: app/ask.tsx
 msgid "When should it arrive?"
 msgstr "什麼時候送到？"
+
+#: app/(tabs)/you.tsx
+msgid "When tomorrow’s question still needs you. Never at night."
+msgstr "明天的問題還需要你時提醒。夜間不打擾。"
 
 #: src/components/onboarding/finish.tsx
 msgid "When you are together, sign in on {name}’s phone. It shows one message at a time in large words, and asks {name} first: nothing arrives before a yes."
@@ -5829,7 +5835,7 @@ msgstr "原因：來自{name}在{day}的回覆。"
 msgid "Why: it grows from {name}'s answer to {asker} on {day}."
 msgstr "原因：來自{name}在{day}回覆{asker}的話。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "With your light on, they also see whether you answered each morning and when, and are told if it stays quiet."
 msgstr "你的燈亮著時，家人也會看到你每天早上有沒有回覆、幾點回覆；如果一直很安靜，家人也會收到通知。"
 
@@ -5962,11 +5968,11 @@ msgstr "你和{name}"
 msgid "You and {name} are connected."
 msgstr "您與{name}已連結。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you, and you are not told if it goes quiet."
 msgstr "你目前暫停中：不會輪到你提問，安靜的日子也不會通知你。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You are paused: no turns come to you."
 msgstr "你目前暫停中：不會輪到你提問。"
 
@@ -6019,15 +6025,15 @@ msgstr "你說{name}沒事。沒有再傳送其他訊息。"
 msgid "You tried an example ask. No message was sent."
 msgstr "你試用了範例提問。沒有傳送任何訊息。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You will not receive turns or quiet notices while paused. Another active organiser must stay reachable."
 msgstr "暫停期間，你不會收到輪次或安靜通知。必須有另一位未暫停的召集人可以聯絡。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "You will stop receiving turns. You can resume whenever you are ready."
 msgstr "你將不再收到輪次。準備好時，隨時可以恢復。"
 
-#: app/settings.tsx
+#: app/account.tsx
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr "你將不再看到家人的日常，也不會再輪流提問。三十天後，保存的關於你的資料會被刪除。"
 
@@ -6102,8 +6108,8 @@ msgstr "你的家庭"
 msgid "Your family connection"
 msgstr "你的家人連結"
 
+#: app/(tabs)/you.tsx
 #: app/away.tsx
-#: app/settings.tsx
 msgid "Your family could not be reached just now."
 msgstr "目前無法載入你的家庭。"
 
@@ -6140,7 +6146,7 @@ msgstr "你的第一個問題"
 msgid "Your idea"
 msgstr "你的想法"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your light is off, so nothing about your mornings is shown."
 msgstr "你的燈沒有亮著，所以不會顯示任何關於你早上的內容。"
 
@@ -6187,11 +6193,11 @@ msgstr "你的名字：{name}"
 msgid "Your name, as the family says it."
 msgstr "你的名字，用家人平常的叫法。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your name, the asks you write, and your replies."
 msgstr "你的名字、你寫的提問，以及你的回覆。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your notification preference could not be loaded."
 msgstr "無法載入你的通知偏好設定。"
 
@@ -6204,11 +6210,11 @@ msgstr "你的長輩"
 msgid "Your parent"
 msgstr "你的家長"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your parent can ask “what does the family see” in their own chat. Health-word sharing is their separate choice, and saying stop pauses their light."
 msgstr "長輩可以在自己的聊天中問「家人看得到什麼」。是否分享健康相關的話，由長輩另外決定；說「停止」就會暫停燈光。"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your pilot is free. Quiet notices and important updates arrive in the organiser’s private chat with Vela in their messenger."
 msgstr "試辦免費。安靜通知和重要訊息會送到發起人在聊天軟體上和 Vela 的私人聊天室。"
 
@@ -6282,7 +6288,7 @@ msgstr "你的登入已過期。請重新登入，再刪除帳號。"
 msgid "Your starting point"
 msgstr "你想問的事"
 
-#: app/settings.tsx
+#: app/(tabs)/you.tsx
 msgid "Your turns"
 msgstr "我的輪次"
 

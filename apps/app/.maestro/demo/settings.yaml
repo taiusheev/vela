@@ -6,9 +6,13 @@ tags:
 - launchApp
 - assertNotVisible: "Only on this device. Removed when you sign out."
 - tapOn: "You"
-- assertVisible: "Notifications, language, privacy, account"
+- assertVisible: "Notifications"
+- assertNotVisible: "Preview family setup"
 - tapOn:
     id: "you-parent-.*"
+- scrollUntilVisible:
+    element: "Photo and parent link"
+    direction: DOWN
 - tapOn: "Photo and parent link"
 - assertVisible: "Parent settings"
 - assertVisible: "Add a photo of Mom"
