@@ -1,5 +1,5 @@
-import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
-import { tokenCache } from "@clerk/clerk-expo/token-cache";
+import { ClerkProvider, useAuth } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { RequestInterrupted, sessionRequests } from "../api/request-session.ts";
 import { clearAudioCache } from "../audio/cache.ts";
