@@ -3,6 +3,7 @@ import { requireOptionalNativeModule } from "expo-modules-core";
 import { Platform } from "react-native";
 import { ApiError, apiBaseUrl } from "../api/client.ts";
 import { sessionRequests } from "../api/request-session.ts";
+import { clearRecordingFiles } from "./recording-files.ts";
 import { createAudioCache } from "./session-cache.ts";
 
 interface Decoder {
@@ -126,7 +127,7 @@ const listeners = new Set<() => void>();
 export async function clearAudioCache(): Promise<void> {
   const cleared = audioCache.clear();
   for (const stop of listeners) stop();
-  await cleared;
+  await Promise.all([cleared, clearRecordingFiles()]);
 }
 export function registerAudioStop(stop: () => void): () => void {
   listeners.add(stop);
