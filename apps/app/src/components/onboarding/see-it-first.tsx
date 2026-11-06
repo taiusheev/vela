@@ -56,7 +56,7 @@ export function SeeItFirst() {
         onDecline={() => resetDraft()}
       />
     ) : isStory(step) ? (
-      <Story step={step} signedIn={!needsAccount} />
+      <Story step={step} signedIn={account.signedIn} canSignIn={needsAccount} />
     ) : isQuestion(step) ? (
       <Questions draft={draft} step={step} />
     ) : step === "build" ? (

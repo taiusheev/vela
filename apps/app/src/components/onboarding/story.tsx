@@ -91,7 +91,15 @@ export function NightCopy({
  * light breathes slowly. With Reduce Motion it opens lit. This one picture stands for the old four-part
  * story: you ask, she answers, her window lights up.
  */
-export function Story({ step: _step, signedIn }: { step: StoryStep; signedIn: boolean }) {
+export function Story({
+  step: _step,
+  signedIn,
+  canSignIn,
+}: {
+  step: StoryStep;
+  signedIn: boolean;
+  canSignIn: boolean;
+}) {
   const { t } = useLingui();
   const insets = useSafeAreaInsets();
   // Undefined until the phone says whether motion is reduced: the moment plays once, so it waits
@@ -166,13 +174,13 @@ export function Story({ step: _step, signedIn }: { step: StoryStep; signedIn: bo
           />
           {signedIn ? (
             <NightButton quiet label={t`Account`} onPress={() => router.push("/account")} />
-          ) : (
+          ) : canSignIn ? (
             <NightButton
               quiet
               label={t`I already have an account`}
               onPress={() => router.push("/sign-in")}
             />
-          )}
+          ) : null}
         </Animated.View>
       </View>
     </NightScene>
