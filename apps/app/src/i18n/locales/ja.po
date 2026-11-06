@@ -244,6 +244,10 @@ msgstr ""
 msgid "{name} answers there. No new app to learn."
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "{name} answers, and it lands here"
+msgstr ""
+
 #: src/components/not-okay-follow-up.tsx
 msgid "{name} asked for the family"
 msgstr ""
@@ -329,6 +333,10 @@ msgstr ""
 msgid "{name} last answered yesterday at 8:41."
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "{name} needs no app, only their usual chat."
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
 msgid "{name} opened the invitation."
 msgstr ""
@@ -346,11 +354,13 @@ msgid "{name} said no"
 msgstr ""
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 #: src/data/family.ts
 msgid "{name} said yes"
 msgstr ""
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 #: src/components/onboarding/finish.tsx
 msgid "{name} says yes"
 msgstr ""
@@ -365,6 +375,10 @@ msgstr ""
 
 #: src/components/reminders.tsx
 msgid "{name}: {what}. You will be reminded to ask on {day}."
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "{name}'s first memory is on its way"
 msgstr ""
 
 #: src/components/onboarding/finish.tsx
@@ -619,6 +633,10 @@ msgstr ""
 msgid "A hello from Vela"
 msgstr ""
 
+#: app/(tabs)/sunday.tsx
+msgid "A letter about {parentName}, every Sunday"
+msgstr ""
+
 #: src/components/today-glance.tsx
 msgid "A light comes on when they answer their morning."
 msgstr ""
@@ -714,6 +732,10 @@ msgstr ""
 
 #: src/data/ask.ts
 msgid "A recipe"
+msgstr ""
+
+#: src/components/find-your-way.tsx
+msgid "A short letter about {name}'s week, every Sunday."
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -921,6 +943,14 @@ msgstr ""
 msgid "Always free"
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "An example memory"
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "An example. {name}'s own words will appear here instead."
+msgstr ""
+
 #: src/components/parent-link-settings.tsx
 msgid "An invitation for {name}"
 msgstr ""
@@ -1004,6 +1034,7 @@ msgid "Ask {name} how {what} went"
 msgstr ""
 
 #: app/ask.tsx
+#: src/components/first-memories.tsx
 #: src/components/today-glance.tsx
 msgid "Ask {name} something"
 msgstr ""
@@ -1737,6 +1768,10 @@ msgstr ""
 msgid "Find my family"
 msgstr ""
 
+#: src/components/find-your-way.tsx
+msgid "Find your way around"
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 msgid "Find your words"
 msgstr ""
@@ -1878,6 +1913,10 @@ msgstr ""
 msgid "Good morning. Your message is here."
 msgstr ""
 
+#: src/components/find-your-way.tsx
+msgid "Got it"
+msgstr ""
+
 #. who the light is for
 #: src/components/onboarding/questions.tsx
 #: src/data/onboarding.ts
@@ -2003,6 +2042,10 @@ msgstr ""
 
 #: src/components/ask-ideas.tsx
 msgid "How {name} sees it"
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "How a memory gets here"
 msgstr ""
 
 #: src/data/memories.ts
@@ -2663,6 +2706,7 @@ msgstr ""
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/exchanges.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "Memories"
 msgstr ""
@@ -2814,6 +2858,10 @@ msgstr ""
 
 #: src/data/onboarding.ts
 msgid "Music & songs"
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "My mother’s red-bean soup. The beans soaked overnight, and I got to stir."
 msgstr ""
 
 #: app/sign-in.tsx
@@ -3456,6 +3504,10 @@ msgstr ""
 msgid "Plan a question for {day}"
 msgstr ""
 
+#: src/components/find-your-way.tsx
+msgid "Plan what to ask {name} in the coming mornings."
+msgstr ""
+
 #: app/(tabs)/questions.tsx
 msgid "Planned questions"
 msgstr ""
@@ -3535,6 +3587,7 @@ msgstr ""
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/questions.tsx
+#: src/components/find-your-way.tsx
 msgid "Questions"
 msgstr ""
 
@@ -3934,7 +3987,9 @@ msgstr ""
 msgid "See that morning"
 msgstr ""
 
+#: app/(tabs)/sunday.tsx
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 msgid "See the invitation"
 msgstr ""
 
@@ -4416,6 +4471,10 @@ msgstr ""
 msgid "Tap the heart on a memory, and it is kept here, long after the chat has let it go."
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "Tap the heart on the ones you love to keep them for good."
+msgstr ""
+
 #: src/data/useToday.ts
 msgid "tapped an answer"
 msgstr ""
@@ -4669,6 +4728,10 @@ msgstr ""
 msgid "The family book could not be reached just now."
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "The family can keep the ones they love for good."
+msgstr ""
+
 #: src/data/precision.ts
 msgid "The family found {found} of {verdicts} useful."
 msgstr ""
@@ -4698,6 +4761,7 @@ msgid "The first page is waiting."
 msgstr ""
 
 #: src/components/first-days.tsx
+#: src/components/first-memories.tsx
 msgid "The invitation is waiting in {name}'s chat. One tap, and their mornings begin."
 msgstr ""
 
@@ -4719,6 +4783,14 @@ msgstr ""
 
 #: src/components/nearby-editor.tsx
 msgid "The link opens a chat with Vela Light. Tap Send there."
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "The little things {name} tells you, a recipe, an old story, a photo, gather here so the family never loses them."
+msgstr ""
+
+#: src/components/find-your-way.tsx
+msgid "The little things {name} tells you, kept for the family."
 msgstr ""
 
 #: src/data/memories.ts
@@ -5086,6 +5158,10 @@ msgstr ""
 msgid "Today could not be reached just now."
 msgstr ""
 
+#: src/components/find-your-way.tsx
+msgid "Today is home: {name}'s window and answers. The rest, in one line each:"
+msgstr ""
+
 #: app/(tabs)/index.tsx
 msgid "Today with the family"
 msgstr ""
@@ -5358,6 +5434,10 @@ msgstr ""
 msgid "Vela asks what it makes her think of."
 msgstr ""
 
+#: src/components/first-memories.tsx
+msgid "Vela brings it to {name} in the morning, signed with your name. Ask nothing, and Vela sends a gentle hello."
+msgstr ""
+
 #: app/(tabs)/index.tsx
 #: src/components/today-feed.tsx
 msgid "Vela cannot reach {name} on {channel}"
@@ -5598,6 +5678,7 @@ msgstr ""
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/sunday.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "Week"
 msgstr ""
@@ -5630,6 +5711,14 @@ msgstr ""
 msgid "What {name} will see"
 msgstr ""
 
+#: app/(tabs)/sunday.tsx
+msgid "What {parentName} told the family this week, what came up more than once, and one thing to ask next. The first one comes after {parentName} says yes and answers a week of mornings."
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "What a memory looks like"
+msgstr ""
+
 #: src/data/memories.ts
 msgid "What are you planting this year?"
 msgstr ""
@@ -5638,6 +5727,10 @@ msgstr ""
 #: src/data/exchanges.ts
 #: src/data/today.ts
 msgid "What did the garden look like this morning?"
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "What did your mother cook when you were small?"
 msgstr ""
 
 #: app/personal-question.tsx
@@ -5949,6 +6042,7 @@ msgstr ""
 
 #: app/(tabs)/_layout.tsx
 #: app/(tabs)/you.tsx
+#: src/components/find-your-way.tsx
 msgctxt "tab"
 msgid "You"
 msgstr ""
@@ -5971,6 +6065,10 @@ msgstr ""
 
 #: src/data/useFamily.ts
 msgid "You are the only organiser who is active, and an organiser who is away is not told if it goes quiet. Someone else who organises the family has to be active first."
+msgstr ""
+
+#: src/components/first-memories.tsx
+msgid "You ask one small thing"
 msgstr ""
 
 #: src/components/onboarding/questions.tsx
@@ -6116,6 +6214,10 @@ msgstr ""
 
 #: app/onboarding.tsx
 msgid "Your family stays together when you update Vela."
+msgstr ""
+
+#: src/components/find-your-way.tsx
+msgid "Your family, notifications and privacy."
 msgstr ""
 
 #: app/(tabs)/index.tsx

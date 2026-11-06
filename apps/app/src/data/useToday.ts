@@ -414,9 +414,19 @@ export function todayTrouble(reads: {
  * `?first=yes`), so the first-days guide can be tried; never on a phone or with an API.
  */
 function demoFirstDays(): Today | null {
+  const stage = demoFirstStage();
+  return stage === null ? null : firstDaysFixture(stage);
+}
+
+/**
+ * The first-days stage the web demo's address asks for (`?first=invited` or `?first=yes`), so the
+ * other tabs can show their first-time pages too; null otherwise, and always with an API.
+ */
+export function demoFirstStage(): "invited" | "yes" | null {
+  if (apiConfigured()) return null;
   const search = typeof window === "undefined" ? "" : (window.location?.search ?? "");
   const stage = /[?&]first=(invited|yes)\b/.exec(search)?.[1];
-  return stage === "invited" || stage === "yes" ? firstDaysFixture(stage) : null;
+  return stage === "invited" || stage === "yes" ? stage : null;
 }
 
 /** Each messenger's own name, the same in every language: a brand, never translated. */
