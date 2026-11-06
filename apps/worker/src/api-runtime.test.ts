@@ -638,6 +638,7 @@ describe("the runtime staging's API app runs on", () => {
     expect(await response.json()).toEqual({
       ...runtime.capabilities,
       personal_question_profiles: true,
+      push: runtime.push === true,
     });
   });
   let network: Mock<typeof fetch>;

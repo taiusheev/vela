@@ -476,7 +476,7 @@ describe("disableApiAccount", () => {
     },
   );
 
-  it("erases the profile, keeps the first tombstone, purges only the actor's receipts and challenges", async () => {
+  it("erases the profile and preserves the first tombstone, purges only the actor's receipts and challenges", async () => {
     const seed = await seedFamily(h.db, { now: h.clock.now() });
     const account = ApiUser.parse((await provision()).response.body);
     await update();
@@ -503,16 +503,18 @@ describe("disableApiAccount", () => {
     const others = (await receipts()).filter((row) => row.actorHash === actorHash);
     const timestamp = h.clock.now();
     await disableApiAccount(h.deps, identity.authSubject);
-    expect(
-      await h.db.select().from(users).where(eq(users.authSubject, identity.authSubject)),
-    ).toEqual([
+    expect(await h.db.select().from(users).where(eq(users.id, account.id))).toEqual([
       {
         ...before,
+        deletedAt: timestamp,
+        authSubject: null,
+        deletedAuthSubjectHash: await sha256Hex(identity.authSubject),
         displayName: "",
         email: null,
         phone: null,
+        language: "en",
         tz: "UTC",
-        deletedAt: timestamp,
+        privacyAcceptance: null,
         oneMomentADay: false,
         replyNotifications: false,
         turnReminders: false,
@@ -540,16 +542,18 @@ describe("disableApiAccount", () => {
     expect(await sideEffects()).toEqual(unlinked);
     h.clock.advance(1_000);
     await disableApiAccount(h.deps, identity.authSubject);
-    expect(
-      await h.db.select().from(users).where(eq(users.authSubject, identity.authSubject)),
-    ).toEqual([
+    expect(await h.db.select().from(users).where(eq(users.id, account.id))).toEqual([
       {
         ...before,
+        deletedAt: timestamp,
+        authSubject: null,
+        deletedAuthSubjectHash: await sha256Hex(identity.authSubject),
         displayName: "",
         email: null,
         phone: null,
+        language: "en",
         tz: "UTC",
-        deletedAt: timestamp,
+        privacyAcceptance: null,
         oneMomentADay: false,
         replyNotifications: false,
         turnReminders: false,
@@ -570,9 +574,10 @@ describe("disableApiAccount", () => {
     const savedReceipts = await receipts();
     const before = await sideEffects();
     await disableApiAccount(h.deps, identity.authSubject);
+    const actorHash = await sha256Hex(identity.authSubject);
     const accounts = await h.db.select().from(users).orderBy(users.id);
     expect(accounts).toHaveLength(2);
-    expect(accounts.find((account) => account.authSubject === identity.authSubject)).toMatchObject({
+    expect(accounts.find((account) => account.deletedAuthSubjectHash === actorHash)).toMatchObject({
       displayName: "",
       deletedAt: h.clock.now(),
     });

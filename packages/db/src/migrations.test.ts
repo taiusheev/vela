@@ -174,3 +174,41 @@ describe("0038_invite_token_sealed", { timeout: MIGRATION_TIMEOUT_MS }, () => {
     );
   });
 });
+
+describe("0039_account_erasure", { timeout: MIGRATION_TIMEOUT_MS }, () => {
+  it("minimises historical deleted profiles while preserving live accounts and a denial fingerprint", async () => {
+    const earlier = migrationsUpTo("0038_invite_token_sealed");
+    const client = new PGlite();
+    cleanups.push(() => rmSync(earlier, { recursive: true, force: true }));
+    cleanups.push(() => client.close());
+    const db = drizzle({ client });
+    await migrate(db, { migrationsFolder: earlier });
+    await db.execute(sql`insert into users (auth_subject, display_name, email, phone, language, tz, deleted_at)
+      values ('synthetic|deleted', 'Synthetic deleted name', 'deleted@example.test', '+886900000001', 'zh-TW', 'Asia/Taipei', now()),
+        ('synthetic|live', 'Synthetic live name', 'live@example.test', null, 'zh-TW', 'Asia/Taipei', null)`);
+    await migrate(db, { migrationsFolder });
+    const { rows } = await db.execute(
+      sql`select auth_subject, deleted_auth_subject_hash, display_name, email, phone, language, tz from users order by display_name`,
+    );
+    expect(rows).toEqual([
+      {
+        auth_subject: null,
+        deleted_auth_subject_hash: createHash("sha256").update("synthetic|deleted").digest("hex"),
+        display_name: "",
+        email: null,
+        phone: null,
+        language: "en",
+        tz: "UTC",
+      },
+      {
+        auth_subject: "synthetic|live",
+        deleted_auth_subject_hash: null,
+        display_name: "Synthetic live name",
+        email: "live@example.test",
+        phone: null,
+        language: "zh-TW",
+        tz: "Asia/Taipei",
+      },
+    ]);
+  });
+});

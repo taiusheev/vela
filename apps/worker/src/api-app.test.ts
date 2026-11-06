@@ -585,7 +585,10 @@ describe("pilot capabilities and secure Telegram linking", () => {
 
   it("returns public capabilities without opening a database or checking an identity", async () => {
     const f = fixture(true, false, { capabilities });
-    await expectResponse(await f.app.request("/v1/capabilities"), 200, capabilities);
+    await expectResponse(await f.app.request("/v1/capabilities"), 200, {
+      ...capabilities,
+      push: false,
+    });
     expect(f.verifySession).not.toHaveBeenCalled();
     expect(f.openDatabase).not.toHaveBeenCalled();
     expect((await f.app.request("/v1/capabilities", { method: "HEAD" })).status).toBe(404);

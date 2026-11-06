@@ -42,6 +42,7 @@ import {
   members,
   photoBox,
   photoBoxUses,
+  users,
   type VelaTransaction,
 } from "@vela/db";
 import {
@@ -121,6 +122,7 @@ export async function loadApiPhotoBox(
     .from(photoBox)
     .innerJoin(media, eq(media.id, photoBox.mediaId))
     .leftJoin(members, eq(members.id, photoBox.addedBy))
+    .leftJoin(users, eq(users.id, members.userId))
     .where(eq(photoBox.familyId, access.familyId))
     .orderBy(desc(photoBox.createdAt), desc(photoBox.id));
   const ids = rows.map((row) => row.box.id);
@@ -565,10 +567,14 @@ export async function releaseBoxPhotosOfLeavers(
     .select({ id: photoBox.id, mediaId: photoBox.mediaId })
     .from(photoBox)
     .leftJoin(members, eq(members.id, photoBox.addedBy))
+    .leftJoin(users, eq(users.id, members.userId))
     .where(
       or(
         isNull(photoBox.addedBy),
         isNull(members.id),
+        isNull(members.userId),
+        isNull(users.id),
+        isNotNull(users.deletedAt),
         isNotNull(members.leftAt),
         inArray(members.status, ["left", "deceased"]),
       ),

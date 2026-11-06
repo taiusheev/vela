@@ -204,6 +204,10 @@ export const users = pgTable(
     id: uuidv7Id(),
     /** Id from the auth provider. */
     authSubject: text("auth_subject").unique("users_auth_subject_key"),
+    /** Minimal denial proof after account erasure; never an active provider identity. */
+    deletedAuthSubjectHash: text("deleted_auth_subject_hash").unique(
+      "users_deleted_auth_subject_hash_key",
+    ),
     email: text("email").unique("users_email_key"),
     /** E.164. */
     phone: text("phone").unique("users_phone_key"),

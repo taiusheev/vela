@@ -813,6 +813,7 @@ CREATE TABLE "turns" (
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"auth_subject" text,
+	"deleted_auth_subject_hash" text,
 	"email" text,
 	"phone" text,
 	"display_name" text NOT NULL,
@@ -825,6 +826,7 @@ CREATE TABLE "users" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
 	CONSTRAINT "users_auth_subject_key" UNIQUE("auth_subject"),
+	CONSTRAINT "users_deleted_auth_subject_hash_key" UNIQUE("deleted_auth_subject_hash"),
 	CONSTRAINT "users_email_key" UNIQUE("email"),
 	CONSTRAINT "users_phone_key" UNIQUE("phone"),
 	CONSTRAINT "users_language_check" CHECK ("language" in ('en', 'zh-TW', 'ja', 'de', 'hi', 'ru'))

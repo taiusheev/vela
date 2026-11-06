@@ -115,6 +115,8 @@ export type ApiLinkCompleteInput = z.infer<typeof ApiLinkCompleteInput>;
 
 /** Public capabilities contain only product switches, never account or provider details. */
 export const ApiCapabilities = z.strictObject({
+  /** Content-free availability; readable before a family's approval or account provisioning. */
+  push: z.boolean().optional(),
   pilot: z.boolean(),
   telegram_first: z.boolean(),
   english_only: z.boolean(),
