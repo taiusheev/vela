@@ -95,11 +95,13 @@ export default function AccountScreen() {
                     <Trans>This is the example family, so nobody left.</Trans>
                   </SettingsNote>
                 ) : null}
-                <SettingsNote>
-                  <Trans>
-                    To take a break instead, pause your turns on You. Nothing is deleted.
-                  </Trans>
-                </SettingsNote>
+                {familyName === "" ? null : (
+                  <SettingsNote>
+                    <Trans>
+                      To take a break instead, pause your turns on You. Nothing is deleted.
+                    </Trans>
+                  </SettingsNote>
+                )}
               </>
             }
           >
