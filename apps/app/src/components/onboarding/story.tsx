@@ -164,7 +164,9 @@ export function Story({ step: _step, signedIn }: { step: StoryStep; signedIn: bo
               })
             }
           />
-          {signedIn ? null : (
+          {signedIn ? (
+            <NightButton quiet label={t`Account`} onPress={() => router.push("/account")} />
+          ) : (
             <NightButton
               quiet
               label={t`I already have an account`}

@@ -30,6 +30,7 @@ vi.mock("../api/client.ts", async (original) => ({
   provisionAccount: (...args: unknown[]) => mocks.provision(...args),
 }));
 vi.mock("./light.tsx", () => ({ Light: () => null }));
+vi.mock("./delete-account.tsx", () => ({ DeleteAccountBody: "delete-account-body" }));
 vi.mock("../auth/clerk.tsx", () => ({
   useAccount: () => ({
     ready: true,
@@ -180,6 +181,71 @@ describe("a family waiting for approval", () => {
     expect(
       nodes("primary-button").some((node) => node.props.label === "Back to the invitation"),
     ).toBe(false);
+  });
+
+  it("opens deletion and returns to waiting without mounting any family screen", async () => {
+    waitingRead();
+    mocks.segments = ["(tabs)"];
+    await open();
+    const remove = nodes("text-button").find((node) => node.props.label === "Delete account");
+    expect(remove).toBeDefined();
+    await act(async () => remove?.props.onPress());
+    expect(nodes("delete-account-body")).toHaveLength(1);
+    expect(nodes("navigator")).toHaveLength(0);
+    expect(nodes("delete-account-body")[0]?.props.navigateAfterDeletion).toBe(false);
+    await act(async () => nodes("delete-account-body")[0]?.props.onBack());
+    expect(nodes("delete-account-body")).toHaveLength(0);
+    expect(nodes("navigator")).toHaveLength(0);
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("deletion without a new privacy agreement", () => {
+  const unacceptedRead = () => {
+    mocks.read.mockResolvedValue({
+      user: { id: "synthetic-user", display_name: "Synthetic", language: "en", tz: "Asia/Taipei" },
+      memberships: [],
+      privacy_accepted: false,
+    });
+    mocks.provision.mockResolvedValue({ id: "synthetic-user" });
+  };
+
+  it("opens and cancels deletion from the agreement screen without accepting anything", async () => {
+    unacceptedRead();
+    await open();
+    const remove = nodes("text-button").find((node) => node.props.label === "Delete account");
+    expect(remove).toBeDefined();
+    await act(async () => remove?.props.onPress());
+    expect(nodes("delete-account-body")).toHaveLength(1);
+    await act(async () => updateDraft({ privacyAccepted: true }));
+    expect(mocks.provision).not.toHaveBeenCalled();
+    expect(queries.getQueryData(["me"])).toMatchObject({ privacy_accepted: false });
+    expect(nodes("navigator")).toHaveLength(0);
+    await act(async () => updateDraft({ privacyAccepted: false }));
+    await act(async () => nodes("delete-account-body")[0]?.props.onBack());
+    expect(nodes("delete-account-body")).toHaveLength(0);
+    expect(nodes("primary-button").some((node) => node.props.label === "Agree and continue")).toBe(
+      true,
+    );
+    expect(mocks.provision).not.toHaveBeenCalled();
+  });
+
+  it("keeps a cold deletion route accessible without automatically saving a local privacy choice", async () => {
+    unacceptedRead();
+    mocks.segments = ["delete-account"];
+    updateDraft({ privacyAccepted: true });
+    await open();
+    expect(nodes("navigator")).toHaveLength(1);
+    expect(mocks.provision).not.toHaveBeenCalled();
+    expect(queries.getQueryData(["me"])).toMatchObject({ privacy_accepted: false });
+  });
+
+  it("allows only the deletion route while family approval is pending", async () => {
+    mocks.read.mockRejectedValue(new ApiError(403, "forbidden", { reason: "family_waiting" }));
+    mocks.segments = ["delete-account"];
+    await open();
+    expect(nodes("navigator")).toHaveLength(1);
+    expect(mocks.provision).not.toHaveBeenCalled();
   });
 });
 
