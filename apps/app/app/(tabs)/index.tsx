@@ -8,6 +8,7 @@ import { apiConfigured, withdrawAsk } from "../../src/api/client.ts";
 import { useIdempotencyKey } from "../../src/api/idempotency.ts";
 import { accountsConfigured, useAccount } from "../../src/auth/clerk.tsx";
 import { FamilyChooser } from "../../src/components/family-chooser.tsx";
+import { FindYourWay } from "../../src/components/find-your-way.tsx";
 import { FirstDaysGuide } from "../../src/components/first-days.tsx";
 import { LightOnMoment } from "../../src/components/light-on.tsx";
 import { LoadingShapes } from "../../src/components/loading-shapes.tsx";
@@ -466,6 +467,7 @@ function FamilyToday({ day }: { day: TodayView }) {
             }
           />
         ) : null}
+        {firstDays && target !== undefined ? <FindYourWay name={recipient} /> : null}
         {/* What she said is coming up (a doctor's visit, a trip), right under her answer: it is this
           week's, and it asks the reader to act, so it leads the page instead of closing it
           (founder, 26 October 2026). Memories stays the keepsake shelf. */}

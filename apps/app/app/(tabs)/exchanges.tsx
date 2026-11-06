@@ -1,9 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
+import { apiConfigured } from "../../src/api/client.ts";
 import { ScreenHeading } from "../../src/components/brand/experience.tsx";
 import { BrandIcon } from "../../src/components/brand/icon.tsx";
+import { FirstMemories } from "../../src/components/first-memories.tsx";
 import {
   BookCover,
   type KeepState,
@@ -16,6 +18,7 @@ import { Text } from "../../src/components/scaled-text.tsx";
 import { SectionTitle } from "../../src/components/today-hero.tsx";
 import { Chip, SecondaryButton, Words } from "../../src/components/ui.tsx";
 import { WarmPage } from "../../src/components/warm.tsx";
+import { askRecipient, canAsk } from "../../src/data/ask-target.ts";
 import { localDateIn } from "../../src/data/chat.ts";
 import { listOf, localDayMonth } from "../../src/data/format.ts";
 import {
@@ -30,7 +33,7 @@ import { type KeepRefusal, useBook } from "../../src/data/useBook.ts";
 import { useCapabilities } from "../../src/data/useCapabilities.ts";
 import { useExchanges } from "../../src/data/useExchanges.ts";
 import { usePullRefresh } from "../../src/data/usePullRefresh.ts";
-import { useToday } from "../../src/data/useToday.ts";
+import { demoFirstStage, useToday } from "../../src/data/useToday.ts";
 import { usePalette } from "../../src/theme/theme.tsx";
 import { hitSlop, radius, softShadow, space, type } from "../../src/theme/tokens.ts";
 
@@ -75,7 +78,11 @@ export default function MemoriesScreen() {
     not_kept: t`This one was taken out of the book, so it is not kept again.`,
     no_answer: t`There is nothing to keep here yet.`,
   };
-  const { memories, stories } = memoriesOf(book, exchanges);
+  // The web demo's first days (`?first=yes`) show the page a new family sees: nothing yet.
+  const firstDemo = demoFirstStage() !== null;
+  const { memories, stories } = firstDemo
+    ? { memories: [], stories: [] }
+    : memoriesOf(book, exchanges);
   const stateOf = (id: string, kept: boolean): KeepState =>
     kept || book.keptIds.has(id) ? "kept" : book.keepingIds.has(id) ? "keeping" : "open";
   const names = day.today.lights.map((light) => light.displayName);
@@ -108,8 +115,9 @@ export default function MemoriesScreen() {
           : t`Week of ${date}`;
     return { monday, label, items };
   });
-  const keptCount = new Set([...book.entries.map((entry) => entry.exchange_id), ...book.keptIds])
+  const keptCountAll = new Set([...book.entries.map((entry) => entry.exchange_id), ...book.keptIds])
     .size;
+  const keptCount = firstDemo ? 0 : keptCountAll;
   const filters = (
     [
       { key: "open", label: t`To keep` },
@@ -189,6 +197,18 @@ export default function MemoriesScreen() {
         ) : null}
       </View>
     ) : null;
+  const target = askRecipient(day.today.lights);
+  // Nothing to sort yet: the page explains how memories arrive instead of showing empty shelves,
+  // tabs and filters (founder, 6 November 2026; Refactoring UI: empty states are first impressions).
+  const fresh =
+    !trouble &&
+    !loading &&
+    !book.loading &&
+    (live || firstDemo) &&
+    memories.length === 0 &&
+    stories.length === 0 &&
+    keptCount === 0 &&
+    target !== undefined;
   const waiting = trouble ? (
     <View style={{ gap: space.m }}>
       <Words variant="body" tone="ink2">
@@ -207,18 +227,35 @@ export default function MemoriesScreen() {
     >
       <ScreenHeading
         title={<Trans context="tab">Memories</Trans>}
-        subtitle={
-          canKeep ? (
-            <Trans>Little things worth remembering, from {who}. Keep the ones you love.</Trans>
-          ) : (
-            <Trans>Little things worth remembering, from {who}.</Trans>
-          )
-        }
+        {...(fresh
+          ? {}
+          : {
+              subtitle: canKeep ? (
+                <Trans>Little things worth remembering, from {who}. Keep the ones you love.</Trans>
+              ) : (
+                <Trans>Little things worth remembering, from {who}.</Trans>
+              ),
+            })}
       />
-      {bookOn ? (
+      {fresh && target !== undefined ? (
+        <FirstMemories
+          name={target.displayName}
+          invited={target.invited === true}
+          canKeep={canKeep}
+          onAsk={
+            canAsk(target) && !(apiConfigured() && !live)
+              ? () => router.push({ pathname: "/ask", params: { recipient: target.memberId } })
+              : undefined
+          }
+          onInvitation={() =>
+            router.push({ pathname: "/parent-settings", params: { member: target.memberId } })
+          }
+        />
+      ) : null}
+      {bookOn && !fresh ? (
         <BookCover kept={keptCount} stories={stories.filter((s) => s.kept).length} />
       ) : null}
-      {bookOn ? (
+      {bookOn && !fresh ? (
         <View
           accessibilityRole="tablist"
           style={{
@@ -269,7 +306,7 @@ export default function MemoriesScreen() {
           ))}
         </View>
       ) : null}
-      {filterRow}
+      {fresh ? null : filterRow}
 
       {section === "stories" && bookOn ? (
         <View style={{ gap: space.m }}>
@@ -341,7 +378,7 @@ export default function MemoriesScreen() {
             </View>
           ) : null}
           {waiting}
-          {waiting === null && live && mine.length === 0 ? (
+          {fresh ? null : waiting === null && live && mine.length === 0 ? (
             <Words variant="body" tone="ink2">
               <Trans>
                 No memories yet. When {who} tells you something worth remembering, it appears here.
