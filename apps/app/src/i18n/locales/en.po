@@ -815,6 +815,7 @@ msgstr "Accepted for delivery. This is not a read receipt."
 
 #: app/(tabs)/you.tsx
 #: app/account.tsx
+#: src/components/onboarding/story.tsx
 msgid "Account"
 msgstr "Account"
 
@@ -1144,6 +1145,7 @@ msgstr "Away until {awayUntil}"
 
 #: app/my-memories.tsx
 #: src/components/back-button.tsx
+#: src/components/delete-account.tsx
 #: src/components/onboarding/questions.tsx
 msgid "Back"
 msgstr "Back"
@@ -1376,7 +1378,7 @@ msgstr "Close notifications"
 msgid "Close quiet notice"
 msgstr "Close quiet notice"
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Close Vela and open it again to finish signing out on this phone."
 msgstr "Close Vela and open it again to finish signing out on this phone."
 
@@ -1509,22 +1511,24 @@ msgstr "Day 30"
 
 #: app/account.tsx
 #: app/delete-account.tsx
+#: src/components/app-privacy.tsx
+#: src/components/delete-account.tsx
 msgid "Delete account"
 msgstr "Delete account"
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Delete my account"
 msgstr "Delete my account"
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Delete your account?"
 msgstr "Delete your account?"
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Deleting your account removes your sign-in, this phone's notifications and your place in each family. Thirty days on, what is kept about you in a family is deleted."
 msgstr "Deleting your account removes your sign-in, this phone's notifications and your place in each family. Thirty days on, what is kept about you in a family is deleted."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Deleting…"
 msgstr "Deleting…"
 
@@ -2207,7 +2211,7 @@ msgstr "If Vela cannot find your family, check you are using your own account. A
 msgid "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
 msgstr "If you agree, Vela can suggest little things worth remembering from your own new answers. Only you see them, and you choose what to keep."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "If you are a family's only organiser, or Vela keeps your own light, you stay in that family in your messenger, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 msgstr "If you are a family's only organiser, or Vela keeps your own light, you stay in that family in your messenger, so nobody is left without being told. To leave it too, say stop there or ask another member to organise first."
 
@@ -2364,7 +2368,7 @@ msgstr "Keep it practical"
 msgid "Keep it short, like a message you would send yourself."
 msgstr "Keep it short, like a message you would send yourself."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Keep my account"
 msgstr "Keep my account"
 
@@ -4218,7 +4222,7 @@ msgstr "Sign in as family"
 msgid "Sign in to connect your family."
 msgstr "Sign in to connect your family."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Sign in to delete your account."
 msgstr "Sign in to delete your account."
 
@@ -4971,7 +4975,7 @@ msgstr "They will no longer receive requests to look in. You can invite someone 
 msgid "This account already runs a family."
 msgstr "This account already runs a family."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "This cannot be undone."
 msgstr "This cannot be undone."
 
@@ -5541,7 +5545,7 @@ msgstr "Vela status"
 msgid "Vela status is unavailable. Try again shortly."
 msgstr "Vela status is unavailable. Try again shortly."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Vela still writes to you in your messenger in a family where you are the only organiser or have your own light. Say stop there to end it."
 msgstr "Vela still writes to you in your messenger in a family where you are the only organiser or have your own light. Say stop there to end it."
 
@@ -5943,7 +5947,7 @@ msgstr "Words & sayings"
 msgid "Words you would never use"
 msgstr "Words you would never use"
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 msgstr "Words, photos and voice messages you sent stay with the family, as they are part of their days."
 
@@ -6134,7 +6138,7 @@ msgstr "You will stop receiving turns. You can resume whenever you are ready."
 msgid "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 msgstr "You will stop seeing the family's days and taking turns. Thirty days on, what is kept about you is deleted."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Your account could not be deleted just now. Nothing was changed. Try again."
 msgstr "Your account could not be deleted just now. Nothing was changed. Try again."
 
@@ -6142,7 +6146,7 @@ msgstr "Your account could not be deleted just now. Nothing was changed. Try aga
 msgid "Your account could not be reached. Your privacy choice has not changed."
 msgstr "Your account could not be reached. Your privacy choice has not changed."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Your account is deleted."
 msgstr "Your account is deleted."
 
@@ -6381,7 +6385,7 @@ msgstr "Your schedule could not be loaded. Your saved questions are unchanged."
 msgid "Your sign-in expired. Sign in again to finish connecting."
 msgstr "Your sign-in expired. Sign in again to finish connecting."
 
-#: app/delete-account.tsx
+#: src/components/delete-account.tsx
 msgid "Your sign-in has expired. Sign in again, then delete your account."
 msgstr "Your sign-in has expired. Sign in again, then delete your account."
 

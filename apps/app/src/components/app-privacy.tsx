@@ -26,6 +26,7 @@ import { readDraft, updateDraft, useOnboardingDraft } from "../data/onboarding-d
 import { retryAccountRead } from "../data/query-client.ts";
 import { usePalette } from "../theme/theme.tsx";
 import { space } from "../theme/tokens.ts";
+import { DeleteAccountBody } from "./delete-account.tsx";
 import { LegalLinks } from "./legal-links.tsx";
 import { Light } from "./light.tsx";
 import { LoadingLight } from "./loading-light.tsx";
@@ -83,11 +84,13 @@ export function PrivacySummary() {
 export function AppPrivacy({
   onAccept,
   onDecline,
+  onDelete,
   working = false,
   failed = false,
 }: {
   onAccept: () => void;
   onDecline: () => void;
+  onDelete?: () => void;
   working?: boolean;
   failed?: boolean;
 }) {
@@ -124,6 +127,9 @@ export function AppPrivacy({
           onPress={onAccept}
         />
         <TextButton label={t`Not now`} disabled={working} onPress={onDecline} />
+        {onDelete === undefined ? null : (
+          <TextButton label={t`Delete account`} disabled={working} onPress={onDelete} />
+        )}
       </View>
     </ScrollView>
   );
@@ -150,7 +156,10 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   const { t, i18n } = useLingui();
   const palette = usePalette();
   const draft = useOnboardingDraft();
-  const onOnboarding = useSegments()[0] === "onboarding";
+  const route = useSegments()[0];
+  const onOnboarding = route === "onboarding";
+  const onDeletion = route === "delete-account";
+  const [deleting, setDeleting] = useState(false);
   const queries = useQueryClient();
   const mounted = useRef(true);
   useEffect(() => {
@@ -236,8 +245,14 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   }, [waitingAttempt]);
   const saveChoice = save.mutate;
   useEffect(() => {
-    if (decision === "save" && save.status === "idle") saveChoice();
-  }, [decision, save.status, saveChoice]);
+    if (!deleting && !onDeletion && decision === "save" && save.status === "idle") saveChoice();
+  }, [deleting, onDeletion, decision, save.status, saveChoice]);
+  // Deletion needs only this identity, never a new privacy agreement or an approved family.
+  // Waiting gates precede the navigator, so open the shared body directly rather than queueing
+  // a route against an unmounted Stack. No family screen mounts behind this choice.
+  if (enabled && deleting)
+    return <DeleteAccountBody onBack={() => setDeleting(false)} navigateAfterDeletion={false} />;
+  if (enabled && onDeletion) return children;
   if (decision === "pass") return children;
   // A family set up in the app finishes onboarding while it waits: its own screen says so, beside
   // the invitation that opens once the founder approves (ADR-52 amended). Only on that screen:
@@ -255,6 +270,7 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
         checking={me.isFetching}
         onCheck={() => void retryAccountRead(queries)}
         onSignOut={() => void account.signOut()}
+        onDelete={() => setDeleting(true)}
       />
     );
   const decline = () => {
@@ -264,7 +280,11 @@ function ScopedPrivacyGate({ children }: { children: ReactNode }) {
   return (
     <View style={{ flex: 1, backgroundColor: palette.bg }}>
       {decision === "ask" ? (
-        <AppPrivacy onAccept={acceptLocalPrivacy} onDecline={decline} />
+        <AppPrivacy
+          onAccept={acceptLocalPrivacy}
+          onDecline={decline}
+          onDelete={() => setDeleting(true)}
+        />
       ) : (
         <ScrollView
           style={{ flex: 1, backgroundColor: palette.bg }}
@@ -321,12 +341,14 @@ function FamilyWaiting({
   checking,
   onCheck,
   onSignOut,
+  onDelete,
 }: {
   /** Back to the invitation, when this session's setup still has it open. */
   onReturn: (() => void) | undefined;
   checking: boolean;
   onCheck: () => void;
   onSignOut: () => void;
+  onDelete: () => void;
 }) {
   const { t } = useLingui();
   const palette = usePalette();
@@ -369,6 +391,7 @@ function FamilyWaiting({
           onPress={onCheck}
         />
         <TextButton label={t`Sign out`} onPress={onSignOut} />
+        <TextButton label={t`Delete account`} onPress={onDelete} />
       </View>
     </ScrollView>
   );
