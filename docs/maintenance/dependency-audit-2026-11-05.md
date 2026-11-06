@@ -1,5 +1,7 @@
 # Dependency repair receipt — 5 November 2026
 
+Follow-up: [6 November remaining-audit repairs](remaining-audit-2026-11-06.md) replaces the remaining dependency inventory below. This file preserves the first repair snapshot.
+
 This is a maintenance change, following the whole-app audit. The counts below are the active pnpm workspace. GitHub separately reported 13 alerts in the archived phase-0 prototype’s lockfile. Its supported dependency refresh is included too: npm audit goes from 5 vulnerable package entries to 0; its local typecheck and build-only dry run pass. No archived Worker or database was deployed. It adds no collection, recipients, permissions, feature switches, or production release.
 
 The active workspace registry audit fell from **55 advisories (26 high, 24 moderate, 5 low)** to **11 (2 high, 8 moderate, 1 low)**. These counts describe dependency advisories, not demonstrated Vela exploits. The audit still exits nonzero; this change does not suppress its remaining findings.

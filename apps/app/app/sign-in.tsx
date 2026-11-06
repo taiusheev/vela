@@ -1,4 +1,4 @@
-import { useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useSignIn, useSignUp } from "@clerk/expo/legacy";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { getLocales } from "expo-localization";
 import { router, Stack } from "expo-router";

@@ -1,6 +1,6 @@
 # Restore drill
 
-18 September 2026 · architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
+18 September 2026; acceptance gates added 6 November 2026 · architecture §13 (quarterly drill) · build plan 2.8 (drill #1) and 5.7 (drill #2) · done by the founder, because the restored copy holds real family data
 
 ## When to use it
 
@@ -13,6 +13,8 @@ Before starting, note the restore window: Neon's Free plan keeps at most 6 hours
 Every step runs in the Neon project `vela`, production's own project, on its default branch (database `neondb`; Neon names it `production` in a project created in the console), called the default branch below; staging has its own project, `vela-staging`, which this drill never touches (`infra/README.md`, section 2). The restored branch is a full copy of production. Only the founder connects to it, queries return counts and identifiers only, nothing is exported or screenshotted, and it is deleted the same day.
 
 ## Steps
+
+The comparison below proves that a historical copy can be read. It does not establish that it is safe to resume delivery from that copy. Apply the [real-restore acceptance gates](#before-any-real-restore) before any recovered database is connected to active Workers.
 
 1. **Record T0 and counts on the default branch.** In the Neon console, project `vela`, **SQL Editor**, the default branch:
 
@@ -89,3 +91,16 @@ Engineering verifies the new branch's project, parent, recovery point, and compu
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-05 — correctness and cleanup complete; timing target missed | `vela-staging`, `production` (`br-odd-mud-b3lnl35f`) | Free, 6 hours | `2026-10-04T17:02:00Z` | Yes, all 10 tables | No differences | Hash `57e54df9d7cee33c61c595413d07a8b7f7e97a5f99712ed1e899a4b38997cd34`; `exchanges_one_per_day` and `outbound_budget_idx` definitions matched, both unique/valid/ready | `opens`, one restored value | 2/2 present; metadata and recorded sizes matched | 8h 58m (32,280 s), creation start `2026-10-04T17:09:19Z` to verification `2026-10-05T02:07:19.468Z`; target missed | Yes, same day; Neon branch list contains only the original staging branch | Verified: environment-only, helper exited, lock absent, no temporary environment files | Engineering; founder enters private credentials |
 | 2026-10-05/06 — staging rehearsal passed | `vela-staging`, `production` (`br-odd-mud-b3lnl35f`) | Free, 6 hours | `2026-10-05T07:09:00Z` | Yes, all 10 tables | No differences | Hash `57e54df9d7cee33c61c595413d07a8b7f7e97a5f99712ed1e899a4b38997cd34`; `exchanges_one_per_day` and `outbound_budget_idx` definitions matched, both unique/valid/ready | `opens`, one restored value | 2/2 present; metadata and recorded sizes matched | 3m 44s (224 s), creation start `2026-10-05T07:15:04.900Z` to verification `2026-10-05T07:18:49.248Z`; target met | Yes, next morning with founder approval (`2026-10-06T02:10:55Z`); Neon branch list contains only `production` | Verified: environment-only, helper exited, lock absent, no temporary environment files | Engineering; founder enters private credentials |
+
+
+## Before any real restore
+
+A recovery point predates some deletions and consent withdrawals. Counts matching that old point do not prove erasure. A database restore also cannot bring back an R2 object that was already deleted.
+
+1. **Keep the recovered copy isolated.** Before any cutover, engineering stops scheduled sends, webhook processing and queue/recovery replay through the existing incident procedure. The historical copy has no active Worker connection or messaging route. Record the recovery point and the potentially lost interval. Do not perform these production operations without the founder's scoped approval.
+2. **Recover the later privacy decisions.** Preserve the latest reliable deletion proofs, account-denial fingerprints, withdrawal evidence and outstanding data requests before replacing any source database. Establish which decisions occurred after the recovery point. Use the existing erasure/withdrawal services to reconcile them on the isolated copy; a count comparison and migration alone cannot do this. Never log or export family words, raw authentication references, phone numbers, messaging ids or credentials as evidence. If the later decisions cannot be recovered reliably, keep delivery disabled and agree a safe recovery plan with the founder before proceeding.
+3. **Catch up retention and outstanding recovery work.** Apply the current migrations, including the account-erasure backfill. Run retention against the recovered copy with delivery disabled. Confirm deleted profiles stay minimised, contributed photos stay removed/expiring, orphaned failed-message events are dropped, and overdue weekly private text is cleared. Discard stale scheduled/outbound work rather than sending an old question after recovery. Rehearse these checks with synthetic staging fixtures first; do not seed production just to obtain evidence.
+4. **Verify the actual backup lifetime.** In the correct Neon project, record the configured restore window and inventory of restore branches/clones. The current notice promises at most 7 days of restore history. An old branch is a separate retained copy; a history-window setting by itself does not demonstrate its deletion. Account for all temporary copies and confirm approved drill copies are deleted. If the configured window or a copy exceeds the notice, keep the discrepancy open and resolve it before claiming backup erasure. Do not change billing plans or shorten recovery history as an incidental test step.
+5. **Approve resuming delivery separately.** Record the migration, key/decryption result, privacy reconciliation, retention results, media reconciliation, branch cleanup and remaining uncertainty. Confirm fresh consent and current membership still gate the recovered account/family paths. The founder approves the production cutover and resumption; engineering verifies the public protection checks afterwards. A readable backup, or a successful local test, is not that approval or proof of production erasure.
+
+No production restore or current backup-window verification is claimed by adding these gates. They make the remaining evidence explicit.
