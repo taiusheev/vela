@@ -32,7 +32,8 @@ import { followAppFocus } from "../src/data/app-focus.ts";
 import { AskOutcomeProvider } from "../src/data/ask-outcome.tsx";
 import { FamilySelectionProvider } from "../src/data/family-selection.tsx";
 import { sessionScope } from "../src/data/live-state.ts";
-import { activateOnboardingSession, readDraft } from "../src/data/onboarding-draft.ts";
+import { readDraft } from "../src/data/onboarding-draft.ts";
+import { OnboardingSession } from "../src/data/onboarding-session.tsx";
 import { clearPhotoCache } from "../src/data/photos.ts";
 import { createSessionQueries } from "../src/data/query-client.ts";
 import { readDeviceToken } from "../src/device/token.ts";
@@ -115,11 +116,12 @@ function AccountQueries({ children }: { children: ReactNode }) {
       previousScope.current = scope;
     }
   }, [scope]);
-  activateOnboardingSession(account.signedIn ? scope : "guest");
   return (
-    <SessionQueries key={scope} scope={scope}>
-      {children}
-    </SessionQueries>
+    <OnboardingSession scope={account.signedIn ? scope : "guest"}>
+      <SessionQueries key={scope} scope={scope}>
+        {children}
+      </SessionQueries>
+    </OnboardingSession>
   );
 }
 
