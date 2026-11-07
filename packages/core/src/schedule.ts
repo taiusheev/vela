@@ -27,6 +27,8 @@ export const SCHEDULE = {
   waitMinutes: 120,
   turnPromptTime: "19:00",
   prepareTime: "22:00",
+  /** A message from her from this time on the evening before a morning counts as overnight. */
+  nightFromTime: "22:00",
   weeklyReadTime: "18:00",
   weeklyReadWeekday: 0,
 } as const;
@@ -98,6 +100,14 @@ export interface DayState {
   deliveryFailed: boolean;
   answeredAt: Date | null;
   repeatSentAt: Date | null;
+  /**
+   * She wrote to Vela overnight: a message of hers arrived from `nightFromTime` on the evening
+   * before this date until the day's morning went out (or until now, before it has). A message
+   * after midnight already answers the day (flows §3.9); one from the evening counts for the day
+   * before. Either way she was up and writing, so the morning still goes and still waits for her,
+   * but no repeat follows it (flows §3.8).
+   */
+  wroteOvernight: boolean;
   quiet: null | {
     openedAt: Date;
     lastNotifiedAt: Date | null;
@@ -215,6 +225,7 @@ function dayOf(ctx: Context, date: LocalDate): DayState {
       deliveryFailed: false,
       answeredAt: null,
       repeatSentAt: null,
+      wroteOvernight: false,
       quiet: null,
     }
   );
@@ -355,7 +366,7 @@ function awayAt(ctx: Context, day: DayState, threshold: Date): boolean {
 }
 
 function repeatRule(ctx: Context, day: DayState, deliveredAt: Date, out: Collector): void {
-  if (day.repeatSentAt !== null) {
+  if (day.repeatSentAt !== null || day.wroteOvernight) {
     return;
   }
   const repeatAt = addMinutes(
