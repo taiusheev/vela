@@ -15,7 +15,7 @@ import { authorizeFamilyAccess, type SessionIdentity } from "./api-access.ts";
 import { type AfterCommit, nothingAfterCommit } from "./api-after-commit.ts";
 import { ApiIdempotencyError, runApiMutation } from "./api-idempotency.ts";
 import { sharedWith } from "./api-media.ts";
-import { arrivalChannelOf } from "./arrivals.ts";
+import { arrivalChannelOf, inAskersWords } from "./arrivals.ts";
 import { canBeAsked, canWaitForHerYes } from "./askable.ts";
 import type { Deps } from "./deps.ts";
 import { VelaError } from "./errors.ts";
@@ -443,7 +443,7 @@ export async function composeApiAsk(
             exchangeId: exchange.id,
             lang: locked.language,
             // A message from her child reads as one: their words, signed with their name.
-            text: `${ask.text}\n${t(locked.language, "arrival.signed", { asker: asker.displayName })}`,
+            ...inAskersWords(channel, locked.language, ask.text, asker),
             ref: { purpose: "arrival", exchangeId: exchange.id },
             effect: { exchangeId: exchange.id },
           });

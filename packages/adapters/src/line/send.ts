@@ -25,7 +25,9 @@ import type {
   LineMessageObject,
   LinePostbackAction,
   LineQuickReplyItem,
+  LineSender,
 } from "./client.ts";
+import { type Face, faceOf } from "./face/face.ts";
 import { CONVERSATION_ID, USER_ID } from "./ids.ts";
 import { mediaTypeOf } from "./media.ts";
 import { lineRetryKey } from "./retry-key.ts";
@@ -38,6 +40,15 @@ const FLEX_LABEL_GRAPHEMES = 40;
 /** Counted in UTF-16 code units, as LINE counts every field but labels and `displayText`. */
 const MAX_ALT_TEXT_UNITS = 1_500;
 const MAX_MEDIA_URL_LENGTH = 2_000;
+/** LINE's limit on a sender's name, which it follows with "from" and the account's name. */
+const SENDER_NAME_UNITS = 20;
+/**
+ * LINE refuses some sender names ("certain words such as LINE"), naming the field in its answer.
+ * Such a message is sent again as the account's own, under keys of its own: a refused request
+ * sent nothing, and the plain body differs, so it may not reuse the first keys.
+ */
+const SENDER_REFUSED = /\.sender\b/;
+const PLAIN_KEY_SUFFIX = "#plain";
 /** LINE says "MB"; the decimal reading is the smaller, so it is the one that always fits. */
 const MAX_IMAGE_BYTES = 10_000_000;
 const MAX_PREVIEW_BYTES = 1_000_000;
@@ -86,6 +97,12 @@ export interface LinePlan {
 export type LineMediaUrl = (ref: { storageKey: string; mime: string }) => Promise<string>;
 
 /**
+ * The Worker's URL of a face picture (`face-route.ts`), or undefined when it cannot draw that face,
+ * so the message goes under the name alone.
+ */
+export type LineFaceUrl = (face: Face) => string | undefined;
+
+/**
  * The message with each stored file named by its signed URL, where the adapter was given a way to
  * sign them; a file already named by a URL, or with no storage key, is left as it is.
  */
@@ -108,6 +125,7 @@ export async function sendLineMessage(
   client: LineClient,
   message: OutboundMessage,
   mediaUrl?: LineMediaUrl,
+  faceUrl?: LineFaceUrl,
 ): Promise<SendResult> {
   const checked = OutboundMessage.safeParse(message);
   if (!checked.success) {
@@ -124,8 +142,27 @@ export async function sendLineMessage(
 
   // Everything that can be refused locally is refused while planning, before the first request,
   // so a bad message never leaves half of itself delivered.
-  const plan = planLineRequests(outbound);
-  const ids = await deliver(client, outbound, plan.requests);
+  const plan = planLineRequests(outbound, faceUrl);
+  let ids: string[];
+  try {
+    ids = await deliver(client, outbound, plan.requests, outbound.idempotencyKey);
+  } catch (error) {
+    if (
+      outbound.from === undefined ||
+      !(error instanceof ChannelSendError) ||
+      error.code !== "invalid_request" ||
+      !SENDER_REFUSED.test(error.message)
+    ) {
+      throw error;
+    }
+    const plain = planLineRequests({ ...outbound, from: undefined });
+    ids = await deliver(
+      client,
+      outbound,
+      plain.requests,
+      `${outbound.idempotencyKey}${PLAIN_KEY_SUFFIX}`,
+    );
+  }
   const primaryMessageId = ids[plan.textIndex];
   if (primaryMessageId === undefined) {
     throw new ChannelSendError("unknown", "line returned no id for the text message");
@@ -134,7 +171,7 @@ export async function sendLineMessage(
 }
 
 /** The requests a message becomes. Throws `invalid_request` for anything LINE would refuse. */
-export function planLineRequests(message: OutboundMessage): LinePlan {
+export function planLineRequests(message: OutboundMessage, faceUrl?: LineFaceUrl): LinePlan {
   const media = (message.media ?? []).map(mediaObject);
   const buttons = (message.buttons ?? []).flat();
   const persistent =
@@ -149,7 +186,10 @@ export function planLineRequests(message: OutboundMessage): LinePlan {
       ? { type: "text", text: message.text }
       : { type: "text", text: message.text, quickReply: { items: buttons.map(quickReplyItem) } };
   // LINE quotes by quote token, which Vela does not keep, so `replyToMessageId` is not sent.
-  const objects = [...media, text, ...(persistent ? [buttonBubble(buttons)] : [])];
+  const sender = senderOf(message, faceUrl);
+  const objects = [...media, text, ...(persistent ? [buttonBubble(buttons)] : [])].map(
+    (object): LineMessageObject => (sender === undefined ? object : { ...object, sender }),
+  );
   const requests: LineMessageObject[][] = [];
   for (let start = 0; start < objects.length; start += MAX_OBJECTS_PER_REQUEST) {
     requests.push(objects.slice(start, start + MAX_OBJECTS_PER_REQUEST));
@@ -172,6 +212,7 @@ async function deliver(
   client: LineClient,
   outbound: OutboundMessage,
   requests: readonly (readonly LineMessageObject[])[],
+  keyBase: string,
 ): Promise<string[]> {
   const [only, ...more] = requests;
   if (outbound.replyToken !== undefined && only !== undefined && more.length === 0) {
@@ -181,7 +222,7 @@ async function deliver(
   }
   const ids: string[] = [];
   for (const [index, messages] of requests.entries()) {
-    const retryKey = await lineRetryKey(outbound.idempotencyKey, index);
+    const retryKey = await lineRetryKey(keyBase, index);
     ids.push(...(await client.push({ to: outbound.to.conversationId, messages }, retryKey)));
   }
   return ids;
@@ -290,6 +331,23 @@ function postback(button: Button, maxLabelGraphemes: number): LinePostbackAction
     data: button.id,
     displayText: button.label,
   };
+}
+
+/**
+ * Who the message is shown as from: the family member it speaks for, by name and face, on every
+ * object it becomes, so her photo and her words sit under the same face. A name LINE would refuse
+ * leaves the message under the account's own (`SENDER_REFUSED`), as one with no `from` is.
+ */
+function senderOf(
+  message: OutboundMessage,
+  faceUrl: LineFaceUrl | undefined,
+): LineSender | undefined {
+  if (message.from === undefined) return undefined;
+  const name = fitUnits(message.from.name.trim(), SENDER_NAME_UNITS);
+  if (name.length === 0) return undefined;
+  const face = faceOf(message.from);
+  const iconUrl = face === null ? undefined : faceUrl?.(face);
+  return iconUrl === undefined ? { name } : { name, iconUrl };
 }
 
 /** Cuts text to LINE's limit in UTF-16 code units, never inside a grapheme, so no emoji is split. */

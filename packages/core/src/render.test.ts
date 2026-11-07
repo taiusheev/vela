@@ -246,6 +246,21 @@ describe("renderArrival in English", () => {
     expect(paragraphs(onBehalf)[1]).toBe(gone);
   });
 
+  it("leaves out the signature when the channel shows the asker beside the message", () => {
+    const shown = render({ shownAsAsker: true });
+    expect(paragraphs(shown)[1]).toBe("What did you cook today?");
+    expect(paragraphs(render())[1]).toBe(
+      `What did you cook today?\n${t("en", "arrival.signed", { asker: "Mia" })}`,
+    );
+  });
+
+  it("keeps the signature of an ask made on behalf of someone, even when shown as the asker", () => {
+    const shown = render({ shownAsAsker: true, ask: question({ onBehalfOf: "Leo" }) });
+    expect(paragraphs(shown)[1]).toBe(
+      `What did you cook today?\n${t("en", "arrival.signed_on_behalf", { asker: "Mia", child: "Leo" })}`,
+    );
+  });
+
   it("sends the fallback hello signed by Vela with only the heart and I'm fine", () => {
     const arrival = render({ ask: { type: "hello" }, readBack: ["Sam: See you Sunday"] });
     expect(paragraphs(arrival)).toEqual([

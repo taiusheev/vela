@@ -444,6 +444,49 @@ async function mediaRefsOf(
 interface LoadedAsk {
   ask: ArrivalAsk;
   media: OutboundMediaRef[];
+  /** The family member who asked, when one did and is still in the family's records. */
+  asker?: { id: string; displayName: string } | null;
+}
+
+/**
+ * A message in a family member's own words, sent to her at once: signed with their name, or, on
+ * LINE, shown under their name and face instead (`OutboundRequest.from`), so it reads as theirs.
+ */
+export function inAskersWords(
+  channel: Channel,
+  lang: Lang,
+  text: string | null,
+  asker: { id: string; displayName: string },
+): { text: string; from?: { memberId: string; name: string } } {
+  return channel === "line" && text !== null && text.trim().length > 0
+    ? { text, from: { memberId: asker.id, name: asker.displayName } }
+    : { text: `${text}\n${t(lang, "arrival.signed", { asker: asker.displayName })}` };
+}
+
+/**
+ * Who her morning is shown as from (`OutboundRequest.from`): on LINE, the family member who asked,
+ * by their own name and face, so it reads as their message, not a service's. Not a morning Vela
+ * asked, one asked on behalf of someone, whose signature says for whom, or one carrying replies
+ * from others, which would sit under the asker's face.
+ */
+export function askerShownOn(
+  channel: Channel,
+  loaded: LoadedAsk,
+  readBackLines: readonly string[],
+): { memberId: string; name: string } | null {
+  const { ask, asker } = loaded;
+  if (
+    channel !== "line" ||
+    ask.type === "hello" ||
+    ask.byVela === true ||
+    ask.onBehalfOf !== null ||
+    asker === undefined ||
+    asker === null ||
+    readBackLines.length > 0
+  ) {
+    return null;
+  }
+  return { memberId: asker.id, name: asker.displayName };
 }
 
 /** The morning an ask is loaded for: its local date and her zone. */
@@ -560,6 +603,7 @@ export async function loadAsk(
       byVela: isVelaPictureMorning(exchange),
     },
     media: attached,
+    asker: asker === null ? null : { id: asker.id, displayName: asker.displayName },
   };
 }
 
@@ -699,13 +743,15 @@ export async function deliverArrival(
     deps.logger.info("arrival_already_out", { memberId, date });
     return;
   }
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
+  const loaded = await loadAsk(deps, family, exchange, link.channel, {
     date,
     timeZone: member.tz,
   });
+  const { ask, media: askMedia } = loaded;
   const askFiles = askMedia.slice(0, MAX_MEDIA);
   const readBack = await loadReadBack(deps, member, date, link.channel, askFiles);
   const child = await childOf(deps.db, member);
+  const from = askerShownOn(link.channel, loaded, readBack.lines);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -718,6 +764,7 @@ export async function deliverArrival(
     hint: inFirstMornings(member, date),
     checkIn: deps.config.checkIn === true,
     child: child?.displayName ?? null,
+    shownAsAsker: from !== null,
   });
   const attached = [...readBack.media, ...askFiles];
   const request: OutboundRequest = {
@@ -733,6 +780,7 @@ export async function deliverArrival(
     // A morning with the check-in on has no buttons, so it goes without a keyboard at all.
     ...(rendered.buttons.length === 0 ? {} : { buttons: rendered.buttons }),
     media: attached.length === 0 ? undefined : attached,
+    ...(from === null ? {} : { from }),
     ref: { purpose: "arrival", exchangeId: exchange.id },
     effect: {
       exchangeId: exchange.id,
@@ -822,10 +870,12 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     });
     return;
   }
-  const { ask, media: askMedia } = await loadAsk(deps, family, exchange, link.channel, {
+  const loaded = await loadAsk(deps, family, exchange, link.channel, {
     date,
     timeZone: member.tz,
   });
+  const { ask, media: askMedia } = loaded;
+  const from = askerShownOn(link.channel, loaded, []);
   const rendered = renderArrival({
     lang: member.language,
     address: member.addressForm ?? member.displayName,
@@ -837,6 +887,7 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     date,
     hint: inFirstMornings(member, date),
     child: (await childOf(deps.db, member))?.displayName ?? null,
+    shownAsAsker: from !== null,
   });
   await enqueueOutbound(deps, deps.db, {
     kind: "repeat",
@@ -850,6 +901,7 @@ export async function sendRepeat(deps: Deps, memberId: string, date: LocalDate):
     text: rendered.text,
     buttons: rendered.buttons,
     media: askMedia.length === 0 ? undefined : askMedia,
+    ...(from === null ? {} : { from }),
     ref: { purpose: "repeat", exchangeId: exchange.id },
     effect: { exchangeId: exchange.id },
   });

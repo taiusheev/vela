@@ -1,6 +1,7 @@
 import { ChannelSendError, type OutboundMessage } from "@vela/contracts";
 import { describe, expect, it } from "vitest";
 import { createLineAdapter } from "./adapter.ts";
+import type { Face } from "./face/face.ts";
 import { lineRetryKey } from "./retry-key.ts";
 import { fitLabel } from "./send.ts";
 import {
@@ -590,6 +591,91 @@ describe("adapter.send", () => {
       await expect(failure).rejects.toMatchObject({ code: "invalid_request", retryable: false });
       expect(requests).toHaveLength(0);
     });
+  });
+});
+
+describe("adapter.send with a sender", () => {
+  const MEI = { memberId: "7d0c2a51-3f7e-4b8e-9a54-1c2d3e4f5a6b", name: "小美" };
+  const FACE_URL = "https://vela-light.example.workers.dev/faces/v1/7f8e-0.png";
+
+  function setupWithFaces(responder: Responder = sequentialSends(FIRST_ID)) {
+    const recording = createRecordingFetch(responder);
+    const faces: Face[] = [];
+    const adapter = createLineAdapter({
+      channelSecret: TEST_CHANNEL_SECRET,
+      channelAccessToken: TEST_CHANNEL_ACCESS_TOKEN,
+      fetch: recording.fetch,
+      faceUrl: (face) => {
+        faces.push(face);
+        return FACE_URL;
+      },
+    });
+    return { adapter, requests: recording.requests, faces };
+  }
+
+  it("shows every object of a family member's message under their name and face", async () => {
+    const { adapter, requests, faces } = setupWithFaces();
+
+    await adapter.send({ ...ARRIVAL, from: MEI, media: [PHOTO] });
+
+    expect(faces).toStrictEqual([{ codePoint: "美".codePointAt(0), colour: faces[0]?.colour }]);
+    const sent = objectsOf(requests).flat();
+    expect(sent).toHaveLength(2);
+    for (const object of sent) {
+      expect(field(object, "sender")).toStrictEqual({ name: "小美", iconUrl: FACE_URL });
+    }
+  });
+
+  it("sends under the name alone when no face can be drawn, and as the account when there is no sender", async () => {
+    const named = setupWithFaces();
+    await named.adapter.send({ ...ARRIVAL, from: { ...MEI, name: "🌸" } });
+    expect(field(objectsOf(named.requests)[0]?.[0], "sender")).toStrictEqual({ name: "🌸" });
+
+    const plain = setup();
+    await plain.adapter.send(ARRIVAL);
+    expect(field(objectsOf(plain.requests)[0]?.[0], "sender")).toBeUndefined();
+  });
+
+  it("cuts a long name to LINE's 20 units without splitting a character", async () => {
+    const { adapter, requests } = setupWithFaces();
+    await adapter.send({ ...ARRIVAL, from: { ...MEI, name: "Anna-Maria Konstantinopolskaya" } });
+    expect(field(field(objectsOf(requests)[0]?.[0], "sender"), "name")).toBe(
+      "Anna-Maria Konstant…",
+    );
+  });
+
+  it("sends the message again as the account, under keys of its own, when LINE refuses the sender", async () => {
+    let calls = 0;
+    const { adapter, requests } = setupWithFaces((request) => {
+      calls += 1;
+      if (calls === 1) {
+        return Response.json(
+          {
+            message: "The request body has 1 error(s)",
+            details: [{ message: "May not be used", property: "messages[0].sender.name" }],
+          },
+          { status: 400 },
+        );
+      }
+      return sequentialSends(FIRST_ID)(request);
+    });
+
+    const result = await adapter.send({ ...ARRIVAL, from: MEI });
+
+    expect(requests).toHaveLength(2);
+    expect(field(objectsOf(requests)[1]?.[0], "sender")).toBeUndefined();
+    expect(requests[1]?.headers.get("x-line-retry-key")).toBe(
+      await lineRetryKey(`${KEY}#plain`, 0),
+    );
+    expect(result.primaryMessageId).toBe(String(FIRST_ID));
+  });
+
+  it("does not resend when LINE refuses something other than the sender", async () => {
+    const { adapter, requests } = setupWithFaces(() =>
+      lineApiFixture("api-error-400-details.json"),
+    );
+    await expect(adapter.send({ ...ARRIVAL, from: MEI })).rejects.toBeInstanceOf(ChannelSendError);
+    expect(requests).toHaveLength(1);
   });
 });
 

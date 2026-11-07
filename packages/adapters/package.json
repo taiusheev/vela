@@ -5,7 +5,8 @@
   "description": "Channel adapters behind the contract in @vela/contracts. Telegram first.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./face-glyphs.bin": "./src/line/face/glyphs.bin"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

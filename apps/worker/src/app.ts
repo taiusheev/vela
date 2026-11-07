@@ -28,6 +28,7 @@ import {
 } from "./config.ts";
 import { createLogger } from "./deps.ts";
 import type { PilotEnv } from "./env.ts";
+import { FACE_PATH_PREFIX, openFace } from "./face-route.ts";
 import { readHealth } from "./heartbeat.ts";
 import { type Html, noticePage, sitePage } from "./html.ts";
 import { MEDIA_PATH_PREFIX, openMedia } from "./media-route.ts";
@@ -324,6 +325,20 @@ export function createApp(runtime: PilotRuntime): Hono<PilotAppEnv> {
       return media ?? notFound(c);
     } catch (error) {
       createLogger(c.env).error("media_request_failed", { error: errorLabel(error) });
+      return c.text("internal error", 500);
+    }
+  });
+
+  /**
+   * The faces LINE shows beside a family member's messages (`face-route.ts`). Where LINE is off, and
+   * for any name that is not a face this Worker draws, the Worker's one 404.
+   */
+  app.get(`${FACE_PATH_PREFIX}:file`, async (c) => {
+    try {
+      const face = readLineConfig(c.env) === null ? null : await openFace(c.req.param("file"));
+      return face ?? notFound(c);
+    } catch (error) {
+      createLogger(c.env).error("face_request_failed", { error: errorLabel(error) });
       return c.text("internal error", 500);
     }
   });
