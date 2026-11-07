@@ -577,6 +577,11 @@ function CodeSignIn() {
           </Words>
         </View>
         <Card>
+          {trouble === undefined ? null : (
+            <Words variant="body" tone="ink2">
+              {troubleWords(trouble)}
+            </Words>
+          )}
           {step === "identifier" ? (
             <>
               {PHONE_SIGN_IN ? (
@@ -758,11 +763,6 @@ function CodeSignIn() {
                 }}
               />
             </>
-          )}
-          {trouble === undefined ? null : (
-            <Words variant="body" tone="ink2">
-              {troubleWords(trouble)}
-            </Words>
           )}
           {trouble?.kind === "country_unsupported" || trouble?.kind === "phone_off" ? (
             <SecondaryButton
