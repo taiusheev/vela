@@ -135,6 +135,7 @@ const StoredMessage = OutboundMessage.pick({
   buttons: true,
   media: true,
   replyToMessageId: true,
+  from: true,
 });
 
 /**
@@ -264,6 +265,11 @@ export interface OutboundRequestBase {
   buttons?: Button[][];
   media?: OutboundMediaRef[];
   replyToMessageId?: string;
+  /**
+   * The family member whose words these are, shown beside the message where the channel can (LINE's
+   * name and face, `OutboundMessage.from`). Set only for LINE, where the text is left unsigned.
+   */
+  from?: { memberId: string; name: string };
   consentUpdateMessageId?: string;
   consentTextLength?: number;
   /** The event's free reply (`replyOf`), for the kinds that answer someone's own message. */
@@ -341,6 +347,7 @@ export async function insertOutbound(
     buttons: request.buttons,
     media: request.media,
     replyToMessageId: request.replyToMessageId,
+    from: request.from,
   });
   if (!message.success) {
     throw new VelaError("invalid_outbound", `${request.kind} request is not a valid message`, {
@@ -405,6 +412,7 @@ export async function insertOutbound(
       buttons: message.data.buttons,
       media: message.data.media,
       replyToMessageId: message.data.replyToMessageId,
+      ...(message.data.from === undefined ? {} : { from: message.data.from }),
     },
     ...(request.reply === undefined ? {} : { reply: request.reply }),
     ref: request.ref,
@@ -748,6 +756,7 @@ export async function deliverOutbound(deps: Deps, outboundId: string): Promise<D
     buttons: payload.data.message.buttons,
     media: unsentMedia(payload.data.message.media, sentMedia),
     replyToMessageId: payload.data.message.replyToMessageId,
+    from: payload.data.message.from,
     ...freeReply(payload.data.reply, taken.row, deps.clock.now()),
   });
   if (!message.success) {

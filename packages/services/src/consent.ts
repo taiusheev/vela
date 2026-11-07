@@ -39,6 +39,7 @@ import {
 } from "@vela/db";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { familyWaitingAlert } from "./admin-alerts.ts";
+import { inAskersWords } from "./arrivals.ts";
 import { lockDeadLetters } from "./dead-letters.ts";
 import type { Deps } from "./deps.ts";
 import { recordEvent } from "./events.ts";
@@ -679,7 +680,7 @@ async function acceptConsent(
       exchangeId: first.id,
       lang,
       // A message from her child reads as one: their words, signed with their name.
-      text: `${first.text}\n${t(lang, "arrival.signed", { asker: firstAsker.displayName })}`,
+      ...inAskersWords(event.channel, lang, first.text, firstAsker),
       ref: { purpose: "arrival", exchangeId: first.id },
       effect: { exchangeId: first.id },
       delaySeconds:

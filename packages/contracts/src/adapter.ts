@@ -185,6 +185,14 @@ export const OutboundMessage = z.object({
   media: z.array(OutboundMediaRef).max(10).optional(),
   replyToMessageId: z.string().optional(),
   /**
+   * The family member whose words this message carries, unsigned because the platform shows who
+   * sent it: LINE puts their name and face beside the message (`sender`). Adapters that cannot show
+   * a sender ignore it, so a message with `from` is only ever sent on a channel that can.
+   */
+  from: z
+    .object({ memberId: z.string().min(1).max(64), name: z.string().min(1).max(200) })
+    .optional(),
+  /**
    * The `reply.token` of the event this message answers. A reply always lands in the conversation
    * the token came from, and neither the adapter nor the platform can catch a mismatch, so it is
    * set only when that conversation is `to.conversationId`. The adapter replies with it when it

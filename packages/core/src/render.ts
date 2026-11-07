@@ -77,6 +77,12 @@ export interface RenderArrivalInput {
    * a service; absent or null keeps "the family".
    */
   child?: string | null;
+  /**
+   * Whether the channel shows the asker's name and face beside the message (LINE's sender,
+   * `OutboundMessage.from`): their name then heads it already, so it is not signed again below.
+   * An ask on behalf of someone keeps its signature, which says for whom. Absent means signed.
+   */
+  shownAsAsker?: boolean;
 }
 
 export interface RenderedArrival {
@@ -151,6 +157,7 @@ function askLines(
   ask: Exclude<ArrivalAsk, { type: "hello" }>,
   text: string,
   child: string | null,
+  shownAsAsker: boolean,
 ): string[] {
   const asker = ask.askerName;
   if (text.length === 0) {
@@ -172,11 +179,11 @@ function askLines(
     lines.push(helloSignature(lang, child));
     return lines;
   }
-  lines.push(
-    ask.onBehalfOf === null
-      ? t(lang, "arrival.signed", { asker })
-      : t(lang, "arrival.signed_on_behalf", { asker, child: ask.onBehalfOf }),
-  );
+  if (ask.onBehalfOf !== null) {
+    lines.push(t(lang, "arrival.signed_on_behalf", { asker, child: ask.onBehalfOf }));
+  } else if (!shownAsAsker) {
+    lines.push(t(lang, "arrival.signed", { asker }));
+  }
   return lines;
 }
 
@@ -274,7 +281,9 @@ function composeText(
   paragraphs.push(opening);
 
   paragraphs.push(
-    ask.type === "hello" ? helloLines(lang, ask, child) : askLines(lang, ask, askText, child),
+    ask.type === "hello"
+      ? helloLines(lang, ask, child)
+      : askLines(lang, ask, askText, child, input.shownAsAsker === true),
   );
   if (input.hint && !input.repeat) {
     paragraphs.push([hintLine(input, child)]);

@@ -16,6 +16,9 @@ export {
 } from "./expo/client.ts";
 export { createLineAdapter, type LineAdapterOptions } from "./line/adapter.ts";
 export type { LineApiOptions } from "./line/client.ts";
+export { type Face, faceOf, facePath, parseFacePath } from "./line/face/face.ts";
+export { type FaceGlyphs, readFaceGlyphs } from "./line/face/glyphs.ts";
+export { FACE_SIZE, renderFace } from "./line/face/render.ts";
 export { LINE_SIGNATURE_HEADER } from "./line/verify.ts";
 export { createTelegramAdapter, type TelegramAdapterOptions } from "./telegram/adapter.ts";
 export type {

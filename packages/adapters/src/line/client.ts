@@ -75,7 +75,17 @@ export interface LineFlexBubble {
   };
 }
 
-export type LineMessageObject =
+/**
+ * Who a message is shown as from (LINE's "change icon and display name"): a name of at most 20
+ * characters, which LINE follows with "from" and the account's name, and a square PNG icon by
+ * HTTPS URL. The chat list and notifications keep the account's own name and icon.
+ */
+export interface LineSender {
+  readonly name: string;
+  readonly iconUrl?: string;
+}
+
+export type LineMessageObject = (
   | {
       readonly type: "text";
       readonly text: string;
@@ -92,7 +102,8 @@ export type LineMessageObject =
       /** Milliseconds. */
       readonly duration: number;
     }
-  | { readonly type: "flex"; readonly altText: string; readonly contents: LineFlexBubble };
+  | { readonly type: "flex"; readonly altText: string; readonly contents: LineFlexBubble }
+) & { readonly sender?: LineSender };
 
 export interface LinePushRequest {
   /** A user, group or multi-person chat id. */

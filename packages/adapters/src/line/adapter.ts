@@ -9,7 +9,7 @@ import { GROUP_ID, ROOM_ID, USER_ID } from "./ids.ts";
 import { fetchLineMedia, fetchLinePreview, type Wait } from "./media.ts";
 import { parseLineWebhook } from "./parse.ts";
 import { readLineQuota } from "./quota.ts";
-import { type LineMediaUrl, sendLineMessage } from "./send.ts";
+import { type LineFaceUrl, type LineMediaUrl, sendLineMessage } from "./send.ts";
 import { createLineSignatureVerifier } from "./verify.ts";
 
 export interface LineAdapterOptions extends LineApiOptions {
@@ -27,6 +27,11 @@ export interface LineAdapterOptions extends LineApiOptions {
   readonly wait?: Wait;
   /** Signs a stored file's URL for LINE to fetch (`media-route.ts`); without it only URLs send. */
   readonly mediaUrl?: LineMediaUrl;
+  /**
+   * The URL of a family member's face picture, served by the pilot Worker (`face-route.ts`);
+   * without it a message that speaks for someone goes under their name alone.
+   */
+  readonly faceUrl?: LineFaceUrl;
 }
 
 const LINE_CAPABILITIES: AdapterCapabilities = {
@@ -78,7 +83,7 @@ export function createLineAdapter(options: LineAdapterOptions): ChannelAdapter {
     },
 
     send(message) {
-      return sendLineMessage(client, message, options.mediaUrl);
+      return sendLineMessage(client, message, options.mediaUrl, options.faceUrl);
     },
 
     // A postback shows no spinner, so there is nothing to stop. Four flows call this without a

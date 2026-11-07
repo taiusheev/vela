@@ -4,6 +4,7 @@ import { t } from "@vela/copy";
 import { decodeButton, outboundKey, zonedInstant } from "@vela/core";
 import {
   aiCalls,
+  channelLinks,
   chips,
   type Exchange,
   events,
@@ -724,6 +725,65 @@ describe("deliverArrival", () => {
       deliveredAt: at(TOMORROW, "08:00"),
     });
     expect(h.telegram.sentTo(seed.memberLink.externalId)).toHaveLength(1);
+  });
+
+  describe("on LINE", () => {
+    const HER_LINE = "U3bf020427417f5c0decf3c1612d4e59a";
+
+    async function onLine(seed: SeededFamily): Promise<void> {
+      await h.db
+        .update(channelLinks)
+        .set({ channel: "line", externalId: HER_LINE })
+        .where(eq(channelLinks.id, seed.memberLink.id));
+      await h.db
+        .update(members)
+        .set({ primarySurface: "line" })
+        .where(eq(members.id, seed.member.id));
+    }
+
+    it("shows her morning under the asker's name and face, unsigned", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await onLine(seed);
+      const fourth = "2026-09-18";
+      await seedExchange(h.db, seed, {
+        date: fourth,
+        state: "composed",
+        text: "Which soup today?",
+      });
+      h.clock.set(at(fourth, "08:00"));
+
+      await deliverArrival(h.deps, seed.member.id, fourth, false);
+
+      const [row] = await outboundRows("arrival");
+      expect(row?.channel).toBe("line");
+      expect(row?.payload).toMatchObject({
+        message: {
+          text: "Hello Mrs Chen, good morning.\n\nWhich soup today?",
+          from: { memberId: seed.organiser.id, name: "Mia" },
+        },
+      });
+
+      // The gateway hands LINE the asker with the message.
+      await deliverOutbound(h.deps, row?.id ?? "");
+      expect(h.line.sent.map((sent) => sent.message.from)).toStrictEqual([
+        { memberId: seed.organiser.id, name: "Mia" },
+      ]);
+    });
+
+    it("keeps the signature, and no face, on a morning that carries others' replies", async () => {
+      const seed = await seedFamily(h.db, { now: h.clock.now() });
+      await onLine(seed);
+      await seedYesterdayWithReplies(seed);
+      await seedSoupQuestion(seed, TOMORROW);
+      h.clock.set(at(TOMORROW, "08:00"));
+
+      await deliverArrival(h.deps, seed.member.id, TOMORROW, false);
+
+      const [row] = await outboundRows("arrival");
+      const payload = row?.payload as { message: { from?: unknown; text: string } } | undefined;
+      expect(payload?.message.from).toBeUndefined();
+      expect(payload?.message.text).toContain("Which soup today?\n— Mia");
+    });
   });
 
   it("renders the question with its image and no answers to tap, and reads yesterday's replies back with the voice first", async () => {

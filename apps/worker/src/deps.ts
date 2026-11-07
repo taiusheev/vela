@@ -49,6 +49,7 @@ import {
   secret,
 } from "./config.ts";
 import type { AdminEnv, PilotEnv } from "./env.ts";
+import { createFaceUrl } from "./face-route.ts";
 import { createHeartbeat } from "./heartbeat.ts";
 import { createMediaUrl } from "./media-route.ts";
 import type { PrivacyNotices } from "./notices.ts";
@@ -239,6 +240,8 @@ function createLineChannel(env: PilotEnv): ChannelAdapter {
     channelAccessToken: config.channelAccessToken,
     // LINE fetches a voice note or photo Vela keeps by this Worker's signed URL (05 §5.2).
     mediaUrl: createMediaUrl(config),
+    // A family member's messages go under their name and initial (`face-route.ts`).
+    faceUrl: createFaceUrl(config.pilotOrigin),
   });
 }
 
