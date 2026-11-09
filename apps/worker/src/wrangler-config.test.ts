@@ -34,10 +34,11 @@ it("requires the private English trial roster in production", () => {
 });
 
 // ADR-52: the Taiwan test (founder, 29 October 2026) admits approved families in English or
-// Traditional Chinese; privacy-notice v12, the live notice, names LINE and Chinese.
-it("admits families the founder approves, in English or Chinese, in production", () => {
+// Traditional Chinese; privacy-notice v12, the live notice, names LINE and Chinese. ADR-62
+// (founder, 9 November 2026): each new family is approved as it is made.
+it("approves families as they are made, in English or Chinese, in production", () => {
   const vars = configOf("pilot", "production").vars;
-  expect(vars.PILOT_FAMILY_APPROVAL).toBe("on");
+  expect(vars.PILOT_FAMILY_APPROVAL).toBe("auto");
   expect(vars.PILOT_LANGUAGES).toBe("en,zh-TW");
 });
 

@@ -9,12 +9,13 @@ import { VelaError } from "./errors.ts";
 import { recordEvent } from "./events.ts";
 import { insertInvite, insertInvitedMember } from "./invites.ts";
 import { regionForCountry } from "./onboarding.ts";
+import { approveNewFamily } from "./pilot-admission.ts";
 
 /** What creating a family needs beyond the database: a token for her invite, the bot it opens, and
  * the regions whose database exists here. */
 export type ApiFamilyDeps = Pick<Deps, "db" | "clock" | "random"> & {
   config: Pick<Deps["config"], "telegramBotUsername" | "regions"> &
-    Partial<Pick<Deps["config"], "lineBasicId" | "talkSetup">>;
+    Partial<Pick<Deps["config"], "lineBasicId" | "talkSetup" | "pilotAdmission">>;
 };
 
 /**
@@ -122,6 +123,7 @@ export async function createApiFamily(
           })
           .returning();
         if (organiser === undefined) throw new Error("organiser insert returned no row");
+        await approveNewFamily(tx, deps.config.pilotAdmission, family.id, now);
 
         const person = request.kept_light_member;
         const her = await insertInvitedMember(

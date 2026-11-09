@@ -711,6 +711,8 @@ describe("the runtime staging's API app runs on", () => {
         lineBasicId: null,
         regions: ["apac"],
         talkSetup: true,
+        // ADR-62: what decides whether a family is approved as it is made; staging has no test.
+        pilotAdmission: null,
       },
     });
     expect(send).toHaveBeenCalledExactlyOnceWith({ type: "deliver", outboundId: "o1" });

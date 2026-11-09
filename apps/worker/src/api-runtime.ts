@@ -541,6 +541,8 @@ export function apiRuntimeFor(env: PilotEnv, config: ApiConfig): ApiRuntime {
                 lineBasicId: config.lineBasicId,
                 regions: config.regions,
                 talkSetup: readTalkSetup(env),
+                // ADR-62: approved as it is made, where approval is automatic.
+                pilotAdmission: config.pilotAdmission,
               },
             },
             devices: {

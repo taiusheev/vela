@@ -1,7 +1,16 @@
 import { ApiCreatedFamily, type InboundEvent } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { encodeButton } from "@vela/core";
-import { consents, events, families, invites, members, users } from "@vela/db";
+import {
+  adminAccessLog,
+  consents,
+  events,
+  families,
+  invites,
+  members,
+  pilotFamilies,
+  users,
+} from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessionIdentity } from "./api-access.ts";
@@ -390,6 +399,28 @@ describe("createApiFamily", () => {
     await expect(
       acceptInvitationForDevelopment(h.db, standIn.kept_light_member.id, h.clock.now()),
     ).rejects.toThrow("not waiting for her yes");
+  });
+
+  // ADR-62: the founder no longer approves each family by hand; one made in the app is approved
+  // as it is made, and only where approval is automatic.
+  it.each([
+    ["automatic", { telegramUserIds: [], familyIds: [], autoApprove: true }, 1],
+    ["by hand", { telegramUserIds: [], familyIds: [] }, 0],
+    ["off", null, 0],
+  ] as const)("approves the new family where approval is %s: %i rows", async (_, admission, n) => {
+    const result = await createApiFamily(
+      { ...h.deps, config: { ...h.config, pilotAdmission: admission } },
+      identity,
+      "key-auto",
+      REQUEST,
+    );
+    const created = ApiCreatedFamily.parse(result.response.body);
+    const approved = await h.db.select().from(pilotFamilies);
+    expect(approved.map((row) => row.familyId)).toEqual(n === 1 ? [created.family.id] : []);
+    const log = await h.db.select().from(adminAccessLog);
+    expect(log.map((row) => [row.admin, row.action])).toEqual(
+      n === 1 ? [["auto", "family_approve"]] : [],
+    );
   });
 
   it("refuses a second family for an account that already runs one, and writes nothing", async () => {

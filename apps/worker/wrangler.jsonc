@@ -553,10 +553,12 @@
         // ADR-52, on for the Taiwan test (founder, 29 October 2026; privacy-notice v12 names LINE
         // and Chinese): the founder approves whole families on the admin page, on Telegram or LINE,
         // in English or Traditional Chinese. The Telegram roster keeps working beside it.
-        "PILOT_FAMILY_APPROVAL": "on",
+        // ADR-62, auto (founder, 9 November 2026): each new family is approved as it is made, so
+        // testers start at once; the founder removes one on /admin/roster.
+        "PILOT_FAMILY_APPROVAL": "auto",
         "PILOT_LANGUAGES": "en,zh-TW",
-        // On (founder, 5 November 2026): closed-test families set up in the app and wait for
-        // approval on /admin/roster like any other (ADR-52 amended).
+        // On (founder, 5 November 2026): closed-test families set up in the app (ADR-52 amended),
+        // approved as they are made since ADR-62.
         "PILOT_APP_SETUP": "on",
         // On for the English trial's iPhone app (ADR-44): Clerk's Production instance on
         // vela-light.com, whose Frontend API is clerk.vela-light.com; its sk_live_ key goes on the
