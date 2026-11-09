@@ -781,9 +781,10 @@ export function readPilotAdmission(
   }
   // ADR-52: families the founder approves on the admin page take part on any messenger. Off, the
   // Telegram roster alone admits; the approved families are read from the table per request.
+  // ADR-62: auto approves each family as it is made; the founder still removes one on the page.
   const approval = env.PILOT_FAMILY_APPROVAL?.trim() ?? "off";
-  if (approval !== "on" && approval !== "off") {
-    throw new ConfigError("PILOT_FAMILY_APPROVAL", "PILOT_FAMILY_APPROVAL must be on or off");
+  if (approval !== "on" && approval !== "off" && approval !== "auto") {
+    throw new ConfigError("PILOT_FAMILY_APPROVAL", "PILOT_FAMILY_APPROVAL must be on, auto or off");
   }
   // The languages the test runs in, as the privacy notice in force allows: English alone until a
   // notice says otherwise.
@@ -801,7 +802,8 @@ export function readPilotAdmission(
   return {
     telegramUserIds: [...new Set(ids)],
     languages,
-    ...(approval === "on" ? { familyIds: [] } : {}),
+    ...(approval === "off" ? {} : { familyIds: [] }),
+    ...(approval === "auto" ? { autoApprove: true } : {}),
   };
 }
 

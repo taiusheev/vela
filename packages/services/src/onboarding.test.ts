@@ -2,6 +2,7 @@ import type { InboundEvent } from "@vela/contracts";
 import { t } from "@vela/copy";
 import { decodeButton, encodeButton } from "@vela/core";
 import {
+  adminAccessLog,
   channelLinks,
   events,
   families,
@@ -10,6 +11,7 @@ import {
   nearbyContacts,
   onboardingSessions,
   outbound,
+  pilotFamilies,
 } from "@vela/db";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -213,6 +215,43 @@ describe("handleOnboarding: starting", () => {
         (member) => member.language === "en" && member.tz === "Asia/Ho_Chi_Minh",
       ),
     ).toBe(true);
+  });
+
+  // ADR-62: with approval automatic, the family is approved as it is made and the organiser sends
+  // the link at once; with approval by hand (ADR-52), the family waits and the organiser keeps it.
+  it.each([
+    [true, "onboarding.done", 1],
+    [false, "onboarding.done_wait", 0],
+  ] as const)("auto-approval %s: says %s and approves %i family", async (auto, key, approved) => {
+    const deps = {
+      ...h.deps,
+      config: {
+        ...h.config,
+        pilotAdmission: {
+          telegramUserIds: [USER],
+          familyIds: [],
+          ...(auto ? { autoApprove: true } : {}),
+        },
+      },
+    };
+    await handleOnboarding(deps, start());
+    await handleOnboarding(deps, text("Mom"));
+    await handleOnboarding(deps, text("Mother"));
+    await handleOnboarding(deps, tap("country", "VN"));
+    await handleOnboarding(deps, tap("wake", "07:30"));
+    await handleOnboarding(deps, tap("nearby", "skip"));
+    const [family] = await h.db.select().from(families);
+    const rows = await h.db.select().from(pilotFamilies);
+    expect(rows).toHaveLength(approved);
+    if (auto) expect(rows[0]).toMatchObject({ familyId: family?.id, approvedAt: h.clock.now() });
+    const log = await h.db.select().from(adminAccessLog);
+    expect(log.map((row) => [row.admin, row.action, row.familyId])).toEqual(
+      auto ? [["auto", "family_approve", family?.id]] : [],
+    );
+    await h.run(handlers());
+    const [invite] = await h.db.select().from(invites);
+    const link = `https://t.me/VelaLightBot?start=${invite?.token ?? ""}`;
+    expect(lastPrompt()?.text).toBe(t("en", key, { name: "Mom", link }));
   });
 
   it("creates no onboarding state for an account outside the pilot roster", async () => {

@@ -570,6 +570,16 @@ describe("closed pilot admission", () => {
     expect(readPilotAdmission({ PILOT_ADMISSION: "off", PILOT_FAMILY_APPROVAL: "on" })).toBeNull();
   });
 
+  // ADR-62: auto approves each new family as it is made; the founder removes one by hand.
+  it("reads automatic family approval", () => {
+    expect(readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_FAMILY_APPROVAL: " auto " })).toEqual({
+      telegramUserIds: [],
+      familyIds: [],
+      languages: ["en"],
+      autoApprove: true,
+    });
+  });
+
   it.each(["fr", "en,en", "zh", "en,", "EN"])("fails closed for languages %j", (languages) => {
     expect(
       configErrorOf(() => readPilotAdmission({ PILOT_ADMISSION: "on", PILOT_LANGUAGES: languages }))

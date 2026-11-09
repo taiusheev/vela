@@ -34,7 +34,7 @@ Pick first the families whose parent already reads and answers LINE, and whose o
 
 1. **Send the organiser message below** (in your own chat with them, LINE or other).
 2. **The organiser sets up** in the private chat with Vela Light: `/start`, then about two minutes of questions. They get her invite link at the end, and keep it.
-3. **You approve the family** on the admin page, **Trial roster** (`/admin/roster`): the newest family waiting, one click. **Always before the organiser sends her the link.** Setup tells the organiser to keep the link until then, and your click sends them 「您的家庭已經確認了。現在可以打電話跟媽媽說明，再把…連結傳過去。」 If she taps yes before your approval, nothing starts: she reads "您的燈還沒亮起", and you get a Telegram message "… tapped yes, but the light cannot start yet". Approve the family, then ask the organiser to have her tap **兩個都好** again on the same message; that tap counts. If the list shows a family you do not know, leave it unapproved.
+3. **The family is approved by itself** as it is made (ADR-62, 9 November 2026): the organiser can send her the link straight away. On the admin page, **Trial roster** (`/admin/roster`), you see every family; if one shows that you do not know, remove it with one click and everything automatic for it stops.
 4. **The organiser makes the family group** in LINE, without her, and invites Vela Light. Each adult taps **我看過了**.
 5. **The organiser calls her**, using the [Chinese consent script](../pilot/consent-script.zh-TW.md), then sends her the invite link. She taps it, presses **傳送**, then chooses **兩個都好** or **好，健康的話不分享**. Her first morning comes the next day.
    - If she sees "您的燈還沒亮起", the family is not approved yet, or the organiser has not added Vela Light as a friend.

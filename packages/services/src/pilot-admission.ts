@@ -1,10 +1,12 @@
 import type { InboundEvent } from "@vela/contracts";
 import {
+  adminAccessLog,
   channelLinks,
   families,
   familyChannels,
   members,
   outbound,
+  pilotFamilies,
   pushDevices,
   users,
 } from "@vela/db";
@@ -26,6 +28,11 @@ export interface PilotAdmission {
   readonly familyIds?: readonly string[];
   /** The languages the test runs in; English alone when absent. */
   readonly languages?: readonly string[];
+  /**
+   * Every new family is approved as it is made (ADR-62, `PILOT_FAMILY_APPROVAL=auto`): the founder
+   * no longer clicks for each one, and removes one on the admin page as before.
+   */
+  readonly autoApprove?: boolean;
 }
 
 export function pilotAllowsTelegram(
@@ -43,6 +50,34 @@ export function pilotSpeaks(
   if (admission == null) return true;
   const allowed = admission.languages ?? ["en"];
   return languages.every((language) => allowed.includes(language));
+}
+
+/** Whether a new family waits for the founder's click: family approval on, and not automatic. */
+export function pilotFamiliesWait(admission: PilotAdmission | null | undefined): boolean {
+  return admission?.familyIds !== undefined && admission.autoApprove !== true;
+}
+
+/**
+ * Approves a family the moment it is made, in the transaction that makes it, where approval is
+ * automatic (ADR-62). One `admin_access_log` row says so, as the founder's own click writes one;
+ * removal on the admin page works as before and lasts, since only creation approves.
+ */
+export async function approveNewFamily(
+  db: Queryable,
+  admission: PilotAdmission | null | undefined,
+  familyId: string,
+  at: Date,
+): Promise<void> {
+  if (admission?.familyIds === undefined || admission.autoApprove !== true) return;
+  await db.insert(pilotFamilies).values({ familyId, approvedAt: at }).onConflictDoNothing();
+  await db.insert(adminAccessLog).values({
+    admin: "auto",
+    familyId,
+    memberId: null,
+    action: "family_approve",
+    what: "closed test, approved on creation",
+    at,
+  });
 }
 
 /** Whether the founder approved this family (ADR-52). */

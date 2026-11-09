@@ -47,7 +47,7 @@ import {
   insertInvitedMember,
   NAME_MAX_LENGTH,
 } from "./invites.ts";
-import { pilotAdmitsInbound } from "./pilot-admission.ts";
+import { approveNewFamily, pilotAdmitsInbound, pilotFamiliesWait } from "./pilot-admission.ts";
 import { isMessenger, type MemberWithFamily, memberByChannelUser } from "./repo.ts";
 
 /** A session that hears nothing for a day is abandoned (flows §3.1). */
@@ -537,6 +537,7 @@ async function createFamily(
   if (organiser === undefined) {
     throw new Error("organiser insert returned no row");
   }
+  await approveNewFamily(tx, deps.config.pilotAdmission, family.id, now);
   await tx.insert(channelLinks).values({
     memberId: organiser.id,
     channel: event.channel,
@@ -592,11 +593,10 @@ async function createFamily(
     lang,
     // Where the founder approves each family first (ADR-52), she must not tap before that: the
     // organiser keeps the link until Vela writes that the family is confirmed (`approveFamily`).
+    // Approved on creation (ADR-62), the link goes to her at once.
     text: t(
       lang,
-      deps.config.pilotAdmission?.familyIds === undefined
-        ? "onboarding.done"
-        : "onboarding.done_wait",
+      pilotFamiliesWait(deps.config.pilotAdmission) ? "onboarding.done_wait" : "onboarding.done",
       { name: data.name, link },
     ),
   });
