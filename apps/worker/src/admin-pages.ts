@@ -358,7 +358,7 @@ ${table(
   ),
 )}
 <h2>Families</h2>
-<p class="lede">With family approval on (ADR-52), an approved family takes part on Telegram or LINE with everyone who joins it by its invite. A family that is waiting gets nothing automatic, and her light does not start, until you approve it. Open a family to see who it is before approving.</p>
+<p class="lede">Since 9 November 2026 (ADR-62) each new family is approved the moment it is set up, and takes part on Telegram or LINE with everyone who joins it by its invite. Open each new family to see who it is, check where its people live and any citizenship limits, and remove its approval if it cannot take part: everything automatic for it stops at once. A family without approval (made before 9 November, or removed) gets nothing automatic, and her light does not start, until you approve it.</p>
 ${table(
   ["Family", "Started (UTC)", "Language", "People", "Messenger", "Approved (UTC)", ""],
   families.map(
