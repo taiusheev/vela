@@ -158,18 +158,13 @@ describe("ADR-62: a family set up in the app with approval automatic", () => {
   it("still stops a family the founder removes, and keeps it removed", async () => {
     const family = await setUpInApp(AUTO);
     await phoneAllowsNotifications();
-    expect(
-      await unapproveFamily(h.deps, { admin: "founder@example.com" }, family.family.id),
-    ).toBe("unapproved");
+    expect(await unapproveFamily(h.deps, { admin: "founder@example.com" }, family.family.id)).toBe(
+      "unapproved",
+    );
     expect(await appOpens(AUTO)).toBe("waiting screen");
     const admission = (await admissionWithRoster(h.db, AUTO)) ?? AUTO;
     expect(
-      await pilotCanActivate(
-        h.db,
-        admission,
-        family.family.id,
-        family.kept_light_member.id,
-      ),
+      await pilotCanActivate(h.db, admission, family.family.id, family.kept_light_member.id),
     ).toBe(false);
   });
 });
