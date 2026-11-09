@@ -1064,3 +1064,4 @@ Decision:
 
 Consequences: a stranger who finds Vela's LINE account can start a family that runs at Vela's cost (AI, messages) until the founder removes it; nothing reaches her without her own yes. If that happens, `on` brings the click back with no other change.
 
+**Production (9 November 2026).** The founder approved privacy-notice.v17 ("yes, change all that needed and deploy it"): point 8 now says a family starts as soon as it is set up and the founder reviews and removes afterwards. consent-script.v8 goes with v17, wording unchanged. `PILOT_FAMILY_APPROVAL=auto` reaches production with that release.

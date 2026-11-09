@@ -19,9 +19,13 @@ describe("the committed notices module", () => {
 });
 
 describe("approved notification-preference notice", () => {
-  it("serves the v16 scope in both languages", () => {
-    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v16");
-    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v16");
+  it("serves the v17 scope in both languages", () => {
+    expect(PRIVACY_NOTICES.en.version).toBe("privacy-notice.v17");
+    expect(PRIVACY_NOTICES["zh-TW"].version).toBe("privacy-notice.v17");
+    // ADR-62: a family starts as soon as it is set up; the founder reviews and removes afterwards.
+    expect(PRIVACY_NOTICES.en.html).toContain("Each family can start as soon as it is set up.");
+    expect(PRIVACY_NOTICES.en.html).not.toContain("only once the founder has approved it");
+    expect(PRIVACY_NOTICES["zh-TW"].html).toContain("每個家庭設定好之後就可以開始。");
     // Onboarding v2: what to avoid is matched in code and never sent to an AI provider.
     expect(PRIVACY_NOTICES.en.html).toContain("These answers are never sent to an AI provider.");
     expect(PRIVACY_NOTICES["zh-TW"].html).toContain("這些答案不會傳給任何 AI 服務。");
