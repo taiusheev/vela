@@ -18,6 +18,7 @@ import {
   decideSchedule,
   localDateOf,
   outboundKey,
+  SCHEDULE,
   type ScheduleInput,
   TUNING,
   weekdayOf,
@@ -163,6 +164,7 @@ function dayStateOf(
   exchange: Exchange | null,
   quiet: QuietEvent | null,
   firstAnswer: Date | null,
+  wroteOvernight: boolean,
 ): DayState {
   return {
     date,
@@ -171,6 +173,7 @@ function dayStateOf(
     deliveryFailed: exchange !== null && exchange.deliveryFailedAt !== null,
     answeredAt: dayAnsweredAt(exchange?.answeredAt ?? null, firstAnswer),
     repeatSentAt: exchange?.repeatedAt ?? null,
+    wroteOvernight,
     quiet:
       quiet === null
         ? null
@@ -224,13 +227,28 @@ export async function loadScheduleInput(
     );
   const byDate = new Map(rows.map((row) => [row.exchange.scheduledFor, row]));
   const firstAnswers = await firstAnswersByDate(db, memberId, timeZone, yesterday, today);
+  // Her messages since the night before yesterday's morning began: each day's night runs from
+  // `nightFromTime` the evening before until its morning went out, or until now before it has.
+  const nightOf = (date: LocalDate) =>
+    zonedInstant(addDays(date, -1), SCHEDULE.nightFromTime, timeZone);
+  const sinceNight = await db
+    .select({ receivedAt: answers.receivedAt })
+    .from(answers)
+    .where(and(eq(answers.memberId, memberId), gte(answers.receivedAt, nightOf(yesterday))));
   const days = [yesterday, today].map((date) => {
     const row = byDate.get(date);
+    const from = nightOf(date).getTime();
+    const until = (row?.exchange.deliveredAt ?? now).getTime();
+    const wroteOvernight = sinceNight.some(({ receivedAt }) => {
+      const time = receivedAt.getTime();
+      return time >= from && time < until;
+    });
     return dayStateOf(
       date,
       row?.exchange ?? null,
       row?.quiet ?? null,
       firstAnswers.get(date) ?? null,
+      wroteOvernight,
     );
   });
 
