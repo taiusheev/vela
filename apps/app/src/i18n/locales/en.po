@@ -4038,6 +4038,14 @@ msgstr "Send {from} a laugh"
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 
+#: src/components/parent-link-settings.tsx
+msgid "Send a LINE link instead"
+msgstr "Send a LINE link instead"
+
+#: src/components/parent-link-settings.tsx
+msgid "Send a Telegram link instead"
+msgstr "Send a Telegram link instead"
+
 #: app/nearby.tsx
 msgid "Send each one a link. Vela writes to them only once they open it, in your name."
 msgstr "Send each one a link. Vela writes to them only once they open it, in your name."
@@ -4990,6 +4998,14 @@ msgstr "This connection needs attention."
 #: app/conversation.tsx
 msgid "This draft could not be saved on this phone. Keep this screen open and try again."
 msgstr "This draft could not be saved on this phone. Keep this screen open and try again."
+
+#: src/components/parent-link-settings.tsx
+msgid "This invitation opens {name}’s chat with Vela in LINE."
+msgstr "This invitation opens {name}’s chat with Vela in LINE."
+
+#: src/components/parent-link-settings.tsx
+msgid "This invitation opens {name}’s chat with Vela in Telegram."
+msgstr "This invitation opens {name}’s chat with Vela in Telegram."
 
 #: app/ask.tsx
 #: app/exchange/[id].tsx
