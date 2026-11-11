@@ -417,6 +417,7 @@ function FamilyToday({ day }: { day: TodayView }) {
             />
           ))}
         <FamilyWindows
+          familyId={portraitFamily}
           lights={today.lights}
           selected={focused}
           onSelect={setSelectedParent}
