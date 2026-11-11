@@ -8,6 +8,7 @@ import { shortDayName } from "../data/format.ts";
 import { portraitInitials, portraitLightOn } from "../data/portrait-lamp.ts";
 import type { TodayExchange, TodayLight } from "../data/today.ts";
 import { useFirstWeek } from "../data/useFirstWeek.ts";
+import { usePortrait } from "../data/usePortrait.ts";
 import { weekWindows } from "../data/week-windows.ts";
 import { usePalette } from "../theme/theme.tsx";
 import {
@@ -86,20 +87,23 @@ function Halo({ id, size, on }: { id: string; size: number; on: boolean }) {
 
 /** One parent's window in the room: lit amber once she has answered today, dark until then. */
 function ParentWindow({
+  familyId,
   light,
   height,
   source,
 }: {
+  familyId: string;
   light: TodayLight;
   height: number;
   source: boolean;
 }) {
+  const photo = usePortrait(familyId, light.memberId);
   const lit = portraitLightOn(light);
   const onRoom = useRoomWindow(lit);
   const window = (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
       {lit ? <Halo id={`halo-${light.memberId}`} size={height * 2.4} on /> : null}
-      <Light state={lit ? "lit" : "resting"} height={height} onRoom={onRoom} />
+      <Light state={lit ? "lit" : "resting"} height={height} onRoom={onRoom} photoUri={photo.uri} />
     </View>
   );
   return source ? (
@@ -115,12 +119,14 @@ function ParentWindow({
  * never a promise of more. With more than one parent, a window is also how one is chosen.
  */
 export function FamilyWindows({
+  familyId,
   lights,
   selected,
   onSelect,
   onQuiet,
   onReplay,
 }: {
+  familyId: string;
   lights: TodayLight[];
   selected: TodayLight | undefined;
   onSelect(id: string): void;
@@ -240,6 +246,7 @@ export function FamilyWindows({
                     }}
                   >
                     <ParentWindow
+                      familyId={familyId}
                       light={lights[0]}
                       height={64}
                       source={glowFrom === lights[0].memberId}
@@ -286,7 +293,12 @@ export function FamilyWindows({
                       opacity: pressed ? 0.85 : 1,
                     })}
                   >
-                    <ParentWindow light={light} height={52} source={glowFrom === light.memberId} />
+                    <ParentWindow
+                      familyId={familyId}
+                      light={light}
+                      height={52}
+                      source={glowFrom === light.memberId}
+                    />
                     <View
                       style={{
                         alignItems: stacked ? "flex-start" : "center",
