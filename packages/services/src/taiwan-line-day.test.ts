@@ -184,6 +184,8 @@ async function organiserSetsUp(): Promise<string> {
   const done = lastTo(ORGANISER).message.text;
   expect(done).toContain("設定完成。");
   expect(done).toContain("https://line.me/R/oaMessage/");
+  // Set up on LINE, her invitation stays LINE: the app's "share invitation" reads this.
+  expect((await her()).primarySurface).toBe("line");
   // With approval on, the organiser keeps her link until Vela says the family is confirmed.
   expect(done).toContain("請先留著，不要馬上傳出去");
   const [invite] = await h.db.select().from(invites);

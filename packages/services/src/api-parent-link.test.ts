@@ -81,6 +81,7 @@ describe("re-sharing a parent link", () => {
     const result = await share();
     expect(ApiParentLink.parse(result.response.body)).toEqual({
       kind: "invite",
+      messenger: "telegram",
       ...{
         url: created.invite.url,
         text: created.invite.text,
@@ -115,6 +116,7 @@ describe("re-sharing a parent link", () => {
     const result = ApiParentLink.parse((await share()).response.body);
     expect(result).toEqual({
       kind: "chat",
+      messenger: "telegram",
       url: `https://t.me/${h.config.telegramBotUsername}`,
       text: `https://t.me/${h.config.telegramBotUsername}`,
       expires_at: null,
@@ -143,48 +145,126 @@ describe("re-sharing a parent link", () => {
     });
     expect(await h.db.select().from(channelLinks)).toHaveLength(0);
   });
-  it("sends a Taiwan family's invitation again as a LINE link to the same invite, where LINE is on", async () => {
-    // Field report, 11 Nov 2026: a Taiwan tester was sent a t.me page she could not open.
-    const token = startTokenOf(created.invite.url);
-    const lineDeps = { ...h.deps, config: { ...h.config, lineBasicId: "@vela-test" } };
-    const body = ApiParentLink.parse(
-      (
-        await shareApiParentLink(
-          lineDeps,
-          actor,
-          "tw-line",
-          created.family.id,
-          created.kept_light_member.id,
-          {},
-        )
-      ).response.body,
-    );
-    const line = `https://line.me/R/oaMessage/%40vela-test/?${encodeURIComponent(`/start ${token}`)}`;
-    expect(body).toMatchObject({ kind: "invite", url: line });
-    expect(body.text).toContain(line);
-    expect(body.text).not.toContain("t.me");
-    expect(await h.db.select().from(invites)).toHaveLength(1);
-  });
-  it("keeps Telegram for a family outside Taiwan, and for Taiwan while LINE is off", async () => {
-    const telegram = ApiParentLink.parse((await share("tw-no-line")).response.body);
-    expect(telegram.url).toBe(created.invite.url);
-    await h.db
-      .update(members)
-      .set({ country: "VN" })
-      .where(eq(members.id, created.kept_light_member.id));
-    const body = ApiParentLink.parse(
-      (
-        await shareApiParentLink(
-          { ...h.deps, config: { ...h.config, lineBasicId: "@vela-test" } },
-          actor,
-          "vn-line",
-          created.family.id,
-          created.kept_light_member.id,
-          {},
-        )
-      ).response.body,
-    );
-    expect(body.url).toBe(created.invite.url);
+  describe("the messenger the family chose at setup", () => {
+    // Field report, 11 Nov 2026: a family that talks on LINE was sent a t.me page from the
+    // "share invitation" button, because every new parent was recorded as Telegram.
+    const lineDeps = () => ({ ...h.deps, config: { ...h.config, lineBasicId: "@vela-test" } });
+    const familyChoosing = async (messenger?: "telegram" | "line" | "phone") => {
+      await h.reset();
+      await h.db.insert(users).values({
+        authSubject: actor.authSubject,
+        displayName: "Mia",
+        language: "en",
+        tz: "Asia/Taipei",
+      });
+      return ApiCreatedFamily.parse(
+        (
+          await createApiFamily(lineDeps(), actor, `create:${messenger ?? "none"}`, {
+            country: "TW",
+            kept_light_member: {
+              display_name: "Mom",
+              address_form: "Mom",
+              language: "en",
+              tz: "Asia/Taipei",
+              wake_time: "07:30",
+            },
+            ...(messenger === undefined ? {} : { messenger }),
+          })
+        ).response.body,
+      );
+    };
+    const shareFor = async (made: ApiCreatedFamily, key: string, input: object = {}) =>
+      ApiParentLink.parse(
+        (
+          await shareApiParentLink(
+            lineDeps(),
+            actor,
+            key,
+            made.family.id,
+            made.kept_light_member.id,
+            input,
+          )
+        ).response.body,
+      );
+    const lineLinkOf = (made: ApiCreatedFamily) =>
+      `https://line.me/R/oaMessage/%40vela-test/?${encodeURIComponent(`/start ${startTokenOf(made.invite.url)}`)}`;
+
+    it("sends LINE again to a family that chose LINE, for the same invite", async () => {
+      const made = await familyChoosing("line");
+      const body = await shareFor(made, "again");
+      expect(body).toMatchObject({ kind: "invite", messenger: "line", url: lineLinkOf(made) });
+      expect(body.url).toBe(made.invite.line_url);
+      expect(body.text).not.toContain("t.me");
+      expect(await h.db.select().from(invites)).toHaveLength(1);
+    });
+
+    it("sends Telegram again to a family that chose Telegram, wherever it lives", async () => {
+      for (const messenger of ["telegram", "phone", undefined] as const) {
+        const made = await familyChoosing(messenger);
+        const body = await shareFor(made, `again:${messenger}`);
+        expect(body).toMatchObject({ messenger: "telegram", url: made.invite.url });
+      }
+    });
+
+    it("keeps Telegram for a LINE choice while LINE is off", async () => {
+      await h.reset();
+      await h.db.insert(users).values({
+        authSubject: actor.authSubject,
+        displayName: "Mia",
+        language: "en",
+        tz: "Asia/Taipei",
+      });
+      const made = ApiCreatedFamily.parse(
+        (
+          await createApiFamily(h.deps, actor, "create-off", {
+            country: "TW",
+            kept_light_member: {
+              display_name: "Mom",
+              address_form: "Mom",
+              language: "en",
+              tz: "Asia/Taipei",
+              wake_time: "07:30",
+            },
+            messenger: "line",
+          })
+        ).response.body,
+      );
+      const [her] = await h.db
+        .select()
+        .from(members)
+        .where(eq(members.id, made.kept_light_member.id));
+      expect(her?.primarySurface).toBe("telegram");
+    });
+
+    it("lets the organiser switch her invitation, and remembers the switch", async () => {
+      const made = await familyChoosing("telegram");
+      const switched = await shareFor(made, "to-line", { messenger: "line" });
+      expect(switched).toMatchObject({ messenger: "line", url: lineLinkOf(made) });
+      expect(await shareFor(made, "later")).toMatchObject({ messenger: "line" });
+      const back = await shareFor(made, "to-telegram", { messenger: "telegram" });
+      expect(back).toMatchObject({ messenger: "telegram", url: made.invite.url });
+      expect(await h.db.select().from(invites)).toHaveLength(1);
+    });
+
+    it("never switches a parent who already answered: her shortcut opens her own chat", async () => {
+      const made = await familyChoosing("line");
+      await h.db
+        .update(members)
+        .set({ status: "active", primarySurface: "telegram" })
+        .where(eq(members.id, made.kept_light_member.id));
+      const body = await shareFor(made, "answered", { messenger: "line" });
+      expect(body).toMatchObject({ kind: "chat", messenger: "telegram" });
+      const [her] = await h.db
+        .select()
+        .from(members)
+        .where(eq(members.id, made.kept_light_member.id));
+      expect(her?.primarySurface).toBe("telegram");
+    });
+
+    it("refuses an unknown messenger", async () => {
+      const made = await familyChoosing("line");
+      await expect(shareFor(made, "bad", { messenger: "whatsapp" })).rejects.toBeDefined();
+    });
   });
   it("refuses strangers, relatives and parents from another family without exposing a token", async () => {
     await expect(

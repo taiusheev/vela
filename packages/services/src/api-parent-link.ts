@@ -71,14 +71,27 @@ export async function shareApiParentLink(
             : `https://t.me/${deps.config.telegramBotUsername}`;
           return {
             status: 200,
-            body: ApiParentLink.parse({ kind: "chat", url, text: url, expires_at: null }),
+            body: ApiParentLink.parse({
+              kind: "chat",
+              messenger: useLine ? "line" : "telegram",
+              url,
+              text: url,
+              expires_at: null,
+            }),
           };
         }
-        // Not joined yet: a family set up in the app records her as Telegram until she answers, so
-        // a Taiwan family, which talks on LINE (ADR-52), gets the LINE link wherever LINE is on.
-        // The token is the same, so either link opens the same invitation.
-        const useLine =
-          lineOn && (member.primarySurface === "line" || member.country.toUpperCase() === "TW");
+        // Not joined yet: her invitation opens the messenger the family chose at setup, or the one
+        // the organiser switches it to now, which is remembered for every later share. Both links
+        // carry the same token, so either opens the same invitation.
+        const chosen = parsed.data.messenger;
+        if (
+          chosen !== undefined &&
+          chosen !== member.primarySurface &&
+          (member.primarySurface === "telegram" || member.primarySurface === "line") &&
+          (chosen !== "line" || lineOn)
+        )
+          await tx.update(members).set({ primarySurface: chosen }).where(eq(members.id, member.id));
+        const useLine = lineOn && (chosen ?? member.primarySurface) === "line";
         const now = deps.clock.now();
         // An invite made before tokens were sealed (migration 0038) has no token to show again: its
         // link still opens, and the organiser gets a fresh one.
@@ -101,6 +114,7 @@ export async function shareApiParentLink(
           status: 200,
           body: ApiParentLink.parse({
             kind: "invite",
+            messenger: useLine ? "line" : "telegram",
             url,
             text: t(member.language, "invite.for_her", {
               name: member.displayName,

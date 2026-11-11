@@ -555,6 +555,9 @@ async function createFamily(
       timeZone: data.timeZone,
       country: data.country,
       wakeTime: data.wakeTime,
+      // A family lives on one messenger (05-line-flows D9): set up on LINE, her invitation opens
+      // LINE, and so does every later share of it.
+      surface: event.channel === "line" && deps.config.lineBasicId != null ? "line" : "telegram",
     },
     now,
   );
@@ -579,7 +582,7 @@ async function createFamily(
   // A family lives on one messenger (05-line-flows D9): an organiser who set up on LINE sends her
   // the LINE link (§2.4), which opens Vela's LINE chat with her /start typed.
   const link =
-    event.channel === "line" && invited.lineLink !== null ? invited.lineLink : invited.link;
+    her.primarySurface === "line" && invited.lineLink !== null ? invited.lineLink : invited.link;
   const lang = data.organiserLanguage;
   await enqueueOutbound(deps, tx, {
     kind: "onboarding",

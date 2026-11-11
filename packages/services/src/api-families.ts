@@ -136,6 +136,9 @@ export async function createApiFamily(
             timeZone: person.tz,
             country: request.country,
             wakeTime: person.wake_time,
+            // Her invitation opens where the organiser said she chats, while LINE is on here.
+            surface:
+              request.messenger === "line" && deps.config.lineBasicId != null ? "line" : "telegram",
             ...(person.relationship === undefined ? {} : { relationship: person.relationship }),
             ...(person.interests === undefined ? {} : { interests: person.interests }),
             ...(person.reply_ways === undefined ? {} : { replyWays: person.reply_ways }),

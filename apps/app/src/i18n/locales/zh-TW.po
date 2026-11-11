@@ -4043,6 +4043,14 @@ msgstr "對{from}笑一個"
 msgid "Send /start in your own Vela chat and follow the setup. Come back here afterwards to connect your family."
 msgstr "請在你自己的 Vela 聊天傳送 /start，並按照指引設定。然後回到這裡連結家人。"
 
+#: src/components/parent-link-settings.tsx
+msgid "Send a LINE link instead"
+msgstr "改傳 LINE 連結"
+
+#: src/components/parent-link-settings.tsx
+msgid "Send a Telegram link instead"
+msgstr "改傳 Telegram 連結"
+
 #: app/nearby.tsx
 msgid "Send each one a link. Vela writes to them only once they open it, in your name."
 msgstr "傳連結給每一位。只有在對方打開連結後，Vela 才會以你的名義傳訊息給對方。"
@@ -4995,6 +5003,14 @@ msgstr "這個連結需要確認。"
 #: app/conversation.tsx
 msgid "This draft could not be saved on this phone. Keep this screen open and try again."
 msgstr "這份草稿無法存在這支手機上。請先別關閉這個畫面，再試一次。"
+
+#: src/components/parent-link-settings.tsx
+msgid "This invitation opens {name}’s chat with Vela in LINE."
+msgstr "這個邀請會在 LINE 打開{name}和 Vela 的聊天室。"
+
+#: src/components/parent-link-settings.tsx
+msgid "This invitation opens {name}’s chat with Vela in Telegram."
+msgstr "這個邀請會在 Telegram 打開{name}和 Vela 的聊天室。"
 
 #: app/ask.tsx
 #: app/exchange/[id].tsx

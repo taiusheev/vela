@@ -865,6 +865,8 @@ export async function createInvite(
         timeZone: input.timeZone,
         country: input.country,
         wakeTime: input.wakeTime,
+        // The family's messenger (05-line-flows D9): the organiser's own chat.
+        surface: link.channel === "line" && deps.config.lineBasicId != null ? "line" : "telegram",
       },
       at,
     );

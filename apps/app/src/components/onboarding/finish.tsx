@@ -121,6 +121,8 @@ export function Save({ name }: { name: string }) {
         }
         const family: CreateFamily = {
           country: start.country,
+          // Every later share of her invitation opens the messenger chosen here.
+          ...(start.messenger === null ? {} : { messenger: start.messenger }),
           kept_light_member: {
             display_name: name,
             address_form: name,
