@@ -62,8 +62,10 @@ export async function shareApiParentLink(
         // The link was already used: send her back to her own chat, never enroll her again.
         const linked =
           member.status !== "invited" || existing.some((invite) => invite.acceptedAt !== null);
-        const useLine = member.primarySurface === "line" && deps.config.lineBasicId != null;
+        const lineOn = deps.config.lineBasicId != null;
         if (linked) {
+          // She said yes in one chat: her shortcut opens that chat.
+          const useLine = lineOn && member.primarySurface === "line";
           const url = useLine
             ? `https://line.me/R/oaMessage/${encodeURIComponent(deps.config.lineBasicId ?? "")}/`
             : `https://t.me/${deps.config.telegramBotUsername}`;
@@ -72,6 +74,11 @@ export async function shareApiParentLink(
             body: ApiParentLink.parse({ kind: "chat", url, text: url, expires_at: null }),
           };
         }
+        // Not joined yet: a family set up in the app records her as Telegram until she answers, so
+        // a Taiwan family, which talks on LINE (ADR-52), gets the LINE link wherever LINE is on.
+        // The token is the same, so either link opens the same invitation.
+        const useLine =
+          lineOn && (member.primarySurface === "line" || member.country.toUpperCase() === "TW");
         const now = deps.clock.now();
         // An invite made before tokens were sealed (migration 0038) has no token to show again: its
         // link still opens, and the organiser gets a fresh one.

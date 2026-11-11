@@ -143,6 +143,49 @@ describe("re-sharing a parent link", () => {
     });
     expect(await h.db.select().from(channelLinks)).toHaveLength(0);
   });
+  it("sends a Taiwan family's invitation again as a LINE link to the same invite, where LINE is on", async () => {
+    // Field report, 11 Nov 2026: a Taiwan tester was sent a t.me page she could not open.
+    const token = startTokenOf(created.invite.url);
+    const lineDeps = { ...h.deps, config: { ...h.config, lineBasicId: "@vela-test" } };
+    const body = ApiParentLink.parse(
+      (
+        await shareApiParentLink(
+          lineDeps,
+          actor,
+          "tw-line",
+          created.family.id,
+          created.kept_light_member.id,
+          {},
+        )
+      ).response.body,
+    );
+    const line = `https://line.me/R/oaMessage/%40vela-test/?${encodeURIComponent(`/start ${token}`)}`;
+    expect(body).toMatchObject({ kind: "invite", url: line });
+    expect(body.text).toContain(line);
+    expect(body.text).not.toContain("t.me");
+    expect(await h.db.select().from(invites)).toHaveLength(1);
+  });
+  it("keeps Telegram for a family outside Taiwan, and for Taiwan while LINE is off", async () => {
+    const telegram = ApiParentLink.parse((await share("tw-no-line")).response.body);
+    expect(telegram.url).toBe(created.invite.url);
+    await h.db
+      .update(members)
+      .set({ country: "VN" })
+      .where(eq(members.id, created.kept_light_member.id));
+    const body = ApiParentLink.parse(
+      (
+        await shareApiParentLink(
+          { ...h.deps, config: { ...h.config, lineBasicId: "@vela-test" } },
+          actor,
+          "vn-line",
+          created.family.id,
+          created.kept_light_member.id,
+          {},
+        )
+      ).response.body,
+    );
+    expect(body.url).toBe(created.invite.url);
+  });
   it("refuses strangers, relatives and parents from another family without exposing a token", async () => {
     await expect(
       share("stranger", { authSubject: "auth|stranger", sessionId: "s2" }),
