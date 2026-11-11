@@ -925,6 +925,12 @@ export const CreateFamily = z.strictObject({
       )
       .optional(),
   }),
+  /**
+   * Where the organiser said she chats (onboarding "messenger" step). The invitation sent again
+   * later opens the same messenger; "phone" and an absent answer keep Telegram. Apps before
+   * 11 November 2026 do not send it, and a server before then refuses it, so the server ships first.
+   */
+  messenger: z.enum(["telegram", "line", "phone"]).optional(),
 });
 export type CreateFamily = z.infer<typeof CreateFamily>;
 

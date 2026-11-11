@@ -53,25 +53,28 @@ export function ParentLinkSettings({
     refetchIntervalInBackground: false,
   });
   const link = useMutation({
-    mutationFn: async () =>
+    mutationFn: async (switchTo?: "telegram" | "line") =>
       prepareParentLink(
         familyId,
         memberId,
-        key({ familyId, memberId, attempt: generation.current }),
+        key({ familyId, memberId, attempt: generation.current, switchTo: switchTo ?? null }),
         await account.token(),
+        switchTo,
       ),
   });
   const state = !status.isError ? status.data?.state : undefined;
   const connected = state === "connected" || state === "paused";
   const unavailable = state === "declined" || state === "unavailable";
-  const share = async () => {
+  // The messenger her invitation opens: the one chosen at setup, unless the organiser switches it.
+  const opens = link.data?.kind === "invite" ? link.data.messenger : undefined;
+  const share = async (switchTo?: "telegram" | "line") => {
     if (!live || running.current || unavailable) return;
     running.current = true;
     setSharing(true);
     setShareFailed(false);
     try {
       // A new deliberate share rechecks acceptance and expiry; a failed request retries its key.
-      const prepared = await link.mutateAsync();
+      const prepared = await link.mutateAsync(switchTo);
       generation.current += 1;
       if (!mounted.current) return;
       const result = await Share.share({ message: prepared.text });
@@ -161,6 +164,22 @@ export function ParentLinkSettings({
                 parent agrees.
               </Trans>
             </Words>
+          ) : null}
+          {opens !== undefined && !connected ? (
+            <>
+              <Words variant="caption" tone="ink2">
+                {opens === "line"
+                  ? t`This invitation opens ${name}’s chat with Vela in LINE.`
+                  : t`This invitation opens ${name}’s chat with Vela in Telegram.`}
+              </Words>
+              <SecondaryButton
+                label={
+                  opens === "line" ? t`Send a Telegram link instead` : t`Send a LINE link instead`
+                }
+                disabled={sharing || link.isPending}
+                onPress={() => void share(opens === "line" ? "telegram" : "line")}
+              />
+            </>
           ) : null}
           {state === "connected" ? (
             <Words variant="caption" tone="ink2">

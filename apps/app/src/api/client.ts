@@ -856,12 +856,14 @@ export function prepareParentLink(
   memberId: string,
   key: string,
   token: string | null,
+  /** Only when the organiser switches her invitation to the other messenger. */
+  messenger?: "telegram" | "line",
 ) {
   return call<ApiParentLink>({
     path: `/v1/families/${familyId}/members/${memberId}/parent-link`,
     token,
     key,
-    body: {},
+    body: messenger === undefined ? {} : { messenger },
   });
 }
 

@@ -46,6 +46,12 @@ export interface InvitedMemberProfile {
   country: string;
   wakeTime: LocalTime;
   /**
+   * The messenger her invitation opens, as the organiser chose it (app setup) or set up in (chat
+   * setup): every later share of her invitation opens the same one. Her yes then records the chat
+   * she really answered in (`consent.ts`). Telegram when not given.
+   */
+  surface?: "telegram" | "line";
+  /**
    * What the app's onboarding also asks (19 October 2026): who she is to the organiser, what she
    * loves to talk about, and how she likes to answer. Telegram onboarding asks none of them, so each
    * stays NULL there.
@@ -80,7 +86,7 @@ export async function insertInvitedMember(
       country: profile.country,
       status: "invited",
       turnsIn: false,
-      primarySurface: "telegram",
+      primarySurface: profile.surface ?? "telegram",
       lightOn: false,
       wakeTime: profile.wakeTime,
       arrivalTime: addMinutesToLocalTime(profile.wakeTime, ARRIVAL_AFTER_WAKE_MINUTES),
