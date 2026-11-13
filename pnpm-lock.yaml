@@ -216,8 +216,8 @@ catalogs:
       specifier: 0.45.2
       version: 0.45.2
     hono:
-      specifier: 4.13.13
-      version: 4.13.13
+      specifier: 4.13.16
+      version: 4.13.16
     jose:
       specifier: 6.2.12
       version: 6.2.12
@@ -462,7 +462,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@5.20260911.1)(@electric-sql/pglite@0.5.8)(@types/pg@8.23.1)(pg@8.23.0)
       hono:
         specifier: 'catalog:'
-        version: 4.13.13
+        version: 4.13.16
       jose:
         specifier: 'catalog:'
         version: 6.2.12
@@ -478,7 +478,7 @@ importers:
         version: 5.20260911.1
       '@hono/node-server':
         specifier: ^2.1.6
-        version: 2.1.6(hono@4.13.13)
+        version: 2.1.6(hono@4.13.16)
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
@@ -4116,8 +4116,8 @@ packages:
   hermes-parser@0.36.1:
     resolution: {integrity: sha512-GApNk4zLHi2UWoWZZkx7LNCOSzLSc5lB55pZ/PhK7ycFeg7u5LcF88p/WbpIi1XUDtE0MpHE3uRR3u3KB7TjSQ==}
 
-  hono@4.13.13:
-    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
+  hono@4.13.16:
+    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@7.0.2:
@@ -7076,9 +7076,9 @@ snapshots:
       chalk: 4.1.2
       js-yaml: 4.3.2
 
-  '@hono/node-server@2.1.6(hono@4.13.13)':
+  '@hono/node-server@2.1.6(hono@4.13.16)':
     dependencies:
-      hono: 4.13.13
+      hono: 4.13.16
 
   '@img/colour@1.1.0': {}
 
@@ -9119,7 +9119,7 @@ snapshots:
     dependencies:
       hermes-estree: 0.36.1
 
-  hono@4.13.13: {}
+  hono@4.13.16: {}
 
   hosted-git-info@7.0.2:
     dependencies:
